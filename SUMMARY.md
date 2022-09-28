@@ -190,6 +190,7 @@
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
     * [Az - AzureAD](pentesting-cloud/azure-security/az-services/az-azuread.md)
+  * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [llicit Consent Grant Attack](pentesting-cloud/azure-security/llicit-consent-grant-attack.md)
   * [Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
   * [VMs](pentesting-cloud/azure-security/vms.md)
