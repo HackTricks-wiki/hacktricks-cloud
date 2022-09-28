@@ -3,6 +3,7 @@
 ## 👽 Welcome!
 
 * [HackTricks Cloud](README.md)
+* [About the Author](https://book.hacktricks.xyz/welcome/about-the-author)
 
 ## 🏭 Pentesting CI/CD
 
