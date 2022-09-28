@@ -23,7 +23,7 @@ Get the [**official PEASS & HackTricks swag**](https://peass.creator-spring.com)
 
 </details>
 
-&#x20;                                                    ****                                                     ![](.gitbook/assets/hc.png)****
+&#x20;                                                           ****                                                            ![](.gitbook/assets/hc.png)****
 
 **Welcome to the page where you will find each hacking trick/technique/whatever related to CI/CD & Cloud I have learnt in CTFs, real life environments, and reading researches and news.**
 
@@ -42,6 +42,11 @@ Get the [**official PEASS & HackTricks swag**](https://peass.creator-spring.com)
 {% content-ref url="pentesting-cloud/pentesting-cloud-methodology.md" %}
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 {% endcontent-ref %}
+
+## License
+
+**Copyright © Carlos Polop 2022. Except where otherwise specified (the external information copied into the book belongs to the original authors), the text on** [**HACK TRICKS**](https://github.com/carlospolop/hacktricks) **by Carlos Polop is licensed under the**[ **Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**](https://creativecommons.org/licenses/by-nc/4.0/)**.**\
+**If you want to use it with commercial purposes, contact me.**
 
 <details>
 
