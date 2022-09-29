@@ -190,6 +190,7 @@
     * [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum/az-device-code-authentication-phishing.md)
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
+    * [Az - App Services & Function Apps](pentesting-cloud/azure-security/az-services/az-app-services-and-function-apps.md)
     * [Az - AzureAD](pentesting-cloud/azure-security/az-services/az-azuread.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [llicit Consent Grant Attack](pentesting-cloud/azure-security/llicit-consent-grant-attack.md)
