@@ -193,6 +193,7 @@
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
     * [Az - Azure App Service](pentesting-cloud/azure-security/az-services/az-azure-app-service.md)
     * [Az - App Services & Function Apps](pentesting-cloud/azure-security/az-services/az-app-services-and-function-apps.md)
+    * [Az - Function Apps](pentesting-cloud/azure-security/az-services/az-function-apps.md)
     * [Az - AzureAD](pentesting-cloud/azure-security/az-services/az-azuread.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
