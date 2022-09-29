@@ -198,10 +198,10 @@
     * [Az - App Services & Function Apps](pentesting-cloud/azure-security/az-services/az-app-services-and-function-apps.md)
     * [Az - Function Apps](pentesting-cloud/azure-security/az-services/az-function-apps.md)
     * [Az - AzureAD](pentesting-cloud/azure-security/az-services/az-azuread.md)
+    * [Az - Keyvault](pentesting-cloud/azure-security/az-services/az-keyvault.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
   * [VMs](pentesting-cloud/azure-security/vms.md)
-  * [Keyvault](pentesting-cloud/azure-security/keyvault.md)
 
 ## 🛫 Pentesting Network Services
 
