@@ -191,6 +191,8 @@
     * [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-device-code-authentication-phishing.md)
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
+    * [Az - Automation Account](pentesting-cloud/azure-security/az-services/az-automation-account/README.md)
+      * [Az - State Configuration RCE](pentesting-cloud/azure-security/az-services/az-automation-account/az-state-configuration-rce.md)
     * [Az - Blob Storage](pentesting-cloud/azure-security/az-services/az-blob-storage.md)
     * [Az - Azure App Service](pentesting-cloud/azure-security/az-services/az-azure-app-service.md)
     * [Az - App Services & Function Apps](pentesting-cloud/azure-security/az-services/az-app-services-and-function-apps.md)
