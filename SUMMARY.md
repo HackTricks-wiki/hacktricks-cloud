@@ -25,6 +25,7 @@
   * [Jenkins RCE Creating/Modifying Project](pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-project.md)
   * [Jenkins RCE Creating/Modifying Pipeline](pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-pipeline.md)
   * [Jenkins Dumping Secrets from Groovy](pentesting-ci-cd/jenkins-security/jenkins-dumping-secrets-from-groovy.md)
+  * [SCM IP Whitelisting Bypass](pentesting-ci-cd/jenkins-security/scm-ip-whitelisting-bypass.md)
 * [Apache Airflow Security](pentesting-ci-cd/apache-airflow-security/README.md)
   * [Airflow Configuration](pentesting-ci-cd/apache-airflow-security/airflow-configuration.md)
   * [Airflow RBAC](pentesting-ci-cd/apache-airflow-security/airflow-rbac.md)
