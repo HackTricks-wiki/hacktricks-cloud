@@ -203,6 +203,7 @@
     * [Az - AzureAD](pentesting-cloud/azure-security/az-services/az-azuread.md)
     * [Az - Keyvault](pentesting-cloud/azure-security/keyvault.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
+  * [Intune](pentesting-cloud/azure-security/intune.md)
   * [Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
   * [VMs](pentesting-cloud/azure-security/vms.md)
 
