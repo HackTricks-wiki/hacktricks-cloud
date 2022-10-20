@@ -204,7 +204,10 @@
     * [Az - Keyvault](pentesting-cloud/azure-security/keyvault.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Intune](pentesting-cloud/azure-security/intune.md)
+  * [Azure AD Connect - Hybrid Identity](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity.md)
   * [Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
+  * [Application Proxy](pentesting-cloud/azure-security/application-proxy.md)
+  * [Dynamic Groups](pentesting-cloud/azure-security/dynamic-groups.md)
   * [VMs](pentesting-cloud/azure-security/vms.md)
 
 ## 🛫 Pentesting Network Services
