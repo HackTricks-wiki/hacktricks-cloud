@@ -23,7 +23,7 @@ Get the [**official PEASS & HackTricks swag**](https://peass.creator-spring.com)
 
 </details>
 
-&#x20;                                                           ****                                                            ![](.gitbook/assets/hc.png)****
+&#x20;                                                           ****                                                            ![](<.gitbook/assets/hc (4).png>)****
 
 **Welcome to the page where you will find each hacking trick/technique/whatever related to CI/CD & Cloud I have learnt in CTFs, real life environments, and reading researches and news.**
 
