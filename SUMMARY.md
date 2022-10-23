@@ -205,6 +205,7 @@
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Intune](pentesting-cloud/azure-security/intune.md)
   * [Azure AD Connect - Hybrid Identity](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/README.md)
+    * [Federation](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/federation.md)
     * [PHS - Password Hash Sync](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/phs-password-hash-sync.md)
     * [PTA - Pass-through Authentication](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/pta-pass-through-authentication.md)
     * [Seamless SSO](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/seamless-sso.md)
