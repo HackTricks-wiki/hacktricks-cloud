@@ -32,6 +32,9 @@
 * [Terraform Security](pentesting-ci-cd/terraform-security/README.md)
   * [Terraform Enterprise Security](pentesting-ci-cd/terraform-security/terraform-enterprise-security.md)
 * [Atlantis Security](pentesting-ci-cd/atlantis-security.md)
+* [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
+  * [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
+  * [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
 ## ⛈ Pentesting Cloud
