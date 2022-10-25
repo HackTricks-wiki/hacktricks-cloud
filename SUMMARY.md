@@ -208,7 +208,7 @@
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Az - Lateral Movements](pentesting-cloud/azure-security/az-lateral-movements/README.md)
     * [Az - Pass the Cookie](pentesting-cloud/azure-security/az-lateral-movements/az-pass-the-cookie.md)
-    * [Az - Pass the PRT](pentesting-cloud/azure-security/az-lateral-movements/pass-the-prt.md)
+    * [Az - Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
   * [Intune](pentesting-cloud/azure-security/intune.md)
   * [Azure AD Connect - Hybrid Identity](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/README.md)
     * [Federation](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/federation.md)
