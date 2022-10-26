@@ -207,6 +207,7 @@
   * [Az - Lateral Movements](pentesting-cloud/azure-security/az-lateral-movements/README.md)
     * [Az - Pass the Cookie](pentesting-cloud/azure-security/az-lateral-movements/az-pass-the-cookie.md)
     * [Az - Pass the PRT](pentesting-cloud/azure-security/pass-the-prt.md)
+    * [Az - Local Cloud Credentials](pentesting-cloud/azure-security/az-lateral-movements/az-local-cloud-credentials.md)
     * [Azure AD Connect - Hybrid Identity](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/README.md)
       * [Federation](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/federation.md)
       * [PHS - Password Hash Sync](pentesting-cloud/azure-security/azure-ad-connect-hybrid-identity/phs-password-hash-sync.md)
