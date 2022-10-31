@@ -218,7 +218,7 @@
       * [PTA - Pass-through Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/pta-pass-through-authentication.md)
       * [Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/seamless-sso.md)
   * [Az - Persistence](pentesting-cloud/azure-security/az-persistence.md)
-  * [Dynamic Groups](pentesting-cloud/azure-security/dynamic-groups.md)
+  * [Az - Dynamic Groups Privesc](pentesting-cloud/azure-security/dynamic-groups.md)
 
 ## 🛫 Pentesting Network Services
 
