@@ -135,6 +135,7 @@
     * [AWS - Lambda Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc.md)
     * [AWS - Lightsail Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc.md)
     * [AWS - RDS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc.md)
+    * [AWS - Redshift Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc.md)
     * [AWS - S3 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc.md)
     * [AWS - Sagemaker Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc.md)
     * [AWS - Secrets Manager Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc.md)
