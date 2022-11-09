@@ -182,7 +182,7 @@
       * [AWS - Confused deputy](pentesting-cloud/aws-security/aws-services/aws-iam-and-sts-enum/aws-confused-deputy.md)
     * [AWS - KMS Enum](pentesting-cloud/aws-security/aws-services/aws-kms-enum.md)
     * [AWS - Lambda Enum](pentesting-cloud/aws-security/aws-services/aws-lambda-enum/README.md)
-      * [AWS - Warm Lambda Persistence](pentesting-cloud/aws-security/aws-services/aws-lambda-enum/aws-warm-lambda-persistence.md)
+      * [AWS - Steal Lambda Requests](pentesting-cloud/aws-security/aws-services/aws-lambda-enum/aws-warm-lambda-persistence.md)
     * [AWS - Lightsail Enum](pentesting-cloud/aws-security/aws-services/aws-lightsail-enum.md)
     * [AWS - MSK Enum](pentesting-cloud/aws-security/aws-services/aws-msk-enum.md)
     * [AWS - Route53 Enum](pentesting-cloud/aws-security/aws-services/aws-route53-enum.md)
