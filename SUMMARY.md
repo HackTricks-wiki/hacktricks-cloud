@@ -109,7 +109,7 @@
 * [Workspace Security](pentesting-cloud/workspace-security.md)
 * [AWS Security](pentesting-cloud/aws-security/README.md)
   * [AWS - Basic Information](pentesting-cloud/aws-security/aws-basic-information/README.md)
-    * [Assume Role Logic](pentesting-cloud/aws-security/aws-basic-information/assume-role-logic.md)
+    * [Assume Role](pentesting-cloud/aws-security/aws-basic-information/assume-role-logic.md)
     * [Connection Tracking](pentesting-cloud/aws-security/aws-basic-information/connection-tracking.md)
   * [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
   * [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
