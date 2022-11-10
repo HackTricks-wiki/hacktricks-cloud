@@ -110,7 +110,6 @@
 * [AWS Security](pentesting-cloud/aws-security/README.md)
   * [AWS - Basic Information](pentesting-cloud/aws-security/aws-basic-information/README.md)
     * [Assume Role & Confused Deputy](pentesting-cloud/aws-security/aws-basic-information/assume-role-confused-deputy.md)
-    * [Connection Tracking](pentesting-cloud/aws-security/aws-basic-information/connection-tracking.md)
   * [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
   * [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     * [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc.md)
