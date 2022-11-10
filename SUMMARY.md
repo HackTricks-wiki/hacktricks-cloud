@@ -178,6 +178,7 @@
     * [AWS - ECS, ECR & EKS Enum](pentesting-cloud/aws-security/aws-services/aws-ecs-ecr-and-eks-enum.md)
     * [AWS - EMR Enum](pentesting-cloud/aws-security/aws-services/aws-emr-enum.md)
     * [AWS - EFS Enum](pentesting-cloud/aws-security/aws-services/aws-efs-enum.md)
+    * [AWS - Kinesis Data Firehose](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose.md)
     * [AWS - IAM & STS Enum](pentesting-cloud/aws-security/aws-services/aws-iam-and-sts-enum/README.md)
       * [AWS - Confused deputy](pentesting-cloud/aws-security/aws-services/aws-iam-and-sts-enum/aws-confused-deputy.md)
     * [AWS - KMS Enum](pentesting-cloud/aws-security/aws-services/aws-kms-enum.md)
