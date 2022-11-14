@@ -109,6 +109,7 @@
 * [Workspace Security](pentesting-cloud/workspace-security.md)
 * [AWS Security](pentesting-cloud/aws-security/README.md)
   * [AWS - Basic Information](pentesting-cloud/aws-security/aws-basic-information/README.md)
+    * [AWS - Federation](pentesting-cloud/aws-security/aws-basic-information/aws-federation.md)
     * [Assume Role & Confused Deputy](pentesting-cloud/aws-security/aws-basic-information/assume-role-confused-deputy.md)
   * [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
   * [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
