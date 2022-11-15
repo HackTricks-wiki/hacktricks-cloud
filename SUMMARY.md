@@ -136,6 +136,7 @@
       * [AWS - Steal Lambda Requests](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/aws-warm-lambda-persistence.md)
     * [AWS - Lightsail Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc.md)
     * [AWS - MQ Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-mq-privesc.md)
+    * [AWS - MSK Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc.md)
     * [AWS - RDS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc.md)
     * [AWS - Redshift Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc.md)
     * [AWS - S3 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc.md)
