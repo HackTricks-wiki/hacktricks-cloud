@@ -132,6 +132,7 @@
     * [AWS - EMR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc.md)
     * [AWS - Glue Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc.md)
     * [AWS - IAM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc.md)
+    * [AWS - KMS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc.md)
     * [AWS - Lambda Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md)
       * [AWS - Steal Lambda Requests](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/aws-warm-lambda-persistence.md)
     * [AWS - Lightsail Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc.md)
