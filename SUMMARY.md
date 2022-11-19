@@ -112,6 +112,7 @@
     * [AWS - Federation](pentesting-cloud/aws-security/aws-basic-information/aws-federation.md)
     * [Assume Role & Confused Deputy](pentesting-cloud/aws-security/aws-basic-information/assume-role-confused-deputy.md)
   * [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
+  * [AWS - Persistence](pentesting-cloud/aws-security/aws-persistence.md)
   * [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     * [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc.md)
     * [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc.md)
