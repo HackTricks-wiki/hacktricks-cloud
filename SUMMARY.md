@@ -201,7 +201,7 @@
     * [AWS - Api Gateway Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-api-gateway-unauthenticated-enum.md)
     * [AWS - Cloudfront Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cloudfront-unauthenticated-enum.md)
     * [AWS - Cognito Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-unauthenticated-enum.md)
-    * [AWS - DocumentDB Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-documentdb-unauthenticated-enum.md)
+    * [AWS - DocumentDB Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-documentdb-enum.md)
     * [AWS - EC2 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ec2-unauthenticated-enum.md)
     * [AWS - Elasticsearch Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elasticsearch-unauthenticated-enum.md)
     * [AWS - IAM Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-iam-unauthenticated-enum.md)
