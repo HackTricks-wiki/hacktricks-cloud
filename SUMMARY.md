@@ -177,6 +177,7 @@
       * [Cognito Identity Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-identity-pools.md)
       * [Cognito User Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-user-pools.md)
     * [AWS - DataPipeline, CodePipeline, CodeBuild & CodeCommit](pentesting-cloud/aws-security/aws-services/aws-datapipeline-codepipeline-codebuild-and-codecommit.md)
+    * [AWS - Directory Services](pentesting-cloud/aws-security/aws-services/aws-directory-services.md)
     * [AWS - EC2, EBS, ELB, SSM, VPC & VPN Enum](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md)
       * [AWS - VPCs-Network-Subnetworks-Ifaces-SecGroups-NAT](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-vpcs-network-subnetworks-ifaces-secgroups-nat.md)
       * [AWS - SSM Post-Exploitation](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-ssm-post-exploitation.md)
