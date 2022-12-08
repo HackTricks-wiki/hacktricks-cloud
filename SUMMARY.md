@@ -125,6 +125,7 @@
       * [iam:PassRole, cloudformation:CreateStack,and cloudformation:DescribeStacks](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md)
     * [AWS - Cognito Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc.md)
     * [AWS - Datapipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-datapipeline-privesc.md)
+    * [AWS - Directory Services Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc.md)
     * [AWS - DynamoDB Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc.md)
     * [AWS - EBS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc.md)
     * [AWS - EC2 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc.md)
