@@ -148,7 +148,7 @@
     * [AWS - Secrets Manager Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc.md)
     * [AWS - SSM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc.md)
     * [AWS - STS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc.md)
-    * [AWS - WorkDocs Privesx](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesx.md)
+    * [AWS - WorkDocs Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc.md)
     * [AWS - Misc Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-misc-privesc/README.md)
       * [route53:CreateHostedZone, route53:ChangeResourceRecordSets, acm-pca:IssueCertificate, acm-pca:GetCer](pentesting-cloud/aws-security/aws-privilege-escalation/aws-misc-privesc/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer.md)
   * [AWS - Services](pentesting-cloud/aws-security/aws-services/README.md)
