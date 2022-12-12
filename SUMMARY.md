@@ -253,7 +253,10 @@
 * [Digital Ocean Pentesting](pentesting-cloud/digital-ocean-pentesting/README.md)
   * [DO - Basic Information](pentesting-cloud/digital-ocean-pentesting/do-basic-information.md)
   * [SO - Services](pentesting-cloud/digital-ocean-pentesting/so-services/README.md)
+    * [DO - Projects](pentesting-cloud/digital-ocean-pentesting/so-services/do-projects.md)
     * [DO - Droplets](pentesting-cloud/digital-ocean-pentesting/so-services/do-droplets.md)
+    * [DO - Volumes](pentesting-cloud/digital-ocean-pentesting/so-services/do-volumes.md)
+    * [DO - Networking](pentesting-cloud/digital-ocean-pentesting/so-services/do-networking.md)
     * [DO - Apps](pentesting-cloud/digital-ocean-pentesting/so-services/do-apps.md)
 
 ## 🛫 Pentesting Network Services
