@@ -257,6 +257,8 @@
     * [DO - Droplets](pentesting-cloud/digital-ocean-pentesting/so-services/do-droplets.md)
     * [DO - Volumes](pentesting-cloud/digital-ocean-pentesting/so-services/do-volumes.md)
     * [DO - Networking](pentesting-cloud/digital-ocean-pentesting/so-services/do-networking.md)
+    * [DO - Functions](pentesting-cloud/digital-ocean-pentesting/so-services/do-functions.md)
+    * [DO - Databases](pentesting-cloud/digital-ocean-pentesting/so-services/do-databases.md)
     * [DO - Apps](pentesting-cloud/digital-ocean-pentesting/so-services/do-apps.md)
 
 ## 🛫 Pentesting Network Services
