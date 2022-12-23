@@ -185,6 +185,7 @@
       * [AWS - SSM Post-Exploitation](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-ssm-post-exploitation.md)
       * [AWS - Malicious VPC Mirror](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-malicious-vpc-mirror.md)
     * [AWS - ECS, ECR & EKS Enum](pentesting-cloud/aws-security/aws-services/aws-ecs-ecr-and-eks-enum.md)
+    * [AWS - Elastic Beanstalk Enum](pentesting-cloud/aws-pentesting/aws-services/aws-elastic-beanstalk-enum.md)
     * [AWS - EMR Enum](pentesting-cloud/aws-security/aws-services/aws-emr-enum.md)
     * [AWS - EFS Enum](pentesting-cloud/aws-security/aws-services/aws-efs-enum.md)
     * [AWS - Kinesis Data Firehose](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose.md)
