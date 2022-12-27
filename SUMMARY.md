@@ -132,6 +132,7 @@
     * [AWS - ECR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc.md)
     * [AWS - ECS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc.md)
     * [AWS - EFS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc.md)
+    * [AWS - Elastic Beanstalk Privesc](pentesting-cloud/aws-pentesting/aws-privilege-escalation/aws-elastic-beanstalk-privesc.md)
     * [AWS - EMR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc.md)
     * [AWS - Glue Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc.md)
     * [AWS - IAM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc.md)
