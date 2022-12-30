@@ -42,7 +42,7 @@
 * [Pentesting Cloud Methodology](pentesting-cloud/pentesting-cloud-methodology.md)
 * [Kubernetes Pentesting](pentesting-cloud/kubernetes-security/README.md)
   * [Kubernetes Basics](pentesting-cloud/kubernetes-security/kubernetes-basics.md)
-  * [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-pentesting/pentesting-kubernetes-services/README.md)
+  * [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services.md)
     * [Kubelet Authentication & Authorization](pentesting-cloud/kubernetes-pentesting/pentesting-kubernetes-services/kubelet-authentication-and-authorization.md)
   * [Exposing Services in Kubernetes](pentesting-cloud/kubernetes-security/exposing-services-in-kubernetes.md)
   * [Attacking Kubernetes from inside a Pod](pentesting-cloud/kubernetes-security/attacking-kubernetes-from-inside-a-pod.md)
