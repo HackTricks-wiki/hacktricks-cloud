@@ -212,7 +212,7 @@
     * [AWS - DocumentDB Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-documentdb-enum.md)
     * [AWS - EC2 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ec2-unauthenticated-enum.md)
     * [AWS - Elasticsearch Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elasticsearch-unauthenticated-enum.md)
-    * [AWS - IAM Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-iam-unauthenticated-enum.md)
+    * [AWS - IAM & STS Unauthenticated Enum](pentesting-cloud/aws-pentesting/aws-unauthenticated-enum-access/aws-iam-and-sts-unauthenticated-enum.md)
     * [AWS - IoT Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-iot-unauthenticated-enum.md)
     * [AWS - Kinesis Video Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-kinesis-video-unauthenticated-enum.md)
     * [AWS - Lambda Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-lambda-unauthenticated-access.md)
