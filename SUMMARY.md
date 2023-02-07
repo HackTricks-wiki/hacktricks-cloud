@@ -198,6 +198,7 @@
     * [AWS - Lightsail Enum](pentesting-cloud/aws-security/aws-services/aws-lightsail-enum.md)
     * [AWS - MQ Enum](pentesting-cloud/aws-security/aws-services/aws-mq-enum.md)
     * [AWS - MSK Enum](pentesting-cloud/aws-security/aws-services/aws-msk-enum.md)
+    * [AWS - Organizations Enum](pentesting-cloud/aws-pentesting/aws-services/aws-organizations-enum.md)
     * [AWS - Route53 Enum](pentesting-cloud/aws-security/aws-services/aws-route53-enum.md)
     * [AWS - Secrets Manager Enum](pentesting-cloud/aws-security/aws-services/aws-secrets-manager-enum.md)
     * [AWS - SQS & SNS Enum](pentesting-cloud/aws-security/aws-services/aws-sqs-and-sns-enum.md)
