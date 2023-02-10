@@ -278,7 +278,8 @@
     * [DO - Projects](pentesting-cloud/digital-ocean-pentesting/do-services/do-projects.md)
     * [DO - Spaces](pentesting-cloud/digital-ocean-pentesting/do-services/do-spaces.md)
     * [DO - Volumes](pentesting-cloud/digital-ocean-pentesting/do-services/do-volumes.md)
-* [IBM Cloud Pentesting](pentesting-cloud/ibm-cloud-pentesting.md)
+* [IBM Cloud Pentesting](pentesting-cloud/ibm-cloud-pentesting/README.md)
+  * [IBM - Basic Information](pentesting-cloud/ibm-cloud-pentesting/ibm-basic-information.md)
 
 ## 🛫 Pentesting Network Services
 
