@@ -115,6 +115,7 @@
   * [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
   * [AWS - Persistence](pentesting-cloud/aws-pentesting/aws-persistence/README.md)
     * [AWS - KMS Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-kms-persistence.md)
+    * [AWS - Lambda Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence.md)
     * [AWS - S3 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-s3-persistence.md)
     * [AWS - EC2 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-ec2-persistence.md)
     * [AWS - Lightsail Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lightsail-persistence.md)
