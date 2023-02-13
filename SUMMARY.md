@@ -116,6 +116,7 @@
   * [AWS - Persistence](pentesting-cloud/aws-pentesting/aws-persistence/README.md)
     * [AWS - KMS Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-kms-persistence.md)
     * [AWS - Lambda Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/README.md)
+      * [AWS - Abusing Lambda Extensions](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/aws-abusing-lambda-extensions.md)
       * [AWS - Lambda Layers Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/aws-lambda-layers-persistence.md)
     * [AWS - S3 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-s3-persistence.md)
     * [AWS - EC2 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-ec2-persistence.md)
