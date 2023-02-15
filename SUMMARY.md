@@ -288,6 +288,8 @@
     * [DO - Spaces](pentesting-cloud/digital-ocean-pentesting/do-services/do-spaces.md)
     * [DO - Volumes](pentesting-cloud/digital-ocean-pentesting/do-services/do-volumes.md)
 * [IBM Cloud Pentesting](pentesting-cloud/ibm-cloud-pentesting/README.md)
+  * [IBM - Hyper Protect Crypto Services](pentesting-cloud/ibm-cloud-pentesting/ibm-hyper-protect-crypto-services.md)
+  * [IBM - Hyper Protect Virtual Server](pentesting-cloud/ibm-cloud-pentesting/ibm-hyper-protect-virtual-server.md)
   * [IBM - Basic Information](pentesting-cloud/ibm-cloud-pentesting/ibm-basic-information.md)
 
 ## 🛫 Pentesting Network Services
