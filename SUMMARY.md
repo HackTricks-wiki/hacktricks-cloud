@@ -100,7 +100,7 @@
       * [GCP - SQL Enum](pentesting-cloud/gcp-security/gcp-services/gcp-databases-enum/gcp-sql-enum.md)
     * [GCP - DNS Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dns-enum.md)
     * [GCP - Filestore Enum](pentesting-cloud/gcp-security/gcp-services/gcp-filestore-enum.md)
-    * [GCP - IAM & Org Policies Enum](pentesting-cloud/gcp-security/gcp-services/gcp-iam-and-org-policies-enum.md)
+    * [GCP - IAM, Ppals & Org Policies Enum](pentesting-cloud/gcp-security/gcp-services/gcp-iam-and-org-policies-enum.md)
     * [GCP - KMS and Secrets Management Enum](pentesting-cloud/gcp-security/gcp-services/gcp-kms-and-secrets-management-enum.md)
     * [GCP - Pub/Sub](pentesting-cloud/gcp-security/gcp-services/gcp-pub-sub.md)
     * [GCP - Source Repositories Enum](pentesting-cloud/gcp-security/gcp-services/gcp-source-repositories-enum.md)
