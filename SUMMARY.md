@@ -87,6 +87,7 @@
     * [GCP - local privilege escalation ssh pivoting](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-local-privilege-escalation-ssh-pivoting.md)
   * [GCP - Services](pentesting-cloud/gcp-security/gcp-services/README.md)
     * [GCP - AI Platform Enum](pentesting-cloud/gcp-security/gcp-services/gcp-ai-platform-enum.md)
+    * [GCP - Cloud Build](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-build.md)
     * [GCP - Cloud Functions, App Engine & Cloud Run Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-functions-app-engine-and-cloud-run-enum.md)
     * [GCP - Compute Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-compute-instances-enum/README.md)
       * [GCP - Compute Instance](pentesting-cloud/gcp-pentesting/gcp-services/gcp-compute-instances-enum/gcp-compute-instance.md)
