@@ -80,6 +80,7 @@
     * [GCP - Run Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md)
     * [GCP - Secretmanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md)
     * [GCP - Serviceusage Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-serviceusage-privesc.md)
+    * [GCP - Source Repos Privesc](pentesting-cloud/gcp-pentesting/gcp-privilege-escalation/gcp-source-repos-privesc.md)
     * [GCP - Storage Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md)
     * [GCP - Misc Perms Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-misc-perms-privesc.md)
     * [GCP - Network Docker Escape](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-docker-escape.md)
