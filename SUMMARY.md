@@ -76,6 +76,7 @@
     * [GCP - IAM Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md)
     * [GCP - KMS Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-kms-privesc.md)
     * [GCP - Orgpolicy Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md)
+    * [GCP Pubsub](pentesting-cloud/gcp-pentesting/gcp-privilege-escalation/gcp-pubsub.md)
     * [GCP - Resourcemanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md)
     * [GCP - Run Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md)
     * [GCP - Secretmanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md)
