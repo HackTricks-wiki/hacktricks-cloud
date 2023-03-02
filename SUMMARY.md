@@ -65,6 +65,7 @@
   * [GCP - Permissions for a Pentest](pentesting-cloud/gcp-security/gcp-permissions-for-a-pentest.md)
   * [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
     * [GCP - Apikeys Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apikeys-privesc.md)
+    * [GCP - AppEngine Privesc](pentesting-cloud/gcp-pentesting/gcp-privilege-escalation/gcp-appengine-privesc.md)
     * [GCP - Cloudbuild Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md)
     * [GCP - Cloudfunctions Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md)
     * [GCP - Cloudscheduler Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudscheduler-privesc.md)
