@@ -143,7 +143,7 @@
     * [AWS - Lambda Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lambda-post-exploitation/README.md)
       * [AWS - Steal Lambda Requests](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lambda-post-exploitation/aws-warm-lambda-persistence.md)
     * [AWS - Lightsail Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lightsail-post-exploitation.md)
-    * [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation/README.md)
+    * [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation.md)
       * [AWS Codebuild - Token Leakage](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
     * [AWS - S3 Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-s3-post-exploitation.md)
     * [AWS - STS Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-sts-post-exploitation.md)
