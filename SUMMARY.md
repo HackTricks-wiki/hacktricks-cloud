@@ -205,6 +205,7 @@
       * [AWS - WAF Enum](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/aws-waf-enum.md)
     * [AWS - Databases](pentesting-cloud/aws-security/aws-services/aws-databases/README.md)
       * [AWS - DynamoDB Enum](pentesting-cloud/aws-security/aws-services/aws-databases/aws-dynamodb-enum.md)
+      * [AWS - EslatiCache](pentesting-cloud/aws-pentesting/aws-services/aws-databases/aws-eslaticache.md)
       * [AWS - Redshift Enum](pentesting-cloud/aws-security/aws-services/aws-databases/aws-redshift-enum.md)
       * [AWS - DocumentDB Enum](pentesting-cloud/aws-security/aws-services/aws-databases/aws-documentdb-enum.md)
       * [AWS - Relational Database (RDS) Enum](pentesting-cloud/aws-security/aws-services/aws-databases/aws-relational-database-rds-enum.md)
