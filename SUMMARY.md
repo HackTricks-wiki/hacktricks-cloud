@@ -140,6 +140,7 @@
       * [AWS - EBS Spanshot Dump](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-spanshot-dump.md)
       * [AWS - SSM Post-Exploitation](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-ssm-post-exploitation.md)
       * [AWS - Malicious VPC Mirror](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-malicious-vpc-mirror.md)
+    * [AWS - ECR Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-ecr-post-exploitation.md)
     * [AWS - EKS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eks-post-exploitation.md)
     * [AWS - IAM Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-iam-post-exploitation.md)
     * [AWS - KMS Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-kms-post-exploitation.md)
