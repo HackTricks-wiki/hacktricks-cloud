@@ -131,6 +131,7 @@
       * [AWS - Lambda Layers Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/aws-lambda-layers-persistence.md)
     * [AWS - Lightsail Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lightsail-persistence.md)
     * [AWS - S3 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-s3-persistence.md)
+    * [AWS - SNS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sns-persistence.md)
     * [AWS - SQS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sqs-persistence.md)
     * [AWS - Secrets Manager Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-secrets-manager-persistence.md)
   * [AWS - Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/README.md)
