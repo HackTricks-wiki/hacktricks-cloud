@@ -226,6 +226,7 @@
     * [AWS - CloudFormation & Codestar Enum](pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md)
     * [AWS - CloudHSM Enum](pentesting-cloud/aws-security/aws-services/aws-cloudhsm-enum.md)
     * [AWS - CloudFront Enum](pentesting-cloud/aws-security/aws-services/aws-cloudfront-enum.md)
+    * [AWS - Codebuild Enum](pentesting-cloud/aws-security/aws-services/aws-codebuild-enum.md)
     * [AWS - Cognito Enum](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/README.md)
       * [Cognito Identity Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-identity-pools.md)
       * [Cognito User Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-user-pools.md)
