@@ -124,6 +124,7 @@
   * [AWS - Persistence](pentesting-cloud/aws-pentesting/aws-persistence/README.md)
     * [AWS - Cognito Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-cognito-persistence.md)
     * [AWS - EC2 Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-ec2-persistence.md)
+    * [AWS - Elastic Beanstalk Persistence](pentesting-cloud/aws-security/aws-persistence/aws-elastic-beanstalk-persistence.md)
     * [AWS - IAM & STS Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-iam-and-sts-persistence.md)
     * [AWS - KMS Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-kms-persistence.md)
     * [AWS - Lambda Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/README.md)
