@@ -1,13 +1,20 @@
-name: Run translation to es on push to master
+name: Translator to ES (Spanish)
 
 on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'scripts/**'
+      - '.gitignore'
+      - '.github/**'
 
 jobs:
   run-translation:
     runs-on: ubuntu-latest
+    env:
+      LANGUAGE: Spanish
+      BRANCH: es
 
     steps:
       - name: Checkout code
@@ -36,8 +43,10 @@ jobs:
 
             # Run the translation script on each changed file
             for file in $files; do
-              echo "Translating $file"
-              python scripts/translator.py --language Spanish --branch es --api-key "$OPENAI_API_KEY" --file-path "$file"
+              if [[ $file == *.md ]]; then
+                echo "Translating $file"
+                python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" --file-path "$file"
+              fi
             done
           EOF
 
