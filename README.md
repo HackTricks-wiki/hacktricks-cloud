@@ -21,7 +21,7 @@ description: >-
 
 &#x20;                                                 ![](.gitbook/assets/hc.png)
 
-**Welcome to the page where you will find each hacking trick/technique/whatever related to CI/CD & Cloud I have learnt in CTFs, real life environments, and reading researches and news.**
+**Welcome to the page where you will find each hacking trick/technique/whatever related to CI/CD & Cloud I have learnt in CTFs, real life environments, researching, and reading researches and news.**
 
 ## **Pentesting CI/CD Methodology**
 
@@ -69,3 +69,5 @@ By using this book, the user agrees to release the authors and publishers from a
 * **Share your hacking tricks by submitting PRs to the** [**HackTricks**](https://github.com/carlospolop/hacktricks) and [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos.
 
 </details>
+
+test
