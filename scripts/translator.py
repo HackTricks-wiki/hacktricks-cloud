@@ -7,6 +7,9 @@ import tempfile
 import subprocess
 import sys
 
+
+MASTER_BRANCH="master"
+
 def get_branch_files(branch):
     """Get a list of all files in a branch."""
     command = f"git ls-tree -r --name-only {branch}"
@@ -17,7 +20,7 @@ def get_branch_files(branch):
 def delete_unique_files(branch):
     """Delete files that are unique to branch2."""
     # Get the files in each branch
-    files_branch1 = get_branch_files("master")
+    files_branch1 = get_branch_files(MASTER_BRANCH)
     files_branch2 = get_branch_files(branch)
 
     # Find the files that are in branch2 but not in branch1
@@ -31,7 +34,7 @@ def delete_unique_files(branch):
         for file in unique_files:
             subprocess.run(["git", "rm", file])
         
-        subprocess.run(["git", "checkout", "master"])
+        subprocess.run(["git", "checkout", MASTER_BRANCH])
 
 
 def check_gh_branch(branch, temp_folder):
@@ -57,7 +60,7 @@ def check_gh_branch(branch, temp_folder):
             shutil.copy2(src_file, dest_path)
 
     print(f"Translated files copied to branch: {branch}")
-    subprocess.run(['git', 'checkout', "master"])
+    subprocess.run(['git', 'checkout', MASTER_BRANCH])
 
 
 def translate_text(language, text, file_path, model, cont=0):
