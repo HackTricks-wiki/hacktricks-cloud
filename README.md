@@ -62,8 +62,6 @@ By using this book, the user agrees to release the authors and publishers from a
 
 <summary><strong>Support HackTricks and get benefits!</strong></summary>
   
-  test
-
 * If you want to see your **company advertised in HackTricks** or if you want access to the **latest version of the PEASS or download HackTricks in PDF** Check the [**SUBSCRIPTION PLANS**](https://github.com/sponsors/carlospolop)!
 * Get the [**official PEASS & HackTricks swag**](https://peass.creator-spring.com)
 * Discover [**The PEASS Family**](https://opensea.io/collection/the-peass-family), our collection of exclusive [**NFTs**](https://opensea.io/collection/the-peass-family)
