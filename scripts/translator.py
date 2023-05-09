@@ -57,6 +57,7 @@ def check_gh_branch(branch, temp_folder):
             shutil.copy2(src_file, dest_path)
 
     print(f"Translated files copied to branch: {branch}")
+    subprocess.run(['git', 'checkout', "master"])
 
 
 def translate_text(language, text, file_path, model, cont=0):
