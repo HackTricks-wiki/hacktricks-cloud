@@ -1,0 +1,50 @@
+name: Run translation to es on push to master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  run-translation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip3 install openai
+
+      - name: Run translation script on changed files
+        run: |
+          # Start a subshell with a timeout (5h)
+          timeout 18000s bash << 'EOF'
+            # Get a list of all changed files
+            files=$(git diff --name-only HEAD^ HEAD)
+            echo $files
+
+            # Export the OpenAI API key as an environment variable
+            export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+
+            # Run the translation script on each changed file
+            for file in $files; do
+              echo "Translating $file"
+              python scripts/translator.py --language Spanish --branch es --api-key "$OPENAI_API_KEY" --file-path "$file"
+            done
+          EOF
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'github-actions@github.com'
+          git add -A
+          git commit -m "Translated files"
+          git push
