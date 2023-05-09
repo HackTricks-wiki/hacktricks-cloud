@@ -38,18 +38,18 @@ jobs:
             echo "Starting translations"
             echo "Commit: $GITHUB_SHA"
 
-            # Get a list of all changed files
-            files=$(git diff-tree --no-commit-id --name-only -r $GITHUB_SHA)
-            echo $files
-
             # Export the OpenAI API key as an environment variable
+            echo "Trying to get api key"
+            echo "${{ secrets.OPENAI_API_KEY }}"
             export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
 
             # Run the translation script on each changed file
-            for file in $files; do
-              if [[ $file == *.md ]]; then
+            git diff-tree --no-commit-id --name-only -r $GITHUB_SHA | while read -r file; do
+              if echo "$file" | grep -qE '\.md$'; then
                 echo "Translating $file"
                 python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" --file-path "$file"
+              else
+                echo "Skipping $file"
               fi
             done
           EOF
