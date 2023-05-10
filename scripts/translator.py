@@ -6,6 +6,8 @@ import shutil
 import tempfile
 import subprocess
 import sys
+import concurrent.futures
+
 
 
 MASTER_BRANCH="master"
@@ -152,25 +154,35 @@ def translate_file(language, file_path, file_dest_path, model):
     print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
 
 
-def translate_directory(language, source_path, dest_path, model):
+def translate_directory(language, source_path, dest_path, model, num_threads):
     
-    for subdir, dirs, files in os.walk(source_path):
-        for file in files:
-            if file == "SUMMARY.md":
-                continue
-            
-            elif file.endswith('.md'):
-                source_filepath = os.path.join(subdir, file)
-                dest_filepath = os.path.join(dest_path, os.path.relpath(source_filepath, source_path))
-
-                if os.path.exists(dest_filepath):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = []
+        for subdir, dirs, files in os.walk(source_path):
+            for file in files:
+                if file == "SUMMARY.md":
                     continue
+                
+                elif file.endswith('.md'):
+                    source_filepath = os.path.join(subdir, file)
+                    dest_filepath = os.path.join(dest_path, os.path.relpath(source_filepath, source_path))
 
-                # Create the directory structure in the translated folder
-                os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
+                    if os.path.exists(dest_filepath):
+                        continue
 
-                # Translate the file
-                translate_file(language, source_filepath, dest_filepath, model)
+                    # Create the directory structure in the translated folder
+                    os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
+
+                    # Schedule the file for translation
+                    future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
+                    futures.append(future)
+
+        # Wait for all files to be translated
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f'Translation generated an exception: {exc}')
                 
 
 if __name__ == "__main__":
@@ -183,6 +195,7 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-path', help='If this is set, only the indicated file will be translated.')
     parser.add_argument('-n', '--dont-cd', default=False, type=bool, help="If this is true, the script won't change the current directory.")
+    parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
     args = parser.parse_args()
 
     source_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -191,6 +204,7 @@ if __name__ == "__main__":
     branch = args.branch
     model = args.model
     org_id = args.org_id
+    threads = args.threads
 
     openai.api_key = args.api_key
     if org_id:
@@ -207,7 +221,7 @@ if __name__ == "__main__":
         delete_unique_files(branch)
     else:
         # Translate everything
-        translate_directory(language, source_folder, dest_folder, model)
+        translate_directory(language, source_folder, dest_folder, model, threads)
 
     # Copy summary
     copy_summary(source_folder, dest_folder)
