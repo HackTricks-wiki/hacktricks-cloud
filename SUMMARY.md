@@ -306,6 +306,7 @@
     * [Az - Intune](pentesting-cloud/azure-security/intune.md)
     * [Az - Keyvault](pentesting-cloud/azure-security/keyvault.md)
     * [Az - Logic Apps](pentesting-cloud/azure-security/az-services/az-logic-apps.md)
+    * [Az - SQL](pentesting-cloud/azure-security/az-services/az-sql.md)
     * [Az - Virtual Machines](pentesting-cloud/azure-security/vms.md)
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Az - Lateral Movement (Cloud - On-Prem)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/README.md)
