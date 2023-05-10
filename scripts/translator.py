@@ -37,7 +37,7 @@ def delete_unique_files(branch):
         subprocess.run(["git", "checkout", MASTER_BRANCH])
 
 
-def check_gh_branch(branch, temp_folder):
+def check_gh_branch(branch, temp_folder, file_path):
     branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:
@@ -60,7 +60,14 @@ def check_gh_branch(branch, temp_folder):
             shutil.copy2(src_file, dest_path)
 
     print(f"Translated files copied to branch: {branch}")
-    subprocess.run(['git', 'checkout', MASTER_BRANCH])
+    
+    if file_path:
+        subprocess.run(['git', 'add', "-A"])
+        subprocess.run(['git', 'commit', '-m', f"Translated {file_path} to {branch}"[:72]])
+        subprocess.run(['git', 'checkout', MASTER_BRANCH])
+        print("Commit created and moved to master branch")
+    else:
+        print("No commiting anything, leaving in language branch")
 
 
 def translate_text(language, text, file_path, model, cont=0):
@@ -209,4 +216,4 @@ if __name__ == "__main__":
     copy_gitbook_dir(source_folder, dest_folder) 
 
     # Create the branch and copy the translated files
-    check_gh_branch(branch, dest_folder)
+    check_gh_branch(branch, dest_folder, args.file_path)
