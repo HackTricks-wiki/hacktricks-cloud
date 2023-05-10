@@ -4,6 +4,7 @@
 
 * [HackTricks Cloud](README.md)
 * [About the Author](https://book.hacktricks.xyz/welcome/about-the-author)
+* [HackTricks Values & faq](https://book.hacktricks.xyz/welcome/hacktricks-values-and-faq)
 
 ## 🏭 Pentesting CI/CD
 
