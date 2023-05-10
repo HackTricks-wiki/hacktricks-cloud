@@ -107,7 +107,7 @@ def split_text(text):
 
     for line in lines:
         if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
-            len(chunk.split() + line.split()) > 2000:
+            len(chunk.split() + line.split()) > 1700:
             chunks.append(chunk.strip())
             chunk = ''
         
