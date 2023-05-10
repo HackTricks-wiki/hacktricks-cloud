@@ -295,6 +295,7 @@
     * [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-device-code-authentication-phishing.md)
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
+    * [Az - ACR](pentesting-cloud/azure-security/az-services/az-acr.md)
     * [Az - Application Proxy](pentesting-cloud/azure-security/az-services/az-application-proxy.md)
     * [Az - ARM Templates / Deployments](pentesting-cloud/azure-security/az-services/az-arm-templates.md)
     * [Az - Automation Account](pentesting-cloud/azure-security/az-services/az-automation-account/README.md)
