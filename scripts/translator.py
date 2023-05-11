@@ -96,6 +96,16 @@ def translate_text(language, text, file_path, model, cont=0):
             print("Timeout, waiting 30 seconds")
             cont += 1
             time.sleep(30)
+        elif "rate limit" in str(e).lower():
+            print("Rate limit, waiting 60 seconds")
+            cont += 1
+            time.sleep(60)
+        elif "maximum context length" in str(e).lower():
+            print("Maximum context length, splitting text in two and translating separately")
+            text1 = text.split('\n')[:len(text.split('\n'))//2]
+            text2 = text.split('\n')[len(text.split('\n'))//2:]
+            return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont)
+        
         return translate_text(language, text, file_path, model, cont)
 
     response_message = response["choices"][0]["message"]["content"]
@@ -137,6 +147,10 @@ def copy_summary(source_path, dest_path):
     shutil.copy2(source_filepath, dest_filepath)
 
 def translate_file(language, file_path, file_dest_path, model):
+
+    if file_path.endswith('SUMMARY.md'):
+        return
+    
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
