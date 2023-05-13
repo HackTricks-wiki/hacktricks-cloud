@@ -21,7 +21,7 @@ description: >-
 
 <figure><img src=".gitbook/assets/cloud gif.gif" alt="" width="563"><figcaption></figcaption></figure>
 
-_Logos & motion design by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 {% hint style="info" %}
 Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
