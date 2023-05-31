@@ -145,7 +145,7 @@ def split_text(text):
                 chunk += line + '\n'
             
             continue
-            
+
 
         if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
             len(chunk.split() + line.split()) > 1600:
@@ -242,9 +242,9 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--model', default="gpt-3.5-turbo", help='The openai model to use. By default: gpt-3.5-turbo')
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-path', help='If this is set, only the indicated file will be translated.')
-    parser.add_argument('-n', '--dont-cd', default=False, type=bool, help="If this is true, the script won't change the current directory.")
+    parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
-    parser.add_argument('-v', '--verbose', default=False, type=bool, help="Get the time it takes to translate each page.")
+    parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
     args = parser.parse_args()
 
     source_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
