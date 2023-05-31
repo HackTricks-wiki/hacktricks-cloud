@@ -116,8 +116,23 @@ def split_text(text):
     lines = text.split('\n')
     chunks = []
     chunk = ''
+    in_code_block = False
 
     for line in lines:
+        # If we are in a code block, just add the code to the chunk
+        if line.startswith('```'):
+            # If we are in a code block, close it
+            if in_code_block:
+                chunk += line + '\n'
+            
+            in_code_block = not in_code_block
+            chunks.append(chunk.strip())
+            chunk = ''
+        
+        if in_code_block:
+            chunk += line + '\n'
+            continue
+
         if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
             len(chunk.split() + line.split()) > 1700:
             chunks.append(chunk.strip())
@@ -156,8 +171,15 @@ def translate_file(language, file_path, file_dest_path, model):
     
     content_chunks = split_text(content)
 
+    translated_content = ''
     start_time = time.time()
-    translated_content = '\n'.join(translate_text(language, chunk, file_path, model) for chunk in content_chunks)
+    for chunk in content_chunks:
+        # Don't trasnlate code blocks
+        if chunk.startswith('```'):
+            translated_content += chunk + '\n'
+        else:
+            translated_content += translate_text(language, chunk, file_path, model) + '\n'
+    
     elapsed_time = time.time() - start_time
 
     # make sure directory exists
