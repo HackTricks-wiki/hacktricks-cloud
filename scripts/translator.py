@@ -74,7 +74,10 @@ def check_gh_branch(branch, temp_folder, file_path):
         print("No commiting anything, leaving in language branch")
 
 
-def translate_text(language, text, file_path, model, cont=0):
+def translate_text(language, text, file_path, model, cont=0, slpitted=False):
+    if not text:
+        return text
+    
     messages = [
         {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information."},
         {"role": "system", "content": f"The following is content from a hacking book about hacking techiques of cloud, SaaS platforms, CI/CD... The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping the markdown syntax. Do not translate things like code, hacking technique names, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
@@ -104,9 +107,14 @@ def translate_text(language, text, file_path, model, cont=0):
             time.sleep(60)
         elif "maximum context length" in str(e).lower():
             print("Maximum context length, splitting text in two and translating separately")
+            if slpitted:
+                print(f"Page {file_path} could not be translated with text: {text}")
+                print("Returning text as is")
+                return text
+            
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont)
+            return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True)
         
         return translate_text(language, text, file_path, model, cont)
 
@@ -137,10 +145,10 @@ def split_text(text):
                 chunk += line + '\n'
             
             continue
-
+            
 
         if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
-            len(chunk.split() + line.split()) > 1700:
+            len(chunk.split() + line.split()) > 1600:
             chunks.append(chunk.strip())
             chunk = ''
         
