@@ -7,7 +7,7 @@ import tempfile
 import subprocess
 import sys
 import concurrent.futures
-from tqdm import tqdm
+from tqdm import tqdm #pip3 install tqdm
 
 
 
