@@ -7,10 +7,12 @@ import tempfile
 import subprocess
 import sys
 import concurrent.futures
+from tqdm import tqdm
 
 
 
-MASTER_BRANCH="master"
+MASTER_BRANCH = "master"
+VERBOSE = False
 
 def get_branch_files(branch):
     """Get a list of all files in a branch."""
@@ -162,7 +164,8 @@ def copy_summary(source_path, dest_path):
     shutil.copy2(source_filepath, dest_filepath)
 
 def translate_file(language, file_path, file_dest_path, model):
-
+    global VERBOSE
+    
     if file_path.endswith('SUMMARY.md'):
         return
     
@@ -187,38 +190,35 @@ def translate_file(language, file_path, file_dest_path, model):
     with open(file_dest_path, 'w', encoding='utf-8') as f:
         f.write(translated_content)
     
-    print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
+    if VERBOSE:
+        print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
 
 
 def translate_directory(language, source_path, dest_path, model, num_threads):
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = []
-        for subdir, dirs, files in os.walk(source_path):
-            for file in files:
-                if file == "SUMMARY.md":
+    all_markdown_files = []
+    for subdir, dirs, files in os.walk(source_path):
+        for file in files:
+            if file.endswith('.md') and file != "SUMMARY.md":
+                source_filepath = os.path.join(subdir, file)
+                dest_filepath = os.path.join(dest_path, os.path.relpath(source_filepath, source_path))
+                all_markdown_files.append((source_filepath, dest_filepath))
+
+    with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = []
+            for source_filepath, dest_filepath in all_markdown_files:
+                if os.path.exists(dest_filepath):
                     continue
-                
-                elif file.endswith('.md'):
-                    source_filepath = os.path.join(subdir, file)
-                    dest_filepath = os.path.join(dest_path, os.path.relpath(source_filepath, source_path))
+                os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
+                future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
+                futures.append(future)
 
-                    if os.path.exists(dest_filepath):
-                        continue
-
-                    # Create the directory structure in the translated folder
-                    os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
-
-                    # Schedule the file for translation
-                    future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
-                    futures.append(future)
-
-        # Wait for all files to be translated
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as exc:
-                print(f'Translation generated an exception: {exc}')
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()
+                    pbar.update()
+                except Exception as exc:
+                    print(f'Translation generated an exception: {exc}')
                 
 
 if __name__ == "__main__":
@@ -232,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--file-path', help='If this is set, only the indicated file will be translated.')
     parser.add_argument('-n', '--dont-cd', default=False, type=bool, help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
+    parser.add_argument('-v', '--verbose', default=False, type=bool, help="Get the time it takes to translate each page.")
     args = parser.parse_args()
 
     source_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -241,6 +242,7 @@ if __name__ == "__main__":
     model = args.model
     org_id = args.org_id
     threads = args.threads
+    VERBOSE = args.verbose
 
     openai.api_key = args.api_key
     if org_id:
