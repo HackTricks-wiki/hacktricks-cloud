@@ -123,17 +123,21 @@ def split_text(text):
     for line in lines:
         # If we are in a code block, just add the code to the chunk
         if line.startswith('```'):
-            # If we are in a code block, close it
+            
+            # If we are in a code block, finish it with the "```"
             if in_code_block:
                 chunk += line + '\n'
             
             in_code_block = not in_code_block
             chunks.append(chunk.strip())
             chunk = ''
-        
-        if in_code_block:
-            chunk += line + '\n'
+
+            # If a code block is started, add the "```" to the chunk
+            if in_code_block:
+                chunk += line + '\n'
+            
             continue
+
 
         if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
             len(chunk.split() + line.split()) > 1700:
