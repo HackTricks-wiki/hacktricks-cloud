@@ -241,7 +241,7 @@ if __name__ == "__main__":
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
     parser.add_argument('-m', '--model', default="gpt-3.5-turbo", help='The openai model to use. By default: gpt-3.5-turbo')
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
-    parser.add_argument('-f', '--file-path', help='If this is set, only the indicated file will be translated.')
+    parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (comma separated).')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
     parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
@@ -268,7 +268,9 @@ if __name__ == "__main__":
     
     if args.file_path:
         # Translate only the indicated file
-        translate_file(language, args.file_path, os.path.join(dest_folder, args.file_path), model)
+        translate_files = [f for f in args.file_path.split(',') if f]
+        for file_path in translate_files:
+            translate_file(language, file_path, os.path.join(dest_folder, args.file_path), model)
         # Delete possibly removed files from the master branch
         delete_unique_files(branch)
     else:
