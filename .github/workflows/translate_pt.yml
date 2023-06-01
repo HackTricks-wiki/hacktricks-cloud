@@ -1,4 +1,4 @@
-name: Translator to PT (Protuguese)
+name: Translator to PT (Portuguese)
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Download language branch #Make sure we have last version
         run: |
-          git config --global user.name 'Portuguese Translator'
+          git config --global user.name 'Translator'
           git config --global user.email 'github-actions@github.com'
           git checkout "$BRANCH"
           git pull
@@ -56,12 +56,14 @@ jobs:
             # Run the translation script on each changed file
             git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" | grep -v "SUMMARY.md" | while read -r file; do
               if echo "$file" | grep -qE '\.md$'; then
-                echo "Translating $file"
-                python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" --file-path "$file"
+                PATHS="$file , $PATHS"
               else
                 echo "Skipping $file"
               fi
             done
+
+            echo "Translating $PATHS"
+            python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" --file-paths "$PATHS"
           EOF
 
       - name: Commit and push changes
