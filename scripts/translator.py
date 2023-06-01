@@ -270,7 +270,7 @@ if __name__ == "__main__":
         # Translate only the indicated file
         translate_files = [f for f in args.file_paths.split(' , ') if f]
         for file_path in translate_files:
-            translate_file(language, file_path, os.path.join(dest_folder, args.file_path), model)
+            translate_file(language, file_path, os.path.join(dest_folder, file_path), model)
         # Delete possibly removed files from the master branch
         delete_unique_files(branch)
     else:
