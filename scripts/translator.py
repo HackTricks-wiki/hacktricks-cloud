@@ -52,7 +52,7 @@ def check_gh_branch(branch, temp_folder, file_path):
     # Walk through source directory
     for dirpath, dirnames, filenames in os.walk(temp_folder):
         # Compute destination path
-        dest_path = os.path.join(os.getcwd(), os.path.relpath(dirpath, temp_folder))
+        dest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), os.path.relpath(dirpath, temp_folder))
         
         # Create directory structure in destination, if not already present
         if not os.path.exists(dest_path):
@@ -259,6 +259,8 @@ if __name__ == "__main__":
     openai.api_key = args.api_key
     if org_id:
         openai.organization = org_id
+    
+    print(f"The translated files will be copied to {os.path.dirname(os.path.dirname(os.path.realpath(__file__)))}, make sure this is the expected folder.")
 
     if not args.dont_cd:
         # Change to the parent directory
