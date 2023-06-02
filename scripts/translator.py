@@ -99,8 +99,8 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
     except Exception as e:
         print(e)
         if cont > 6:
-            print(f"Page {file_path} could not be translated with text: {text}")
-            exit(1)
+            print(f"Page {file_path} could not be translated due to count with text: {text}\nReturning text as is.")
+            return text
         if "is currently overloaded" in str(e).lower():
             print("Overloaded, waiting 30 seconds")
             time.sleep(30)
@@ -115,8 +115,8 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
         elif "maximum context length" in str(e).lower():
             print("Maximum context length, splitting text in two and translating separately")
             if slpitted:
-                print(f"Page {file_path} could not be translated with text: {text}")
-                print("Returning text as is")
+                #print(f"Page {file_path} could not be translated with text: {text}")
+                print(f"Page {file_path} could not be translated.\nReturning text as is.")
                 return text
             
             text1 = text.split('\n')[:len(text.split('\n'))//2]
@@ -154,8 +154,8 @@ def split_text(text):
             continue
 
 
-        if (line.startswith('#') and len(chunk.split() + line.split()) > 1100) or \
-            len(chunk.split() + line.split()) > 1600:
+        if (line.startswith('#') and len(chunk.split() + line.split()) > 1400) or \
+            len(chunk.split() + line.split()) > 1750:
             chunks.append(chunk.strip())
             chunk = ''
         
@@ -228,7 +228,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
     #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
-        for source_filepath, dest_filepath in all_markdown_files[:1]:
+        for source_filepath, dest_filepath in all_markdown_files:
             if os.path.exists(dest_filepath):
                 continue
             os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
