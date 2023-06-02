@@ -48,7 +48,7 @@ def delete_unique_files(branch):
     print(f"[+] Deleted {len(unique_files)} files from branch: {branch}")
 
 
-def check_gh_branch(branch, temp_folder, translate_files):
+def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translate_files):
     branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:
@@ -315,4 +315,4 @@ if __name__ == "__main__":
     copy_gitbook_dir(source_folder, dest_folder) 
 
     # Create the branch and copy the translated files
-    check_gh_branch(branch, dest_folder, translate_files)
+    cp_translation_to_repo_dir_and_check_gh_branch(branch, dest_folder, translate_files)
