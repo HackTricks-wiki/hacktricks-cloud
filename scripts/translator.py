@@ -12,7 +12,7 @@ from tqdm import tqdm #pip3 install tqdm
 
 
 MASTER_BRANCH = "master"
-VERBOSE = False
+VERBOSE = True
 
 def get_branch_files(branch):
     """Get a list of all files in a branch."""
@@ -39,6 +39,8 @@ def delete_unique_files(branch):
             subprocess.run(["git", "rm", file])
         
         subprocess.run(["git", "checkout", MASTER_BRANCH])
+    
+    print(f"[+] Deleted {len(unique_files)} files from branch: {branch}")
 
 
 def check_gh_branch(branch, temp_folder, file_path):
@@ -202,8 +204,8 @@ def translate_file(language, file_path, file_dest_path, model):
     with open(file_dest_path, 'w', encoding='utf-8') as f:
         f.write(translated_content)
     
-    if VERBOSE:
-        print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
+    #if VERBOSE:
+    print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
 
 
 def translate_directory(language, source_path, dest_path, model, num_threads):
@@ -214,23 +216,25 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
                 source_filepath = os.path.join(subdir, file)
                 dest_filepath = os.path.join(dest_path, os.path.relpath(source_filepath, source_path))
                 all_markdown_files.append((source_filepath, dest_filepath))
+    
+    print(f"Translating {len(all_markdown_files)} files")
 
-    with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = []
-            for source_filepath, dest_filepath in all_markdown_files:
-                if os.path.exists(dest_filepath):
-                    continue
-                os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
-                future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
-                futures.append(future)
+    #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = []
+        for source_filepath, dest_filepath in all_markdown_files[:10]:
+            if os.path.exists(dest_filepath):
+                continue
+            os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
+            future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
+            futures.append(future)
 
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    future.result()
-                    pbar.update()
-                except Exception as exc:
-                    print(f'Translation generated an exception: {exc}')
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+                #pbar.update()
+            except Exception as exc:
+                print(f'Translation generated an exception: {exc}')
                 
 
 if __name__ == "__main__":
@@ -244,7 +248,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
-    parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
+    #parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
     args = parser.parse_args()
 
     source_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -254,7 +258,7 @@ if __name__ == "__main__":
     model = args.model
     org_id = args.org_id
     threads = args.threads
-    VERBOSE = args.verbose
+    #VERBOSE = args.verbose
 
     openai.api_key = args.api_key
     if org_id:
