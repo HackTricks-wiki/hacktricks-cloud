@@ -48,7 +48,7 @@ def delete_unique_files(branch):
     print(f"[+] Deleted {len(unique_files)} files from branch: {branch}")
 
 
-def check_gh_branch(branch, temp_folder, file_path):
+def check_gh_branch(branch, temp_folder, translate_files):
     branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:
@@ -72,9 +72,9 @@ def check_gh_branch(branch, temp_folder, file_path):
 
     print(f"Translated files copied to branch: {branch}")
     
-    if file_path:
+    if translate_files:
         subprocess.run(['git', 'add', "-A"])
-        subprocess.run(['git', 'commit', '-m', f"Translated {file_path} to {branch}"[:72]])
+        subprocess.run(['git', 'commit', '-m', f"Translated {translate_files} to {branch}"[:72]])
         subprocess.run(['git', 'checkout', MASTER_BRANCH])
         print("Commit created and moved to master branch")
     else:
@@ -228,7 +228,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
     #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
-        for source_filepath, dest_filepath in all_markdown_files[:11]:
+        for source_filepath, dest_filepath in all_markdown_files[:1]:
             if os.path.exists(dest_filepath):
                 continue
             os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
@@ -286,7 +286,8 @@ if __name__ == "__main__":
             os.chdir(parent_dir)
             print('Current working directory has been changed to: ' + os.getcwd())
         else:
-            print('No .git directory found in current or parent directory.')
+            print('No .git directory found in current or parent directory. Exiting.')
+            exit(1)
 
     current_dir = os.getcwd()
     print(f"The translated files will be copied to {current_dir}, make sure this is the expected folder.")
@@ -313,4 +314,4 @@ if __name__ == "__main__":
     copy_gitbook_dir(source_folder, dest_folder) 
 
     # Create the branch and copy the translated files
-    check_gh_branch(branch, dest_folder, args.file_path)
+    check_gh_branch(branch, dest_folder, translate_files)
