@@ -296,6 +296,7 @@ if __name__ == "__main__":
         # Change to the parent directory
         os.chdir(source_folder)
     
+    translate_files = None # Need to initialize it here to avoid error
     if args.file_paths:
         # Translate only the indicated file
         translate_files = [f for f in args.file_paths.split(' , ') if f]
