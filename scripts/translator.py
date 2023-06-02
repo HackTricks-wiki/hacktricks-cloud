@@ -14,6 +14,11 @@ from tqdm import tqdm #pip3 install tqdm
 MASTER_BRANCH = "master"
 VERBOSE = True
 
+def check_git_dir(path):
+    if os.path.isdir(os.path.join(path, '.git')):
+        return True
+    return False
+
 def get_branch_files(branch):
     """Get a list of all files in a branch."""
     command = f"git ls-tree -r --name-only {branch}"
@@ -54,7 +59,7 @@ def check_gh_branch(branch, temp_folder, file_path):
     # Walk through source directory
     for dirpath, dirnames, filenames in os.walk(temp_folder):
         # Compute destination path
-        dest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), os.path.relpath(dirpath, temp_folder))
+        dest_path = os.path.join(os.getcwd(), os.path.relpath(dirpath, temp_folder))
         
         # Create directory structure in destination, if not already present
         if not os.path.exists(dest_path):
@@ -176,6 +181,7 @@ def copy_summary(source_path, dest_path):
     source_filepath = os.path.join(source_path, file_name)
     dest_filepath = os.path.join(dest_path, file_name)
     shutil.copy2(source_filepath, dest_filepath)
+    print("[+] Copied SUMMARY.md")
 
 def translate_file(language, file_path, file_dest_path, model):
     global VERBOSE
@@ -222,7 +228,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
     #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
-        for source_filepath, dest_filepath in all_markdown_files[:10]:
+        for source_filepath, dest_filepath in all_markdown_files[:11]:
             if os.path.exists(dest_filepath):
                 continue
             os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
@@ -264,7 +270,26 @@ if __name__ == "__main__":
     if org_id:
         openai.organization = org_id
     
-    print(f"The translated files will be copied to {os.path.dirname(os.path.dirname(os.path.realpath(__file__)))}, make sure this is the expected folder.")
+    # Start with the current directory.
+    current_dir = os.getcwd()
+
+    # Check the current directory
+    if check_git_dir(current_dir):
+        print('Found .git directory in current directory: ' + current_dir)
+    else:
+        # Check the parent directory
+        parent_dir = os.path.dirname(current_dir)
+        if check_git_dir(parent_dir):
+            print('Found .git directory in parent directory: ' + parent_dir)
+            
+            # Change the current working directory to the parent directory
+            os.chdir(parent_dir)
+            print('Current working directory has been changed to: ' + os.getcwd())
+        else:
+            print('No .git directory found in current or parent directory.')
+
+    current_dir = os.getcwd()
+    print(f"The translated files will be copied to {current_dir}, make sure this is the expected folder.")
 
     if not args.dont_cd:
         # Change to the parent directory
