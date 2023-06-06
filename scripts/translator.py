@@ -87,7 +87,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
     
     messages = [
         {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information."},
-        {"role": "system", "content": f"The following is content from a hacking book about hacking techiques of cloud, SaaS platforms, CI/CD... The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping the markdown syntax. Do not translate things like code, hacking technique names, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
+        {"role": "system", "content": f"The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping the markdown syntax. Do not translate things like code, hacking technique names, hacking word, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
         {"role": "user", "content": text},
     ]
     try:
