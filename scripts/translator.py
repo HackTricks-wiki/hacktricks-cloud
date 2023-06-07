@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import subprocess
 import sys
+import re
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
 
@@ -13,6 +14,7 @@ from tqdm import tqdm #pip3 install tqdm
 
 MASTER_BRANCH = "master"
 VERBOSE = True
+
 
 def check_git_dir(path):
     if os.path.isdir(os.path.join(path, '.git')):
@@ -246,6 +248,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
 if __name__ == "__main__":
     # Set up argparse
     parser = argparse.ArgumentParser(description='Translate gitbook and copy to a new branch.')
+    parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
     parser.add_argument('-l', '--language', required=True, help='Target language for translation.')
     parser.add_argument('-b', '--branch', required=True, help='Branch name to copy translated files.')
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
@@ -263,7 +266,7 @@ if __name__ == "__main__":
     branch = args.branch
     model = args.model
     org_id = args.org_id
-    threads = args.threads
+    num_threads = args.threads
     #VERBOSE = args.verbose
 
     openai.api_key = args.api_key
@@ -301,12 +304,29 @@ if __name__ == "__main__":
         # Translate only the indicated file
         translate_files = [f for f in args.file_paths.split(' , ') if f]
         for file_path in translate_files:
-            translate_file(language, file_path, os.path.join(dest_folder, file_path), model)
+            #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+                futures = []                
+                future = executor.submit(translate_file, language, file_path, os.path.join(dest_folder, file_path), model)
+                futures.append(future)
+
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        future.result()
+                        #pbar.update()
+                    except Exception as exc:
+                        print(f'Translation generated an exception: {exc}')
+        
         # Delete possibly removed files from the master branch
         delete_unique_files(branch)
-    else:
+    
+    elif args.directory:
         # Translate everything
-        translate_directory(language, source_folder, dest_folder, model, threads)
+        translate_directory(language, source_folder, dest_folder, model, num_threads)
+    
+    else:
+        print("You need to indicate either a directory or a list of files to translate.")
+        exit(1)
 
     # Copy summary
     copy_summary(source_folder, dest_folder)
