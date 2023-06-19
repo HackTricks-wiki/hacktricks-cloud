@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import subprocess
 import sys
-import re
+import tiktoken
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
 
@@ -14,6 +14,12 @@ from tqdm import tqdm #pip3 install tqdm
 
 MASTER_BRANCH = "master"
 VERBOSE = True
+
+def reportTokens(prompt, model):
+    encoding = tiktoken.encoding_for_model(model)
+    # print number of tokens in light gray, with first 50 characters of prompt in green. if truncated, show that it is truncated
+    #print("\033[37m" + str(len(encoding.encode(prompt))) + " tokens\033[0m" + " in prompt: " + "\033[92m" + prompt[:50] + "\033[0m" + ("..." if len(prompt) > 50 else ""))
+    return len(encoding.encode(prompt))
 
 
 def check_git_dir(path):
@@ -156,8 +162,8 @@ def split_text(text):
             continue
 
 
-        if (line.startswith('#') and len(chunk.split() + line.split()) > 1400) or \
-            len(chunk.split() + line.split()) > 1750:
+        if (line.startswith('#') and reportTokens(chunk.split() + line.split()) > 1400) or \
+            reportTokens(chunk.split() + line.split()) > 1750:
             chunks.append(chunk.strip())
             chunk = ''
         
