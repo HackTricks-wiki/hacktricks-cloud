@@ -137,7 +137,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
     return response_message.strip()
 
 
-def split_text(text):
+def split_text(text, model):
     lines = text.split('\n')
     chunks = []
     chunk = ''
@@ -162,8 +162,8 @@ def split_text(text):
             continue
 
 
-        if (line.startswith('#') and reportTokens(chunk.split() + line.split()) > 1400) or \
-            reportTokens(chunk.split() + line.split()) > 1750:
+        if (line.startswith('#') and reportTokens(chunk.split() + line.split(), model) > 1400) or \
+            reportTokens(chunk.split() + line.split(), model) > 1750:
             chunks.append(chunk.strip())
             chunk = ''
         
@@ -200,7 +200,7 @@ def translate_file(language, file_path, file_dest_path, model):
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    content_chunks = split_text(content)
+    content_chunks = split_text(content, model)
 
     translated_content = ''
     start_time = time.time()
