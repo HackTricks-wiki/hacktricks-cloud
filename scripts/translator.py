@@ -162,12 +162,13 @@ def split_text(text, model):
             continue
 
 
-        if (line.startswith('#') and reportTokens(chunk.split() + line.split(), model) > 1400) or \
-            reportTokens(chunk.split() + line.split(), model) > 1750:
+        if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > 1400) or \
+            reportTokens(chunk + "\n" + line.strip(), model) > 1750:
+            
             chunks.append(chunk.strip())
             chunk = ''
         
-        chunk += line + '\n'
+        chunk += line.strip() + '\n'
 
     chunks.append(chunk.strip())
     return chunks
