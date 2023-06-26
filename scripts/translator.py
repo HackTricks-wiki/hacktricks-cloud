@@ -131,6 +131,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
             text2 = text.split('\n')[len(text.split('\n'))//2:]
             return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True)
         
+        print("Retrying translation")
         return translate_text(language, text, file_path, model, cont)
 
     response_message = response["choices"][0]["message"]["content"]
