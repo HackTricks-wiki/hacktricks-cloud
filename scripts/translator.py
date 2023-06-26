@@ -95,7 +95,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
     
     messages = [
         {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information."},
-        {"role": "system", "content": f"The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping the markdown syntax. Do not translate things like code, hacking technique names, hacking word, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
+        {"role": "system", "content": f"The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping excatly the same markdown and html syntax. Do not translate things like code, hacking technique names, hacking word, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
         {"role": "user", "content": text},
     ]
     try:
@@ -134,8 +134,20 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
         print("Retrying translation")
         return translate_text(language, text, file_path, model, cont)
 
-    response_message = response["choices"][0]["message"]["content"]
-    return response_message.strip()
+    response_message = response["choices"][0]["message"]["content"].strip()
+
+    # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
+    cont2 = 0
+    while (text.startswith('# ') and not response_message[cont2:].startswith('# ')):
+        cont2 += 1
+        if cont2 > 3:
+            cont2 = 0
+            print(f"Error with initial '#', something went wrong, recheck: {response_message[:30]}")
+            break
+    
+    response_message = response_message[cont2:]
+        
+    return response_message
 
 
 def split_text(text, model):
