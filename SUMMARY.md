@@ -36,7 +36,7 @@
 * [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
   * [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
   * [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
-* [Okta](pentesting-ci-cd/okta.md)
+* [Okta Security](pentesting-ci-cd/okta-security.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
 ## ⛈ Pentesting Cloud
