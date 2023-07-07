@@ -289,6 +289,7 @@
     * [AWS - RDS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-rds-unauthenticated-enum.md)
     * [AWS - Redshift Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-redshift-unauthenticated-enum.md)
     * [AWS - SQS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-sqs-unauthenticated-enum.md)
+    * [AWS - SNS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-sns-unauthenticated-enum.md)
     * [AWS - S3 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-s3-unauthenticated-enum.md)
 * [Azure Pentesting](pentesting-cloud/azure-security/README.md)
   * [Az - Basic Information](pentesting-cloud/azure-security/az-basic-information.md)
