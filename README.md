@@ -1,10 +1,3 @@
----
-description: >-
-  Welcome to the page where you will find each hacking trick/technique/whatever
-  related to Infrastructure I have learnt in CTFs, real life environments, and
-  reading researches and news.
----
-
 # HackTricks Cloud
 
 <details>
