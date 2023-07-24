@@ -130,6 +130,7 @@
     * [AWS - ECR Persistence](pentesting-cloud/aws-security/aws-persistence/aws-ecr-persistence.md)
     * [AWS - ECS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-ecs-persistence.md)
     * [AWS - Elastic Beanstalk Persistence](pentesting-cloud/aws-security/aws-persistence/aws-elastic-beanstalk-persistence.md)
+    * [AWS - EFS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-efs-persistence.md)
     * [AWS - IAM Persistence](pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence.md)
     * [AWS - KMS Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-kms-persistence.md)
     * [AWS - Lambda Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-lambda-persistence/README.md)
