@@ -142,6 +142,7 @@
     * [AWS - Secrets Manager Persistence](pentesting-cloud/aws-pentesting/aws-persistence/aws-secrets-manager-persistence.md)
     * [AWS - STS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sts-persistence.md)
     * [AWS - SQS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sqs-persistence.md)
+    * [AWS - API Gateway Persistence](pentesting-cloud/aws-security/aws-persistence/aws-api-gateway-persistence.md)
   * [AWS - Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/README.md)
     * [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation.md)
     * [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation.md)
