@@ -13,7 +13,7 @@
   * [Abusing Github Actions](pentesting-ci-cd/github-security/abusing-github-actions/README.md)
     * [Gh Actions - Artifact Poisoning](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-artifact-poisoning.md)
     * [GH Actions - Cache Poisoning](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-cache-poisoning.md)
-    * [Gh Actions - Script Injections](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-script-injections.md)
+    * [Gh Actions - Context Script Injections](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-context-script-injections.md)
   * [Basic Github Information](pentesting-ci-cd/github-security/basic-github-information.md)
 * [Gitea Security](pentesting-ci-cd/gitea-security/README.md)
   * [Basic Gitea Information](pentesting-ci-cd/gitea-security/basic-gitea-information.md)
