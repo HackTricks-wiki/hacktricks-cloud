@@ -168,6 +168,7 @@
     * [AWS - Lambda Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lambda-post-exploitation/README.md)
       * [AWS - Steal Lambda Requests](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lambda-post-exploitation/aws-warm-lambda-persistence.md)
     * [AWS - Lightsail Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-lightsail-post-exploitation.md)
+    * [AWS - Organizations Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-organizations-post-exploitation.md)
     * [AWS - RDS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation.md)
     * [AWS - S3 Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-s3-post-exploitation.md)
     * [AWS - Secrets Manager Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-secrets-manager-post-exploitation.md)
