@@ -156,7 +156,7 @@
     * [AWS - Control Tower Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-control-tower-post-exploitation.md)
     * [AWS - DynamoDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation.md)
     * [AWS - EC2, EBS, SSM & VPC Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md)
-      * [AWS - EBS Spanshot Dump](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-spanshot-dump.md)
+      * [AWS - EBS Snapshot Dump](pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-snapshot-dump.md)
       * [AWS - SSM Post-Exploitation](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-ssm-post-exploitation.md)
       * [AWS - Malicious VPC Mirror](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-malicious-vpc-mirror.md)
     * [AWS - ECR Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-ecr-post-exploitation.md)
