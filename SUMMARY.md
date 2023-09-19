@@ -151,6 +151,7 @@
     * [AWS - API Gateway Persistence](pentesting-cloud/aws-security/aws-persistence/aws-api-gateway-persistence.md)
   * [AWS - Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/README.md)
     * [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation.md)
+    * [AWS - CloudFront Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation.md)
     * [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation.md)
       * [AWS Codebuild - Token Leakage](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
     * [AWS - Control Tower Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-control-tower-post-exploitation.md)
