@@ -266,7 +266,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads, cl
                 
 
 if __name__ == "__main__":
-    print("- Version 1.1")
+    print("- Version 1.1.1")
     # Set up argparse
     parser = argparse.ArgumentParser(description='Translate gitbook and copy to a new branch.')
     parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
