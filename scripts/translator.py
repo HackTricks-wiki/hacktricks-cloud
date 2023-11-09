@@ -286,13 +286,13 @@ if __name__ == "__main__":
     language = args.language.capitalize()
     branch = args.branch
     model = args.model
-    org_id = args.org_id
+    org_id = args.org_id 
     num_threads = args.threads
     #VERBOSE = args.verbose
 
     client = OpenAI(
         api_key=args.api_key,
-        org_id=org_id
+        organization=org_id
     )
     
     # Start with the current directory.
