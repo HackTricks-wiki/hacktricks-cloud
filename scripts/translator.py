@@ -130,10 +130,10 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
             
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True)
+            return translate_text(language, '\n'.join(text1), file_path, model, cont, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True, client)
         
         print("Retrying translation")
-        return translate_text(language, text, file_path, model, cont)
+        return translate_text(language, text, file_path, model, cont, False, client)
 
     response_message = response["choices"][0]["message"]["content"].strip()
 
@@ -224,7 +224,7 @@ def translate_file(language, file_path, file_dest_path, model, client):
         if chunk.startswith('```'):
             translated_content += chunk + '\n'
         else:
-            translated_content += translate_text(language, chunk, file_path, model, client) + '\n'
+            translated_content += translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client) + '\n'
     
     elapsed_time = time.time() - start_time
 
