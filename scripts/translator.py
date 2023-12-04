@@ -9,6 +9,7 @@ import sys
 import tiktoken
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
+import traceback
 
 
 
@@ -262,7 +263,9 @@ def translate_directory(language, source_path, dest_path, model, num_threads, cl
                 future.result()
                 #pbar.update()
             except Exception as exc:
+                tb = traceback.format_exc()
                 print(f'Translation generated an exception: {exc}')
+                print("Traceback:", tb)
                 
 
 if __name__ == "__main__":
