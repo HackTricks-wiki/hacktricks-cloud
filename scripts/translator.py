@@ -135,7 +135,6 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
         print("Retrying translation")
         return translate_text(language, text, file_path, model, cont, False, client)
 
-    print(response)
     response_message = response.choices[0].message.content.strip()
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
