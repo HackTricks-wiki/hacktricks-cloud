@@ -1,6 +1,6 @@
 import argparse
 import os
-from openai import OpenAI #pip3 install openai
+import openai #pip3 install openai
 import time
 import shutil
 import tempfile
