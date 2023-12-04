@@ -1,6 +1,6 @@
 import argparse
 import os
-import openai #pip3 install openai
+from openai import OpenAI #pip3 install openai
 import time
 import shutil
 import tempfile
@@ -9,6 +9,7 @@ import sys
 import tiktoken
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
+import traceback
 
 
 
@@ -89,7 +90,7 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
         print("No commiting anything, leaving in language branch")
 
 
-def translate_text(language, text, file_path, model, cont=0, slpitted=False):
+def translate_text(language, text, file_path, model, cont=0, slpitted=False, client=None):
     if not text:
         return text
     
@@ -99,7 +100,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
         {"role": "user", "content": text},
     ]
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0
@@ -129,12 +130,12 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False):
             
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True)
+            return translate_text(language, '\n'.join(text1), file_path, model, cont, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True, client)
         
         print("Retrying translation")
-        return translate_text(language, text, file_path, model, cont)
+        return translate_text(language, text, file_path, model, cont, False, client)
 
-    response_message = response["choices"][0]["message"]["content"].strip()
+    response_message = response.choices[0].message.content.strip()
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
@@ -205,7 +206,7 @@ def copy_summary(source_path, dest_path):
     shutil.copy2(source_filepath, dest_filepath)
     print("[+] Copied SUMMARY.md")
 
-def translate_file(language, file_path, file_dest_path, model):
+def translate_file(language, file_path, file_dest_path, model, client):
     global VERBOSE
     
     if file_path.endswith('SUMMARY.md'):
@@ -223,7 +224,7 @@ def translate_file(language, file_path, file_dest_path, model):
         if chunk.startswith('```'):
             translated_content += chunk + '\n'
         else:
-            translated_content += translate_text(language, chunk, file_path, model) + '\n'
+            translated_content += translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client) + '\n'
     
     elapsed_time = time.time() - start_time
 
@@ -236,7 +237,7 @@ def translate_file(language, file_path, file_dest_path, model):
     print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
 
 
-def translate_directory(language, source_path, dest_path, model, num_threads):
+def translate_directory(language, source_path, dest_path, model, num_threads, client):
     all_markdown_files = []
     for subdir, dirs, files in os.walk(source_path):
         for file in files:
@@ -254,7 +255,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
             if os.path.exists(dest_filepath):
                 continue
             os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
-            future = executor.submit(translate_file, language, source_filepath, dest_filepath, model)
+            future = executor.submit(translate_file, language, source_filepath, dest_filepath, model, client)
             futures.append(future)
 
         for future in concurrent.futures.as_completed(futures):
@@ -262,10 +263,13 @@ def translate_directory(language, source_path, dest_path, model, num_threads):
                 future.result()
                 #pbar.update()
             except Exception as exc:
+                tb = traceback.format_exc()
                 print(f'Translation generated an exception: {exc}')
+                print("Traceback:", tb)
                 
 
 if __name__ == "__main__":
+    print("- Version 1.1.1")
     # Set up argparse
     parser = argparse.ArgumentParser(description='Translate gitbook and copy to a new branch.')
     parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
@@ -285,13 +289,14 @@ if __name__ == "__main__":
     language = args.language.capitalize()
     branch = args.branch
     model = args.model
-    org_id = args.org_id
+    org_id = args.org_id 
     num_threads = args.threads
     #VERBOSE = args.verbose
 
-    openai.api_key = args.api_key
-    if org_id:
-        openai.organization = org_id
+    client = OpenAI(
+        api_key=args.api_key,
+        organization=org_id
+    )
     
     # Start with the current directory.
     current_dir = os.getcwd()
@@ -327,7 +332,7 @@ if __name__ == "__main__":
             #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
                 futures = []                
-                future = executor.submit(translate_file, language, file_path, os.path.join(dest_folder, file_path), model)
+                future = executor.submit(translate_file, language, file_path, os.path.join(dest_folder, file_path), model, client)
                 futures.append(future)
 
                 for future in concurrent.futures.as_completed(futures):
@@ -342,7 +347,7 @@ if __name__ == "__main__":
     
     elif args.directory:
         # Translate everything
-        translate_directory(language, source_folder, dest_folder, model, num_threads)
+        translate_directory(language, source_folder, dest_folder, model, num_threads, client)
     
     else:
         print("You need to indicate either a directory or a list of files to translate.")
