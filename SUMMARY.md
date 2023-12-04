@@ -40,7 +40,8 @@
 * [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
   * [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
   * [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
-* [Okta Security](pentesting-ci-cd/okta-security.md)
+* [Okta Security](pentesting-ci-cd/okta-security/README.md)
+  * [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
 * [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
