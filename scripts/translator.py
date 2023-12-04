@@ -289,6 +289,7 @@ if __name__ == "__main__":
     org_id = args.org_id 
     num_threads = args.threads
     #VERBOSE = args.verbose
+    openai.api_key = args.api_key
     
     # Start with the current directory.
     current_dir = os.getcwd()
