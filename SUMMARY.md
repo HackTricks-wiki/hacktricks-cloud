@@ -122,6 +122,7 @@
     * [GCP - Source Repositories Enum](pentesting-cloud/gcp-security/gcp-services/gcp-source-repositories-enum.md)
     * [GCP - Stackdriver Enum](pentesting-cloud/gcp-security/gcp-services/gcp-stackdriver-enum.md)
     * [GCP - Storage Enum](pentesting-cloud/gcp-security/gcp-services/gcp-storage-enum.md)
+  * [GCP to Workspace Pivoting](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting.md)
   * [GCP - Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum/README.md)
     * [GCP - Public Buckets Privilege Escalation](pentesting-cloud/gcp-security/gcp-unauthenticated-enum/gcp-public-buckets-privilege-escalation.md)
 * [Workspace Pentesting](pentesting-cloud/workspace-security.md)
