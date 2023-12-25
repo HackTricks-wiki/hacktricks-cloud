@@ -15,7 +15,7 @@ import traceback
 
 MASTER_BRANCH = "master"
 VERBOSE = True
-MAX_TOKENS = 20000 #gpt-4-1106-preview
+MAX_TOKENS = 10000 #gpt-4-1106-preview
 
 def reportTokens(prompt, model):
     encoding = tiktoken.encoding_for_model(model)
