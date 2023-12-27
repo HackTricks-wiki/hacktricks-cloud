@@ -337,6 +337,7 @@
     * [Az - Pass the PRT](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/pass-the-prt.md)
     * [Az - Phishing Primary Refresh Token (Microsoft Entra)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-phishing-primary-refresh-token-microsoft-entra.md)
     * [Az - Primary Refresh Token (PRT)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md)
+    * [Az - Roadtx - Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-roadtx-authentication.md)
   * [Az - Persistence](pentesting-cloud/azure-security/az-persistence.md)
   * [Az - Dynamic Groups Privesc](pentesting-cloud/azure-security/dynamic-groups.md)
 * [Digital Ocean Pentesting](pentesting-cloud/digital-ocean-pentesting/README.md)
