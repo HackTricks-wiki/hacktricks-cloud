@@ -327,6 +327,8 @@
   * [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
   * [Az - Lateral Movement (Cloud - On-Prem)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/README.md)
     * [Az AD Connect - Hybrid Identity](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/README.md)
+      * [Az- Synchronising New Users](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/az-synchronising-new-users.md)
+      * [Az - Default Applications](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/az-default-applications.md)
       * [Az - Cloud Kerberos Trust](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/az-cloud-kerberos-trust.md)
       * [Az - Federation](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/federation.md)
       * [Az - PHS - Password Hash Sync](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/phs-password-hash-sync.md)
