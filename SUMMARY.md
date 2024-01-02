@@ -342,6 +342,8 @@
     * [Az - Primary Refresh Token (PRT)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md)
     * [Az - Roadtx - Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-roadtx-authentication.md)
   * [Az - Persistence](pentesting-cloud/azure-security/az-persistence.md)
+  * [Az - Conditional Access Policies / MFA Bypass](pentesting-cloud/azure-security/az-conditional-access-policies-mfa-bypass.md)
+  * [Az - Device Registration](pentesting-cloud/azure-security/az-device-registration.md)
   * [Az - Dynamic Groups Privesc](pentesting-cloud/azure-security/dynamic-groups.md)
 * [Digital Ocean Pentesting](pentesting-cloud/digital-ocean-pentesting/README.md)
   * [DO - Basic Information](pentesting-cloud/digital-ocean-pentesting/do-basic-information.md)
