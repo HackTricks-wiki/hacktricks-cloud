@@ -180,6 +180,7 @@
     * [AWS - SQS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation.md)
     * [AWS - SSO & identitystore Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sso-and-identitystore-post-exploitation.md)
     * [AWS - STS Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-sts-post-exploitation.md)
+    * [AWS - VPN Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation.md)
   * [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     * [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc.md)
     * [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc.md)
