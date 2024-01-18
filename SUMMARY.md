@@ -118,6 +118,7 @@
     * [GCP - Cloud Build Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-build-enum.md)
     * [GCP - Cloud Functions Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-functions-enum.md)
     * [GCP - Cloud Run Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-run-enum.md)
+    * [GCP - Cloud SQL](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-sql.md)
     * [GCP - Compute Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-compute-instances-enum/README.md)
       * [GCP - Compute Instance](pentesting-cloud/gcp-pentesting/gcp-services/gcp-compute-instances-enum/gcp-compute-instance.md)
       * [GCP - VPC & Networking](pentesting-cloud/gcp-pentesting/gcp-services/gcp-compute-instances-enum/gcp-vpc-and-networking.md)
