@@ -78,6 +78,7 @@
     * [GCP - Cloud Functions Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-functions-post-exploitation.md)
     * [GCP - Cloud Run Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-run-post-exploitation.md)
     * [GCP - Cloud SQL Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-sql-post-exploitation.md)
+    * [GCP - Compute Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-compute-post-exploitation.md)
     * [GCP - IAM Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-iam-post-exploitation.md)
     * [GCP - KMS Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-kms-post-exploitation.md)
     * [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
