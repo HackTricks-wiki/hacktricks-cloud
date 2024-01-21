@@ -125,6 +125,7 @@
     * [GCP - AI Platform Enum](pentesting-cloud/gcp-security/gcp-services/gcp-ai-platform-enum.md)
     * [GCP - App Engine Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-app-engine-enum.md)
     * [GCP - Artifact Registry Enum](pentesting-cloud/gcp-security/gcp-services/gcp-artifact-registry-enum.md)
+    * [GCP - Bigquery](pentesting-cloud/gcp-security/gcp-services/gcp-bigquery.md)
     * [GCP - Cloud Build Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-build-enum.md)
     * [GCP - Cloud Functions Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-functions-enum.md)
     * [GCP - Cloud Run Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-cloud-run-enum.md)
