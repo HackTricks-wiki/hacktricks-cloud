@@ -162,6 +162,7 @@
     * [GCP - Cloud Run Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-cloud-run-unauthenticated-enum.md)
     * [GCP - Cloud SQL Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-cloud-sql-unauthenticated-enum.md)
     * [GCP - Compute Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-compute-unauthenticated-enum.md)
+    * [GCP - IAM, Principals & Org Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-iam-principals-and-org-unauthenticated-enum.md)
     * [GCP - Source Repositories Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-source-repositories-unauthenticated-enum.md)
     * [GCP - Storage Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-storage-unauthenticated-enum/README.md)
       * [GCP - Public Buckets Privilege Escalation](pentesting-cloud/gcp-security/gcp-unaunthenticated-enum-and-access/gcp-storage-unauthenticated-enum/gcp-public-buckets-privilege-escalation.md)
