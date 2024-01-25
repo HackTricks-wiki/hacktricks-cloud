@@ -90,6 +90,7 @@
     * [GCP - AppEngine Privesc](pentesting-cloud/gcp-pentesting/gcp-privilege-escalation/gcp-appengine-privesc.md)
     * [GCP - Artifact Registry Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md)
     * [GCP - BigQuery Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md)
+    * [GCP - ClientAuthConfig Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-clientauthconfig-privesc.md)
     * [GCP - Cloudbuild Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md)
     * [GCP - Cloudfunctions Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md)
     * [GCP - Cloudidentity Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudidentity-privesc.md)
