@@ -15,6 +15,7 @@ import traceback
 
 MASTER_BRANCH = "master"
 VERBOSE = True
+MAX_TOKENS = 10000 #gpt-4-1106-preview
 
 def reportTokens(prompt, model):
     encoding = tiktoken.encoding_for_model(model)
@@ -152,6 +153,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
 
 
 def split_text(text, model):
+    global MAX_TOKENS
     lines = text.split('\n')
     chunks = []
     chunk = ''
@@ -176,8 +178,8 @@ def split_text(text, model):
             continue
 
 
-        if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > 1400) or \
-            reportTokens(chunk + "\n" + line.strip(), model) > 1750:
+        if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS*0.8) or \
+            reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS:
             
             chunks.append(chunk.strip())
             chunk = ''
@@ -300,6 +302,10 @@ if __name__ == "__main__":
     
     # Start with the current directory.
     current_dir = os.getcwd()
+
+    # Check if model is gpt-3.5
+    if "gpt-3.5" in model:
+        MAX_TOKENS = 2000
 
     # Check the current directory
     if check_git_dir(current_dir):
