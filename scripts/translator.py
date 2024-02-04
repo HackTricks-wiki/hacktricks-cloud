@@ -278,7 +278,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--language', required=True, help='Target language for translation.')
     parser.add_argument('-b', '--branch', required=True, help='Branch name to copy translated files.')
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
-    parser.add_argument('-m', '--model', default="gpt-3.5-turbo-0125	", help='The openai model to use. By default: gpt-3.5-turbo-0125	')
+    parser.add_argument('-m', '--model', default="gpt-3.5-turbo", help='The openai model to use. By default: gpt-3.5-turbo')
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
