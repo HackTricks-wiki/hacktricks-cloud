@@ -304,9 +304,7 @@ if __name__ == "__main__":
     current_dir = os.getcwd()
 
     # Check if model is gpt-3.5
-    if model == "gpt-3.5-turbo-0125":
-        MAX_TOKENS = 10000
-    elif "gpt-3.5" in model:
+    if "gpt-3.5" in model:
         MAX_TOKENS = 2000
 
     # Check the current directory
