@@ -43,7 +43,7 @@
 * [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
-## ⛈ Pentesting Cloud
+## ⛈️ Pentesting Cloud
 
 * [Pentesting Cloud Methodology](pentesting-cloud/pentesting-cloud-methodology.md)
 * [Kubernetes Pentesting](pentesting-cloud/kubernetes-security/README.md)
