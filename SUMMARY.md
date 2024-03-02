@@ -154,7 +154,7 @@
     * [GCP - Monitoring Enum](pentesting-cloud/gcp-security/gcp-services/gcp-monitoring-enum.md)
     * [GCP - Pub/Sub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-pub-sub.md)
     * [GCP - Secrets Manager Enum](pentesting-cloud/gcp-pentesting/gcp-services/gcp-secrets-manager-enum.md)
-    * [GCP - Security](pentesting-cloud/gcp-security/gcp-services/gcp-security.md)
+    * [GCP - Security Enum](pentesting-cloud/gcp-security/gcp-services/gcp-security-enum.md)
     * [GCP - Source Repositories Enum](pentesting-cloud/gcp-security/gcp-services/gcp-source-repositories-enum.md)
     * [GCP - Spanner Enum](pentesting-cloud/gcp-security/gcp-services/gcp-spanner-enum.md)
     * [GCP - Stackdriver Enum](pentesting-cloud/gcp-security/gcp-services/gcp-stackdriver-enum.md)
