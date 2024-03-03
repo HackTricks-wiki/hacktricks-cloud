@@ -211,6 +211,7 @@
     * [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation.md)
       * [AWS Codebuild - Token Leakage](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
     * [AWS - Control Tower Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-control-tower-post-exploitation.md)
+    * [AWS - DLM Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-dlm-post-exploitation.md)
     * [AWS - DynamoDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation.md)
     * [AWS - EC2, EBS, SSM & VPC Post Exploitation](pentesting-cloud/aws-pentesting/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md)
       * [AWS - EBS Snapshot Dump](pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-snapshot-dump.md)
