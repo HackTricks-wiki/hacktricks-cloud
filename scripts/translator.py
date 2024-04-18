@@ -96,7 +96,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
         return text
     
     messages = [
-        {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information."},
+        {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information. Do not return invalid Unicode output."},
         {"role": "system", "content": f"The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping excatly the same markdown and html syntax. Do not translate things like code, hacking technique names, hacking word, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
         {"role": "user", "content": text},
     ]
@@ -107,23 +107,32 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
             temperature=0
         )
     except Exception as e:
-        print(e)
+        print("Python Exception: " + str(e))
         if cont > 6:
             print(f"Page {file_path} could not be translated due to count with text: {text}\nReturning text as is.")
             return text
+        
         if "is currently overloaded" in str(e).lower():
             print("Overloaded, waiting 30 seconds")
             time.sleep(30)
+        
         elif "timeout" in str(e).lower():
             print("Timeout, waiting 30 seconds")
             cont += 1
             time.sleep(30)
+        
         elif "rate limit" in str(e).lower():
             print("Rate limit, waiting 60 seconds")
             cont += 1
             time.sleep(60)
-        elif "maximum context length" in str(e).lower():
-            print("Maximum context length, splitting text in two and translating separately")
+        
+        elif "maximum context length" in str(e).lower() or "generated invalid Unicode output" in str(e).lower():
+            if "maximum context length" in str(e).lower():
+                print("Maximum context length, splitting text in two and translating separately")
+
+            elif "generated invalid Unicode output" in str(e).lower():
+                print("Invalid unicode error detected.")
+
             if slpitted:
                 #print(f"Page {file_path} could not be translated with text: {text}")
                 print(f"Page {file_path} could not be translated.\nReturning text as is.")
@@ -132,7 +141,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
             return translate_text(language, '\n'.join(text1), file_path, model, cont, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True, client)
-        
+
         print("Retrying translation")
         return translate_text(language, text, file_path, model, cont, False, client)
 
