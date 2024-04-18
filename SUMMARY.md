@@ -309,6 +309,7 @@
     * [AWS - DocumentDB Enum](pentesting-cloud/aws-security/aws-services/aws-documentdb-enum.md)
     * [AWS - DynamoDB Enum](pentesting-cloud/aws-security/aws-services/aws-dynamodb-enum.md)
     * [AWS - EC2, EBS, ELB, SSM, VPC & VPN Enum](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md)
+      * [AWS - Nitro](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-nitro.md)
       * [AWS - VPC & Networking Basic Information](pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/aws-vpc-and-networking-basic-information.md)
     * [AWS - ECR Enum](pentesting-cloud/aws-security/aws-services/aws-ecr-enum.md)
     * [AWS - ECS Enum](pentesting-cloud/aws-security/aws-services/aws-ecs-enum.md)
