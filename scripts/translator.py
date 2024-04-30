@@ -126,7 +126,7 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
             cont += 1
             time.sleep(60)
         
-        elif "maximum context length" in str(e).lower() or "generated invalid Unicode output" in str(e).lower():
+        elif "maximum context length" in str(e).lower() or "generated invalid unicode output" in str(e).lower():
             if "maximum context length" in str(e).lower():
                 print("Maximum context length, splitting text in two and translating separately")
 
