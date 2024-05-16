@@ -111,6 +111,9 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
         if cont > 6:
             print(f"Page {file_path} could not be translated due to count with text: {text}\nReturning text as is.")
             return text
+        if "exceeded your current quota" in str(e).lower():
+            print("Critical error: Quota exceeded")
+            exit(1)
         
         if "is currently overloaded" in str(e).lower():
             print("Overloaded, waiting 30 seconds")
