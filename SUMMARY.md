@@ -59,10 +59,13 @@
     * [Pod Escape Privileges](pentesting-cloud/kubernetes-security/abusing-roles-clusterroles-in-kubernetes/pod-escape-privileges.md)
     * [Kubernetes Roles Abuse Lab](pentesting-cloud/kubernetes-security/abusing-roles-clusterroles-in-kubernetes/kubernetes-roles-abuse-lab.md)
   * [Kubernetes Namespace Escalation](pentesting-cloud/kubernetes-security/kubernetes-namespace-escalation.md)
+  * [Kubernetes Namespace Escalation](pentesting-cloud/kubernetes-security/kubernetes-external-secrets-operator.md)
   * [Kubernetes Pivoting to Clouds](pentesting-cloud/kubernetes-security/kubernetes-pivoting-to-clouds.md)
   * [Kubernetes Network Attacks](pentesting-cloud/kubernetes-security/kubernetes-network-attacks.md)
   * [Kubernetes Hardening](pentesting-cloud/kubernetes-security/kubernetes-hardening/README.md)
     * [Kubernetes SecurityContext(s)](pentesting-cloud/kubernetes-security/kubernetes-hardening/kubernetes-securitycontext-s.md)
+  * [Kubernetes - OPA Gatekeeper](pentesting-cloud/kubernetes-security/kubernetes-opa-gatekeeper/README.md)
+    * [Kubernetes - OPA Gatekeeper bypass](pentesting-cloud/kubernetes-security/kubernetes-opa-gatekeeper/kubernetes-opa-gatekeeper-bypass.md)
 * [GCP Pentesting](pentesting-cloud/gcp-security/README.md)
   * [GCP - Basic Information](pentesting-cloud/gcp-security/gcp-basic-information/README.md)
     * [GCP - Federation Abuse](pentesting-cloud/gcp-security/gcp-basic-information/gcp-federation-abuse.md)
@@ -423,6 +426,14 @@
   * [IBM - Hyper Protect Crypto Services](pentesting-cloud/ibm-cloud-pentesting/ibm-hyper-protect-crypto-services.md)
   * [IBM - Hyper Protect Virtual Server](pentesting-cloud/ibm-cloud-pentesting/ibm-hyper-protect-virtual-server.md)
   * [IBM - Basic Information](pentesting-cloud/ibm-cloud-pentesting/ibm-basic-information.md)
+* [OpenShift Pentesting](pentesting-cloud/openshift-pentesting/README.md)
+  * [OpenShift - Basic information](pentesting-cloud/openshift-pentesting/openshift-basic-information.md)
+  * [Openshift - SCC](pentesting-cloud/openshift-pentesting/openshift-scc.md)
+  * [OpenShift - Jenkins](pentesting-cloud/openshift-pentesting/openshift-jenkins/README.md)
+  * [OpenShift - Privilege Escalation](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/README.md)
+    * [OpenShift - Missing Service Account](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-missing-service-account.md)
+    * [OpenShift - Tekton](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-tekton.md)
+    * [OpenShift - SCC bypass](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md)
 
 ## 🛫 Pentesting Network Services
 
