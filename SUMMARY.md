@@ -430,7 +430,7 @@
   * [OpenShift - Basic information](pentesting-cloud/openshift-pentesting/openshift-basic-information.md)
   * [Openshift - SCC](pentesting-cloud/openshift-pentesting/openshift-scc.md)
   * [OpenShift - Jenkins](pentesting-cloud/openshift-pentesting/openshift-jenkins/README.md)
-    * [OpenShift - Jenkins Build Pod Override](pentesting-cloud/openshift-pentesting/openshift-jenkins/README.md)
+    * [OpenShift - Jenkins Build Pod Override](pentesting-cloud/openshift-pentesting/openshift-jenkins/openshift-jenkins-build-overrides.md)
   * [OpenShift - Privilege Escalation](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/README.md)
     * [OpenShift - Missing Service Account](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-missing-service-account.md)
     * [OpenShift - Tekton](pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-tekton.md)
