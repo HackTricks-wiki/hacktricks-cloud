@@ -129,6 +129,7 @@
     * [GCP - Cloud Shell Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-cloud-shell-persistence.md)
     * [GCP - Cloud SQL Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-cloud-sql-persistence.md)
     * [GCP - Compute Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-compute-persistence.md)
+    * [GCP - Dataflow Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-dataflow-persistence.md)
     * [GCP - Filestore Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-filestore-persistence.md)
     * [GCP - Logging Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-logging-persistence.md)
     * [GCP - Non-svc Persistance](pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistance.md)
