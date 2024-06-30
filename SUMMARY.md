@@ -403,6 +403,7 @@
       * [Az - PHS - Password Hash Sync](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/phs-password-hash-sync.md)
       * [Az - PTA - Pass-through Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/pta-pass-through-authentication.md)
       * [Az - Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/azure-ad-connect-hybrid-identity/seamless-sso.md)
+      * [Az - Arc vulnerable GPO Deploy Script](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-arc-vulnerable-gpo-deploy-script.md)
     * [Az - Local Cloud Credentials](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-local-cloud-credentials.md)
     * [Az - Pass the Cookie](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-cookie.md)
     * [Az - Pass the Certificate](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-certificate.md)
