@@ -409,6 +409,7 @@
     * [Az - Pass the Certificate](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-certificate.md)
     * [Az - Pass the PRT](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/pass-the-prt.md)
     * [Az - Phishing Primary Refresh Token (Microsoft Entra)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-phishing-primary-refresh-token-microsoft-entra.md)
+    * [Az - Processes Memory Access Token](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-processes-memory-access-token.md)
     * [Az - Primary Refresh Token (PRT)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md)
   * [Az - Persistence](pentesting-cloud/azure-security/az-persistence.md)
   * [Az - Device Registration](pentesting-cloud/azure-security/az-device-registration.md)
