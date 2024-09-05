@@ -30,6 +30,7 @@
   * [Jenkins RCE with Groovy Script](pentesting-ci-cd/jenkins-security/jenkins-rce-with-groovy-script.md)
   * [Jenkins RCE Creating/Modifying Project](pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-project.md)
   * [Jenkins RCE Creating/Modifying Pipeline](pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-pipeline.md)
+  * [Jenkins Arbitrary File Read to RCE via "Remember Me"](pentesting-ci-cd/jenkins-security/jenkins-arbitrary-file-read-to-rce-via-remember-me.md)
   * [Jenkins Dumping Secrets from Groovy](pentesting-ci-cd/jenkins-security/jenkins-dumping-secrets-from-groovy.md)
 * [Apache Airflow Security](pentesting-ci-cd/apache-airflow-security/README.md)
   * [Airflow Configuration](pentesting-ci-cd/apache-airflow-security/airflow-configuration.md)
