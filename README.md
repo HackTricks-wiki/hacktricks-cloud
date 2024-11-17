@@ -1,7 +1,7 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-Learn & practice AWS Hacking:<img src=".gitbook/assets/image (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1).png" alt="" data-size="line">\
+Learn & practice AWS Hacking:<img src=".gitbook/assets/image (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1).png" alt="" data-size="line">\
 Learn & practice GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
@@ -52,7 +52,7 @@ Welcome to the page where you will find each **hacking trick/technique/whatever 
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-Learn & practice AWS Hacking:<img src=".gitbook/assets/image (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1).png" alt="" data-size="line">\
+Learn & practice AWS Hacking:<img src=".gitbook/assets/image (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1).png" alt="" data-size="line">\
 Learn & practice GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
