@@ -399,7 +399,7 @@
     * [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-device-code-authentication-phishing.md)
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
-    * [Az - Entra ID (formerly AzureAD - AAD)](pentesting-cloud/azure-security/az-services/az-azuread.md)
+    * [Az - Entra ID (formerly AzureAD - AAD) & IAM](pentesting-cloud/azure-security/az-services/az-azuread.md)
     * [Az - Management Groups, Subscriptions & Resource Groups](pentesting-cloud/azure-security/az-services/az-management-groups-subscriptions-and-resource-groups.md)
     * [Az - ACR](pentesting-cloud/azure-security/az-services/az-acr.md)
     * [Az - Application Proxy](pentesting-cloud/azure-security/az-services/az-application-proxy.md)
