@@ -1,8 +1,8 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-AWS Hacking'i öğrenin ve pratik yapın:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-GCP Hacking'i öğrenin ve pratik yapın: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+AWS Hacking'i öğrenin ve pratik yapın:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+GCP Hacking'i öğrenin ve pratik yapın: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
@@ -17,10 +17,10 @@ GCP Hacking'i öğrenin ve pratik yapın: <img src=".gitbook/assets/image (2).pn
 
 <figure><img src=".gitbook/assets/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logoları ve hareket tasarımı_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
+_Hacktricks logoları & hareket tasarımı_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
 
 {% hint style="success" %}
-**CTF'lerde**, **gerçek** yaşam **ortamlarında**, **araştırma yaparak** ve **araştırmaları ve haberleri okuyarak** öğrendiğim her **hacking ipucu/teknik/CI/CD & Cloud ile ilgili her şey** bulacağınız sayfaya hoş geldiniz.
+**CTF'lerde**, **gerçek** yaşam **ortamlarında**, **araştırma yaparak** ve **araştırmaları** ve haberleri okuyarak öğrendiğim her **hacking ipucu/teknik/CI/CD & Cloud ile ilgili her şey** için bu sayfaya hoş geldiniz.
 {% endhint %}
 
 ### **Pentesting CI/CD Metodolojisi**
@@ -52,8 +52,8 @@ _Hacktricks logoları ve hareket tasarımı_ [_@ppiernacho_](https://www.instagr
 ![HackTricks Cloud Github İstatistikleri](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-AWS Hacking'i öğrenin ve pratik yapın:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-GCP Hacking'i öğrenin ve pratik yapın: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+AWS Hacking'i öğrenin ve pratik yapın:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+GCP Hacking'i öğrenin ve pratik yapın: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
