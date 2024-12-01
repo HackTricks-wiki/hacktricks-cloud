@@ -1,8 +1,8 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-AWS हैकिंग सीखें और अभ्यास करें:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-GCP हैकिंग सीखें और अभ्यास करें: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+AWS हैकिंग सीखें और अभ्यास करें:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+GCP हैकिंग सीखें और अभ्यास करें: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
@@ -20,40 +20,40 @@ GCP हैकिंग सीखें और अभ्यास करें: <
 _Hacktricks लोगो और मोशन डिज़ाइन_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ द्वारा।_
 
 {% hint style="success" %}
-स्वागत है उस पृष्ठ पर जहाँ आप प्रत्येक **हैकिंग ट्रिक/तकनीक/जो भी CI/CD और क्लाउड से संबंधित है** जो मैंने **CTFs**, **वास्तविक** जीवन **पर्यावरण**, **शोध**, और **शोध और समाचार पढ़ने** में सीखा है।
+उस पृष्ठ पर आपका स्वागत है जहाँ आप **CI/CD और क्लाउड** से संबंधित प्रत्येक **हैकिंग ट्रिक/तकनीक/जो भी** मैंने **CTFs**, **वास्तविक** जीवन **पर्यावरण**, **शोध**, और **शोध और समाचार पढ़ने** में सीखा है।
 {% endhint %}
 
-### **Pentesting CI/CD Methodology**
+### **Pentesting CI/CD विधि**
 
-**HackTricks CI/CD विधि में आप CI/CD गतिविधियों से संबंधित बुनियादी ढांचे का परीक्षण कैसे करें, यह पाएंगे।** एक **परिचय के लिए निम्नलिखित पृष्ठ पढ़ें:**
+**HackTricks CI/CD विधि में आप CI/CD गतिविधियों से संबंधित बुनियादी ढांचे का पेंटेस्ट कैसे करें, यह पाएंगे।** एक **परिचय के लिए निम्नलिखित पृष्ठ पढ़ें:**
 
 {% content-ref url="pentesting-ci-cd/pentesting-ci-cd-methodology.md" %}
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 {% endcontent-ref %}
 
-### Pentesting Cloud Methodology
+### Pentesting Cloud विधि
 
-**HackTricks Cloud विधि में आप क्लाउड वातावरण का परीक्षण कैसे करें, यह पाएंगे।** एक **परिचय के लिए निम्नलिखित पृष्ठ पढ़ें:**
+**HackTricks Cloud विधि में आप क्लाउड वातावरण का पेंटेस्ट कैसे करें, यह पाएंगे।** एक **परिचय के लिए निम्नलिखित पृष्ठ पढ़ें:**
 
 {% content-ref url="pentesting-cloud/pentesting-cloud-methodology.md" %}
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 {% endcontent-ref %}
 
-### License & Disclaimer
+### लाइसेंस और अस्वीकरण
 
 **इन्हें देखें:**
 
 {% content-ref url="https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq" %}
-[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks मूल्य और FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 {% endcontent-ref %}
 
-### Github Stats
+### Github आँकड़े
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github आँकड़े](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-AWS हैकिंग सीखें और अभ्यास करें:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-GCP हैकिंग सीखें और अभ्यास करें: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+AWS हैकिंग सीखें और अभ्यास करें:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+GCP हैकिंग सीखें और अभ्यास करें: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
