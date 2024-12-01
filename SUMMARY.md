@@ -395,7 +395,7 @@
     * [Az - Tokens & Public Applications](pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md)
   * [Az - Enumeration Tools](pentesting-cloud/azure-security/az-enumeration-tools.md)
   * [Az - Unauthenticated Enum & Initial Entry](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/README.md)
-    * [Az - Illicit Consent Grant](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-illicit-consent-grant.md)
+    * [Az - OAuth Apps Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md)
     * [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-device-code-authentication-phishing.md)
     * [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-password-spraying.md)
   * [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
