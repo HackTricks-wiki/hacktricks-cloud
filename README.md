@@ -1,15 +1,15 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-Ucz się i ćwicz AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Ucz się i ćwicz GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Ucz się i ćwicz AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Ucz się i ćwicz GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
 <summary>Wsparcie dla HackTricks</summary>
 
 * Sprawdź [**plany subskrypcyjne**](https://github.com/sponsors/carlospolop)!
-* **Dołącz do** 💬 [**grupy Discord**](https://discord.gg/hRep4RUj7f) lub [**grupy telegramowej**](https://t.me/peass) lub **śledź** nas na **Twitterze** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
+* **Dołącz do** 💬 [**grupy Discord**](https://discord.gg/hRep4RUj7f) lub [**grupy telegram**](https://t.me/peass) lub **śledź** nas na **Twitterze** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
 * **Podziel się trikami hackingowymi, przesyłając PR-y do** [**HackTricks**](https://github.com/carlospolop/hacktricks) i [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) repozytoriów github.
 
 </details>
@@ -17,7 +17,7 @@ Ucz się i ćwicz GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" d
 
 <figure><img src=".gitbook/assets/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Loga Hacktricks & animacje zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Loga Hacktricks i animacje zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 {% hint style="success" %}
 Witamy na stronie, na której znajdziesz każdy **trik/technikę/hacking związany z CI/CD i Chmurą**, którego nauczyłem się w **CTF-ach**, **prawdziwych** środowiskach **życiowych**, **badaniach** i **czytaniu** badań oraz wiadomości.
@@ -52,15 +52,15 @@ Witamy na stronie, na której znajdziesz każdy **trik/technikę/hacking związa
 ![Statystyki Github HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-Ucz się i ćwicz AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Ucz się i ćwicz GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Ucz się i ćwicz AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Ucz się i ćwicz GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
 <summary>Wsparcie dla HackTricks</summary>
 
 * Sprawdź [**plany subskrypcyjne**](https://github.com/sponsors/carlospolop)!
-* **Dołącz do** 💬 [**grupy Discord**](https://discord.gg/hRep4RUj7f) lub [**grupy telegramowej**](https://t.me/peass) lub **śledź** nas na **Twitterze** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
+* **Dołącz do** 💬 [**grupy Discord**](https://discord.gg/hRep4RUj7f) lub [**grupy telegram**](https://t.me/peass) lub **śledź** nas na **Twitterze** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
 * **Podziel się trikami hackingowymi, przesyłając PR-y do** [**HackTricks**](https://github.com/carlospolop/hacktricks) i [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) repozytoriów github.
 
 </details>
