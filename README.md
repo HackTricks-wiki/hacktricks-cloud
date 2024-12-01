@@ -1,8 +1,8 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-Вивчайте та практикуйте AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Вивчайте та практикуйте GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Вивчайте та практикуйте AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Вивчайте та практикуйте GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
@@ -25,7 +25,7 @@ _Логотипи Hacktricks та анімація розроблені_ [_@ppie
 
 ### **Методологія пентестингу CI/CD**
 
-**У методології HackTricks CI/CD ви знайдете, як проводити пентестинг інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks CI/CD ви знайдете, як провести пентест інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
 
 {% content-ref url="pentesting-ci-cd/pentesting-ci-cd-methodology.md" %}
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
@@ -33,7 +33,7 @@ _Логотипи Hacktricks та анімація розроблені_ [_@ppie
 
 ### Методологія пентестингу Cloud
 
-**У методології HackTricks Cloud ви знайдете, як проводити пентестинг хмарних середовищ.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks Cloud ви знайдете, як провести пентест хмарних середовищ.** Прочитайте наступну сторінку для **вступу:**
 
 {% content-ref url="pentesting-cloud/pentesting-cloud-methodology.md" %}
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
@@ -52,8 +52,8 @@ _Логотипи Hacktricks та анімація розроблені_ [_@ppie
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-Вивчайте та практикуйте AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Вивчайте та практикуйте GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Вивчайте та практикуйте AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Вивчайте та практикуйте GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
