@@ -1,8 +1,8 @@
 # HackTricks Cloud
 
 {% hint style="success" %}
-Jifunze na fanya mazoezi ya AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Jifunze na fanya mazoezi ya AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
@@ -10,17 +10,17 @@ Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2).png
 
 * Angalia [**mpango wa usajili**](https://github.com/sponsors/carlospolop)!
 * **Jiunge na** 💬 [**kikundi cha Discord**](https://discord.gg/hRep4RUj7f) au [**kikundi cha telegram**](https://t.me/peass) au **tufuatilie** kwenye **Twitter** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
-* **Shiriki mbinu za hacking kwa kuwasilisha PRs kwa** [**HackTricks**](https://github.com/carlospolop/hacktricks) na [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) repos za github.
+* **Shiriki mbinu za hacking kwa kuwasilisha PRs kwa** [**HackTricks**](https://github.com/carlospolop/hacktricks) na [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos.
 
 </details>
 {% endhint %}
 
 <figure><img src=".gitbook/assets/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Malengo ya Hacktricks & muundo wa harakati yameundwa na_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Logos za Hacktricks & muundo wa mwendo zimeundwa na_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 {% hint style="success" %}
-Karibu kwenye ukurasa ambapo utaweza kupata kila **mbinu/tekniki/chochote kinachohusiana na CI/CD & Cloud** nilichojifunza katika **CTFs**, **maisha** halisi **mazingira**, **utafiti**, na **kusoma** tafiti na habari.
+Karibu kwenye ukurasa ambapo utaweza kupata kila **mbinu/tekniki ya hacking/chochote kinachohusiana na CI/CD & Cloud** nilichojifunza katika **CTFs**, **maisha** halisi **mazingira**, **utafiti**, na **kusoma** tafiti na habari.
 {% endhint %}
 
 ### **Pentesting CI/CD Methodology**
@@ -52,8 +52,8 @@ Karibu kwenye ukurasa ambapo utaweza kupata kila **mbinu/tekniki/chochote kinach
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {% hint style="success" %}
-Jifunze na fanya mazoezi ya AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1).png" alt="" data-size="line">\
-Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
+Jifunze na fanya mazoezi ya AWS Hacking:<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src=".gitbook/assets/image (1) (1) (1) (1).png" alt="" data-size="line">\
+Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">[**HackTricks Training GCP Red Team Expert (GRTE)**<img src=".gitbook/assets/image (2) (1).png" alt="" data-size="line">](https://training.hacktricks.xyz/courses/grte)
 
 <details>
 
@@ -61,7 +61,7 @@ Jifunze na fanya mazoezi ya GCP Hacking: <img src=".gitbook/assets/image (2).png
 
 * Angalia [**mpango wa usajili**](https://github.com/sponsors/carlospolop)!
 * **Jiunge na** 💬 [**kikundi cha Discord**](https://discord.gg/hRep4RUj7f) au [**kikundi cha telegram**](https://t.me/peass) au **tufuatilie** kwenye **Twitter** 🐦 [**@hacktricks\_live**](https://twitter.com/hacktricks_live)**.**
-* **Shiriki mbinu za hacking kwa kuwasilisha PRs kwa** [**HackTricks**](https://github.com/carlospolop/hacktricks) na [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) repos za github.
+* **Shiriki mbinu za hacking kwa kuwasilisha PRs kwa** [**HackTricks**](https://github.com/carlospolop/hacktricks) na [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos.
 
 </details>
 {% endhint %}
