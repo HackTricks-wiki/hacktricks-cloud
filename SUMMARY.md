@@ -42,9 +42,10 @@
   * [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
 * [Okta Security](pentesting-ci-cd/okta-security/README.md)
   * [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
+* [Serverless.com Security](pentesting-ci-cd/serverless.com-security.md)
 * [Supabase Security](pentesting-ci-cd/supabase-security.md)
 * [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
-* [Vercel](pentesting-ci-cd/vercel.md)
+* [Vercel Security](pentesting-ci-cd/vercel-security.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
 ## ⛈️ Pentesting Cloud
