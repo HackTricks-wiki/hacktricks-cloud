@@ -10,13 +10,13 @@ def clean_and_merge_md_files(start_folder, exclude_keywords, output_file):
         
         cleaned_lines = []
         inside_hint = False
-        for line in content:
+        for i,line in enumerate(content):
             # Skip lines containing excluded keywords
             if any(keyword in line for keyword in exclude_keywords):
                 continue
             
             # Detect and skip {% hint %} ... {% endhint %} blocks
-            if "{% hint style=\"success\" %}" in line:
+            if "{% hint style=\"success\" %}" in line and "Learn & practice" in content[i+1]:
                 inside_hint = True
             if "{% endhint %}" in line:
                 inside_hint = False
@@ -85,9 +85,52 @@ def main():
     
     # Keywords to exclude from lines
     exclude_keywords = [
-        "Keyword1",  # Replace with your keywords
-        "Keyword2",
-        "HackTricks",  # Example
+        "STM Cyber",  # STM Cyber ads
+        "offer several valuable cybersecurity services",  # STM Cyber ads
+        "and hack the unhackable",  # STM Cyber ads
+        "blog.stmcyber.com", # STM Cyber ads
+
+        "RootedCON", # RootedCON ads
+        "rootedcon.com", # RootedCON ads
+        "the mission of promoting technical knowledge", # RootedCON ads
+
+        "Intigriti", # Intigriti ads
+        "intigriti.com", # Intigriti ads
+
+        "Trickest", # Trickest ads
+        "trickest.com", # Trickest ads,
+        "Get Access Today:",
+
+        "HACKENPROOF", # Hackenproof ads
+        "hackenproof.com", # Hackenproof ads
+        "HackenProof", # Hackenproof ads
+        "discord.com/invite/N3FrSbmwdy", # Hackenproof ads
+        "Hacking Insights:", # Hackenproof ads
+        "Engage with content that delves", # Hackenproof ads
+        "Real-Time Hack News:", # Hackenproof ads
+        "Keep up-to-date with fast-paced", # Hackenproof ads
+        "Latest Announcements:", # Hackenproof ads
+        "Stay informed with the newest bug", # Hackenproof ads
+        "start collaborating with top hackers today!", # Hackenproof ads
+        "discord.com/invite/N3FrSbmwdy", # Hackenproof ads
+
+        "Pentest-Tools", # Pentest-Tools.com ads
+        "pentest-tools.com", # Pentest-Tools.com ads
+        "perspective on your web apps, network, and", # Pentest-Tools.com ads
+        "report critical, exploitable vulnerabilities with real business impact", # Pentest-Tools.com ads
+
+        "SerpApi", # SerpApi ads
+        "serpapi.com", # SerpApi ads
+        "offers fast and easy real-time", # SerpApi ads
+        "plans includes access to over 50 different APIs for scraping", # SerpApi ads
+        
+        "8kSec", # 8kSec ads
+        "academy.8ksec.io", # 8kSec ads
+        "Learn the technologies and skills required", # 8kSec ads
+
+        "WebSec", # WebSec ads
+        "websec.nl", # WebSec ads
+        "which means they do it all; Pentesting", # WebSec ads
     ]
     
     # Clean and merge .md files
