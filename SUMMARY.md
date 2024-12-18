@@ -44,6 +44,7 @@
   * [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
 * [Supabase Security](pentesting-ci-cd/supabase-security.md)
 * [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
+* [Vercel](pentesting-ci-cd/vercel.md)
 * [TODO](pentesting-ci-cd/todo.md)
 
 ## ⛈️ Pentesting Cloud
