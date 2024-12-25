@@ -443,6 +443,7 @@
   * [Az - Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/README.md)
     * [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
     * [Az - File Share Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-file-share-post-exploitation.md)
+    * [Az - Function Apps Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-function-apps-post-exploitation.md)
     * [Az - Key Vault Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-key-vault-post-exploitation.md)
     * [Az - Queue Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-queue-post-exploitation.md)
     * [Az - Service Bus Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-servicebus-post-exploitation.md)
