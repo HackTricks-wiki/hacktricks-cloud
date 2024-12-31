@@ -1,16 +1,11 @@
 You can remove this content before sending the PR:
 
 ## Attribution
-We value your knowledge and encourage you to share content. Please ensure that you only upload content that you own or that have permission to share it from the original author (adding a reference to the author in the added text or at the end of the page you are modifying or both). Your respect for intellectual property rights fosters a trustworthy and legal sharing environment for everyone.
+我们重视您的知识，并鼓励您分享内容。请确保您仅上传您拥有或已获得原作者分享权限的内容（在您添加的文本中或您正在修改的页面末尾添加对作者的引用，或两者都添加）。您对知识产权的尊重为每个人营造了一个值得信赖和合法的分享环境。
 
 ## HackTricks Training
-If you are adding so you can pass the in the [ARTE certification](https://training.hacktricks.xyz/courses/arte) exam with 2 flags instead of 3, you need to call the PR `arte-<username>`.
+如果您正在添加内容以便通过 [ARTE certification](https://training.hacktricks.xyz/courses/arte) 考试，使用 2 个标志而不是 3 个，您需要将 PR 命名为 `arte-<username>`。
 
-Also, remember that grammar/syntax fixes won't be accepted for the exam flag reduction.
+此外，请记住，语法/语法修正将不被接受以减少考试标志。
 
-
-In any case, thanks for contributing to HackTricks!
-
-
-
-
+在任何情况下，感谢您为 HackTricks 的贡献！
