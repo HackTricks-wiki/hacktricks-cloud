@@ -214,7 +214,7 @@ def copy_gitbook_dir(source_path, dest_path):
         print(f"Copied .gitbook folder from {source_folder} to {destination_folder}")
 
 def copy_summary(source_path, dest_path):
-    file_name = "SUMMARY.md"
+    file_name = "src/SUMMARY.md"
     source_filepath = os.path.join(source_path, file_name)
     dest_filepath = os.path.join(dest_path, file_name)
     shutil.copy2(source_filepath, dest_filepath)
