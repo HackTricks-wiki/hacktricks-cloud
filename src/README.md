@@ -6,26 +6,26 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks логотипи та анімація розроблені_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+> Ласкаво просимо на сторінку, де ви знайдете кожен **хакерський трюк/техніку/що завгодно, пов'язане з CI/CD та Cloud**, який я навчився в **CTFs**, **реальних** життєвих **середовищах**, **досліджуючи** та **читаючи** дослідження і новини.
 
 ### **Pentesting CI/CD Methodology**
 
-**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** Read the following page for an **introduction:**
+**У методології HackTricks CI/CD ви знайдете, як проводити тестування на проникнення інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** Read the following page for an **introduction:**
+**У методології HackTricks Cloud ви знайдете, як проводити тестування на проникнення в хмарні середовища.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
 ### License & Disclaimer
 
-**Check them in:**
+**Перевірте їх у:**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
@@ -34,7 +34,3 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
