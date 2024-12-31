@@ -6,26 +6,26 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricksのロゴとモーションデザインは_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_によるものです。_
 
 > [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+> CI/CDおよびクラウドに関連する各**ハッキングトリック/テクニック/その他**を見つけることができるページへようこそ。これは**CTF**、**実際の**ライフ**環境**、**研究**、および**研究やニュースを読む**中で学んだものです。
 
 ### **Pentesting CI/CD Methodology**
 
-**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** Read the following page for an **introduction:**
+**HackTricks CI/CDメソッドでは、CI/CD活動に関連するインフラストラクチャをペンテストする方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** Read the following page for an **introduction:**
+**HackTricks Cloudメソッドでは、クラウド環境をペンテストする方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
 ### License & Disclaimer
 
-**Check them in:**
+**こちらで確認してください：**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
@@ -34,7 +34,3 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
