@@ -91,10 +91,6 @@ jobs:
           echo "Translating $(cat /tmp/file_paths.txt)"
           python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" -f "$(cat /tmp/file_paths.txt)" -t 3
 
-      # Build the mdBook
-      - name: Build mdBook
-        run: mdbook build    
-      
       # Push changes to the repository
       - name: Commit and push changes
         run: |
@@ -102,3 +98,18 @@ jobs:
           git add -A
           git commit -m "Translated $BRANCH files" || true
           git push --set-upstream origin "$BRANCH"
+
+      # Build the mdBook
+      - name: Build mdBook
+        run: mdbook build
+      
+      # Login in AWs
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      
+      # Sync the build to S3
+      - name: Sync to S3
+        run: aws s3 sync ./book s3://hacktricks-cloud/en --delete
