@@ -1,16 +1,11 @@
 You can remove this content before sending the PR:
 
 ## Attribution
-We value your knowledge and encourage you to share content. Please ensure that you only upload content that you own or that have permission to share it from the original author (adding a reference to the author in the added text or at the end of the page you are modifying or both). Your respect for intellectual property rights fosters a trustworthy and legal sharing environment for everyone.
+Cenimo vaše znanje i podstičemo vas da delite sadržaj. Molimo vas da osigurate da uploadujete samo sadržaj koji posedujete ili za koji imate dozvolu da ga delite od originalnog autora (dodajući referencu na autora u dodatom tekstu ili na kraju stranice koju menjate ili oboje). Vaše poštovanje prava intelektualne svojine doprinosi pouzdanoj i legalnoj sredini za deljenje za sve.
 
 ## HackTricks Training
-If you are adding so you can pass the in the [ARTE certification](https://training.hacktricks.xyz/courses/arte) exam with 2 flags instead of 3, you need to call the PR `arte-<username>`.
+Ako dodajete kako biste mogli da prođete na [ARTE certification](https://training.hacktricks.xyz/courses/arte) ispitu sa 2 zastavice umesto 3, potrebno je da nazovete PR `arte-<username>`.
 
-Also, remember that grammar/syntax fixes won't be accepted for the exam flag reduction.
+Takođe, zapamtite da ispravke gramatike/sintakse neće biti prihvaćene za smanjenje zastavica ispita.
 
-
-In any case, thanks for contributing to HackTricks!
-
-
-
-
+U svakom slučaju, hvala što doprinosite HackTricks!
