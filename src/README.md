@@ -6,35 +6,31 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks Logos & Motion Design von_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+> Willkommen auf der Seite, auf der Sie jeden **Hacking-Trick/Technik/was auch immer im Zusammenhang mit CI/CD & Cloud** finden, den ich in **CTFs**, **realen** Lebensumgebungen, **Forschung** und **Lesen** von Forschungen und Nachrichten gelernt habe.
 
-### **Pentesting CI/CD Methodology**
+### **Pentesting CI/CD Methodologie**
 
-**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** Read the following page for an **introduction:**
+**In der HackTricks CI/CD Methodologie finden Sie, wie man Infrastruktur im Zusammenhang mit CI/CD-Aktivitäten pentestet.** Lesen Sie die folgende Seite für eine **Einführung:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud Methodology
+### Pentesting Cloud Methodologie
 
-**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** Read the following page for an **introduction:**
+**In der HackTricks Cloud Methodologie finden Sie, wie man Cloud-Umgebungen pentestet.** Lesen Sie die folgende Seite für eine **Einführung:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### License & Disclaimer
+### Lizenz & Haftungsausschluss
 
-**Check them in:**
+**Überprüfen Sie sie in:**
 
-[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Werte & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github Stats
+### Github Statistiken
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Statistiken](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
