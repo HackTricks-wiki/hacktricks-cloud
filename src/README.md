@@ -1,31 +1,31 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
+阅读时间: {{ #reading_time }}
 
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks 标志和动画设计由_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+> 欢迎来到这个页面，在这里你将找到我在 **CTFs**、**真实**生活**环境**、**研究**和**阅读**研究和新闻中学到的每一个与 **CI/CD & Cloud** 相关的 **黑客技巧/技术/其他**。
 
 ### **Pentesting CI/CD Methodology**
 
-**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** Read the following page for an **introduction:**
+**在 HackTricks CI/CD 方法论中，你将找到如何对与 CI/CD 活动相关的基础设施进行渗透测试。** 阅读以下页面以获取 **介绍：**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** Read the following page for an **introduction:**
+**在 HackTricks Cloud 方法论中，你将找到如何对云环境进行渗透测试。** 阅读以下页面以获取 **介绍：**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
 ### License & Disclaimer
 
-**Check them in:**
+**请查看：**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
@@ -34,7 +34,3 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
