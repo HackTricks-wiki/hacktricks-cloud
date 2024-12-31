@@ -1,16 +1,11 @@
 You can remove this content before sending the PR:
 
 ## Attribution
-We value your knowledge and encourage you to share content. Please ensure that you only upload content that you own or that have permission to share it from the original author (adding a reference to the author in the added text or at the end of the page you are modifying or both). Your respect for intellectual property rights fosters a trustworthy and legal sharing environment for everyone.
+Tunathamini maarifa yako na kukuhimiza kushiriki maudhui. Tafadhali hakikisha unachapisha tu maudhui ambayo unamiliki au ambayo una ruhusa ya kuyashiriki kutoka kwa mwandishi wa asili (kuongeza rejea kwa mwandishi katika maandiko yaliyoongezwa au mwishoni mwa ukurasa unaobadilisha au vyote viwili). Heshima yako kwa haki za mali ya akili inakuza mazingira ya kushiriki ambayo ni ya kuaminika na kisheria kwa kila mtu.
 
 ## HackTricks Training
-If you are adding so you can pass the in the [ARTE certification](https://training.hacktricks.xyz/courses/arte) exam with 2 flags instead of 3, you need to call the PR `arte-<username>`.
+Ikiwa unongeza ili uweze kupita katika mtihani wa [ARTE certification](https://training.hacktricks.xyz/courses/arte) na bendera 2 badala ya 3, unahitaji kuita PR `arte-<username>`.
 
-Also, remember that grammar/syntax fixes won't be accepted for the exam flag reduction.
+Pia, kumbuka kwamba marekebisho ya sarufi/sintaksia hayatakubaliwa kwa kupunguza bendera za mtihani.
 
-
-In any case, thanks for contributing to HackTricks!
-
-
-
-
+Katika hali yoyote, asante kwa kuchangia katika HackTricks!
