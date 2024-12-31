@@ -6,35 +6,31 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks logotipi & animacije dizajnirao_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+> Dobrodošli na stranicu gde ćete pronaći svaki **hacking trik/tehniku/šta god vezano za CI/CD & Cloud** koju sam naučio u **CTF-ovima**, **pravim** životnim **okruženjima**, **istražujući**, i **čitajuci** istraživanja i vesti.
 
-### **Pentesting CI/CD Methodology**
+### **Pentesting CI/CD Metodologija**
 
-**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** Read the following page for an **introduction:**
+**U HackTricks CI/CD Metodologiji ćete pronaći kako da pentestujete infrastrukturu vezanu za CI/CD aktivnosti.** Pročitajte sledeću stranicu za **uvod:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud Methodology
+### Pentesting Cloud Metodologija
 
-**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** Read the following page for an **introduction:**
+**U HackTricks Cloud Metodologiji ćete pronaći kako da pentestujete cloud okruženja.** Pročitajte sledeću stranicu za **uvod:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### License & Disclaimer
+### Licenca & Odricanje
 
-**Check them in:**
+**Proverite ih u:**
 
-[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Vrednosti & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github Stats
+### Github Statistika
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Statistika](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
