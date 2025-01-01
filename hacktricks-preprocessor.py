@@ -50,7 +50,7 @@ def ref(matchobj):
                 dir = path.dirname(current_chapter['source_path'])
                 logger.debug(f'Error getting chapter title: {href} trying with relative path {path.normpath(path.join(dir,href))}')
                 chapter, _path = findtitle(path.normpath(path.join(dir,href)), book, "source_path")
-                logger.debug(f'Recursive title search result: {chapter['name']}')
+                logger.debug(f'Recursive title search result: {chapter["name"]}')
                 title = chapter['name']
             except Exception as e:
                 logger.debug(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
