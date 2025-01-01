@@ -9,17 +9,17 @@ Reading time: {{ #reading_time }}
 _Hacktricks 로고 및 모션 디자인은_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_에 의해 제작되었습니다._
 
 > [!TIP]
-> CI/CD 및 Cloud와 관련된 각 **해킹 트릭/기술/무엇이든**을 찾을 수 있는 페이지에 오신 것을 환영합니다. 저는 **CTFs**, **실제** 환경, **연구**, 그리고 **연구 및 뉴스**를 읽으면서 배웠습니다.
+> CI/CD 및 클라우드와 관련된 각 **해킹 트릭/기술/무엇이든**을 찾을 수 있는 페이지에 오신 것을 환영합니다. 저는 **CTFs**, **실제** 환경, **연구**, 그리고 **연구 및 뉴스 읽기**를 통해 배웠습니다.
 
 ### **Pentesting CI/CD Methodology**
 
-**HackTricks CI/CD 방법론에서는 CI/CD 활동과 관련된 인프라를 어떻게 펜테스트하는지 알 수 있습니다.** 다음 페이지를 읽어보세요: 
+**HackTricks CI/CD 방법론에서는 CI/CD 활동과 관련된 인프라를 어떻게 펜테스트하는지 찾을 수 있습니다.** 다음 페이지를 읽어보세요: 
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**HackTricks Cloud 방법론에서는 클라우드 환경을 어떻게 펜테스트하는지 알 수 있습니다.** 다음 페이지를 읽어보세요: 
+**HackTricks 클라우드 방법론에서는 클라우드 환경을 어떻게 펜테스트하는지 찾을 수 있습니다.** 다음 페이지를 읽어보세요: 
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
