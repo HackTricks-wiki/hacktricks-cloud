@@ -12,7 +12,6 @@ from tqdm import tqdm #pip3 install tqdm
 import traceback
 
 
-
 MASTER_BRANCH = "master"
 VERBOSE = True
 MAX_TOKENS = 10000 #gpt-4-1106-preview
@@ -214,23 +213,25 @@ def split_text(text, model):
     return chunks
 
 
-def copy_gitbook_dir(source_path, dest_path):
-    folder_name = ".gitbook/"
-    source_folder = os.path.join(source_path, folder_name)
-    destination_folder = os.path.join(dest_path, folder_name)
-    if not os.path.exists(source_folder):
-        print(f"Error: {source_folder} does not exist.")
-    else:
-        # Copy the .gitbook folder
-        shutil.copytree(source_folder, destination_folder)
-        print(f"Copied .gitbook folder from {source_folder} to {destination_folder}")
+def copy_dirs(source_path, dest_path):
+    folder_names = ["theme/", "src/images/"]
+    for folder_name in folder_names:
+        source_folder = os.path.join(source_path, folder_name)
+        destination_folder = os.path.join(dest_path, folder_name)
+        if not os.path.exists(source_folder):
+            print(f"Error: {source_folder} does not exist.")
+        else:
+            # Copy the theme folder
+            shutil.copytree(source_folder, destination_folder)
+            print(f"Copied .gitbook folder from {source_folder} to {destination_folder}")
 
-def copy_summary(source_path, dest_path):
-    file_name = "src/SUMMARY.md"
-    source_filepath = os.path.join(source_path, file_name)
-    dest_filepath = os.path.join(dest_path, file_name)
-    shutil.copy2(source_filepath, dest_filepath)
-    print("[+] Copied SUMMARY.md")
+def copy_files(source_path, dest_path):
+    file_names = ["src/SUMMARY.md", "hacktricks-preprocessonr.py", "book.toml", ".gitignore"]
+    for file_name in file_names:
+        source_filepath = os.path.join(source_path, file_name)
+        dest_filepath = os.path.join(dest_path, file_name)
+        shutil.copy2(source_filepath, dest_filepath)
+        print(f"[+] Copied {file_name}")
 
 def translate_file(language, file_path, file_dest_path, model, client):
     global VERBOSE
@@ -384,10 +385,10 @@ if __name__ == "__main__":
         exit(1)
 
     # Copy summary
-    copy_summary(source_folder, dest_folder)
+    copy_files(source_folder, dest_folder)
 
     # Copy .gitbook folder
-    copy_gitbook_dir(source_folder, dest_folder) 
+    copy_dirs(source_folder, dest_folder) 
 
     # Create the branch and copy the translated files
     cp_translation_to_repo_dir_and_check_gh_branch(branch, dest_folder, translate_files)

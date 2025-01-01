@@ -43,7 +43,7 @@ def ref(matchobj):
             if href.endswith("/"):
                 href = href+"README.md" # Fix if ref points to a folder
             chapter, _path = findtitle(href, book, "source_path")
-            logger.debug(f'Recursive title search result: {chapter['name']}')
+            logger.debug(f'Recursive title search result: {chapter["name"]}')
             title = chapter['name']
         except Exception as e:
             try:
