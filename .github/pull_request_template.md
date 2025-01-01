@@ -1,10 +1,8 @@
-You can remove this content before sending the PR:
-
-## Attribution
+## Toeskryfing
 Ons waardeer jou kennis en moedig jou aan om inhoud te deel. Maak asseblief seker dat jy slegs inhoud oplaai wat jy besit of waarvoor jy toestemming het om dit van die oorspronklike outeur te deel (voeg 'n verwysing na die outeur in die bygevoegde teks of aan die einde van die bladsy wat jy wysig of albei). Jou respek vir intellektuele eiendomsregte bevorder 'n betroubare en wettige deelomgewing vir almal.
 
-## HackTricks Training
-As jy byvoeg sodat jy die in die [ARTE certification](https://training.hacktricks.xyz/courses/arte) eksamen met 2 vlae in plaas van 3 kan slaag, moet jy die PR `arte-<username>` noem.
+## HackTricks Opleiding
+As jy byvoeg sodat jy die [ARTE sertifisering](https://training.hacktricks.xyz/courses/arte) eksamen met 2 vlae in plaas van 3 kan slaag, moet jy die PR `arte-<gebruikersnaam>` noem.
 
 Onthou ook dat grammatika/sintaksis regstellings nie aanvaar sal word vir die eksamenvlag vermindering nie.
 

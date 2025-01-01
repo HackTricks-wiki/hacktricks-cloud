@@ -9,7 +9,7 @@ Reading time: {{ #reading_time }}
 _Hacktricks logo's & bewegingsontwerp deur_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Welkom op die bladsy waar jy elke **hacking trick/technique/whatever verwant aan CI/CD & Cloud** sal vind wat ek geleer het in **CTFs**, **werklike** lewe **omgewings**, **navorsing**, en **lees** navorsings en nuus.
+> Welkom op die bladsy waar jy elke **hacking trick/technique/whatever related to CI/CD & Cloud** sal vind wat ek geleer het in **CTFs**, **werklike** lewe **omgewings**, **navorsing**, en **lees** navorsings en nuus.
 
 ### **Pentesting CI/CD Metodologie**
 
@@ -31,6 +31,6 @@ _Hacktricks logo's & bewegingsontwerp deur_ [_@ppiernacho_](https://www.instagra
 
 ### Github Statistieke
 
-![HackTricks Cloud Github Statistieke](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
