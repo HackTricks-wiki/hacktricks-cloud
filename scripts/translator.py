@@ -96,8 +96,20 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
         return text
     
     messages = [
-        {"role": "system", "content": "You are a professional hacker, translator and writer. You write everything super clear and as concise as possible without loosing information. Do not return invalid Unicode output."},
-        {"role": "system", "content": f"The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}. Translate the relevant English text to {language} and return the translation keeping excatly the same markdown and html syntax. Do not translate things like code, hacking technique names, hacking word, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, and markdown tags. Also don't add any extra stuff apart from the translation and markdown syntax."},
+        {"role": "system", "content": "You are a professional hacker, translator and writer. You translate everything super clear and as concise as possible without loosing information. Do not return invalid Unicode output and do not translate markdown or html tags or links."},
+        {"role": "system", "content": f"""The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}.
+Translate the relevant English text to {language} and return the translation keeping exactly the same markdown and html syntax and following this guidance:
+
+- Don't translate things like code, hacking technique names, common hacking words, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, links and markdown tags.
+- Don't translate links or paths, e.g. if a path is to "../lamda-post-exploitation" and you are asked to trasnlate to another language, don't translate the path. 
+- Don't translate or modify tags, links and paths like in:
+    - {{#tabs}}
+    - {{#tab name="Method1"}}
+    - {{#ref}}\ngeneric-methodologies-and-resources/pentesting-methodology.md\n{{#endref}}
+    - {{#include ./banners/hacktricks-training.md}}
+- Don't translate any other tag
+
+Also don't add any extra stuff in your response apart from the translation and markdown syntax."""},
         {"role": "user", "content": text},
     ]
     try:
