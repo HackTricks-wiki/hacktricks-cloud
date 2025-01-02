@@ -4,7 +4,7 @@
 >
 > <details>
 >
-> <summary>Suporte ao HackTricks</summary>
+> <summary>Support HackTricks</summary>
 >
 > - Confira os [**planos de assinatura**](https://github.com/sponsors/carlospolop)!
 > - **Junte-se ao** 💬 [**grupo do Discord**](https://discord.gg/hRep4RUj7f) ou ao [**grupo do telegram**](https://t.me/peass) ou **siga**-nos no **Twitter** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)**.**
