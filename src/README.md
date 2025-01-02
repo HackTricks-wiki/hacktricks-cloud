@@ -6,20 +6,20 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Τα λογότυπα και η κίνηση του Hacktricks σχεδιάστηκαν από_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Καλώς ήρθατε στη σελίδα όπου θα βρείτε κάθε **hacking trick/technique/whatever σχετικό με CI/CD & Cloud** που έχω μάθει σε **CTFs**, **πραγματικές** συνθήκες **περιβάλλοντος**, **έρευνα**, και **ανάγνωση** ερευνών και ειδήσεων.
+> Καλώς ήρθατε στη σελίδα όπου θα βρείτε κάθε **hacking trick/technique/whatever σχετικό με CI/CD & Cloud** που έχω μάθει σε **CTFs**, **πραγματικά** περιβάλλοντα **ζωής**, **ερευνώντας**, και **διαβάζοντας** έρευνες και νέα.
 
 ### **Pentesting CI/CD Methodology**
 
-**Στη μεθοδολογία HackTricks CI/CD θα βρείτε πώς να κάνετε pentest υποδομές σχετικές με δραστηριότητες CI/CD.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
+**Στη Μεθοδολογία CI/CD του HackTricks θα βρείτε πώς να κάνετε pentest υποδομές σχετικές με δραστηριότητες CI/CD.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**Στη μεθοδολογία HackTricks Cloud θα βρείτε πώς να κάνετε pentest περιβάλλοντα cloud.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
+**Στη Μεθοδολογία Cloud του HackTricks θα βρείτε πώς να κάνετε pentest σε περιβάλλοντα cloud.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
