@@ -1,15 +1,15 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
+Tempo di lettura: {{ #reading_time }}
 
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_I loghi e il design in movimento di Hacktricks sono stati creati da_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_I loghi e le animazioni di Hacktricks sono stati progettati da_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Benvenuto nella pagina dove troverai ogni **trucco/tecnica/qualunque cosa relativa a CI/CD & Cloud** che ho imparato in **CTF**, **reali** ambienti **di vita**, **ricercando**, e **leggendo** ricerche e notizie.
+> Benvenuto nella pagina dove troverai ogni **trucco/tecnica di hacking/qualunque cosa relativa a CI/CD & Cloud** che ho imparato in **CTF**, **reali** ambienti **di vita**, **ricercando** e **leggendo** ricerche e notizie.
 
 ### **Metodologia di Pentesting CI/CD**
 
@@ -27,10 +27,10 @@ _I loghi e il design in movimento di Hacktricks sono stati creati da_ [_@ppierna
 
 **Controllali in:**
 
-[Valori & FAQ di HackTricks](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
 ### Statistiche Github
 
-![Statistiche Github di HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
