@@ -13,13 +13,13 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 
 ### **Pentesting CI/CD Methodology**
 
-**Katika HackTricks CI/CD Methodology utaweza kuona jinsi ya pentest miundombinu inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks CI/CD Methodology utaweza kupata jinsi ya pentest miundombinu inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**Katika HackTricks Cloud Methodology utaweza kuona jinsi ya pentest mazingira ya wingu.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks Cloud Methodology utaweza kupata jinsi ya pentest mazingira ya wingu.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
