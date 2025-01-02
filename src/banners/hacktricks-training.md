@@ -6,8 +6,8 @@
 >
 > <summary>HackTricksをサポートする</summary>
 >
-> - [**サブスクリプションプラン**](https://github.com/sponsors/carlospolop)を確認してください！
+> - [**サブスクリプションプラン**](https://github.com/sponsors/carlospolop)をチェックしてください！
 > - **💬 [**Discordグループ**](https://discord.gg/hRep4RUj7f)または[**Telegramグループ**](https://t.me/peass)に参加するか、**Twitter** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)**をフォローしてください。**
-> - **ハッキングトリックを共有するには、[**HackTricks**](https://github.com/carlospolop/hacktricks)と[**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud)のGitHubリポジトリにPRを提出してください。**
+> - **ハッキングトリックを共有するには、[**HackTricks**](https://github.com/carlospolop/hacktricks)と[**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud)のGitHubリポジトリにPRを送信してください。**
 >
 > </details>
