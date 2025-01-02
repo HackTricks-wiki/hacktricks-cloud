@@ -7,7 +7,7 @@
 > <summary>HackTricks'i Destekleyin</summary>
 >
 > - [**abonelik planlarını**](https://github.com/sponsors/carlospolop) kontrol edin!
-> - **Bize katılın** 💬 [**Discord grubuna**](https://discord.gg/hRep4RUj7f) veya [**telegram grubuna**](https://t.me/peass) veya **bizi** **Twitter'da** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)** takip edin.**
-> - **Hacking ipuçlarını paylaşın,** [**HackTricks**](https://github.com/carlospolop/hacktricks) ve [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github reposuna PR göndererek.
+> - **💬 [**Discord grubuna**](https://discord.gg/hRep4RUj7f) veya [**telegram grubuna**](https://t.me/peass) katılın ya da **Twitter'da** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)**'i takip edin.**
+> - **Hacking ipuçlarını paylaşmak için** [**HackTricks**](https://github.com/carlospolop/hacktricks) ve [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github reposuna PR gönderin.
 >
 > </details>
