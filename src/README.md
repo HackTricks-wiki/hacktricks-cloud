@@ -1,25 +1,25 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
+Okuma süresi: {{ #reading_time }}
 
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logoları & hareket tasarımı_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
+_Hacktricks logoları ve hareket tasarımı_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
 
 > [!TIP]
-> **CTF'lerde**, **gerçek** yaşam **ortamlarında**, **araştırma** yaparak ve **araştırmaları** ve haberleri okuyarak öğrendiğim her **hacking trick/technique/whatever related to CI/CD & Cloud**'ı bulacağınız sayfaya hoş geldiniz.
+> **CTF'lerde**, **gerçek** yaşam **ortamlarında**, **araştırma** yaparak ve **araştırmaları** ve haberleri okuyarak öğrendiğim her **hacking hilesi/teknik/CI/CD & Cloud ile ilgili her şey** bulacağınız sayfaya hoş geldiniz.
 
 ### **Pentesting CI/CD Methodology**
 
-**HackTricks CI/CD Methodolojisinde, CI/CD faaliyetleriyle ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
+**HackTricks CI/CD Methodology'de CI/CD faaliyetleri ile ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**HackTricks Cloud Methodolojisinde, bulut ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
+**HackTricks Cloud Methodology'de bulut ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
