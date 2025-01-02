@@ -382,7 +382,7 @@ if __name__ == "__main__":
     
     else:
         print("You need to indicate either a directory or a list of files to translate.")
-        exit(1)
+        exit(0)
 
     # Copy summary
     copy_files(source_folder, dest_folder)
