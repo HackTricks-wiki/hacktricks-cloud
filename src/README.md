@@ -6,10 +6,10 @@ Reading time: {{ #reading_time }}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks लोगो और गति डिज़ाइन_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ द्वारा।_
 
 > [!TIP]
-> उस पृष्ठ पर आपका स्वागत है जहाँ आप **CI/CD & Cloud** से संबंधित प्रत्येक **हैकिंग ट्रिक/तकनीक/जो भी** मैंने **CTFs**, **वास्तविक** जीवन **पर्यावरण**, **शोध**, और **शोधों और समाचारों** को पढ़कर सीखा है।
+> उस पृष्ठ पर आपका स्वागत है जहाँ आप **CI/CD और Cloud** से संबंधित प्रत्येक **हैकिंग ट्रिक/तकनीक/जो भी** मैंने **CTFs**, **वास्तविक** जीवन **पर्यावरण**, **शोध**, और **शोध और समाचार पढ़ने** में सीखा है।
 
 ### **Pentesting CI/CD Methodology**
 
