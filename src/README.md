@@ -1,15 +1,13 @@
 # HackTricks Cloud
 
-Czas czytania: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Loga Hacktricks & animacja zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Loga Hacktricks & animacje zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Witaj na stronie, na której znajdziesz każdą **sztuczkę/technikę/hack związaną z CI/CD i Chmurą**, której nauczyłem się w **CTF**, **prawdziwych** środowiskach **życiowych**, **badaniach** oraz **czytając** badania i wiadomości.
+> Witaj na stronie, na której znajdziesz każdy **sposób hackowania/technikę/cokolwiek związanego z CI/CD i Chmurą**, którego nauczyłem się w **CTF**, **prawdziwych** środowiskach **życiowych**, **badaniach** oraz **czytaniu** badań i wiadomości.
 
 ### **Metodologia Pentestingu CI/CD**
 
