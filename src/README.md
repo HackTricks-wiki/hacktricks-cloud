@@ -1,12 +1,10 @@
 # HackTricks Cloud
 
-Tempo di lettura: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_I loghi e le animazioni di Hacktricks sono stati progettati da_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_I loghi e il design in movimento di Hacktricks sono stati creati da_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
 > Benvenuto nella pagina dove troverai ogni **trucco/tecnica di hacking/qualunque cosa relativa a CI/CD & Cloud** che ho imparato in **CTF**, **reali** ambienti **di vita**, **ricercando** e **leggendo** ricerche e notizie.
