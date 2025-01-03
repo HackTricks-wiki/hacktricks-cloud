@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Час читання: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -13,13 +11,13 @@ _Логотипи Hacktricks та анімація розроблені_ [_@ppie
 
 ### **Методологія пентестингу CI/CD**
 
-**У методології HackTricks CI/CD ви знайдете, як провести пентест інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks CI/CD ви знайдете, як проводити пентестинг інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Методологія пентестингу Cloud
 
-**У методології HackTricks Cloud ви знайдете, як провести пентест хмарних середовищ.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks Cloud ви знайдете, як проводити пентестинг хмарних середовищ.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
