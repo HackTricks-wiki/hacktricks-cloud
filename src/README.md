@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -9,7 +7,7 @@ Reading time: {{ #reading_time }}
 _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Karibu kwenye ukurasa ambapo utaweza kupata kila **hacking trick/technique/whatever related to CI/CD & Cloud** nilizojifunza katika **CTFs**, **maisha** halisi **mazingira**, **utafiti**, na **kusoma** tafiti na habari.
+> Karibu kwenye ukurasa ambapo utaweza kupata kila **hacking trick/technique/whatever related to CI/CD & Cloud** nilizojifunza katika **CTFs**, **maisha** halisi **muhitimu**, **utafiti**, na **kusoma** tafiti na habari.
 
 ### **Pentesting CI/CD Methodology**
 
