@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -9,17 +7,17 @@ Reading time: {{ #reading_time }}
 _Hacktricksのロゴとモーションは_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_によってデザインされています。_
 
 > [!TIP]
-> CI/CDおよびクラウドに関連する各**ハッキングトリック/テクニック/その他**を見つけるページへようこそ。これは**CTF**、**実際の**ライフ**環境**、**研究**、および**研究やニュースを読む**中で学んだものです。
+> **CI/CDおよびクラウドに関連するすべてのハッキングトリック/テクニック/その他**を見つけることができるページへようこそ。これは**CTF**、**実際の**ライフ**環境**、**研究**、および**研究やニュースを読むこと**を通じて学んだものです。
 
 ### **Pentesting CI/CD Methodology**
 
-**HackTricks CI/CDメソッドでは、CI/CD活動に関連するインフラストラクチャのペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
+**HackTricks CI/CD Methodologyでは、CI/CD活動に関連するインフラストラクチャのペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**HackTricks Cloudメソッドでは、クラウド環境のペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
+**HackTricks Cloud Methodologyでは、クラウド環境のペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクション**を確認してください：
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
