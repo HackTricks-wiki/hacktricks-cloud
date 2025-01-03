@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -9,11 +7,11 @@ Reading time: {{ #reading_time }}
 _Τα λογότυπα και η κίνηση του Hacktricks σχεδιάστηκαν από_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Καλώς ήρθατε στη σελίδα όπου θα βρείτε κάθε **hacking trick/technique/whatever σχετικό με CI/CD & Cloud** που έχω μάθει σε **CTFs**, **πραγματικά** περιβάλλοντα **ζωής**, **ερευνώντας**, και **διαβάζοντας** έρευνες και νέα.
+> Καλώς ήρθατε στη σελίδα όπου θα βρείτε κάθε **κόλπο/τεχνική/οτιδήποτε σχετίζεται με CI/CD & Cloud** που έχω μάθει σε **CTFs**, **πραγματικά** περιβάλλοντα **ζωής**, **ερευνώντας**, και **διαβάζοντας** έρευνες και νέα.
 
 ### **Pentesting CI/CD Methodology**
 
-**Στη Μεθοδολογία CI/CD του HackTricks θα βρείτε πώς να κάνετε pentest υποδομές σχετικές με δραστηριότητες CI/CD.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
+**Στη Μεθοδολογία CI/CD του HackTricks θα βρείτε πώς να κάνετε pentest υποδομές που σχετίζονται με δραστηριότητες CI/CD.** Διαβάστε την επόμενη σελίδα για μια **εισαγωγή:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
