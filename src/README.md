@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-阅读时间: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
