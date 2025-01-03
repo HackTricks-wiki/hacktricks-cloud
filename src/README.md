@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Reading time: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -34,7 +32,3 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
-
-
-
-
