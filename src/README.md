@@ -4,14 +4,14 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Loga Hacktricks & animacje zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Loga Hacktricks i animacje zaprojektowane przez_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
 > Witaj na stronie, na której znajdziesz każdy **sposób hackowania/technikę/cokolwiek związanego z CI/CD i Chmurą**, którego nauczyłem się w **CTF**, **prawdziwych** środowiskach **życiowych**, **badaniach** oraz **czytaniu** badań i wiadomości.
 
 ### **Metodologia Pentestingu CI/CD**
 
-**W Metodologii CI/CD HackTricks znajdziesz, jak przeprowadzać pentesting infrastruktury związanej z działaniami CI/CD.** Przeczytaj następującą stronę, aby uzyskać **wprowadzenie:**
+**W Metodologii CI/CD HackTricks znajdziesz, jak przeprowadzać pentesting infrastruktury związanej z działalnością CI/CD.** Przeczytaj następującą stronę, aby uzyskać **wprowadzenie:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
