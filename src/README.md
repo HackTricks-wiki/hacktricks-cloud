@@ -1,7 +1,5 @@
 # HackTricks Cloud
 
-Tiempo de lectura: {{ #reading_time }}
-
 {{#include ./banners/hacktricks-training.md}}
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
@@ -9,7 +7,7 @@ Tiempo de lectura: {{ #reading_time }}
 _Los logotipos y el diseño en movimiento de Hacktricks son de_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Bienvenido a la página donde encontrarás cada **truco/técnica/lo que sea relacionado con CI/CD y Cloud** que he aprendido en **CTFs**, **entornos** de **vida real**, **investigando** y **leyendo** investigaciones y noticias.
+> Bienvenido a la página donde encontrarás cada **truco/técnica/lo que sea relacionado con CI/CD y Cloud** que he aprendido en **CTFs**, **entornos** de **vida** **real**, **investigando** y **leyendo** investigaciones y noticias.
 
 ### **Metodología de Pentesting CI/CD**
 
