@@ -226,7 +226,7 @@ def copy_dirs(source_path, dest_path):
             print(f"Copied .gitbook folder from {source_folder} to {destination_folder}")
 
 def copy_files(source_path, dest_path):
-    file_names = ["src/SUMMARY.md", "hacktricks-preprocessor.py", "book.toml", ".gitignore"]
+    file_names = ["src/SUMMARY.md", "hacktricks-preprocessor.py", "book.toml", ".gitignore", "src/robots.txt"]
     for file_name in file_names:
         source_filepath = os.path.join(source_path, file_name)
         dest_filepath = os.path.join(dest_path, file_name)
