@@ -96,19 +96,21 @@ def translate_text(language, text, file_path, model, cont=0, slpitted=False, cli
     
     messages = [
         {"role": "system", "content": "You are a professional hacker, translator and writer. You translate everything super clear and as concise as possible without loosing information. Do not return invalid Unicode output and do not translate markdown or html tags or links."},
-        {"role": "system", "content": f"""The following is content from a hacking book about hacking techiques. The following content is from the file {file_path}.
+        {"role": "system", "content": f"""The following is content from a hacking book about technical hacking techiques. The following given content is from the file {file_path}.
 Translate the relevant English text to {language} and return the translation keeping exactly the same markdown and html syntax and following this guidance:
 
 - Don't translate things like code, hacking technique names, common hacking words, cloud/SaaS platform names (like Workspace, aws, gcp...), the word 'leak', pentesting, links and markdown tags.
-- Don't translate links or paths, e.g. if a path is to "../lamda-post-exploitation" and you are asked to trasnlate to another language, don't translate the path. 
-- Don't translate or modify tags, links and paths like in:
+- Don't translate links or paths, e.g. if a link or ref is to "lamda-post-exploitation.md" don't translate that path to the language. 
+- Don't translate or modify tags, links, refs and paths like in:
     - {{#tabs}}
     - {{#tab name="Method1"}}
     - {{#ref}}\ngeneric-methodologies-and-resources/pentesting-methodology.md\n{{#endref}}
     - {{#include ./banners/hacktricks-training.md}}
-- Don't translate any other tag
+    - {{#ref}}macos-tcc-bypasses/{{#endref}}
+    - {{#ref}}0.-basic-llm-concepts.md{{#endref}}
+- Don't translate any other tag, just return markdown and html content as is.
 
-Also don't add any extra stuff in your response apart from the translation and markdown syntax."""},
+Also don't add any extra stuff in your response that is not part of the translation and markdown syntax."""},
         {"role": "user", "content": text},
     ]
     try:
