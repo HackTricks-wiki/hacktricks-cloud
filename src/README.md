@@ -7,17 +7,17 @@
 _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
 > [!TIP]
-> Karibu kwenye ukurasa ambapo utaweza kupata kila **hacking trick/technique/whatever related to CI/CD & Cloud** nilizojifunza katika **CTFs**, **maisha** halisi **muhitimu**, **utafiti**, na **kusoma** tafiti na habari.
+> Karibu kwenye ukurasa ambapo utaweza kupata kila **hacking trick/technique/whatever related to CI/CD & Cloud** nilizojifunza katika **CTFs**, **maisha** halisi **mazingira**, **utafiti**, na **kusoma** tafiti na habari.
 
 ### **Pentesting CI/CD Methodology**
 
-**Katika HackTricks CI/CD Methodology utaweza kupata jinsi ya pentest miundombinu inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks CI/CD Methodology utaweza kuona jinsi ya pentest miundombinu inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**Katika HackTricks Cloud Methodology utaweza kupata jinsi ya pentest mazingira ya wingu.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks Cloud Methodology utaweza kuona jinsi ya pentest mazingira ya wingu.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
