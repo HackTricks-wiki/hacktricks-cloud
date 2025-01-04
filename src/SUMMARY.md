@@ -408,7 +408,7 @@
     - [Az - ARM Templates / Deployments](pentesting-cloud/azure-security/az-services/az-arm-templates.md)
     - [Az - Automation Account](pentesting-cloud/azure-security/az-services/az-automation-account/README.md)
       - [Az - State Configuration RCE](pentesting-cloud/azure-security/az-services/az-automation-account/az-state-configuration-rce.md)
-    - [Az - Azure App Service & Function Apps](pentesting-cloud/azure-security/az-services/az-app-service.md)
+    - [Az - Azure App Services](pentesting-cloud/azure-security/az-services/az-app-services.md)
     - [Az - Intune](pentesting-cloud/azure-security/az-services/intune.md)
     - [Az - File Shares](pentesting-cloud/azure-security/az-services/az-file-shares.md)
     - [Az - Function Apps](pentesting-cloud/azure-security/az-services/az-function-apps.md)
