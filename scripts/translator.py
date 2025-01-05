@@ -232,8 +232,11 @@ def copy_files(source_path, dest_path):
     for file_name in file_names:
         source_filepath = os.path.join(source_path, file_name)
         dest_filepath = os.path.join(dest_path, file_name)
-        shutil.copy2(source_filepath, dest_filepath)
-        print(f"[+] Copied {file_name}")
+        if not os.path.exists(source_filepath):
+            print(f"Error: {source_filepath} does not exist.")
+        else:
+            shutil.copy2(source_filepath, dest_filepath)
+            print(f"[+] Copied {file_name}")
 
 def translate_file(language, file_path, file_dest_path, model, client):
     global VERBOSE
