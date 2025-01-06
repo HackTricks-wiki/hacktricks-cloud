@@ -7,7 +7,14 @@ from os import path
 from urllib.request import urlopen, Request
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename='hacktricks-preprocessor.log', filemode='w', encoding='utf-8', level=logging.DEBUG)
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='hacktricks-preprocessor.log', mode='w', encoding='utf-8')
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
+
+handler2 = logging.FileHandler(filename='hacktricks-preprocessor-error.log', mode='w', encoding='utf-8')
+handler2.setLevel(logging.ERROR)
+logger.addHandler(handler2)
 
 
 def findtitle(search ,obj, key, path=(),):
@@ -45,19 +52,29 @@ def ref(matchobj):
         try:
             if href.endswith("/"):
                 href = href+"README.md" # Fix if ref points to a folder
-            chapter, _path = findtitle(href, book, "source_path")
-            logger.debug(f'Recursive title search result: {chapter["name"]}')
-            title = chapter['name']
+            if "#" in  href:
+                chapter, _path = findtitle(href.split("#")[0], book, "source_path")
+                title = " ".join(href.split("#")[1].split("-")).title()
+                logger.debug(f'Ref has # using title: {title}')
+            else:
+                chapter, _path = findtitle(href, book, "source_path")
+                logger.debug(f'Recursive title search result: {chapter["name"]}')
+                title = chapter['name']
         except Exception as e:
             try:
                 dir = path.dirname(current_chapter['source_path'])
                 logger.debug(f'Error getting chapter title: {href} trying with relative path {path.normpath(path.join(dir,href))}')
-                chapter, _path = findtitle(path.normpath(path.join(dir,href)), book, "source_path")
-                logger.debug(f'Recursive title search result: {chapter["name"]}')
-                title = chapter['name']
+                if "#" in  href:
+                    chapter, _path = findtitle(path.normpath(path.join(dir,href.split('#')[0])), book, "source_path")
+                    title = " ".join(href.split("#")[1].split("-")).title()
+                    logger.debug(f'Ref has # using title: {title}')
+                else:
+                    chapter, _path = findtitle(path.normpath(path.join(dir,href.split('#')[0])), book, "source_path")
+                    title = chapter["name"]
+                    logger.debug(f'Recursive title search result: {chapter["name"]}')
             except Exception as e:
-                logger.debug(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
-                print(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
+                logger.debug(e)
+                logger.error(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
                 sys.exit(1)
 
 
@@ -85,13 +102,11 @@ def files(matchobj):
         
     except Exception as e:
         logger.debug(e)
-        logger.debug(f'Error searching file: {href}')
-        print(f'Error searching file: {href}')
+        logger.error(f'Error searching file: {href}')
         sys.exit(1)
 
         if title=="":
-            logger.debug(f'Error searching file: {href}')
-            print(f'Error searching file: {href}')
+            logger.error(f'Error searching file: {href}')
             sys.exit(1)
 
     template = f"""<a class="content_ref" href="/files/{href}"><span class="content_ref_label">{title}</span></a>"""
@@ -134,10 +149,11 @@ if __name__ == '__main__':
     for chapter in iterate_chapters(book['sections']):
         logger.debug(f"Chapter: {chapter['path']}")
         current_chapter = chapter
-        regex = r'{{[\s]*#ref[\s]*}}(?:\n)?([^\\\n]*)(?:\n)?{{[\s]*#endref[\s]*}}'
+        # regex = r'{{[\s]*#ref[\s]*}}(?:\n)?([^\\\n]*)(?:\n)?{{[\s]*#endref[\s]*}}'
+        regex = r'{{[\s]*#ref[\s]*}}(?:\n)?([^\\\n#]*(?:#(.*))?)(?:\n)?{{[\s]*#endref[\s]*}}'
         new_content = re.sub(regex, ref, chapter['content'])
         regex = r'{{[\s]*#file[\s]*}}(?:\n)?([^\\\n]*)(?:\n)?{{[\s]*#endfile[\s]*}}'
-        new_content = re.sub(regex, files, chapter['content'])
+        new_content = re.sub(regex, files, new_content)
         new_content = add_read_time(new_content)
         chapter['content'] = new_content
 
