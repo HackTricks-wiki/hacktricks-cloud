@@ -225,7 +225,7 @@ def copy_dirs(source_path, dest_path):
         else:
             # Copy the theme folder
             shutil.copytree(source_folder, destination_folder)
-            print(f"Copied .gitbook folder from {source_folder} to {destination_folder}")
+            print(f"Copied {folder_name} folder from {source_folder} to {destination_folder}")
 
 def copy_files(source_path, dest_path):
     file_names = ["src/SUMMARY.md", "hacktricks-preprocessor.py", "book.toml", ".gitignore", "src/robots.txt"]
