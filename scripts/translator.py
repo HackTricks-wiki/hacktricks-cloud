@@ -227,16 +227,19 @@ def copy_dirs(source_path, dest_path):
             shutil.copytree(source_folder, destination_folder)
             print(f"Copied {folder_name} folder from {source_folder} to {destination_folder}")
 
-def copy_files(source_path, dest_path):
-    file_names = ["src/SUMMARY.md", "hacktricks-preprocessor.py", "book.toml", ".gitignore", "src/robots.txt"]
-    for file_name in file_names:
-        source_filepath = os.path.join(source_path, file_name)
-        dest_filepath = os.path.join(dest_path, file_name)
+def move_files_to_push(source_path, dest_path, relative_file_paths):
+    for file_path in relative_file_paths:
+        source_filepath = os.path.join(source_path, file_path)
+        dest_filepath = os.path.join(dest_path, file_path)
         if not os.path.exists(source_filepath):
             print(f"Error: {source_filepath} does not exist.")
         else:
             shutil.copy2(source_filepath, dest_filepath)
-            print(f"[+] Copied {file_name}")
+            print(f"[+] Copied {file_path}")
+
+def copy_files(source_path, dest_path):
+    file_names = ["src/SUMMARY.md", "hacktricks-preprocessor.py", "book.toml", ".gitignore", "src/robots.txt"]
+    move_files_to_push(source_path, dest_path, file_names)
 
 def translate_file(language, file_path, file_dest_path, model, client):
     global VERBOSE
@@ -301,7 +304,7 @@ def translate_directory(language, source_path, dest_path, model, num_threads, cl
                 
 
 if __name__ == "__main__":
-    print("- Version 1.1.1")
+    print("- Version 2.0.0")
     # Set up argparse
     parser = argparse.ArgumentParser(description='Translate gitbook and copy to a new branch.')
     parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
@@ -389,7 +392,10 @@ if __name__ == "__main__":
         print("You need to indicate either a directory or a list of files to translate.")
         exit(0)
 
-    # Copy summary
+    # Copy translated files
+    move_files_to_push(source_folder, dest_folder, translate_files)
+
+    # Copy Summary
     copy_files(source_folder, dest_folder)
 
     # Copy .gitbook folder
