@@ -6,18 +6,24 @@
 
 _Логотипи Hacktricks та анімація розроблені_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
-> [!TIP]
-> Ласкаво просимо на сторінку, де ви знайдете кожен **хакерський трюк/техніку/що завгодно, пов'язане з CI/CD та Cloud**, який я навчився в **CTFs**, **реальних** життєвих **середовищах**, **досліджуючи** та **читаючи** дослідження і новини.
+### Запустіть HackTricks Cloud локально
+```bash
+# Download latest version of hacktricks cloud
+git clone https://github.com/HackTricks-wiki/hacktricks-cloud
+# Run the docker container indicating the path to the hacktricks-cloud folder
+docker run -d --rm -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+```
+Ваша локальна копія HackTricks Cloud буде **доступна за [http://localhost:3377](http://localhost:3377)** через хвилину.
 
-### **Методологія пентестингу CI/CD**
+### **Методологія Pentesting CI/CD**
 
-**У методології HackTricks CI/CD ви знайдете, як проводити пентестинг інфраструктури, пов'язаної з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks CI/CD ви знайдете, як проводити тестування на проникнення в інфраструктуру, пов'язану з CI/CD активностями.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Методологія пентестингу Cloud
+### Методологія Pentesting Cloud
 
-**У методології HackTricks Cloud ви знайдете, як проводити пентестинг хмарних середовищ.** Прочитайте наступну сторінку для **вступу:**
+**У методології HackTricks Cloud ви знайдете, як проводити тестування на проникнення в хмарні середовища.** Прочитайте наступну сторінку для **вступу:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
