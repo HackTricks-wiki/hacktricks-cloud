@@ -412,7 +412,7 @@
     - [Az - Intune](pentesting-cloud/azure-security/az-services/intune.md)
     - [Az - File Shares](pentesting-cloud/azure-security/az-services/az-file-shares.md)
     - [Az - Function Apps](pentesting-cloud/azure-security/az-services/az-function-apps.md)
-    - [Az - Key Vault](pentesting-cloud/azure-security/az-services/keyvault.md)
+    - [Az - Key Vault](pentesting-cloud/azure-security/az-services/az-keyvault.md)
     - [Az - Logic Apps](pentesting-cloud/azure-security/az-services/az-logic-apps.md)
     - [Az - Management Groups, Subscriptions & Resource Groups](pentesting-cloud/azure-security/az-services/az-management-groups-subscriptions-and-resource-groups.md)
     - [Az - Queue Storage](pentesting-cloud/azure-security/az-services/az-queue-enum.md)
