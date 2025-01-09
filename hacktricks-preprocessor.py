@@ -46,8 +46,8 @@ def ref(matchobj):
                 match = re.search('<title>(.*?)</title>', raw_html)
                 title = match.group(1) if match else href
             except Exception as e:
-                logger.debug(f'Error opening URL {href}: {e}')
-                pass #nDont stop on broken link
+                logger.error(f'Error opening URL {href}: {e}')
+                pass #Dont stop on broken link
     else:
         try:
             if href.endswith("/"):
@@ -73,7 +73,7 @@ def ref(matchobj):
                     title = chapter["name"]
                     logger.debug(f'Recursive title search result: {chapter["name"]}')
             except Exception as e:
-                logger.debug(e)
+                logger.error(f"Error: {e}")
                 logger.error(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
                 sys.exit(1)
 
@@ -101,7 +101,7 @@ def files(matchobj):
                 logger.debug(f'File search result: {os.path.join(root, href)}')
         
     except Exception as e:
-        logger.debug(e)
+        logger.error(f"Error: {e}")
         logger.error(f'Error searching file: {href}')
         sys.exit(1)
 
