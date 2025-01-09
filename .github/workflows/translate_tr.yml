@@ -46,7 +46,8 @@ jobs:
           git config --global --add safe.directory /__w/hacktricks-cloud/hacktricks-cloud
           git config --global user.name 'Translator'
           git config --global user.email 'github-actions@github.com'
-          git checkout af
+          git config pull.rebase false
+          git checkout $BRANCH
           git pull
           git checkout master
       
@@ -58,18 +59,18 @@ jobs:
               echo -n "$file , " >> /tmp/file_paths.txt
             fi
           done
-          python scripts/translator.py --language "Afrikaans" --branch "af" --api-key "$OPENAI_API_KEY" -f "$(cat /tmp/file_paths.txt)" -t 3
+          python scripts/translator.py --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" -f "$(cat /tmp/file_paths.txt)" -t 3
 
       - name: Commit and push changes
         run: |
-          git checkout af
+          git checkout $BRANCH
           git add -A
-          git commit -m "Translated Afrikaans files" || true
-          git push --set-upstream origin af
+          git commit -m "Translated $LANGUAGE files" || true
+          git push --set-upstream origin $BRANCH
 
       - name: Build mdBook
         run: |
-          MDBOOK_BOOK__LANGUAGE=af mdbook build || (cat hacktricks-preprocessor-error.log && exit 1)
+          MDBOOK_BOOK__LANGUAGE=$BRANCH mdbook build || (cat hacktricks-preprocessor-error.log && exit 1)
       
       # Login in AWs
       - name: Configure AWS credentials using OIDC
