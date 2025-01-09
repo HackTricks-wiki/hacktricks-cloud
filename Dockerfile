@@ -28,8 +28,3 @@ RUN cargo install mdbook-codename
 # Set the working directory
 WORKDIR /app
 
-# (Optional) Copy your script(s) into the image
-# COPY translator.py /app/translator.py
-
-# (Optional) Set an entrypoint or default command
-# ENTRYPOINT ["mdbook"]
