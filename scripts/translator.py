@@ -78,14 +78,15 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
         for file_name in filenames:
             src_file = os.path.join(dirpath, file_name)
             shutil.copy2(src_file, dest_path)
+            print(f"[+] Copied from {src_file} to {file_name}")
 
     print(f"Translated files copied to branch: {branch}")
     
     if translate_files:
         subprocess.run(['git', 'add', "-A"])
         subprocess.run(['git', 'commit', '-m', f"Translated {translate_files} to {branch}"[:72]])
-        subprocess.run(['git', 'checkout', MASTER_BRANCH])
-        print("Commit created and moved to master branch")
+        subprocess.run(['git', 'push', '--set-upstream', 'origin', branch])
+        print("Commit created and pushed")
     else:
         print("No commiting anything, leaving in language branch")
 
@@ -202,7 +203,6 @@ def split_text(text, model):
             
             continue
 
-
         if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS*0.8) or \
             reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS:
             
@@ -255,7 +255,7 @@ def translate_file(language, file_path, file_dest_path, model, client):
     translated_content = ''
     start_time = time.time()
     for chunk in content_chunks:
-        # Don't trasnlate code blocks
+        # Don't translate code blocks
         if chunk.startswith('```'):
             translated_content += chunk + '\n'
         else:
@@ -269,9 +269,10 @@ def translate_file(language, file_path, file_dest_path, model, client):
         f.write(translated_content)
     
     #if VERBOSE:
-    print(f"Page {file_path} translated in {elapsed_time:.2f} seconds")
+    print(f"Page {file_path} translated in {file_dest_path} in {elapsed_time:.2f} seconds")
 
 
+"""
 def translate_directory(language, source_path, dest_path, model, num_threads, client):
     all_markdown_files = []
     for subdir, dirs, files in os.walk(source_path):
@@ -301,13 +302,13 @@ def translate_directory(language, source_path, dest_path, model, num_threads, cl
                 tb = traceback.format_exc()
                 print(f'Translation generated an exception: {exc}')
                 print("Traceback:", tb)
-                
+"""     
 
 if __name__ == "__main__":
     print("- Version 2.0.0")
     # Set up argparse
     parser = argparse.ArgumentParser(description='Translate gitbook and copy to a new branch.')
-    parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
+    #parser.add_argument('-d', '--directory', action='store_true', help='Translate a full directory.')
     parser.add_argument('-l', '--language', required=True, help='Target language for translation.')
     parser.add_argument('-b', '--branch', required=True, help='Branch name to copy translated files.')
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
@@ -384,16 +385,13 @@ if __name__ == "__main__":
         # Delete possibly removed files from the master branch
         delete_unique_files(branch)
     
-    elif args.directory:
+    #elif args.directory:
         # Translate everything
-        translate_directory(language, source_folder, dest_folder, model, num_threads, client)
+        #translate_directory(language, source_folder, dest_folder, model, num_threads, client)
     
     else:
         print("You need to indicate either a directory or a list of files to translate.")
         exit(0)
-
-    # Copy translated files
-    move_files_to_push(source_folder, dest_folder, translate_files)
 
     # Copy Summary
     copy_files(source_folder, dest_folder)
