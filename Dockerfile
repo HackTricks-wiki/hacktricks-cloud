@@ -1,24 +1,17 @@
-# Dockerfile
-FROM ubuntu:22.04
+# Use the official Python 3.12 Bullseye image as the base
+FROM python:3.12-bullseye
 
 # Install system dependencies
-RUN apt-get update && \
-    apt-get install -y \
-      curl \
-      wget \
-      git \
-      sudo \
-      python3.12 \
-      python3-pip \
-      build-essential \
-      && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    sudo \
+    build-essential
 
-# Upgrade pip
-RUN pip3 install --upgrade pip
-
-# Install Python dependencies
-RUN pip3 install openai tqdm tiktoken
+# Install Python libraries
+RUN pip install --upgrade pip && \
+    pip install openai tqdm tiktoken
 
 # Install Rust & Cargo
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -32,4 +25,11 @@ RUN cargo install mdbook-pagetoc
 RUN cargo install mdbook-tabs
 RUN cargo install mdbook-codename
 
+# Set the working directory
 WORKDIR /app
+
+# (Optional) Copy your script(s) into the image
+# COPY translator.py /app/translator.py
+
+# (Optional) Set an entrypoint or default command
+# ENTRYPOINT ["mdbook"]
