@@ -6,18 +6,24 @@
 
 _Hacktricks logoları ve hareket tasarımı_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
 
-> [!TIP]
-> **CTF'lerde**, **gerçek** yaşam **ortamlarında**, **araştırma** yaparak ve **araştırmaları** ve haberleri okuyarak öğrendiğim her **hacking hilesi/teknik/ilişkili şey** için bu sayfaya hoş geldiniz.
+### HackTricks Cloud'u Yerel Olarak Çalıştırın
+```bash
+# Download latest version of hacktricks cloud
+git clone https://github.com/HackTricks-wiki/hacktricks-cloud
+# Run the docker container indicating the path to the hacktricks-cloud folder
+docker run -d --rm -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+```
+Yerel kopyanız HackTricks Cloud **bir dakika sonra [http://localhost:3377](http://localhost:3377)** adresinde **mevcut olacak.**
 
 ### **Pentesting CI/CD Metodolojisi**
 
-**HackTricks CI/CD Metodolojisinde CI/CD faaliyetleriyle ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
+**HackTricks CI/CD Metodolojisinde, CI/CD faaliyetleri ile ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Aşağıdaki sayfayı bir **giriş için** okuyun:
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Metodolojisi
 
-**HackTricks Cloud Metodolojisinde bulut ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
+**HackTricks Cloud Metodolojisinde, bulut ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Aşağıdaki sayfayı bir **giriş için** okuyun:
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
