@@ -6,8 +6,16 @@
 
 _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
-> [!TIP]
-> Welcome to the page where you will find each **hacking trick/technique/whatever related to CI/CD & Cloud** I have learnt in **CTFs**, **real** life **environments**, **researching**, and **reading** researches and news.
+### Run HackTricks Cloud Locally
+
+```bash
+# Download latest version of hacktricks cloud
+git clone https://github.com/HackTricks-wiki/hacktricks-cloud
+# Run the docker container indicating the path to the hacktricks-cloud folder
+docker run -d --rm -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+```
+
+Your local copy of HackTricks Cloud will be **available at [http://localhost:3377](http://localhost:3377)** after a minute.
 
 ### **Pentesting CI/CD Methodology**
 
