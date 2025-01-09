@@ -102,6 +102,10 @@ def commit_and_push(translate_files, branch):
         # Print stdout and stderr (if any)
         if result.stdout:
             print(f"STDOUT for {cmd}:\n{result.stdout}")
+            if "nothing to commit" in result.stdout.lower():
+                print("Nothing to commit, leaving")
+                exit(0)
+        
         if result.stderr:
             print(f"STDERR for {cmd}:\n{result.stderr}")
         
