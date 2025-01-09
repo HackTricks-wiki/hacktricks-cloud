@@ -80,7 +80,7 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
         for file_name in filenames:
             src_file = os.path.join(dirpath, file_name)
             shutil.copy2(src_file, dest_path)
-            if not "/images/" in src_file:
+            if not "/images/" in src_file and not "/theme/" in src_file:
                 print(f"[+] Copied from {src_file} to {file_name}")
     
     if translate_files:
