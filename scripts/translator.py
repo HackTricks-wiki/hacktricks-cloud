@@ -48,6 +48,10 @@ def get_unused_files(branch):
 
 
 def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translate_files):
+    """
+    Get the translated files from the temp folder and copy them to the repo directory in the expected branch.
+    Also remove all the files that are not in the master branch.
+    """
     branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:
@@ -399,10 +403,7 @@ if __name__ == "__main__":
                         #pbar.update()
                     except Exception as exc:
                         print(f'Translation generated an exception: {exc}')
-        
-        # Delete possibly removed files from the master branch
-        delete_unused_files(branch)
-    
+            
     #elif args.directory:
         # Translate everything
         #translate_directory(language, source_folder, dest_folder, model, num_threads, client)
