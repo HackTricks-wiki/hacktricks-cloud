@@ -12,6 +12,12 @@ find "$IMAGE_FOLDER" -type f | while IFS= read -r image; do
     # Extract the filename without the path
     image_name=$(basename "$image")
 
+    # If image file name contains "sponsor", skip it
+    if [[ "$image_name" == *"sponsor"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
     echo "Checking image: $image_name"
 
     # Search for the image name using rg and capture the result
