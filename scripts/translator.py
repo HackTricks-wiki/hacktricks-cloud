@@ -35,26 +35,16 @@ def get_branch_files(branch):
     files = result.stdout.decode().splitlines()
     return set(files)
 
-def delete_unique_files(branch):
+def get_unused_files(branch):
     """Delete files that are unique to branch2."""
     # Get the files in each branch
-    files_branch1 = get_branch_files(MASTER_BRANCH)
-    files_branch2 = get_branch_files(branch)
+    files_branch_master = get_branch_files(MASTER_BRANCH)
+    files_branch_lang = get_branch_files(branch)
 
     # Find the files that are in branch2 but not in branch1
-    unique_files = files_branch2 - files_branch1
+    unique_files = files_branch_lang - files_branch_master
 
-    if unique_files:
-        # Switch to the second branch
-        subprocess.run(["git", "checkout", branch])
-
-        # Delete the unique files from the second branch
-        for file in unique_files:
-            subprocess.run(["git", "rm", file])
-        
-        subprocess.run(["git", "checkout", MASTER_BRANCH])
-    
-    print(f"[+] Deleted {len(unique_files)} files from branch: {branch}")
+    return unique_files
 
 
 def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translate_files):
@@ -64,6 +54,14 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
         subprocess.run(['git', 'checkout', '-b', branch])
     else:
         subprocess.run(['git', 'checkout', branch])
+
+    # Get files to delete
+    files_to_delete = get_unused_files(branch)
+
+    # Delete files
+    for file in files_to_delete:
+        os.remove(file)
+        print(f"[+] Deleted {file}")
     
     # Walk through source directory
     for dirpath, dirnames, filenames in os.walk(temp_folder):
@@ -80,14 +78,11 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
             shutil.copy2(src_file, dest_path)
             if not "/images/" in src_file:
                 print(f"[+] Copied from {src_file} to {file_name}")
-
-    print(f"Translated files copied to branch: {branch}")
     
     if translate_files:
         commit_and_push(translate_files, branch)
     else:
         print("No commiting anything, leaving in language branch")
-
 
 def commit_and_push(translate_files, branch):
     # Define the commands we want to run
@@ -239,8 +234,7 @@ def split_text(text, model):
     return chunks
 
 
-def copy_dirs(source_path, dest_path):
-    folder_names = ["theme/", "src/images/"]
+def copy_dirs(source_path, dest_path, folder_names):
     for folder_name in folder_names:
         source_folder = os.path.join(source_path, folder_name)
         destination_folder = os.path.join(dest_path, folder_name)
@@ -407,7 +401,7 @@ if __name__ == "__main__":
                         print(f'Translation generated an exception: {exc}')
         
         # Delete possibly removed files from the master branch
-        delete_unique_files(branch)
+        delete_unused_files(branch)
     
     #elif args.directory:
         # Translate everything
@@ -421,7 +415,8 @@ if __name__ == "__main__":
     copy_files(source_folder, dest_folder)
 
     # Copy .gitbook folder
-    copy_dirs(source_folder, dest_folder) 
+    folder_names = ["theme/", "src/images/"]
+    copy_dirs(source_folder, dest_folder, folder_names)
 
     # Create the branch and copy the translated files
     cp_translation_to_repo_dir_and_check_gh_branch(branch, dest_folder, translate_files)
