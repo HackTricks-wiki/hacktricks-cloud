@@ -4,31 +4,37 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks 标志和动画设计由_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
-> [!TIP]
-> 欢迎来到这个页面，在这里你将找到我在 **CTFs**、**真实**生活**环境**、**研究**和**阅读**研究和新闻中学到的每一个与 **CI/CD & Cloud** 相关的 **黑客技巧/技术/其他**。
+### 本地运行 HackTricks Cloud
+```bash
+# Download latest version of hacktricks cloud
+git clone https://github.com/HackTricks-wiki/hacktricks-cloud
+# Run the docker container indicating the path to the hacktricks-cloud folder
+docker run -d --rm -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+```
+您的本地 HackTricks Cloud 副本将在 **[http://localhost:3377](http://localhost:3377)** 一分钟后可用。
 
-### **Pentesting CI/CD Methodology**
+### **渗透测试 CI/CD 方法论**
 
-**在 HackTricks CI/CD 方法论中，你将找到如何对与 CI/CD 活动相关的基础设施进行渗透测试。** 阅读以下页面以获取 **介绍：**
+**在 HackTricks CI/CD 方法论中，您将找到如何对与 CI/CD 活动相关的基础设施进行渗透测试。** 请阅读以下页面以获取 **介绍：**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud Methodology
+### 渗透测试云方法论
 
-**在 HackTricks Cloud 方法论中，你将找到如何对云环境进行渗透测试。** 阅读以下页面以获取 **介绍：**
+**在 HackTricks 云方法论中，您将找到如何对云环境进行渗透测试。** 请阅读以下页面以获取 **介绍：**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### License & Disclaimer
+### 许可证与免责声明
 
 **请查看：**
 
-[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks 值与常见问题](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github Stats
+### Github 统计
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github 统计](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
