@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     sudo \
-    build-essential
+    build-essential \
+    awscli
 
 # Install Python libraries
 RUN pip install --upgrade pip && \
