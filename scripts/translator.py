@@ -78,17 +78,41 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
         for file_name in filenames:
             src_file = os.path.join(dirpath, file_name)
             shutil.copy2(src_file, dest_path)
-            print(f"[+] Copied from {src_file} to {file_name}")
+            if not "/images/" in src_file:
+                print(f"[+] Copied from {src_file} to {file_name}")
 
     print(f"Translated files copied to branch: {branch}")
     
     if translate_files:
-        subprocess.run(['git', 'add', "-A"])
-        subprocess.run(['git', 'commit', '-m', f"Translated {translate_files} to {branch}"[:72]])
-        subprocess.run(['git', 'push', '--set-upstream', 'origin', branch])
-        print("Commit created and pushed")
+        commit_and_push(translate_files, branch)
     else:
         print("No commiting anything, leaving in language branch")
+
+
+def commit_and_push(translate_files, branch):
+    # Define the commands we want to run
+    commands = [
+        ['git', 'add', '-A'],
+        ['git', 'commit', '-m', f"Translated {translate_files} to {branch}"[:72]],
+        ['git', 'push', '--set-upstream', 'origin', branch],
+    ]
+
+    for cmd in commands:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Print stdout and stderr (if any)
+        if result.stdout:
+            print(f"STDOUT for {cmd}:\n{result.stdout}")
+        if result.stderr:
+            print(f"STDERR for {cmd}:\n{result.stderr}")
+        
+        # Check for errors
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Command `{cmd}` failed with exit code {result.returncode}"
+            )
+
+    print("Commit created and pushed")
 
 
 def translate_text(language, text, file_path, model, cont=0, slpitted=False, client=None):
