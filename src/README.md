@@ -4,10 +4,16 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Logos et animations Hacktricks conçus par_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Logo et animation de Hacktricks conçus par_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
 
-> [!TIP]
-> Bienvenue sur la page où vous trouverez chaque **astuce/technique de hacking/quoi que ce soit lié à CI/CD & Cloud** que j'ai appris dans **CTFs**, **la** vie **réelle**, **la recherche**, et **la lecture** de recherches et d'actualités.
+### Exécuter HackTricks Cloud Localement
+```bash
+# Download latest version of hacktricks cloud
+git clone https://github.com/HackTricks-wiki/hacktricks-cloud
+# Run the docker container indicating the path to the hacktricks-cloud folder
+docker run -d --rm -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+```
+Votre copie locale de HackTricks Cloud sera **disponible à [http://localhost:3377](http://localhost:3377)** après une minute.
 
 ### **Méthodologie de Pentesting CI/CD**
 
@@ -23,12 +29,12 @@ _Logos et animations Hacktricks conçus par_ [_@ppiernacho_](https://www.instagr
 
 ### Licence & Avertissement
 
-**Vérifiez-les ici :**
+**Vérifiez-les dans :**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
 ### Statistiques Github
 
-![Statistiques Github HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
