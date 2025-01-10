@@ -3,8 +3,8 @@
 # 👽 Welcome!
 
 - [HackTricks Cloud](README.md)
-- [About the Author$$external:https://book.hacktricks.xyz/welcome/about-the-author$$]()
-- [HackTricks Values & faq$$external:https://book.hacktricks.xyz/welcome/hacktricks-values-and-faq$$]()
+- [About the Author$$external:https://book.hacktricks.wiki/en/welcome/about-the-author.html$$]()
+- [HackTricks Values & faq$$external:https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html$$]()
 
 # 🏭 Pentesting CI/CD
 
@@ -510,8 +510,8 @@
 
 # 🛫 Pentesting Network Services
 
-- [HackTricks Pentesting Network$$external:https://book.hacktricks.xyz/generic-methodologies-and-resources/pentesting-network$$]()
-- [HackTricks Pentesting Services$$external:https://book.hacktricks.xyz/network-services-pentesting/pentesting-ssh$$]()
+- [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
+- [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
 
 
 
