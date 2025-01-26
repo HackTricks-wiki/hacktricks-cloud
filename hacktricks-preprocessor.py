@@ -77,6 +77,8 @@ def ref(matchobj):
                 logger.error(f'Error getting chapter title: {path.normpath(path.join(dir,href))}')
                 sys.exit(1)
 
+    if href.endswith("/README.md"):
+        href = href.replace("/README.md", "/index.html")
 
     template = f"""<a class="content_ref" href="{href}"><span class="content_ref_label">{title}</span></a>"""
 
