@@ -414,7 +414,7 @@
     - [Az - Azure App Services](pentesting-cloud/azure-security/az-services/az-app-services.md)
     - [Az - Cloud Shell](pentesting-cloud/azure-security/az-services/az-cloud-shell.md)
     - [Az - Container Registry](pentesting-cloud/azure-security/az-services/az-container-registry.md)
-    - [Az - Container Registry](pentesting-cloud/azure-security/az-services/az-container-instances.md)
+    - [Az - Container Instances](pentesting-cloud/azure-security/az-services/az-container-instances.md)
     - [Az - CosmosDB](pentesting-cloud/azure-security/az-services/az-cosmosDB.md)
     - [Az - Intune](pentesting-cloud/azure-security/az-services/intune.md)
     - [Az - File Shares](pentesting-cloud/azure-security/az-services/az-file-shares.md)
