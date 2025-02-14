@@ -400,6 +400,7 @@
     - [Az - Tokens & Public Applications](pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md)
   - [Az - Enumeration Tools](pentesting-cloud/azure-security/az-enumeration-tools.md)
   - [Az - Unauthenticated Enum & Initial Entry](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/README.md)
+    - [Az - Container Registry Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-container-registry-unauth.md)
     - [Az - OAuth Apps Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md)
     - [Az - Storage Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-storage-unauth.md)
     - [Az - VMs Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-vms-unauth.md)
