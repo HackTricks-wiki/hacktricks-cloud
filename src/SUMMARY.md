@@ -292,7 +292,7 @@
     - [AWS - KMS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc.md)
     - [AWS - Lambda Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc.md)
     - [AWS - Lightsail Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc.md)
-    - [AWS - Macie Enum](pentesting-cloud/aws-security/aws-privilege-escalation/aws-macie-privesc.md)
+    - [AWS - Macie Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-macie-privesc.md)
     - [AWS - Mediapackage Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-mediapackage-privesc.md)
     - [AWS - MQ Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-mq-privesc.md)
     - [AWS - MSK Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc.md)
