@@ -487,6 +487,7 @@
     - [Az - SQL Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md)
     - [Az - Virtual Machines & Network Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md)
   - [Az - Persistence](pentesting-cloud/azure-security/az-persistence/README.md)
+    - [Az - Automation Accounts Persistence](pentesting-cloud/azure-security/az-persistence/az-automation-accounts-persistence.md)
     - [Az - Cloud Shell Persistence](pentesting-cloud/azure-security/az-persistence/az-cloud-shell-persistence.md)
     - [Az - Queue Storage Persistence](pentesting-cloud/azure-security/az-persistence/az-queue-persistance.md)
     - [Az - VMs Persistence](pentesting-cloud/azure-security/az-persistence/az-vms-persistence.md)
