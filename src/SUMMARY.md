@@ -431,7 +431,7 @@
     - [Az - Static Web Applications](pentesting-cloud/azure-security/az-services/az-static-web-apps.md)
     - [Az - Storage Accounts & Blobs](pentesting-cloud/azure-security/az-services/az-storage.md)
     - [Az - Table Storage](pentesting-cloud/azure-security/az-services/az-table-storage.md)
-    - [Az - Virtual Desktop](pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-desktop.md)
+    - [Az - Virtual Desktop](pentesting-cloud/azure-security/az-services/az-virtual-desktop.md)
     - [Az - Virtual Machines & Network](pentesting-cloud/azure-security/az-services/vms/README.md)
       - [Az - Azure Network](pentesting-cloud/azure-security/az-services/vms/az-azure-network.md)
   - [Az - Permissions for a Pentest](pentesting-cloud/azure-security/az-permissions-for-a-pentest.md)
