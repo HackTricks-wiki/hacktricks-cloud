@@ -9,8 +9,6 @@ import re
 from openai import OpenAI
 
 # Initialize OpenAI client
-for name in os.environ:
-    print(name)
 client = OpenAI(api_key=os.getenv("MY_OPENAI_API_KEY"))
 
 # Vector Store ID
