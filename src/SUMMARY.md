@@ -211,6 +211,7 @@
   - [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
   - [AWS - Persistence](pentesting-cloud/aws-security/aws-persistence/README.md)
     - [AWS - API Gateway Persistence](pentesting-cloud/aws-security/aws-persistence/aws-api-gateway-persistence.md)
+    - [AWS - Cloudformation Persistence](pentesting-cloud/aws-security/aws-persistence/aws-cloudformation-persistence.md)
     - [AWS - Cognito Persistence](pentesting-cloud/aws-security/aws-persistence/aws-cognito-persistence.md)
     - [AWS - DynamoDB Persistence](pentesting-cloud/aws-security/aws-persistence/aws-dynamodb-persistence.md)
     - [AWS - EC2 Persistence](pentesting-cloud/aws-security/aws-persistence/aws-ec2-persistence.md)
