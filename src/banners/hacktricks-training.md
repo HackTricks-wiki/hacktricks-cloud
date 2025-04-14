@@ -1,6 +1,7 @@
 > [!TIP]
 > Aprenda e pratique Hacking AWS:<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
 > Aprenda e pratique Hacking GCP: <img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training GCP Red Team Expert (GRTE)**](https://training.hacktricks.xyz/courses/grte)<img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">
+> Aprenda e pratique Hacking Azure: <img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training Azure Red Team Expert (AzRTE)**](https://training.hacktricks.xyz/courses/azrte)<img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">
 >
 > <details>
 >
