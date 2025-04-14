@@ -14,7 +14,7 @@ import traceback
 
 MASTER_BRANCH = "master"
 VERBOSE = True
-MAX_TOKENS = 10000 #gpt-4-1106-preview
+MAX_TOKENS = 20000 #gpt-4-1106-preview
 
 def reportTokens(prompt, model):
     encoding = tiktoken.encoding_for_model(model)
@@ -190,6 +190,8 @@ Also don't add any extra stuff in your response that is not part of the translat
         return translate_text(language, text, file_path, model, cont, False, client)
 
     response_message = response.choices[0].message.content.strip()
+    response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
+    response_message = response_message.replace("Bypassy", "Bypasses")
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
