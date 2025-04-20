@@ -13,7 +13,7 @@ _Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.co
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
 
 # Select the language you want to use
-export LANG="master" # Leave master for english
+export LANG="master" # Leave master for English
 # "af" for Afrikaans
 # "de" for German
 # "el" for Greek
