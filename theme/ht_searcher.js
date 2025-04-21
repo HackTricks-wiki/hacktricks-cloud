@@ -471,16 +471,53 @@ window.search = window.search || {};
         showResults(true);
     }
 
-    var branch = lang === "en" ? "master" : lang
-    fetch(`https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/refs/heads/${branch}/searchindex.json`)
-        .then(response => response.json())
-        .then(json => init(json))        
-        .catch(error => { // Try to load searchindex.js if fetch failed
-            var script = document.createElement('script');
-            script.src = `https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/refs/heads/${branch}/searchindex.js`;
-            script.onload = () => init(window.search);
-            document.head.appendChild(script);
-        });
+    (async function loadSearchIndex(lang = window.lang || "en") {
+        const branch  = lang === "en" ? "master" : lang;
+        const rawUrl  =
+          `https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/refs/heads/${branch}/searchindex.js`;
+        const localJs = "/searchindex.js";
+        const TIMEOUT_MS = 5_000;
+      
+        /* helper: inject a <script src=…> and wait for it */
+        const injectScript = (src) =>
+          new Promise((resolve, reject) => {
+            const s   = document.createElement("script");
+            s.src     = src;
+            s.onload  = () => resolve(src);
+            s.onerror = (e) => reject(e);
+            document.head.appendChild(s);
+          });
+      
+        try {
+          /* 1 — download raw JS from GitHub */
+          const controller = new AbortController();
+          const timer      = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      
+          const res  = await fetch(rawUrl, { signal: controller.signal });
+          clearTimeout(timer);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
+          /* 2 — wrap in a Blob so the browser sees application/javascript */
+          const code     = await res.text();
+          const blobUrl  = URL.createObjectURL(
+                            new Blob([code], { type: "application/javascript" })
+                          );
+      
+          /* 3 — execute it */
+          await injectScript(blobUrl);
+          return init(window.search);
+        } catch (eRemote) {
+          console.warn("Remote JS failed →", eRemote);
+        }
+      
+        /* ───────── fallback: local copy ───────── */
+        try {
+          await injectScript(localJs);
+          return init(window.search);
+        } catch (eLocal) {
+          console.error("Local JS failed →", eLocal);
+        }
+      })();
 
     // Exported functions
     search.hasFocus = hasFocus;
