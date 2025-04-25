@@ -77,7 +77,7 @@
         const loadingBubble = addMsg("", "ht-ai");
         loadingBubble.innerHTML = LOADER_HTML;
   
-        const content = context ? `Context:\n${context}\n\nQuestion:\n${question}` : question;
+        const content = context ? `### Context:\n${context}\n\n### Question to answer:\n${question}` : question;
         try {
           const res = await fetch(`${API_BASE}/${threadId}/messages`, { method:"POST", credentials:"include", headers:{"Content-Type":"application/json"}, body:JSON.stringify({content}) });
           if (!res.ok) {
