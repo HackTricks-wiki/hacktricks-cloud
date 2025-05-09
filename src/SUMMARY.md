@@ -425,6 +425,7 @@
     - [Az - Key Vault](pentesting-cloud/azure-security/az-services/az-keyvault.md)
     - [Az - Logic Apps](pentesting-cloud/azure-security/az-services/az-logic-apps.md)
     - [Az - Management Groups, Subscriptions & Resource Groups](pentesting-cloud/azure-security/az-services/az-management-groups-subscriptions-and-resource-groups.md)
+    - [Az - Misc](pentesting-cloud/azure-security/az-services/az-misc.md)
     - [Az - Monitoring](pentesting-cloud/azure-security/az-services/az-monitoring.md)
     - [Az - MySQL](pentesting-cloud/azure-security/az-services/az-mysql.md)
     - [Az - PostgreSQL](pentesting-cloud/azure-security/az-services/az-postgresql.md)
