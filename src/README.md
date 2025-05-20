@@ -4,7 +4,7 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logos & motion designed by_ [_@ppiernacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks logos & motion designed by_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
 ### Run HackTricks Cloud Locally
 
