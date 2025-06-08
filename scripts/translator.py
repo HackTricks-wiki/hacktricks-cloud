@@ -14,12 +14,23 @@ import traceback
 
 MASTER_BRANCH = "master"
 VERBOSE = True
-MAX_TOKENS = 20000 #gpt-4-1106-preview
+MAX_TOKENS = 30000 #gpt-4-1106-preview
+DISALLOWED_SPECIAL = "<|endoftext|>"
+REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
+
+def _sanitize(text: str) -> str:
+    """
+    Replace the reserved tiktoken token with a harmless placeholder.
+    Called everywhere a string can flow into tiktoken.encode() or the
+    OpenAI client.
+    """
+    return text.replace(DISALLOWED_SPECIAL, REPLACEMENT_TOKEN)
 
 def reportTokens(prompt, model):
     encoding = tiktoken.encoding_for_model(model)
     # print number of tokens in light gray, with first 50 characters of prompt in green. if truncated, show that it is truncated
     #print("\033[37m" + str(len(encoding.encode(prompt))) + " tokens\033[0m" + " in prompt: " + "\033[92m" + prompt[:50] + "\033[0m" + ("..." if len(prompt) > 50 else ""))
+    prompt   = _sanitize(prompt)
     return len(encoding.encode(prompt))
 
 
