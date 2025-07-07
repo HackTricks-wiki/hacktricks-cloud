@@ -101,6 +101,8 @@
     const READY_ICON = icon.innerHTML;
     icon.textContent = '⏳';
     icon.setAttribute('aria-label','Loading search …');
+      icon.setAttribute('title','Search is loading, please wait...');
+
   
     const HOT=83, ESC=27, DOWN=40, UP=38, ENTER=13;
     let debounce, teaserCount=0;
