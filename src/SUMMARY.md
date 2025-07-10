@@ -461,6 +461,7 @@
     - [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
     - [Az - CosmosDB Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-cosmosDB-post-exploitation.md)
     - [Az - File Share Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-file-share-post-exploitation.md)
+    - [Az Front Door Waf Ip Restriction Bypass](pentesting-cloud/azure-security/az-post-exploitation/az-front-door-waf-ip-restriction-bypass.md)
     - [Az - Function Apps Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-function-apps-post-exploitation.md)
     - [Az - Key Vault Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-key-vault-post-exploitation.md)
     - [Az - Logic Apps Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-logic-apps-post-exploitation.md)
