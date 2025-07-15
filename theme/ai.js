@@ -1,4 +1,78 @@
 /**
+ * HackTricks Training Discounts
+ */
+
+
+(() => {
+  const KEY  = 'htSummerDiscountDismissed';
+  const IMG  = '/images/discount.jpeg';
+  const TXT  = 'HT Summer Discount, Last Days!';
+
+  /* Stop if user already dismissed */
+  if (localStorage.getItem(KEY) === 'true') return;
+
+  /* Quick helper */
+  const $ = (tag, css = '') => Object.assign(document.createElement(tag), { style: css });
+
+  /* --- Overlay (blur + dim) --- */
+  const overlay = $('div', `
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(6px);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10000;
+  `);
+
+  /* --- Modal --- */
+  const modal = $('div', `
+    max-width: 90vw; width: 480px;
+    background: #fff; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    font-family: system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: stretch;
+  `);
+
+  /* --- Title bar (separate, over image) --- */
+  const titleBar = $('div', `
+    padding: 1rem; text-align: center;
+    background: #222; color: #fff;
+    font-size: 1.3rem; font-weight: 700;
+  `);
+  titleBar.textContent = TXT;
+
+  /* --- Image --- */
+  const img = $('img');
+  img.src = IMG; img.alt = TXT; img.style.width = '100%';
+
+  /* --- Checkbox row --- */
+  const label = $('label', `
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    padding: 1rem; font-size: 1rem; color: #222; cursor: pointer;
+  `);
+  const cb = $('input'); cb.type = 'checkbox'; cb.style.scale = '1.2';
+  cb.onchange = () => {
+    if (cb.checked) {
+      localStorage.setItem(KEY, 'true');
+      overlay.remove();
+    }
+  };
+  label.append(cb, document.createTextNode("Don't show again"));
+
+  /* --- Assemble & inject --- */
+  modal.append(titleBar, img, label);
+  overlay.appendChild(modal);
+
+  (document.readyState === 'loading'
+    ? () => document.addEventListener('DOMContentLoaded', () => document.body.appendChild(overlay), { once: true })
+    : () => document.body.appendChild(overlay))();
+})();
+
+
+
+
+
+
+/**
  * HackTricks AI Chat Widget v1.16 – resizable sidebar
  * ---------------------------------------------------
  * ❶ Markdown rendering + sanitised (same as before)
