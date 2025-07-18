@@ -224,9 +224,11 @@ def split_text(text, model):
     chunks = []
     chunk = ''
     in_code_block = False
+    in_ref = False
 
     for line in lines:
-        # If we are in a code block, just add the code to the chunk
+        
+        # Keep code blocks as one chunk
         if line.startswith('```'):
             
             # If we are in a code block, finish it with the "```"
@@ -242,7 +244,24 @@ def split_text(text, model):
                 chunk += line + '\n'
             
             continue
+        
+        """
+        Prevent refs using `` like:
+        {{#ref}}
+        ../../generic-methodologies-and-resources/pentesting-network/`spoofing-llmnr-nbt-ns-mdns-dns-and-wpad-and-relay-attacks.md`
+        {{#endref}}
+        """
+        if line.startswith('{{#ref}}'):
+            in_ref = True
+        
+        if in_ref:
+            line = line.replace("`", "")
+        
+        if line.startswith('{{#endref}}'):
+            in_ref = False
 
+
+        # If new section, see if we should be splitting the text
         if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS*0.8) or \
             reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS:
             
