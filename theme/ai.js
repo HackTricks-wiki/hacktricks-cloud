@@ -1,4 +1,105 @@
 /**
+ * HackTricks Training Discounts
+ */
+
+
+(() => {
+  const KEY = 'htSummerDiscountsDismissed';
+  const IMG = '/images/discount.jpeg';
+  const TXT = 'Click here for HT Summer Discounts, Last Days!';
+  const URL = 'https://training.hacktricks.xyz';
+
+  /* Stop if user already dismissed */
+  if (localStorage.getItem(KEY) === 'true') return;
+
+  /* Quick helper */
+  const $ = (tag, css = '') => Object.assign(document.createElement(tag), { style: css });
+
+  /* --- Overlay (blur + dim) --- */
+  const overlay = $('div', `
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(6px);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10000;
+  `);
+
+  /* --- Modal --- */
+  const modal = $('div', `
+    max-width: 90vw; width: 480px;
+    background: #fff; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    font-family: system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: stretch;
+  `);
+
+  /* --- Title bar (link + close) --- */
+  const titleBar = $('div', `
+    position: relative;
+    padding: 1rem 2.5rem 1rem 1rem; /* room for the close button */
+    text-align: center;
+    background: #222; color: #fff;
+    font-size: 1.3rem; font-weight: 700;
+  `);
+
+  const link = $('a', `
+    color: inherit;
+    text-decoration: none;
+    display: block;
+  `);
+  link.href = URL;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = TXT;
+  titleBar.appendChild(link);
+
+  /* Close "X" (no persistence) */
+  const closeBtn = $('button', `
+    position: absolute; top: .25rem; right: .5rem;
+    background: transparent; border: none;
+    color: #fff; font-size: 1.4rem; line-height: 1;
+    cursor: pointer; padding: 0; margin: 0;
+  `);
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.textContent = '✕';
+  closeBtn.onclick = () => overlay.remove();
+  titleBar.appendChild(closeBtn);
+
+  /* --- Image --- */
+  const img = $('img');
+  img.src = IMG; img.alt = TXT; img.style.width = '100%';
+
+  /* --- Checkbox row --- */
+  const label = $('label', `
+    display: flex; align-items: center; justify-content: center; gap: .6rem;
+    padding: 1rem; font-size: 1rem; color: #222; cursor: pointer;
+  `);
+  const cb = $('input'); cb.type = 'checkbox'; cb.style.scale = '1.2';
+  cb.onchange = () => {
+    if (cb.checked) {
+      localStorage.setItem(KEY, 'true');
+      overlay.remove();
+    }
+  };
+  label.append(cb, document.createTextNode("Don't show again"));
+
+  /* --- Assemble & inject --- */
+  modal.append(titleBar, img, label);
+  overlay.appendChild(modal);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(overlay), { once: true });
+  } else {
+    document.body.appendChild(overlay);
+  }
+})();
+
+
+
+
+
+
+/**
  * HackTricks AI Chat Widget v1.16 – resizable sidebar
  * ---------------------------------------------------
  * ❶ Markdown rendering + sanitised (same as before)
