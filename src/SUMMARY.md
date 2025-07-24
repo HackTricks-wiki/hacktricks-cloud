@@ -230,7 +230,7 @@
     - [AWS - SNS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sns-persistence.md)
     - [AWS - Secrets Manager Persistence](pentesting-cloud/aws-security/aws-persistence/aws-secrets-manager-persistence.md)
     - [AWS - SQS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sqs-persistence.md)
-    - [AWS - SSM Perssitence](pentesting-cloud/aws-security/aws-persistence/aws-ssm-perssitence.md)
+    - [AWS - SSM Perssitence](pentesting-cloud/aws-security/aws-persistence/aws-ssm-persistence.md)
     - [AWS - Step Functions Persistence](pentesting-cloud/aws-security/aws-persistence/aws-step-functions-persistence.md)
     - [AWS - STS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sts-persistence.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
