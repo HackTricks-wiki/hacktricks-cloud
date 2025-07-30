@@ -454,7 +454,7 @@
     - [Az - Pass the Cookie](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-cookie.md)
     - [Az - Primary Refresh Token (PRT)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md)
     - [Az - PTA - Pass-through Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pta-pass-through-authentication.md)
-    - [Az - Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/seamless-sso.md)    
+    - [Az - Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-seamless-sso)    
   - [Az - Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/README.md)
     - [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
     - [Az - CosmosDB Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-cosmosDB-post-exploitation.md)
