@@ -267,6 +267,7 @@
     - [AWS - VPN Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation.md)
   - [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc.md)
+    - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc.md)
     - [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc.md)
     - [AWS - Codepipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc.md)
