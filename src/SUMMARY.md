@@ -107,6 +107,7 @@
     - [GCP - Cloudfunctions Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md)
     - [GCP - Cloudidentity Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudidentity-privesc.md)
     - [GCP - Cloud Scheduler Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudscheduler-privesc.md)
+    - [GCP - Cloud Tasks Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudtasks-privesc.md)
     - [GCP - Compute Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md)
       - [GCP - Add Custom SSH Metadata](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/gcp-add-custom-ssh-metadata.md)
     - [GCP - Composer Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md)
