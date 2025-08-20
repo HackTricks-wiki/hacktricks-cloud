@@ -57,10 +57,16 @@ def main():
     files_with_differences = 0
     unmatched_files = []  # Track files with unmatched refs
     
+    # Track which files exist in current branch
+    current_files = set()
+    
     for md_path in sorted(SRC_DIR.rglob("*.md")):
         rel = md_path.relative_to(SRC_DIR).as_posix()
         rel_with_src = f"{SRC_DIR.name}/{rel}"  # Include src/ prefix for output
         files_processed += 1
+        
+        # Track this file as existing in current branch
+        current_files.add(rel)
         
         try:
             content = md_path.read_text(encoding="utf-8")
@@ -118,13 +124,21 @@ def main():
             except Exception as e:
                 print(f"   ❌ Error fixing refs in {rel_with_src}: {e}")
     
+    # Check for files that exist in master refs but not in current branch
+    for master_file_rel in master_refs.keys():
+        if master_file_rel not in current_files:
+            rel_with_src = f"{SRC_DIR.name}/{master_file_rel}"
+            print(f"🗑️  {rel_with_src} (existed in master but not in current one)")
+            files_with_differences += 1
+            unmatched_files.append(rel_with_src)
+    
     # Save unmatched files to specified path if requested
     if args.files_unmatched_paths and unmatched_files:
         try:
             unmatched_paths_file = Path(args.files_unmatched_paths)
             unmatched_paths_file.parent.mkdir(parents=True, exist_ok=True)
             with open(unmatched_paths_file, 'w', encoding='utf-8') as f:
-                f.write(','.join(unmatched_files))
+                f.write(','.join(list(set(unmatched_files))))
             print(f"📝 Saved {len(unmatched_files)} unmatched file paths to: {unmatched_paths_file}")
         except Exception as e:
             print(f"❌ Error saving unmatched paths to {args.files_unmatched_paths}: {e}")
