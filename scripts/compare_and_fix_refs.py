@@ -125,11 +125,12 @@ def main():
                 print(f"   ❌ Error fixing refs in {rel_with_src}: {e}")
     
     # Check for files that exist in master refs but not in current branch
+    unexisted_files = 0
     for master_file_rel in master_refs.keys():
         if master_file_rel not in current_files:
             rel_with_src = f"{SRC_DIR.name}/{master_file_rel}"
             print(f"🗑️  {rel_with_src} (existed in master but not in current one)")
-            files_with_differences += 1
+            unexisted_files += 1
             unmatched_files.append(rel_with_src)
     
     # Save unmatched files to specified path if requested
@@ -151,11 +152,12 @@ def main():
             print(f"� No unmatched files found. Created empty file: {unmatched_paths_file}")
         except Exception as e:
             print(f"❌ Error creating empty unmatched paths file {args.files_unmatched_paths}: {e}")
-    
-    print(f"\n�📈 SUMMARY:")
+
+    print(f"\n SUMMARY:")
     print(f"   Files processed: {files_processed}")
-    print(f"   Files with differences: {files_with_differences}")
+    print(f"   Files with different refs: {files_with_differences}")
     print(f"   Files modified: {files_modified}")
+    print(f"   Non existing files: {unexisted_files}")
     if unmatched_files:
         print(f"   Unmatched files: {len(unmatched_files)}")
 
