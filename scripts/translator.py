@@ -425,7 +425,7 @@ if __name__ == "__main__":
     translate_files = None # Need to initialize it here to avoid error
     if args.file_paths:
         # Translate only the indicated file
-        translate_files = [f for f in args.file_paths.split(' , ') if f]
+        translate_files = [f.strip() for f in args.file_paths.split(',') if f]
         for file_path in translate_files:
             #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
