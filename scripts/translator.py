@@ -203,6 +203,7 @@ Also don't add any extra stuff in your response that is not part of the translat
     response_message = response.choices[0].message.content.strip()
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
     response_message = response_message.replace("Bypassy", "Bypasses")
+    response_message = response_message.replace("-privec.md", "-privesc.md") # PL translations translates that from time to time
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
