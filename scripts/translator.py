@@ -156,7 +156,7 @@ Also don't add any extra stuff in your response that is not part of the translat
         response = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0
+            temperature=1 # 1 because gpt-5 doesn't support other
         )
     except Exception as e:
         print("Python Exception: " + str(e))
