@@ -541,3 +541,6 @@
 
 
 
+
+  - [Readme](pentesting-ci-cd/gitlab-security/README.md)
+  - [Abusing Gitlab Runner](pentesting-ci-cd/gitlab-security/abusing-gitlab-runner.md)
