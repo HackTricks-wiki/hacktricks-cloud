@@ -14,7 +14,7 @@ import traceback
 
 MASTER_BRANCH = "master"
 VERBOSE = True
-MAX_TOKENS = 30000 #gpt-4-1106-preview
+MAX_TOKENS = 50000 #gpt-4-1106-preview
 DISALLOWED_SPECIAL = "<|endoftext|>"
 REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 
@@ -156,7 +156,7 @@ Also don't add any extra stuff in your response that is not part of the translat
         response = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0
+            temperature=1 # 1 because gpt-5 doesn't support other
         )
     except Exception as e:
         print("Python Exception: " + str(e))
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--language', required=True, help='Target language for translation.')
     parser.add_argument('-b', '--branch', required=True, help='Branch name to copy translated files.')
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
-    parser.add_argument('-m', '--model', default="gpt-4o-mini", help='The openai model to use. By default: gpt-4o-mini')
+    parser.add_argument('-m', '--model', default="gpt-5-mini", help='The openai model to use. By default: gpt-5-mini')
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
