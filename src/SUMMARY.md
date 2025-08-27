@@ -22,6 +22,7 @@
   - [Concourse Architecture](pentesting-ci-cd/concourse-security/concourse-architecture.md)
   - [Concourse Lab Creation](pentesting-ci-cd/concourse-security/concourse-lab-creation.md)
   - [Concourse Enumeration & Attacks](pentesting-ci-cd/concourse-security/concourse-enumeration-and-attacks.md)
+  - [Gitea Enumeration And Attacks](pentesting-ci-cd/gitea-security/gitea-enumeration-and-attacks.md)
 - [CircleCI Security](pentesting-ci-cd/circleci-security.md)
 - [TravisCI Security](pentesting-ci-cd/travisci-security/README.md)
   - [Basic TravisCI Information](pentesting-ci-cd/travisci-security/basic-travisci-information.md)
