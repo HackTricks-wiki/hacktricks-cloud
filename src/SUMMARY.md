@@ -17,6 +17,7 @@
   - [Accessible Deleted Data in Github](pentesting-ci-cd/github-security/accessible-deleted-data-in-github.md)
   - [Basic Github Information](pentesting-ci-cd/github-security/basic-github-information.md)
 - [Gitea Security](pentesting-ci-cd/gitea-security/README.md)
+  - [Abusing Pats And Ci Cd Auto Deploy](pentesting-ci-cd/gitea-security/abusing-pats-and-ci-cd-auto-deploy.md)
   - [Basic Gitea Information](pentesting-ci-cd/gitea-security/basic-gitea-information.md)
 - [Concourse Security](pentesting-ci-cd/concourse-security/README.md)
   - [Concourse Architecture](pentesting-ci-cd/concourse-security/concourse-architecture.md)
