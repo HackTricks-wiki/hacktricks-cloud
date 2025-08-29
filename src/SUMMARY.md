@@ -541,3 +541,6 @@
 
 
 
+
+  - [Readme](pentesting-ci-cd/gitblit-security/README.md)
+  - [Gitblit Embedded Ssh Auth Bypass Cve 2024 28080](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
