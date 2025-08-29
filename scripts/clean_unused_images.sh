@@ -18,6 +18,53 @@ find "$IMAGE_FOLDER" -type f | while IFS= read -r image; do
         continue
     fi
 
+    if [[ "$image_name" == *"arte"* ]]; then
+        echo "Skipping arte image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"grte"* ]]; then
+        echo "Skipping grte image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"azrte"* ]]; then
+        echo "Skipping azrte image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"websec"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"venacus"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"CLOUD"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"cloud.gif"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"CH_logo"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    if [[ "$image_name" == *"lasttower"* ]]; then
+        echo "Skipping sponsor image: $image_name"
+        continue
+    fi
+
+    
+
     echo "Checking image: $image_name"
 
     # Search for the image name using rg and capture the result
