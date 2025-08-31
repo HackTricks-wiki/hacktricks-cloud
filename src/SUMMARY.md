@@ -9,6 +9,8 @@
 # 🏭 Pentesting CI/CD
 
 - [Pentesting CI/CD Methodology](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [Gitblit Security](pentesting-ci-cd/gitblit-security/README.md)
+  - [Ssh Auth Bypass](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
 - [Github Security](pentesting-ci-cd/github-security/README.md)
   - [Abusing Github Actions](pentesting-ci-cd/github-security/abusing-github-actions/README.md)
     - [Gh Actions - Artifact Poisoning](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-artifact-poisoning.md)
@@ -537,10 +539,3 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
-
-
-
-
-
-  - [Readme](pentesting-ci-cd/gitblit-security/README.md)
-  - [Gitblit Embedded Ssh Auth Bypass Cve 2024 28080](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
