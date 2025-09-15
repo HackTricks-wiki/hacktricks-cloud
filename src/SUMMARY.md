@@ -403,6 +403,7 @@
     - [AWS - S3 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-s3-unauthenticated-enum.md)
 - [Azure Pentesting](pentesting-cloud/azure-security/README.md)
   - [Az - Basic Information](pentesting-cloud/azure-security/az-basic-information/README.md)
+    - [Az Federation Abuse](pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md)
     - [Az - Tokens & Public Applications](pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md)
   - [Az - Enumeration Tools](pentesting-cloud/azure-security/az-enumeration-tools.md)
   - [Az - Unauthenticated Enum & Initial Entry](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/README.md)
