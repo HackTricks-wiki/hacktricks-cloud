@@ -9,6 +9,8 @@
 # 🏭 Pentesting CI/CD
 
 - [Pentesting CI/CD Methodology](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [Gitblit Security](pentesting-ci-cd/gitblit-security/README.md)
+  - [Ssh Auth Bypass](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
 - [Github Security](pentesting-ci-cd/github-security/README.md)
   - [Abusing Github Actions](pentesting-ci-cd/github-security/abusing-github-actions/README.md)
     - [Gh Actions - Artifact Poisoning](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-artifact-poisoning.md)
@@ -94,6 +96,7 @@
     - [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
     - [GCP - Secretmanager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md)
     - [GCP - Security Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-security-post-exploitation.md)
+    - [Gcp Vertex Ai Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-vertex-ai-post-exploitation.md)
     - [GCP - Workflows Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-workflows-post-exploitation.md)
     - [GCP - Storage Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-post-exploitation.md)
   - [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
@@ -459,6 +462,7 @@
     - [Az - PTA - Pass-through Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pta-pass-through-authentication.md)
     - [Az - Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-seamless-sso.md)    
   - [Az - Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/README.md)
+    - [Az Azure Ai Foundry Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-azure-ai-foundry-post-exploitation.md)
     - [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
     - [Az - CosmosDB Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-cosmosDB-post-exploitation.md)
     - [Az - File Share Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-file-share-post-exploitation.md)
@@ -537,7 +541,3 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
-
-
-
-
