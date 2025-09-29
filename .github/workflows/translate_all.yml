@@ -93,6 +93,7 @@ jobs:
       - name: Run translation script on changed files
         run: |
           git checkout master
+          cp src/SUMMARY.md /tmp/master-summary.md
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           git diff --name-only HEAD~1 | grep -v "SUMMARY.md" | while read -r file; do
             if echo "$file" | grep -qE '\.md$'; then
@@ -115,6 +116,20 @@ jobs:
               -t 3
           else
             echo "No markdown files changed, skipping translation."
+          fi
+
+      - name: Sync SUMMARY.md from master
+        run: |
+          git checkout "$BRANCH"
+          git pull
+          if [ -f /tmp/master-summary.md ]; then
+            cp /tmp/master-summary.md src/SUMMARY.md
+            git add src/SUMMARY.md
+            git commit -m "Sync SUMMARY.md with master" || echo "SUMMARY already up to date"
+            git push || echo "No SUMMARY updates to push"
+          else
+            echo "master summary not exported; failing"
+            exit 1
           fi
 
       - name: Build mdBook
