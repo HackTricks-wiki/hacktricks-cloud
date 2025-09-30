@@ -46,8 +46,10 @@
   - [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
 - [Serverless.com Security](pentesting-ci-cd/serverless.com-security.md)
 - [Supabase Security](pentesting-ci-cd/supabase-security.md)
-- [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
+- [Check Automate Security](pentesting-ci-cd/chef-automate-security/README.md)
+  - [Chef Automate Enumeration And Attacks](pentesting-ci-cd/chef-automate-security/chef-automate-enumeration-and-attacks.md)
 - [Vercel Security](pentesting-ci-cd/vercel-security.md)
+- [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
 - [TODO](pentesting-ci-cd/todo.md)
 
 # ⛈️ Pentesting Cloud
@@ -542,6 +544,3 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
-
-  - [Readme](pentesting-ci-cd/chef-automate-security/README.md)
-  - [Chef Automate Enumeration And Attacks](pentesting-ci-cd/chef-automate-security/chef-automate-enumeration-and-attacks.md)
