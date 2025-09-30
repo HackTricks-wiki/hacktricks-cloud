@@ -46,8 +46,10 @@
   - [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
 - [Serverless.com Security](pentesting-ci-cd/serverless.com-security.md)
 - [Supabase Security](pentesting-ci-cd/supabase-security.md)
-- [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
+- [Check Automate Security](pentesting-ci-cd/chef-automate-security/README.md)
+  - [Chef Automate Enumeration And Attacks](pentesting-ci-cd/chef-automate-security/chef-automate-enumeration-and-attacks.md)
 - [Vercel Security](pentesting-ci-cd/vercel-security.md)
+- [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
 - [TODO](pentesting-ci-cd/todo.md)
 
 # ⛈️ Pentesting Cloud
@@ -404,6 +406,7 @@
     - [AWS - S3 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-s3-unauthenticated-enum.md)
 - [Azure Pentesting](pentesting-cloud/azure-security/README.md)
   - [Az - Basic Information](pentesting-cloud/azure-security/az-basic-information/README.md)
+    - [Az Federation Abuse](pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md)
     - [Az - Tokens & Public Applications](pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md)
   - [Az - Enumeration Tools](pentesting-cloud/azure-security/az-enumeration-tools.md)
   - [Az - Unauthenticated Enum & Initial Entry](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/README.md)
