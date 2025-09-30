@@ -542,3 +542,6 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
+
+  - [Readme](pentesting-ci-cd/chef-automate-security/README.md)
+  - [Chef Automate Enumeration And Attacks](pentesting-ci-cd/chef-automate-security/chef-automate-enumeration-and-attacks.md)
