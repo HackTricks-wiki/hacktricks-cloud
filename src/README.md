@@ -4,9 +4,9 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks λογότυπα & κίνηση σχεδιασμένα από_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Τα λογότυπα και η κινούμενη εικόνα του Hacktricks σχεδιάστηκαν από_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
-### Εκτέλεση του HackTricks Cloud Τοπικά
+### Τρέξτε το HackTricks Cloud τοπικά
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -31,29 +31,29 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Η τοπική σας έκδοση του HackTricks Cloud θα είναι **διαθέσιμη στο [http://localhost:3377](http://localhost:3377)** μετά από ένα λεπτό.
+Το τοπικό σας αντίγραφο του HackTricks Cloud θα είναι **διαθέσιμο στο [http://localhost:3377](http://localhost:3377)** μέσα σε ένα λεπτό.
 
-### **Μεθοδολογία Pentesting CI/CD**
+### **Pentesting CI/CD Μεθοδολογία**
 
-**Στη Μεθοδολογία CI/CD του HackTricks θα βρείτε πώς να κάνετε pentest υποδομές που σχετίζονται με δραστηριότητες CI/CD.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
+**Στη HackTricks CI/CD Μεθοδολογία θα βρείτε πώς να pentest την υποδομή που σχετίζεται με δραστηριότητες CI/CD.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Μεθοδολογία Pentesting Cloud
+### Pentesting Cloud Μεθοδολογία
 
-**Στη Μεθοδολογία Cloud του HackTricks θα βρείτε πώς να κάνετε pentest σε περιβάλλοντα cloud.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
+**Στην HackTricks Cloud Μεθοδολογία θα βρείτε πώς να pentest περιβάλλοντα cloud.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Άδεια & Αποποίηση Ευθύνης
+### Άδεια & Αποποίηση
 
-**Ελέγξτε τα εδώ:**
+**Ελέγξτε τα στο:**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Στατιστικά Github
+### Github Στατιστικά
 
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
