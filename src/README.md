@@ -4,9 +4,9 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks 로고 및 모션 디자인_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_에 의해 제작되었습니다._
+_Hacktricks 로고 및 모션 디자인:_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
-### HackTricks Cloud를 로컬에서 실행하기
+### 로컬에서 HackTricks Cloud 실행
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -31,23 +31,23 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-당신의 로컬 HackTricks Cloud 복사본은 **1분 후에 [http://localhost:3377](http://localhost:3377)**에서 **사용 가능**합니다.
+로컬에 복제된 HackTricks Cloud는 **[http://localhost:3377](http://localhost:3377)**에서 1분 후 이용할 수 있습니다.
 
-### **펜테스팅 CI/CD 방법론**
+### **Pentesting CI/CD 방법론**
 
-**HackTricks CI/CD 방법론에서는 CI/CD 활동과 관련된 인프라를 펜테스트하는 방법을 찾을 수 있습니다.** 다음 페이지를 읽어 **소개**를 확인하세요:
+**In the HackTricks CI/CD Methodology you will find how to pentest infrastructure related to CI/CD activities.** 다음 페이지에서 **소개:**를 읽으세요:
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### 펜테스팅 클라우드 방법론
+### Pentesting Cloud 방법론
 
-**HackTricks Cloud 방법론에서는 클라우드 환경을 펜테스트하는 방법을 찾을 수 있습니다.** 다음 페이지를 읽어 **소개**를 확인하세요:
+**In the HackTricks Cloud Methodology you will find how to pentest cloud environments.** 다음 페이지에서 **소개:**를 읽으세요:
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### 라이센스 및 면책 조항
+### 라이선스 & 고지사항
 
 **다음에서 확인하세요:**
 
