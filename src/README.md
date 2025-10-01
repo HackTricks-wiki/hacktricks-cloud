@@ -4,7 +4,7 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logotipi i animacije dizajnirao_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Logotipe i animacije za Hacktricks dizajnirao_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
 ### Pokrenite HackTricks Cloud lokalno
 ```bash
@@ -31,30 +31,30 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Vaša lokalna kopija HackTricks Cloud biće **dostupna na [http://localhost:3377](http://localhost:3377)** nakon minuta.
+Vaša lokalna kopija HackTricks Cloud biće **dostupna na [http://localhost:3377](http://localhost:3377)** za minut.
 
-### **Pentesting CI/CD metodologija**
+### **Pentesting CI/CD Metodologija**
 
-**U HackTricks CI/CD metodologiji ćete pronaći kako da pentestirate infrastrukturu vezanu za CI/CD aktivnosti.** Pročitajte sledeću stranicu za **uvod:**
+**U HackTricks CI/CD metodologiji naći ćete kako da pentestujete infrastrukturu povezanu sa CI/CD aktivnostima.** Pročitajte sledeću stranicu za **uvod:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud metodologija
+### Pentesting Cloud Metodologija
 
-**U HackTricks Cloud metodologiji ćete pronaći kako da pentestirate cloud okruženja.** Pročitajte sledeću stranicu za **uvod:**
+**U HackTricks Cloud metodologiji naći ćete kako da pentestujete cloud okruženja.** Pročitajte sledeću stranicu za **uvod:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Licenca i odricanje od odgovornosti
+### Licenca i odricanje odgovornosti
 
 **Proverite ih u:**
 
-[HackTricks vrednosti i FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
 ### Github statistika
 
-![HackTricks Cloud Github statistika](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
