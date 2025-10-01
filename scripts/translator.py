@@ -18,6 +18,39 @@ MAX_TOKENS = 50000 #gpt-4-1106-preview
 DISALLOWED_SPECIAL = "<|endoftext|>"
 REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 
+def run_git_command_with_retry(cmd, max_retries=1, delay=5, **kwargs):
+    """
+    Run a git command with retry logic.
+    
+    Args:
+        cmd: Command to run (list or string)
+        max_retries: Number of additional retries after first failure
+        delay: Delay in seconds between retries
+        **kwargs: Additional arguments to pass to subprocess.run
+    
+    Returns:
+        subprocess.CompletedProcess result
+    """
+    last_exception = None
+    for attempt in range(max_retries + 1):
+        try:
+            result = subprocess.run(cmd, **kwargs)
+            return result
+        except Exception as e:
+            last_exception = e
+            if attempt < max_retries:
+                print(f"Git command failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                print(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                print(f"Git command failed after {max_retries + 1} attempts: {e}")
+                
+    # If we get here, all attempts failed, re-raise the last exception
+    if last_exception:
+        raise last_exception
+    else:
+        raise RuntimeError("Unexpected error in git command retry logic")
+
 def _sanitize(text: str) -> str:
     """
     Replace the reserved tiktoken token with a harmless placeholder.
@@ -42,7 +75,7 @@ def check_git_dir(path):
 def get_branch_files(branch):
     """Get a list of all files in a branch."""
     command = f"git ls-tree -r --name-only {branch}"
-    result = subprocess.run(command.split(), stdout=subprocess.PIPE)
+    result = run_git_command_with_retry(command.split(), stdout=subprocess.PIPE)
     files = result.stdout.decode().splitlines()
     return set(files)
 
@@ -63,12 +96,12 @@ def cp_translation_to_repo_dir_and_check_gh_branch(branch, temp_folder, translat
     Get the translated files from the temp folder and copy them to the repo directory in the expected branch.
     Also remove all the files that are not in the master branch.
     """
-    branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
+    branch_exists = run_git_command_with_retry(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:
-        subprocess.run(['git', 'checkout', '-b', branch])
+        run_git_command_with_retry(['git', 'checkout', '-b', branch])
     else:
-        subprocess.run(['git', 'checkout', branch])
+        run_git_command_with_retry(['git', 'checkout', branch])
 
     # Get files to delete
     files_to_delete = get_unused_files(branch)
@@ -108,7 +141,7 @@ def commit_and_push(translate_files, branch):
     ]
 
     for cmd in commands:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = run_git_command_with_retry(cmd, capture_output=True, text=True)
         
         # Print stdout and stderr (if any)
         if result.stdout:
