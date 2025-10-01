@@ -4,9 +4,9 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Logos e animações do Hacktricks projetados por_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Logotipos e motion do Hacktricks desenhados por_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
-### Execute o HackTricks Cloud Localmente
+### Executar o HackTricks Cloud localmente
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -31,25 +31,25 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Sua cópia local do HackTricks Cloud estará **disponível em [http://localhost:3377](http://localhost:3377)** após um minuto.
+Sua cópia local do HackTricks Cloud ficará **disponível em [http://localhost:3377](http://localhost:3377)** após um minuto.
 
 ### **Metodologia de Pentesting CI/CD**
 
-**Na Metodologia CI/CD do HackTricks você encontrará como pentestar a infraestrutura relacionada a atividades de CI/CD.** Leia a página a seguir para uma **introdução:**
+**Na Metodologia HackTricks CI/CD você encontrará como realizar pentesting em infraestrutura relacionada às atividades de CI/CD.** Leia a página a seguir para uma **introdução:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Metodologia de Pentesting Cloud
 
-**Na Metodologia Cloud do HackTricks você encontrará como pentestar ambientes de cloud.** Leia a página a seguir para uma **introdução:**
+**Na Metodologia HackTricks Cloud você encontrará como realizar pentesting em ambientes cloud.** Leia a página a seguir para uma **introdução:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Licença & Isenção de Responsabilidade
+### Licença & Aviso Legal
 
-**Verifique-os em:**
+**Consulte-os em:**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
