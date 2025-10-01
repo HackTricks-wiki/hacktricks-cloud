@@ -4,9 +4,9 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logoları ve hareket tasarımı_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_ tarafından yapılmıştır._
+_Hacktricks logoları ve hareket tasarımı [_@ppieranacho_](https://www.instagram.com/ppieranacho/) tarafından yapıldı._
 
-### HackTricks Cloud'u Yerel Olarak Çalıştırın
+### HackTricks Cloud'u Yerel Olarak Çalıştırma
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -31,27 +31,27 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Yerel kopyanız HackTricks Cloud **bir dakika sonra [http://localhost:3377](http://localhost:3377)** adresinde **mevcut olacak.**
+Yerel HackTricks Cloud kopyanız bir dakika içinde **[http://localhost:3377](http://localhost:3377)** adresinde kullanıma açılacak.
 
 ### **Pentesting CI/CD Metodolojisi**
 
-**HackTricks CI/CD Metodolojisinde, CI/CD faaliyetleri ile ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Aşağıdaki sayfayı bir **giriş için** okuyun:
+**HackTricks CI/CD Metodolojisi'nde CI/CD faaliyetleriyle ilgili altyapıyı nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Metodolojisi
 
-**HackTricks Cloud Metodolojisinde, bulut ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Aşağıdaki sayfayı bir **giriş için** okuyun:
+**HackTricks Cloud Metodolojisi'nde cloud ortamlarını nasıl pentest edeceğinizi bulacaksınız.** Bir **giriş** için aşağıdaki sayfayı okuyun:
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Lisans & Feragatname
+### Lisans & Sorumluluk Reddi
 
-**Onları kontrol edin:**
+**Bunları inceleyin:**
 
-[HackTricks Değerleri & SSS](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
 ### Github İstatistikleri
 
