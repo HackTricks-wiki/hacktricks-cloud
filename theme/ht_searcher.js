@@ -21,33 +21,60 @@
       try { importScripts('https://cdn.jsdelivr.net/npm/elasticlunr@0.9.5/elasticlunr.min.js'); }
       catch { importScripts(abs('/elasticlunr.min.js')); }
   
-      /* 2 — load a single index (remote → local) */
-      async function loadIndex(remote, local, isCloud=false){
-        let rawLoaded = false;
+    /* 2 — load a single index (remote → local) */
+    async function loadIndex(remote, local, isCloud=false){
+      let rawLoaded = false;
+      if(remote){
         try {
           const r = await fetch(remote,{mode:'cors'});
           if (!r.ok) throw new Error('HTTP '+r.status);
           importScripts(URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'})));
           rawLoaded = true;
         } catch(e){ console.warn('remote',remote,'failed →',e); }
-        if(!rawLoaded){
-          try { importScripts(abs(local)); rawLoaded = true; }
-          catch(e){ console.error('local',local,'failed →',e); }
-        }
-        if(!rawLoaded) return null;                 /* give up on this index */
-        const data = { json:self.search.index, urls:self.search.doc_urls, cloud:isCloud };
-        delete self.search.index; delete self.search.doc_urls;
-        return data;
       }
-  
-      (async () => {
-        const MAIN_RAW  = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks/refs/heads/master/searchindex.js';
-        const CLOUD_RAW = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/refs/heads/master/searchindex.js';
-  
-        const indices = [];
-        const main = await loadIndex(MAIN_RAW , '/searchindex-book.js',        false); if(main)  indices.push(main);
-        const cloud= await loadIndex(CLOUD_RAW, '/searchindex.js',  true ); if(cloud) indices.push(cloud);
-  
+      if(!rawLoaded && local){
+        try { importScripts(abs(local)); rawLoaded = true; }
+        catch(e){ console.error('local',local,'failed →',e); }
+      }
+      if(!rawLoaded) return null;                 /* give up on this index */
+      const data = { json:self.search.index, urls:self.search.doc_urls, cloud:isCloud };
+      delete self.search.index; delete self.search.doc_urls;
+      return data;
+    }
+
+    async function loadWithFallback(remotes, local, isCloud=false){
+      if(remotes.length){
+        const [primary, ...secondary] = remotes;
+        const primaryData = await loadIndex(primary, null, isCloud);
+        if(primaryData) return primaryData;
+
+        if(local){
+          const localData = await loadIndex(null, local, isCloud);
+          if(localData) return localData;
+        }
+
+        for (const remote of secondary){
+          const data = await loadIndex(remote, null, isCloud);
+          if(data) return data;
+        }
+      }
+
+      return local ? loadIndex(null, local, isCloud) : null;
+    }          (async () => {
+      const htmlLang = (document.documentElement.lang || 'en').toLowerCase();
+      const lang = htmlLang.split('-')[0];
+      const mainReleaseBase = 'https://github.com/HackTricks-wiki/hacktricks/releases/download';
+      const cloudReleaseBase = 'https://github.com/HackTricks-wiki/hacktricks-cloud/releases/download';
+
+      const mainTags = Array.from(new Set(['searchindex-' + lang, 'searchindex-en', 'searchindex-master']));
+      const cloudTags = Array.from(new Set(['searchindex-' + lang, 'searchindex-en', 'searchindex-master']));
+
+      const MAIN_REMOTE_SOURCES  = mainTags.map(function(tag) { return mainReleaseBase + '/' + tag + '/searchindex.js'; });
+      const CLOUD_REMOTE_SOURCES = cloudTags.map(function(tag) { return cloudReleaseBase + '/' + tag + '/searchindex.js'; });
+
+      const indices = [];
+      const main = await loadWithFallback(MAIN_REMOTE_SOURCES , '/searchindex-book.js',        false); if(main)  indices.push(main);
+      const cloud= await loadWithFallback(CLOUD_REMOTE_SOURCES, '/searchindex.js',  true ); if(cloud) indices.push(cloud);  
         if(!indices.length){ postMessage({ready:false, error:'no-index'}); return; }
   
         /* build index objects */
@@ -160,8 +187,16 @@
     /* ───────────── worker messages ───────────── */
     worker.onmessage = ({data}) => {
       if(data && data.ready!==undefined){
-        if(data.ready){ icon.innerHTML=READY_ICON; icon.setAttribute('aria-label','Open search (S)'); }
-        else { icon.textContent='❌'; icon.setAttribute('aria-label','Search unavailable'); }
+        if(data.ready){ 
+          icon.innerHTML=READY_ICON; 
+          icon.setAttribute('aria-label','Open search (S)'); 
+          icon.removeAttribute('title');
+        }
+        else { 
+          icon.textContent='❌'; 
+          icon.setAttribute('aria-label','Search unavailable'); 
+          icon.setAttribute('title','Search is unavailable');
+        }
         return;
       }
       const docs=data, q=bar.value.trim(), terms=q.split(/\s+/).filter(Boolean);
