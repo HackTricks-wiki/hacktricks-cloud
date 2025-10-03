@@ -60,25 +60,29 @@
       }
 
       return local ? loadIndex(null, local, isCloud) : null;
-    }          (async () => {
-      const htmlLang = (document.documentElement.lang || 'en').toLowerCase();
-      const lang = htmlLang.split('-')[0];
-      const mainReleaseBase = 'https://github.com/HackTricks-wiki/hacktricks/releases/download';
-      const cloudReleaseBase = 'https://github.com/HackTricks-wiki/hacktricks-cloud/releases/download';
+    }
+    
+    let built = [];
+    const MAX = 30, opts = {bool:'AND', expand:true};
+    
+    self.onmessage = async ({data}) => {
+      if(data.type === 'init'){
+        const lang = data.lang || 'en';
+        const searchindexBase = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-searchindex/main';
 
-      const mainTags = Array.from(new Set(['searchindex-' + lang, 'searchindex-en', 'searchindex-master']));
-      const cloudTags = Array.from(new Set(['searchindex-' + lang, 'searchindex-en', 'searchindex-master']));
+        const mainFilenames = Array.from(new Set(['searchindex-' + lang + '.js', 'searchindex-en.js']));
+        const cloudFilenames = Array.from(new Set(['searchindex-cloud-' + lang + '.js', 'searchindex-cloud-en.js']));
 
-      const MAIN_REMOTE_SOURCES  = mainTags.map(function(tag) { return mainReleaseBase + '/' + tag + '/searchindex.js'; });
-      const CLOUD_REMOTE_SOURCES = cloudTags.map(function(tag) { return cloudReleaseBase + '/' + tag + '/searchindex.js'; });
+        const MAIN_REMOTE_SOURCES  = mainFilenames.map(function(filename) { return searchindexBase + '/' + filename; });
+        const CLOUD_REMOTE_SOURCES = cloudFilenames.map(function(filename) { return searchindexBase + '/' + filename; });
 
-      const indices = [];
-      const main = await loadWithFallback(MAIN_REMOTE_SOURCES , '/searchindex-book.js',        false); if(main)  indices.push(main);
-      const cloud= await loadWithFallback(CLOUD_REMOTE_SOURCES, '/searchindex.js',  true ); if(cloud) indices.push(cloud);  
+        const indices = [];
+        const main = await loadWithFallback(MAIN_REMOTE_SOURCES , '/searchindex-book.js',        false); if(main)  indices.push(main);
+        const cloud= await loadWithFallback(CLOUD_REMOTE_SOURCES, '/searchindex.js',  true ); if(cloud) indices.push(cloud);  
         if(!indices.length){ postMessage({ready:false, error:'no-index'}); return; }
   
         /* build index objects */
-        const built = indices.map(d => ({
+        built = indices.map(d => ({
           idx : elasticlunr.Index.load(d.json),
           urls: d.urls,
           cloud: d.cloud,
@@ -86,10 +90,11 @@
         }));
   
         postMessage({ready:true});
-        const MAX = 30, opts = {bool:'AND', expand:true};
-  
-        self.onmessage = ({data:q}) => {
-          if(!q){ postMessage([]); return; }
+        return;
+      }
+      
+      const q = data.query || data;
+      if(!q){ postMessage([]); return; }
   
           const all = [];
           for(const s of built){
@@ -110,12 +115,16 @@
           }
           all.sort((a,b)=>b.norm-a.norm);
           postMessage(all.slice(0,MAX));
-        };
-      })();
+    };
     `;
   
     /* ───────────── 2. spawn worker ───────────── */
     const worker = new Worker(URL.createObjectURL(new Blob([workerCode],{type:'application/javascript'})));
+    
+    /* ───────────── 2.1. initialize worker with language ───────────── */
+    const htmlLang = (document.documentElement.lang || 'en').toLowerCase();
+    const lang = htmlLang.split('-')[0];
+    worker.postMessage({type: 'init', lang: lang});
   
     /* ───────────── 3. DOM refs ─────────────── */
     const wrap    = document.getElementById('search-wrapper');
@@ -182,7 +191,7 @@
       else if([DOWN,UP,ENTER].includes(e.keyCode) && document.activeElement!==bar){const cur=list.querySelector('li.focus'); if(!cur) return; e.preventDefault(); if(e.keyCode===DOWN){const nxt=cur.nextElementSibling; if(nxt){cur.classList.remove('focus'); nxt.classList.add('focus');}} else if(e.keyCode===UP){const prv=cur.previousElementSibling; cur.classList.remove('focus'); if(prv){prv.classList.add('focus');} else {bar.focus();}} else {const a=cur.querySelector('a'); if(a) window.location.assign(a.href);}}
     });
   
-    bar.addEventListener('input',e=>{ clearTimeout(debounce); debounce=setTimeout(()=>worker.postMessage(e.target.value.trim()),120); });
+    bar.addEventListener('input',e=>{ clearTimeout(debounce); debounce=setTimeout(()=>worker.postMessage({query: e.target.value.trim()}),120); });
   
     /* ───────────── worker messages ───────────── */
     worker.onmessage = ({data}) => {
