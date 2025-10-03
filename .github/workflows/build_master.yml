@@ -60,10 +60,20 @@ jobs:
           # Clone the searchindex repo
           git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
           
+          cd /tmp/searchindex-repo
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+          
+          # Create a fresh orphan branch (no history)
+          git checkout --orphan new-main
+          
+          # Remove all existing files from git index
+          git rm -rf . 2>/dev/null || true
+          
           # Copy and compress the searchindex file
-          cp "$ASSET" "/tmp/searchindex-repo/${FILENAME}"
+          cp "$ASSET" "${FILENAME}"
           gzip -9 -k -f "$ASSET"
-          cp "${ASSET}.gz" "/tmp/searchindex-repo/${FILENAME}.gz"
+          cp "${ASSET}.gz" "${FILENAME}.gz"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
@@ -71,37 +81,34 @@ jobs:
           RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
           echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
           
-          # Commit and push with retry logic
-          cd /tmp/searchindex-repo
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@github.com"
-          git add "${FILENAME}" "${FILENAME}.gz"
+          # Add all files from other workflows (if they exist)
+          git checkout main -- . 2>/dev/null || true
           
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update ${FILENAME} from hacktricks-cloud build"
-            
-            # Retry push up to 20 times with pull --rebase between attempts
-            MAX_RETRIES=20
-            RETRY_COUNT=0
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if git push origin main; then
-                echo "Successfully pushed on attempt $((RETRY_COUNT + 1))"
-                break
-              else
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                  echo "Push failed, attempt $RETRY_COUNT/$MAX_RETRIES. Pulling and retrying..."
-                  git pull --rebase origin main
-                  sleep $((RETRY_COUNT * 2))  # Exponential backoff
-                else
-                  echo "Failed to push after $MAX_RETRIES attempts"
-                  exit 1
-                fi
-              fi
-            done
+          # Add our new files (will overwrite if they existed)
+          cp "$ASSET" "${FILENAME}"
+          cp "${ASSET}.gz" "${FILENAME}.gz"
+          
+          # Create README if it doesn't exist
+          if [ ! -f "README.md" ]; then
+            echo "# HackTricks Search Index Repository" > README.md
+            echo "" >> README.md
+            echo "This repository contains searchindex files for HackTricks and HackTricks Cloud." >> README.md
+            echo "Files are automatically generated and updated by GitHub Actions." >> README.md
+            echo "" >> README.md
+            echo "⚠️ This repository is reset periodically to keep history clean." >> README.md
           fi
+          
+          # Stage all files
+          git add -A
+          
+          # Commit with timestamp
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          git commit -m "Update searchindex files - ${TIMESTAMP}"
+          
+          # Force push to replace main branch (deletes history)
+          git push -f origin new-main:main
+          
+          echo "Successfully reset repository and pushed searchindex files"
 
       # Login in AWs
       - name: Configure AWS credentials using OIDC

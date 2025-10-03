@@ -202,7 +202,33 @@ jobs:
                 RETRY_COUNT=$((RETRY_COUNT + 1))
                 if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                   echo "Push failed, attempt $RETRY_COUNT/$MAX_RETRIES. Pulling and retrying..."
-                  git pull --rebase origin main
+                  
+                  # Try normal rebase first
+                  if git pull --rebase origin main 2>&1 | tee /tmp/pull_output.txt; then
+                    echo "Rebase successful, retrying push..."
+                  else
+                    # If rebase fails due to divergent histories (orphan branch reset), re-clone
+                    if grep -q "unrelated histories\|refusing to merge\|fatal: invalid upstream" /tmp/pull_output.txt; then
+                      echo "Detected history rewrite, re-cloning repository..."
+                      cd /tmp
+                      rm -rf searchindex-repo
+                      git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git searchindex-repo
+                      cd searchindex-repo
+                      git config user.name "GitHub Actions"
+                      git config user.email "github-actions@github.com"
+                      
+                      # Re-copy and compress the searchindex file
+                      cp "$ASSET" "${FILENAME}"
+                      cp "${ASSET}.gz" "${FILENAME}.gz"
+                      
+                      git add "${FILENAME}" "${FILENAME}.gz"
+                      git commit -m "Update ${FILENAME} from hacktricks-cloud build"
+                      echo "Re-cloned and re-committed, will retry push..."
+                    else
+                      echo "Rebase failed for unknown reason, retrying anyway..."
+                    fi
+                  fi
+                  
                   sleep $((RETRY_COUNT * 2))  # Exponential backoff
                 else
                   echo "Failed to push after $MAX_RETRIES attempts"
