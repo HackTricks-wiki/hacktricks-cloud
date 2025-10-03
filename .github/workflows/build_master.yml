@@ -78,15 +78,20 @@ jobs:
           cp -r /tmp/searchindex-backup/* . 2>/dev/null || true
           
           # Now update/add our English searchindex file
+          # First, compress the original file (in the build directory)
+          cd "${GITHUB_WORKSPACE}"
           gzip -9 -k -f "$ASSET"
-          cp "$ASSET" "${FILENAME}"
-          cp "${ASSET}.gz" "${FILENAME}.gz"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
           COMPRESSED_SIZE=$(wc -c < "${ASSET}.gz")
           RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
           echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
+          
+          # Copy both versions to the searchindex repo
+          cd /tmp/searchindex-repo
+          cp "${GITHUB_WORKSPACE}/${ASSET}" "${FILENAME}"
+          cp "${GITHUB_WORKSPACE}/${ASSET}.gz" "${FILENAME}.gz"
           
           # Stage all files
           git add -A
