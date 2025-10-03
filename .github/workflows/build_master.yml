@@ -64,15 +64,22 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
           
+          # Save all current files from main branch to temp directory
+          mkdir -p /tmp/searchindex-backup
+          cp -r * /tmp/searchindex-backup/ 2>/dev/null || true
+          
           # Create a fresh orphan branch (no history)
           git checkout --orphan new-main
           
-          # Remove all existing files from git index
+          # Remove all files from git index (but keep working directory)
           git rm -rf . 2>/dev/null || true
           
-          # Copy and compress the searchindex file
-          cp "$ASSET" "${FILENAME}"
+          # Restore all the files from backup (keeps all language files)
+          cp -r /tmp/searchindex-backup/* . 2>/dev/null || true
+          
+          # Now update/add our English searchindex file
           gzip -9 -k -f "$ASSET"
+          cp "$ASSET" "${FILENAME}"
           cp "${ASSET}.gz" "${FILENAME}.gz"
           
           # Show compression stats
@@ -81,34 +88,17 @@ jobs:
           RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
           echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
           
-          # Add all files from other workflows (if they exist)
-          git checkout main -- . 2>/dev/null || true
-          
-          # Add our new files (will overwrite if they existed)
-          cp "$ASSET" "${FILENAME}"
-          cp "${ASSET}.gz" "${FILENAME}.gz"
-          
-          # Create README if it doesn't exist
-          if [ ! -f "README.md" ]; then
-            echo "# HackTricks Search Index Repository" > README.md
-            echo "" >> README.md
-            echo "This repository contains searchindex files for HackTricks and HackTricks Cloud." >> README.md
-            echo "Files are automatically generated and updated by GitHub Actions." >> README.md
-            echo "" >> README.md
-            echo "⚠️ This repository is reset periodically to keep history clean." >> README.md
-          fi
-          
           # Stage all files
           git add -A
           
           # Commit with timestamp
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          git commit -m "Update searchindex files - ${TIMESTAMP}"
+          git commit -m "Update searchindex files - ${TIMESTAMP}" --allow-empty
           
-          # Force push to replace main branch (deletes history)
+          # Force push to replace main branch (deletes history, keeps all files)
           git push -f origin new-main:main
           
-          echo "Successfully reset repository and pushed searchindex files"
+          echo "Successfully reset repository history and pushed all searchindex files"
 
       # Login in AWs
       - name: Configure AWS credentials using OIDC
