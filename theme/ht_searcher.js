@@ -44,32 +44,25 @@
     async function loadIndex(remote, local, isCloud=false){
       let rawLoaded = false;
       if(remote){
-        /* Try compressed version first */
+        /* Try ONLY compressed version from GitHub (remote already includes .js.gz) */
         try {
-          const gzUrl = remote + '.gz';
-          const r = await fetch(gzUrl,{mode:'cors'});
+          const r = await fetch(remote,{mode:'cors'});
           if (r.ok) {
             const compressed = await r.arrayBuffer();
             const text = await decompressGzip(compressed);
             importScripts(URL.createObjectURL(new Blob([text],{type:'application/javascript'})));
             rawLoaded = true;
-            console.log('Loaded compressed',gzUrl);
+            console.log('Loaded compressed from GitHub:',remote);
           }
-        } catch(e){ console.warn('compressed',remote+'.gz','failed →',e); }
-        
-        /* Fall back to uncompressed if compressed failed */
-        if(!rawLoaded){
-          try {
-            const r = await fetch(remote,{mode:'cors'});
-            if (!r.ok) throw new Error('HTTP '+r.status);
-            importScripts(URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'})));
-            rawLoaded = true;
-            console.log('Loaded uncompressed',remote);
-          } catch(e){ console.warn('remote',remote,'failed →',e); }
-        }
+        } catch(e){ console.warn('compressed GitHub',remote,'failed →',e); }
       }
+      /* If remote (GitHub) failed, fall back to local uncompressed file */
       if(!rawLoaded && local){
-        try { importScripts(abs(local)); rawLoaded = true; }
+        try { 
+          importScripts(abs(local)); 
+          rawLoaded = true;
+          console.log('Loaded local fallback:',local);
+        }
         catch(e){ console.error('local',local,'failed →',e); }
       }
       if(!rawLoaded) return null;                 /* give up on this index */
@@ -106,8 +99,9 @@
         const lang = data.lang || 'en';
         const searchindexBase = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-searchindex/main';
 
-        const mainFilenames = Array.from(new Set(['searchindex-' + lang + '.js', 'searchindex-en.js']));
-        const cloudFilenames = Array.from(new Set(['searchindex-cloud-' + lang + '.js', 'searchindex-cloud-en.js']));
+        /* Remote sources are .js.gz (compressed), local fallback is .js (uncompressed) */
+        const mainFilenames = Array.from(new Set(['searchindex-' + lang + '.js.gz', 'searchindex-en.js.gz']));
+        const cloudFilenames = Array.from(new Set(['searchindex-cloud-' + lang + '.js.gz', 'searchindex-cloud-en.js.gz']));
 
         const MAIN_REMOTE_SOURCES  = mainFilenames.map(function(filename) { return searchindexBase + '/' + filename; });
         const CLOUD_REMOTE_SOURCES = cloudFilenames.map(function(filename) { return searchindexBase + '/' + filename; });

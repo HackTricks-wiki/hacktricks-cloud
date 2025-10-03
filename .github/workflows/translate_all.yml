@@ -175,10 +175,8 @@ jobs:
           # Clone the searchindex repo
           git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
           
-          # Copy and compress the searchindex file
-          cp "$ASSET" "/tmp/searchindex-repo/${FILENAME}"
+          # Compress the searchindex file
           gzip -9 -k -f "$ASSET"
-          cp "${ASSET}.gz" "/tmp/searchindex-repo/${FILENAME}.gz"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
@@ -186,11 +184,14 @@ jobs:
           RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
           echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
           
+          # Copy ONLY the .gz version to the searchindex repo (no uncompressed .js)
+          cp "${ASSET}.gz" "/tmp/searchindex-repo/${FILENAME}.gz"
+          
           # Commit and push with retry logic
           cd /tmp/searchindex-repo
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
-          git add "${FILENAME}" "${FILENAME}.gz"
+          git add "${FILENAME}.gz"
           
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -223,12 +224,11 @@ jobs:
                       git config user.name "GitHub Actions"
                       git config user.email "github-actions@github.com"
                       
-                      # Re-copy and compress the searchindex file
-                      cp "$ASSET" "${FILENAME}"
+                      # Re-copy ONLY the .gz version (no uncompressed .js)
                       cp "${ASSET}.gz" "${FILENAME}.gz"
                       
-                      git add "${FILENAME}" "${FILENAME}.gz"
-                      git commit -m "Update ${FILENAME} from hacktricks-cloud build"
+                      git add "${FILENAME}.gz"
+                      git commit -m "Update ${FILENAME}.gz from hacktricks-cloud build"
                       echo "Re-cloned and re-committed, will retry push..."
                     else
                       echo "Rebase failed for unknown reason, retrying anyway..."
