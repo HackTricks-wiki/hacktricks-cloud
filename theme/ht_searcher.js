@@ -21,16 +21,52 @@
       try { importScripts('https://cdn.jsdelivr.net/npm/elasticlunr@0.9.5/elasticlunr.min.js'); }
       catch { importScripts(abs('/elasticlunr.min.js')); }
   
-    /* 2 — load a single index (remote → local) */
+    /* 2 — decompress gzip data */
+    async function decompressGzip(arrayBuffer){
+      if(typeof DecompressionStream !== 'undefined'){
+        /* Modern browsers: use native DecompressionStream */
+        const stream = new Response(arrayBuffer).body.pipeThrough(new DecompressionStream('gzip'));
+        const decompressed = await new Response(stream).arrayBuffer();
+        return new TextDecoder().decode(decompressed);
+      } else {
+        /* Fallback: use pako library */
+        if(typeof pako === 'undefined'){
+          try { importScripts('https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js'); }
+          catch(e){ throw new Error('pako library required for decompression: '+e); }
+        }
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const decompressed = pako.ungzip(uint8Array, {to: 'string'});
+        return decompressed;
+      }
+    }
+
+    /* 3 — load a single index (remote → local) */
     async function loadIndex(remote, local, isCloud=false){
       let rawLoaded = false;
       if(remote){
+        /* Try compressed version first */
         try {
-          const r = await fetch(remote,{mode:'cors'});
-          if (!r.ok) throw new Error('HTTP '+r.status);
-          importScripts(URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'})));
-          rawLoaded = true;
-        } catch(e){ console.warn('remote',remote,'failed →',e); }
+          const gzUrl = remote + '.gz';
+          const r = await fetch(gzUrl,{mode:'cors'});
+          if (r.ok) {
+            const compressed = await r.arrayBuffer();
+            const text = await decompressGzip(compressed);
+            importScripts(URL.createObjectURL(new Blob([text],{type:'application/javascript'})));
+            rawLoaded = true;
+            console.log('Loaded compressed',gzUrl);
+          }
+        } catch(e){ console.warn('compressed',remote+'.gz','failed →',e); }
+        
+        /* Fall back to uncompressed if compressed failed */
+        if(!rawLoaded){
+          try {
+            const r = await fetch(remote,{mode:'cors'});
+            if (!r.ok) throw new Error('HTTP '+r.status);
+            importScripts(URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'})));
+            rawLoaded = true;
+            console.log('Loaded uncompressed',remote);
+          } catch(e){ console.warn('remote',remote,'failed →',e); }
+        }
       }
       if(!rawLoaded && local){
         try { importScripts(abs(local)); rawLoaded = true; }

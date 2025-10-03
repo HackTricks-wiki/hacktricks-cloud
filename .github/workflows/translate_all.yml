@@ -169,14 +169,22 @@ jobs:
           # Clone the searchindex repo
           git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
           
-          # Copy the searchindex file
+          # Copy and compress the searchindex file
           cp "$ASSET" "/tmp/searchindex-repo/${FILENAME}"
+          gzip -9 -k -f "$ASSET"
+          cp "${ASSET}.gz" "/tmp/searchindex-repo/${FILENAME}.gz"
+          
+          # Show compression stats
+          ORIGINAL_SIZE=$(wc -c < "$ASSET")
+          COMPRESSED_SIZE=$(wc -c < "${ASSET}.gz")
+          RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
+          echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
           
           # Commit and push
           cd /tmp/searchindex-repo
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
-          git add "${FILENAME}"
+          git add "${FILENAME}" "${FILENAME}.gz"
           git commit -m "Update ${FILENAME} from hacktricks-cloud build" || echo "No changes to commit"
           git push || echo "No changes to push"
       
