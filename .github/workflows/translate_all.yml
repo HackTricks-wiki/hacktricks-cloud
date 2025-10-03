@@ -180,13 +180,37 @@ jobs:
           RATIO=$(awk "BEGIN {printf \"%.1f\", ($COMPRESSED_SIZE / $ORIGINAL_SIZE) * 100}")
           echo "Compression: ${ORIGINAL_SIZE} bytes -> ${COMPRESSED_SIZE} bytes (${RATIO}%)"
           
-          # Commit and push
+          # Commit and push with retry logic
           cd /tmp/searchindex-repo
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
           git add "${FILENAME}" "${FILENAME}.gz"
-          git commit -m "Update ${FILENAME} from hacktricks-cloud build" || echo "No changes to commit"
-          git push || echo "No changes to push"
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update ${FILENAME} from hacktricks-cloud build"
+            
+            # Retry push up to 20 times with pull --rebase between attempts
+            MAX_RETRIES=20
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if git push origin main; then
+                echo "Successfully pushed on attempt $((RETRY_COUNT + 1))"
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                  echo "Push failed, attempt $RETRY_COUNT/$MAX_RETRIES. Pulling and retrying..."
+                  git pull --rebase origin main
+                  sleep $((RETRY_COUNT * 2))  # Exponential backoff
+                else
+                  echo "Failed to push after $MAX_RETRIES attempts"
+                  exit 1
+                fi
+              fi
+            done
+          fi
       
       # Login in AWs
       - name: Configure AWS credentials using OIDC
