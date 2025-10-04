@@ -97,7 +97,7 @@
     self.onmessage = async ({data}) => {
       if(data.type === 'init'){
         const lang = data.lang || 'en';
-        const searchindexBase = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-searchindex/main';
+        const searchindexBase = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-searchindex/master';
 
         /* Remote sources are .js.gz (compressed), local fallback is .js (uncompressed) */
         const mainFilenames = Array.from(new Set(['searchindex-' + lang + '.js.gz', 'searchindex-en.js.gz']));
