@@ -361,6 +361,7 @@
       - [AWS - Trusted Advisor Enum](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/aws-trusted-advisor-enum.md)
       - [AWS - WAF Enum](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/aws-waf-enum.md)
     - [AWS - API Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-api-gateway-enum.md)
+    - [Aws Bedrock Agents Memory Poisoning](pentesting-cloud/aws-security/aws-services/aws-bedrock-agents-memory-poisoning.md)
     - [AWS - Certificate Manager (ACM) & Private Certificate Authority (PCA)](pentesting-cloud/aws-security/aws-services/aws-certificate-manager-acm-and-private-certificate-authority-pca.md)
     - [AWS - CloudFormation & Codestar Enum](pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md)
     - [AWS - CloudHSM Enum](pentesting-cloud/aws-security/aws-services/aws-cloudhsm-enum.md)
