@@ -41,6 +41,7 @@
 - [Atlantis Security](pentesting-ci-cd/atlantis-security.md)
 - [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
   - [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
+  - [Cloudflare Workers Pass Through Proxy Ip Rotation](pentesting-ci-cd/cloudflare-security/cloudflare-workers-pass-through-proxy-ip-rotation.md)
   - [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
 - [Okta Security](pentesting-ci-cd/okta-security/README.md)
   - [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
@@ -303,6 +304,7 @@
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md)
     - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
+    - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
     - [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md)
     - [AWS - Codepipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md)
     - [AWS - Codestar Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md)
@@ -574,3 +576,6 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
+
+    - [Feature Store Poisoning](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/feature-store-poisoning.md)
+  - [Aws Sqs Dlq Redrive Exfiltration](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
