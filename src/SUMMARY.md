@@ -304,6 +304,7 @@
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md)
     - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
+    - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
     - [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md)
     - [AWS - Codepipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md)
     - [AWS - Codestar Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md)
