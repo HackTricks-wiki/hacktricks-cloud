@@ -41,6 +41,7 @@
 - [Atlantis Security](pentesting-ci-cd/atlantis-security.md)
 - [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
   - [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
+  - [Cloudflare Workers Pass Through Proxy Ip Rotation](pentesting-ci-cd/cloudflare-security/cloudflare-workers-pass-through-proxy-ip-rotation.md)
   - [Cloudflare Zero Trust Network](pentesting-ci-cd/cloudflare-security/cloudflare-zero-trust-network.md)
 - [Okta Security](pentesting-ci-cd/okta-security/README.md)
   - [Okta Hardening](pentesting-ci-cd/okta-security/okta-hardening.md)
@@ -248,6 +249,7 @@
     - [AWS - STS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sts-persistence/README.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
+    - [AWS - Bedrock Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md)
     - [AWS - CloudFront Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md)
     - [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/README.md)
       - [AWS Codebuild - Token Leakage](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
@@ -362,6 +364,7 @@
       - [AWS - Trusted Advisor Enum](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/aws-trusted-advisor-enum.md)
       - [AWS - WAF Enum](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/aws-waf-enum.md)
     - [AWS - API Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-api-gateway-enum.md)
+    - [AWS - Bedrock Enum](pentesting-cloud/aws-security/aws-services/aws-bedrock-enum.md)
     - [AWS - Certificate Manager (ACM) & Private Certificate Authority (PCA)](pentesting-cloud/aws-security/aws-services/aws-certificate-manager-acm-and-private-certificate-authority-pca.md)
     - [AWS - CloudFormation & Codestar Enum](pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md)
     - [AWS - CloudHSM Enum](pentesting-cloud/aws-security/aws-services/aws-cloudhsm-enum.md)
@@ -573,3 +576,6 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
+
+    - [Feature Store Poisoning](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/feature-store-poisoning.md)
+  - [Aws Sqs Dlq Redrive Exfiltration](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
