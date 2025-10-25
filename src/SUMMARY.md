@@ -298,7 +298,6 @@
     - [AWS - SQS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/README.md)
       - [AWS – SQS DLQ Redrive Exfiltration via StartMessageMoveTask](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
       - [AWS – SQS Cross-/Same-Account Injection via SNS Subscription + Queue Policy](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-sns-injection.md)
-      - [Aws SQS Dlq Redrive Exfiltration](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
     - [AWS - SSO & identitystore Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sso-and-identitystore-post-exploitation/README.md)
     - [AWS - Step Functions Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md)
     - [AWS - STS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sts-post-exploitation/README.md)
