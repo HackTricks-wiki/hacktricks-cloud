@@ -579,3 +579,4 @@
 
     - [Feature Store Poisoning](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/feature-store-poisoning.md)
   - [Aws Sqs Dlq Redrive Exfiltration](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
+    - [Readme](pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md)
