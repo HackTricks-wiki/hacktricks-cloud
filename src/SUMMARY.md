@@ -9,6 +9,7 @@
 # 🏭 Pentesting CI/CD
 
 - [Pentesting CI/CD Methodology](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [Docker Build Context Abuse in Cloud Envs](pentesting-ci-cd/docker-build-context-abuse.md)
 - [Gitblit Security](pentesting-ci-cd/gitblit-security/README.md)
   - [Ssh Auth Bypass](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
 - [Github Security](pentesting-ci-cd/github-security/README.md)
@@ -298,7 +299,6 @@
     - [AWS - SQS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/README.md)
       - [AWS – SQS DLQ Redrive Exfiltration via StartMessageMoveTask](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
       - [AWS – SQS Cross-/Same-Account Injection via SNS Subscription + Queue Policy](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-sns-injection.md)
-      - [Aws SQS Dlq Redrive Exfiltration](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
     - [AWS - SSO & identitystore Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sso-and-identitystore-post-exploitation/README.md)
     - [AWS - Step Functions Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md)
     - [AWS - STS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sts-post-exploitation/README.md)
@@ -579,5 +579,4 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
-
     
