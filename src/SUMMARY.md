@@ -8,8 +8,8 @@
 
 # 🏭 Pentesting CI/CD
 
-- [Docker Build Context Abuse](pentesting-ci-cd/docker-build-context-abuse.md)
 - [Pentesting CI/CD Methodology](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [Docker Build Context Abuse in Cloud Envs](pentesting-ci-cd/docker-build-context-abuse.md)
 - [Gitblit Security](pentesting-ci-cd/gitblit-security/README.md)
   - [Ssh Auth Bypass](pentesting-ci-cd/gitblit-security/gitblit-embedded-ssh-auth-bypass-cve-2024-28080.md)
 - [Github Security](pentesting-ci-cd/github-security/README.md)
