@@ -53,6 +53,7 @@
 - [Vercel Security](pentesting-ci-cd/vercel-security.md)
 - [Ansible Tower / AWX / Automation controller Security](pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md)
 - [TODO](pentesting-ci-cd/todo.md)
+- [Workspace One Airwatch Security](pentesting-ci-cd/workspace-one-airwatch-security.md)
 
 # ⛈️ Pentesting Cloud
 
