@@ -580,3 +580,5 @@
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
     
+
+  - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
