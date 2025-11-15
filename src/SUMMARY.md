@@ -57,6 +57,7 @@
 # ⛈️ Pentesting Cloud
 
 - [Pentesting Cloud Methodology](pentesting-cloud/pentesting-cloud-methodology.md)
+  - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
 - [Kubernetes Pentesting](pentesting-cloud/kubernetes-security/README.md)
   - [Kubernetes Basics](pentesting-cloud/kubernetes-security/kubernetes-basics.md)
   - [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
@@ -579,6 +580,3 @@
 
 - [HackTricks Pentesting Network$$external:https://book.hacktricks.wiki/en/generic-methodologies-and-resources/pentesting-network/index.html$$]()
 - [HackTricks Pentesting Services$$external:https://book.hacktricks.wiki/en/network-services-pentesting/pentesting-ssh.html$$]()
-    
-
-  - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
