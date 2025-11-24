@@ -165,6 +165,8 @@ if __name__ == '__main__':
     book_items = book.get('sections') or book.get('items', [])
     
     for chapter in iterate_chapters(book_items):
+        if chapter is None:
+            continue
         logger.debug(f"Chapter: {chapter['path']}")
         current_chapter = chapter
         # regex = r'{{[\s]*#ref[\s]*}}(?:\n)?([^\\\n]*)(?:\n)?{{[\s]*#endref[\s]*}}'
