@@ -21,37 +21,112 @@
       try { importScripts('https://cdn.jsdelivr.net/npm/elasticlunr@0.9.5/elasticlunr.min.js'); }
       catch { importScripts(abs('/elasticlunr.min.js')); }
   
-      /* 2 — load a single index (remote → local) */
-      async function loadIndex(remote, local, isCloud=false){
-        let rawLoaded = false;
+    /* 2 — XOR decryption function */
+    function xorDecrypt(encryptedData, key){
+      const keyBytes = new TextEncoder().encode(key);
+      const decrypted = new Uint8Array(encryptedData.length);
+      for(let i = 0; i < encryptedData.length; i++){
+        decrypted[i] = encryptedData[i] ^ keyBytes[i % keyBytes.length];
+      }
+      return decrypted.buffer;
+    }
+
+    /* 3 — decompress gzip data */
+    async function decompressGzip(arrayBuffer){
+      if(typeof DecompressionStream !== 'undefined'){
+        /* Modern browsers: use native DecompressionStream */
+        const stream = new Response(arrayBuffer).body.pipeThrough(new DecompressionStream('gzip'));
+        const decompressed = await new Response(stream).arrayBuffer();
+        return new TextDecoder().decode(decompressed);
+      } else {
+        /* Fallback: use pako library */
+        if(typeof pako === 'undefined'){
+          try { importScripts('https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js'); }
+          catch(e){ throw new Error('pako library required for decompression: '+e); }
+        }
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const decompressed = pako.ungzip(uint8Array, {to: 'string'});
+        return decompressed;
+      }
+    }
+
+    /* 4 — load a single index (remote → local) */
+    async function loadIndex(remote, local, isCloud=false){
+      const XOR_KEY = "Prevent_Online_AVs_From_Flagging_HackTricks_Search_Gzip_As_Malicious_394h7gt8rf9u3rf9g";
+      let rawLoaded = false;
+      if(remote){
+        /* Try ONLY compressed version from GitHub (remote already includes .js.gz) */
         try {
           const r = await fetch(remote,{mode:'cors'});
-          if (!r.ok) throw new Error('HTTP '+r.status);
-          importScripts(URL.createObjectURL(new Blob([await r.text()],{type:'application/javascript'})));
-          rawLoaded = true;
-        } catch(e){ console.warn('remote',remote,'failed →',e); }
-        if(!rawLoaded){
-          try { importScripts(abs(local)); rawLoaded = true; }
-          catch(e){ console.error('local',local,'failed →',e); }
-        }
-        if(!rawLoaded) return null;                 /* give up on this index */
-        const data = { json:self.search.index, urls:self.search.doc_urls, cloud:isCloud };
-        delete self.search.index; delete self.search.doc_urls;
-        return data;
+          if (r.ok) {
+            const encryptedCompressed = await r.arrayBuffer();
+            /* Decrypt first */
+            const compressed = xorDecrypt(new Uint8Array(encryptedCompressed), XOR_KEY);
+            /* Then decompress */
+            const text = await decompressGzip(compressed);
+            importScripts(URL.createObjectURL(new Blob([text],{type:'application/javascript'})));
+            rawLoaded = true;
+            console.log('Loaded encrypted+compressed from GitHub:',remote);
+          }
+        } catch(e){ console.warn('encrypted+compressed GitHub',remote,'failed →',e); }
       }
-  
-      (async () => {
-        const MAIN_RAW  = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks/refs/heads/master/searchindex.js';
-        const CLOUD_RAW = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/refs/heads/master/searchindex.js';
-  
+      /* If remote (GitHub) failed, fall back to local uncompressed file */
+      if(!rawLoaded && local){
+        try { 
+          importScripts(abs(local)); 
+          rawLoaded = true;
+          console.log('Loaded local fallback:',local);
+        }
+        catch(e){ console.error('local',local,'failed →',e); }
+      }
+      if(!rawLoaded) return null;                 /* give up on this index */
+      const data = { json:self.search.index, urls:self.search.doc_urls, cloud:isCloud };
+      delete self.search.index; delete self.search.doc_urls;
+      return data;
+    }
+
+    async function loadWithFallback(remotes, local, isCloud=false){
+      if(remotes.length){
+        const [primary, ...secondary] = remotes;
+        const primaryData = await loadIndex(primary, null, isCloud);
+        if(primaryData) return primaryData;
+
+        if(local){
+          const localData = await loadIndex(null, local, isCloud);
+          if(localData) return localData;
+        }
+
+        for (const remote of secondary){
+          const data = await loadIndex(remote, null, isCloud);
+          if(data) return data;
+        }
+      }
+
+      return local ? loadIndex(null, local, isCloud) : null;
+    }
+    
+    let built = [];
+    const MAX = 30, opts = {bool:'AND', expand:true};
+    
+    self.onmessage = async ({data}) => {
+      if(data.type === 'init'){
+        const lang = data.lang || 'en';
+        const searchindexBase = 'https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-searchindex/master';
+
+        /* Remote sources are .js.gz (compressed), local fallback is .js (uncompressed) */
+        const mainFilenames = Array.from(new Set(['searchindex-' + lang + '.js.gz', 'searchindex-en.js.gz']));
+        const cloudFilenames = Array.from(new Set(['searchindex-cloud-' + lang + '.js.gz', 'searchindex-cloud-en.js.gz']));
+
+        const MAIN_REMOTE_SOURCES  = mainFilenames.map(function(filename) { return searchindexBase + '/' + filename; });
+        const CLOUD_REMOTE_SOURCES = cloudFilenames.map(function(filename) { return searchindexBase + '/' + filename; });
+
         const indices = [];
-        const main = await loadIndex(MAIN_RAW , '/searchindex-book.js',        false); if(main)  indices.push(main);
-        const cloud= await loadIndex(CLOUD_RAW, '/searchindex.js',  true ); if(cloud) indices.push(cloud);
-  
+        const main = await loadWithFallback(MAIN_REMOTE_SOURCES , '/searchindex-book.js',        false); if(main)  indices.push(main);
+        const cloud= await loadWithFallback(CLOUD_REMOTE_SOURCES, '/searchindex.js',  true ); if(cloud) indices.push(cloud);  
         if(!indices.length){ postMessage({ready:false, error:'no-index'}); return; }
   
         /* build index objects */
-        const built = indices.map(d => ({
+        built = indices.map(d => ({
           idx : elasticlunr.Index.load(d.json),
           urls: d.urls,
           cloud: d.cloud,
@@ -59,10 +134,11 @@
         }));
   
         postMessage({ready:true});
-        const MAX = 30, opts = {bool:'AND', expand:true};
-  
-        self.onmessage = ({data:q}) => {
-          if(!q){ postMessage([]); return; }
+        return;
+      }
+      
+      const q = data.query || data;
+      if(!q){ postMessage([]); return; }
   
           const all = [];
           for(const s of built){
@@ -83,12 +159,16 @@
           }
           all.sort((a,b)=>b.norm-a.norm);
           postMessage(all.slice(0,MAX));
-        };
-      })();
+    };
     `;
   
     /* ───────────── 2. spawn worker ───────────── */
     const worker = new Worker(URL.createObjectURL(new Blob([workerCode],{type:'application/javascript'})));
+    
+    /* ───────────── 2.1. initialize worker with language ───────────── */
+    const htmlLang = (document.documentElement.lang || 'en').toLowerCase();
+    const lang = htmlLang.split('-')[0];
+    worker.postMessage({type: 'init', lang: lang});
   
     /* ───────────── 3. DOM refs ─────────────── */
     const wrap    = document.getElementById('search-wrapper');
@@ -97,11 +177,32 @@
     const listOut = document.getElementById('searchresults-outer');
     const header  = document.getElementById('searchresults-header');
     const icon    = document.getElementById('search-toggle');
-  
-    const READY_ICON = icon.innerHTML;
+
+    if(!wrap || !bar || !list || !listOut || !header || !icon) {
+      console.error('[HT Search] Missing DOM elements:', {wrap:!!wrap, bar:!!bar, list:!!list, listOut:!!listOut, header:!!header, icon:!!icon});
+      return;
+    }
+
+    /* Clear icon content and use emoji states directly */
     icon.textContent = '⏳';
     icon.setAttribute('aria-label','Loading search …');
-      icon.setAttribute('title','Search is loading, please wait...');
+    icon.setAttribute('title','Search is loading, please wait...');
+
+    const setIconState = state => {
+      if(state === 'ready'){
+        icon.textContent = '🔍';
+        icon.setAttribute('aria-label','Open search (S)');
+        icon.removeAttribute('title');
+      } else if(state === 'error'){
+        icon.textContent = '❌';
+        icon.setAttribute('aria-label','Search unavailable');
+        icon.setAttribute('title','Search is unavailable');
+      } else {
+        icon.textContent = '⏳';
+        icon.setAttribute('aria-label','Loading search …');
+        icon.setAttribute('title','Search is loading, please wait...');
+      }
+    };
 
   
     const HOT=83, ESC=27, DOWN=40, UP=38, ENTER=13;
@@ -155,13 +256,12 @@
       else if([DOWN,UP,ENTER].includes(e.keyCode) && document.activeElement!==bar){const cur=list.querySelector('li.focus'); if(!cur) return; e.preventDefault(); if(e.keyCode===DOWN){const nxt=cur.nextElementSibling; if(nxt){cur.classList.remove('focus'); nxt.classList.add('focus');}} else if(e.keyCode===UP){const prv=cur.previousElementSibling; cur.classList.remove('focus'); if(prv){prv.classList.add('focus');} else {bar.focus();}} else {const a=cur.querySelector('a'); if(a) window.location.assign(a.href);}}
     });
   
-    bar.addEventListener('input',e=>{ clearTimeout(debounce); debounce=setTimeout(()=>worker.postMessage(e.target.value.trim()),120); });
+    bar.addEventListener('input',e=>{ clearTimeout(debounce); debounce=setTimeout(()=>worker.postMessage({query: e.target.value.trim()}),120); });
   
     /* ───────────── worker messages ───────────── */
     worker.onmessage = ({data}) => {
       if(data && data.ready!==undefined){
-        if(data.ready){ icon.innerHTML=READY_ICON; icon.setAttribute('aria-label','Open search (S)'); }
-        else { icon.textContent='❌'; icon.setAttribute('aria-label','Search unavailable'); }
+        setIconState(data.ready ? 'ready' : 'error');
         return;
       }
       const docs=data, q=bar.value.trim(), terms=q.split(/\s+/).filter(Boolean);
