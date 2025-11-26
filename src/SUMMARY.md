@@ -125,7 +125,7 @@
     - [GCP - Deploymentmaneger Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md)
     - [GCP - IAM Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md)
     - [GCP - KMS Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-kms-privesc.md)
-    - [GCP - Firebase Privesc](pentesting-cloud/gcp-security/gcp-services/gcp-firebase-privesc.md)
+    - [GCP - Firebase Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-firebase-privesc.md)
     - [GCP - Orgpolicy Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md)
     - [GCP - Pubsub Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md)
     - [GCP - Resourcemanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md)
