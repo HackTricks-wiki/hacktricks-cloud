@@ -19,7 +19,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install mdBook & plugins
-RUN cargo install mdbook
+RUN cargo install mdbook --version 0.5.2
 RUN cargo install mdbook-alerts
 RUN cargo install mdbook-reading-time
 RUN cargo install mdbook-pagetoc
@@ -28,4 +28,3 @@ RUN cargo install mdbook-codename
 
 # Set the working directory
 WORKDIR /app
-
