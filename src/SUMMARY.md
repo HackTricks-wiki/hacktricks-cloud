@@ -309,6 +309,7 @@
     - [AWS - Step Functions Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md)
     - [AWS - STS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sts-post-exploitation/README.md)
     - [AWS - VPN Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md)
+    - [Readme](pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md)
   - [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md)
     - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md)
