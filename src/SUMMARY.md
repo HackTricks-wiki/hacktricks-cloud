@@ -260,6 +260,7 @@
     - [AWS - CloudFront Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md)
     - [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/README.md)
       - [AWS Codebuild - Token Leakage](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
+      - [AWS CodeBuild - Untrusted PR Webhook Bypass (CodeBreach-style)](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-untrusted-pr-webhook-bypass.md)
     - [AWS - Control Tower Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-control-tower-post-exploitation/README.md)
     - [AWS - DLM Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dlm-post-exploitation/README.md)
     - [AWS - DynamoDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation/README.md)
