@@ -206,62 +206,47 @@ jobs:
           # Copy ONLY the encrypted .gz version to the searchindex repo (no uncompressed .js)
           cp "${ASSET}.gz.enc" "/tmp/searchindex-repo/${FILENAME}.gz"
           
-          # Commit and push with retry logic
+          # Commit and push with retry logic resilient to concurrent writers/history rewrites
           cd /tmp/searchindex-repo
           git config user.name "GitHub Actions"
           git config user.email "github-actions@github.com"
-          git add "${FILENAME}.gz"
-          
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
+
+          MAX_RETRIES=20
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Push attempt ${RETRY_COUNT}/${MAX_RETRIES}"
+
+            # Rebuild commit from latest remote state each attempt.
+            git fetch origin master
+            git checkout -B master origin/master
+            cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
+            git add "${FILENAME}.gz"
+
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+              break
+            fi
+
             git commit -m "Update ${FILENAME} from hacktricks-cloud build"
-            
-            # Retry push up to 20 times with pull --rebase between attempts
-            MAX_RETRIES=20
-            RETRY_COUNT=0
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-              if git push origin master; then
-                echo "Successfully pushed on attempt $((RETRY_COUNT + 1))"
-                break
+
+            if git push origin master 2>&1 | tee /tmp/push_output.txt; then
+              echo "Successfully pushed on attempt ${RETRY_COUNT}"
+              break
+            fi
+
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              if grep -q "cannot lock ref 'refs/heads/master'" /tmp/push_output.txt; then
+                echo "Concurrent update detected on remote master. Retrying..."
               else
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                  echo "Push failed, attempt $RETRY_COUNT/$MAX_RETRIES. Pulling and retrying..."
-                  
-                  # Try normal rebase first
-                  if git pull --rebase origin master 2>&1 | tee /tmp/pull_output.txt; then
-                    echo "Rebase successful, retrying push..."
-                  else
-                    # If rebase fails due to divergent histories (orphan branch reset), re-clone
-                    if grep -q "unrelated histories\|refusing to merge\|fatal: invalid upstream\|couldn't find remote ref" /tmp/pull_output.txt; then
-                      echo "Detected history rewrite, re-cloning repository..."
-                      cd /tmp
-                      rm -rf searchindex-repo
-                      git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git searchindex-repo
-                      cd searchindex-repo
-                      git config user.name "GitHub Actions"
-                      git config user.email "github-actions@github.com"
-                      
-                      # Re-copy ONLY the encrypted .gz version (no uncompressed .js)
-                      cp "${ASSET}.gz.enc" "${FILENAME}.gz"
-                      
-                      git add "${FILENAME}.gz"
-                      git commit -m "Update ${FILENAME}.gz from hacktricks-cloud build"
-                      echo "Re-cloned and re-committed, will retry push..."
-                    else
-                      echo "Rebase failed for unknown reason, retrying anyway..."
-                    fi
-                  fi
-                  
-                  sleep 1
-                else
-                  echo "Failed to push after $MAX_RETRIES attempts"
-                  exit 1
-                fi
+                echo "Push failed. Retrying with fresh remote state..."
               fi
-            done
-          fi
+              sleep 1
+            else
+              echo "Failed to push after ${MAX_RETRIES} attempts"
+              exit 1
+            fi
+          done
       
       # Login in AWs
       - name: Configure AWS credentials using OIDC

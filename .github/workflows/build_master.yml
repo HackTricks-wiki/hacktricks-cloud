@@ -57,27 +57,6 @@ jobs:
             exit 1
           fi
 
-          # Clone the searchindex repo
-          git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
-          
-          cd /tmp/searchindex-repo
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@github.com"
-          
-          # Save all current files from main branch to temp directory
-          mkdir -p /tmp/searchindex-backup
-          cp -r * /tmp/searchindex-backup/ 2>/dev/null || true
-          
-          # Create a fresh orphan branch (no history)
-          git checkout --orphan new-main
-          
-          # Remove all files from git index (but keep working directory)
-          git rm -rf . 2>/dev/null || true
-          
-          # Restore all the files from backup (keeps all language files)
-          cp -r /tmp/searchindex-backup/* . 2>/dev/null || true
-          
-          # Now update/add our English searchindex file
           # First, compress the original file (in the build directory)
           cd "${GITHUB_WORKSPACE}"
           gzip -9 -k -f "$ASSET"
@@ -107,21 +86,57 @@ jobs:
           EOF
           python3 /tmp/xor_encrypt.py "$KEY" "${ASSET}.gz" "${ASSET}.gz.enc"
           
-          # Copy ONLY the encrypted .gz version to the searchindex repo (no uncompressed .js)
-          cd /tmp/searchindex-repo
-          cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
-          
-          # Stage all files
-          git add -A
-          
-          # Commit with timestamp
-          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          git commit -m "Update searchindex files - ${TIMESTAMP}" --allow-empty
-          
-          # Force push to replace master branch (deletes history, keeps all files)
-          git push -f origin new-main:master
-          
-          echo "Successfully reset repository history and pushed all searchindex files"
+          # Rebuild and force-push with retries to handle concurrent updates.
+          MAX_RETRIES=20
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Push attempt ${RETRY_COUNT}/${MAX_RETRIES}"
+
+            rm -rf /tmp/searchindex-repo /tmp/searchindex-backup
+            git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
+
+            cd /tmp/searchindex-repo
+            git config user.name "GitHub Actions"
+            git config user.email "github-actions@github.com"
+
+            # Save all current files from master branch to temp directory.
+            mkdir -p /tmp/searchindex-backup
+            cp -r * /tmp/searchindex-backup/ 2>/dev/null || true
+
+            # Create a fresh orphan branch (no history).
+            git checkout --orphan new-main
+
+            # Remove all files from git index (but keep working directory).
+            git rm -rf . 2>/dev/null || true
+
+            # Restore all files from backup (keeps all language files).
+            cp -r /tmp/searchindex-backup/* . 2>/dev/null || true
+
+            # Update English searchindex artifact.
+            cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
+
+            git add -A
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            git commit -m "Update searchindex files - ${TIMESTAMP}" --allow-empty
+
+            if git push -f origin new-main:master 2>&1 | tee /tmp/push_output.txt; then
+              echo "Successfully reset repository history and pushed all searchindex files"
+              break
+            fi
+
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              if grep -q "cannot lock ref 'refs/heads/master'" /tmp/push_output.txt; then
+                echo "Concurrent update detected on remote master. Retrying..."
+              else
+                echo "Force push failed. Retrying..."
+              fi
+              sleep 1
+            else
+              echo "Failed to push after ${MAX_RETRIES} attempts"
+              exit 1
+            fi
+          done
 
       # Login in AWs
       - name: Configure AWS credentials using OIDC
