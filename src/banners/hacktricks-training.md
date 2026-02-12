@@ -1,14 +1,14 @@
 > [!TIP]
-> AWS हैकिंग सीखें और अभ्यास करें:<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://training.hacktricks.xyz/courses/arte)<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
-> GCP हैकिंग सीखें और अभ्यास करें: <img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training GCP Red Team Expert (GRTE)**](https://training.hacktricks.xyz/courses/grte)<img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">
-> Azure हैकिंग सीखें और अभ्यास करें: <img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training Azure Red Team Expert (AzRTE)**](https://training.hacktricks.xyz/courses/azrte)<img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">
+> सीखें और अभ्यास करें AWS Hacking:<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://hacktricks-training.com/courses/arte)<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
+> सीखें और अभ्यास करें GCP Hacking: <img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training GCP Red Team Expert (GRTE)**](https://hacktricks-training.com/courses/grte)<img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
+> सीखें और अभ्यास करें Az Hacking: <img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training Azure Red Team Expert (AzRTE)**](https://hacktricks-training.com/courses/azrte)<img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">
 >
 > <details>
 >
 > <summary>HackTricks का समर्थन करें</summary>
 >
-> - [**सदस्यता योजनाओं**](https://github.com/sponsors/carlospolop) की जांच करें!
-> - **हमारे** 💬 [**Discord समूह**](https://discord.gg/hRep4RUj7f) या [**टेलीग्राम समूह**](https://t.me/peass) में शामिल हों या **हमें** **Twitter** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)** पर फॉलो करें।**
-> - **हैकिंग ट्रिक्स साझा करें, PRs को** [**HackTricks**](https://github.com/carlospolop/hacktricks) और [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) गिटहब रिपोजिटरी में सबमिट करके।
+> - देखें [**subscription plans**](https://github.com/sponsors/carlospolop)!
+> - **शामिल हों** 💬 [**Discord group**](https://discord.gg/hRep4RUj7f) या [**telegram group**](https://t.me/peass) या **हमें फ़ॉलो करें** **Twitter** 🐦 [**@hacktricks_live**](https://twitter.com/hacktricks_live)**.**
+> - **PRs सबमिट करके hacking tricks साझा करें** [**HackTricks**](https://github.com/carlospolop/hacktricks) और [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos.
 >
 > </details>
