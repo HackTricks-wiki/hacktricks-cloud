@@ -1,9 +1,12 @@
-## Attribution
-Cenimy Twoją wiedzę i zachęcamy do dzielenia się treściami. Proszę upewnić się, że przesyłasz tylko treści, które posiadasz lub na które masz pozwolenie od oryginalnego autora (dodając odniesienie do autora w dodanym tekście lub na końcu strony, którą modyfikujesz, lub w obu miejscach). Twój szacunek dla praw własności intelektualnej sprzyja zaufanemu i legalnemu środowisku dzielenia się dla wszystkich.
+Możesz usunąć tę treść przed wysłaniem PR:
+
+## Uznanie autorstwa
+Cenimy Twoją wiedzę i zachęcamy do dzielenia się treściami. Upewnij się, że przesyłasz tylko materiały, których jesteś właścicielem lub które możesz udostępnić za zgodą oryginalnego autora (dodając odniesienie do autora w dodanym tekście lub na końcu strony, którą modyfikujesz, albo w obu miejscach). Szacunek dla praw własności intelektualnej sprzyja zaufanemu i legalnemu środowisku współdzielenia dla wszystkich.
 
 ## HackTricks Training
-Jeśli dodajesz, aby zdać egzamin w [ARTE certification](https://training.hacktricks.xyz/courses/arte) z 2 flagami zamiast 3, musisz nazwać PR `arte-<username>`.
+Jeśli wysyłasz PR po to, aby zdać egzamin na [ARTE certification](https://hacktricks-training.com/courses/arte) z 2 flagami zamiast 3, musisz nazwać PR `arte-<username>`, `grte-<username>` lub `azrte-<username>`, w zależności od certyfikacji, którą zdajesz.
 
-Pamiętaj również, że poprawki gramatyczne/składniowe nie będą akceptowane w celu zmniejszenia liczby flag egzaminacyjnych.
+Pamiętaj także, że poprawki dotyczące gramatyki/składni nie zostaną zaakceptowane jako redukcja liczby flag na egzaminie.
+
 
 W każdym razie, dziękujemy za wkład w HackTricks!
