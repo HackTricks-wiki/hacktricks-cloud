@@ -1,9 +1,11 @@
-## Attribution
-Tunathamini maarifa yako na kukuhimiza kushiriki maudhui. Tafadhali hakikisha unachapisha tu maudhui ambayo unamiliki au ambayo una ruhusa ya kuyashiriki kutoka kwa mwandishi wa asili (kuongeza rejea kwa mwandishi katika maandiko yaliyoongezwa au mwishoni mwa ukurasa unaobadilisha au vyote viwili). Heshima yako kwa haki za mali ya akili inakuza mazingira ya kushiriki ambayo ni ya kuaminika na kisheria kwa kila mtu.
+Unaweza kuondoa yaliyomo haya kabla ya kutuma PR:
+
+## Marejeleo
+Tunathamini ujuzi wako na tunaku himiza kushiriki maudhui. Tafadhali hakikisha kwamba unapakia tu maudhui unayomiliki au ambayo umepewa ruhusa kuyashirikisha kutoka kwa mwandishi wa asili (ongeza rejea kwa mwandishi katika maandishi uliyoongeza au mwishoni mwa ukurasa unaofanyia mabadiliko, au zote mbili). Heshima yako kwa haki za mali ya kiakili inakuza mazingira ya kushirikiana yenye uaminifu na halali kwa wote.
 
 ## HackTricks Training
-Ikiwa unongeza ili uweze kupita mtihani wa [ARTE certification](https://training.hacktricks.xyz/courses/arte) kwa bendera 2 badala ya 3, unahitaji kuita PR `arte-<username>`.
+Ikiwa unatumia PR ili upite katika mtihani wa [ARTE certification](https://hacktricks-training.com/courses/arte) na 2 flags badala ya 3, unahitaji kuitwa PR `arte-<username>`, `grte-<username>` au `azrte-<username>`, kulingana na cheti unachofanya.
 
-Pia, kumbuka kwamba marekebisho ya sarufi/sintaksis hayatakubaliwa kwa kupunguza bendera za mtihani.
+Pia, kumbuka kwamba marekebisho ya sarufi au sintaksia hayatakubaliwa kwa ajili ya kupunguzwa kwa flags kwenye mtihani.
 
-Katika hali yoyote, asante kwa kuchangia katika HackTricks!
+Kwa kila hali, asante kwa kuchangia HackTricks!
