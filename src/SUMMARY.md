@@ -85,6 +85,7 @@
     - [GCP - Federation Abuse](pentesting-cloud/gcp-security/gcp-basic-information/gcp-federation-abuse.md)
   - [GCP - Permissions for a Pentest](pentesting-cloud/gcp-security/gcp-permissions-for-a-pentest.md)
   - [GCP - Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/README.md)
+    - [GCP - Apigee Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-apigee-post-exploitation.md)
     - [GCP - App Engine Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md)
     - [GCP - Artifact Registry Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md)
     - [GCP - Bigtable Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigtable-post-exploitation.md)
