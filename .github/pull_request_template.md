@@ -1,9 +1,11 @@
-## Attribution
-Wir schätzen Ihr Wissen und ermutigen Sie, Inhalte zu teilen. Bitte stellen Sie sicher, dass Sie nur Inhalte hochladen, die Sie besitzen oder für die Sie die Erlaubnis des ursprünglichen Autors haben, sie zu teilen (indem Sie einen Verweis auf den Autor im hinzugefügten Text oder am Ende der Seite, die Sie ändern, oder beides hinzufügen). Ihr Respekt vor den Rechten an geistigem Eigentum fördert eine vertrauenswürdige und legale Sharing-Umgebung für alle.
+Du kannst diesen Inhalt vor dem Absenden des PR entfernen:
+
+## Namensnennung
+Wir schätzen dein Wissen und ermutigen dich, Inhalte zu teilen. Bitte stelle sicher, dass du nur Inhalte hochlädst, die du besitzt oder für die du die Erlaubnis des Originalautors hast (füge eine Referenz auf den Autor im hinzugefügten Text oder am Ende der Seite, die du änderst, oder beides hinzu). Deine Achtung geistiger Eigentumsrechte fördert eine vertrauenswürdige und legale Austauschumgebung für alle.
 
 ## HackTricks Training
-Wenn Sie hinzufügen, um die [ARTE-Zertifizierung](https://training.hacktricks.xyz/courses/arte) mit 2 Flags anstelle von 3 zu bestehen, müssen Sie die PR `arte-<username>` nennen.
+Wenn du einen PR einreichst, um in der [ARTE certification](https://hacktricks-training.com/courses/arte) Prüfung mit 2 Flags statt 3 zu bestehen, musst du den PR `arte-<username>`, `grte-<username>` oder `azrte-<username>` nennen, je nachdem, welche Zertifizierung du machst.
 
-Denken Sie auch daran, dass Grammatik-/Syntaxkorrekturen für die Reduzierung der Prüfungsflags nicht akzeptiert werden.
+Beachte außerdem, dass Grammatik- oder Syntaxkorrekturen nicht für die Reduktion der Prüfungsflags akzeptiert werden.
 
-In jedem Fall vielen Dank für Ihren Beitrag zu HackTricks!
+In jedem Fall: Vielen Dank für deinen Beitrag zu HackTricks!
