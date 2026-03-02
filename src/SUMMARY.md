@@ -507,6 +507,7 @@
     - [Az - Domain Services](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-domain-services.md)
     - [Az - Federation](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-federation.md)
     - [Az - Hybrid Identity Misc Attacks](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-hybrid-identity-misc-attacks.md)
+    - [Az - Exchange Hybrid Impersonation (ACS Actor Tokens)](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-exchange-hybrid-impersonation.md)
     - [Az - Local Cloud Credentials](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-local-cloud-credentials.md)
     - [Az - Pass the Certificate](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-certificate.md)
     - [Az - Pass the Cookie](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-cookie.md)
