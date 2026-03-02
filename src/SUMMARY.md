@@ -504,7 +504,6 @@
     - [Az - Cloud Kerberos Trust](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-cloud-kerberos-trust.md)
     - [Az - Cloud Sync](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-cloud-sync.md)
     - [Az - Connect Sync](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-connect-sync.md)
-    - [Az - Connect Sync Policy Abuse](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-connect-sync-policy-abuse.md)
     - [Az - Domain Services](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-domain-services.md)
     - [Az - Federation](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-federation.md)
     - [Az - Hybrid Identity Misc Attacks](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-hybrid-identity-misc-attacks.md)
