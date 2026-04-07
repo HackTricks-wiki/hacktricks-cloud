@@ -104,6 +104,7 @@
     - [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
     - [GCP - Secretmanager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md)
     - [GCP - Security Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-security-post-exploitation.md)
+    - [GCP - Vertex AI Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-vertex-ai-post-exploitation.md)
     - [GCP - Workflows Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-workflows-post-exploitation.md)
     - [GCP - Storage Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-post-exploitation.md)
   - [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
