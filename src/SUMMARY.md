@@ -28,6 +28,7 @@
 - [CircleCI Security](pentesting-ci-cd/circleci-security.md)
 - [TravisCI Security](pentesting-ci-cd/travisci-security/README.md)
   - [Basic TravisCI Information](pentesting-ci-cd/travisci-security/basic-travisci-information.md)
+- [TeamCity Security](pentesting-ci-cd/teamcity-security/README.md)
 - [Jenkins Security](pentesting-ci-cd/jenkins-security/README.md)
   - [Basic Jenkins Information](pentesting-ci-cd/jenkins-security/basic-jenkins-information.md)
   - [Jenkins RCE with Groovy Script](pentesting-ci-cd/jenkins-security/jenkins-rce-with-groovy-script.md)
