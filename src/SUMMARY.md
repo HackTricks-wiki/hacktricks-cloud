@@ -21,6 +21,7 @@
   - [Basic Github Information](pentesting-ci-cd/github-security/basic-github-information.md)
 - [Gitea Security](pentesting-ci-cd/gitea-security/README.md)
   - [Basic Gitea Information](pentesting-ci-cd/gitea-security/basic-gitea-information.md)
+- [Gogs Security](pentesting-ci-cd/gogs-security/README.md)
 - [Concourse Security](pentesting-ci-cd/concourse-security/README.md)
   - [Concourse Architecture](pentesting-ci-cd/concourse-security/concourse-architecture.md)
   - [Concourse Lab Creation](pentesting-ci-cd/concourse-security/concourse-lab-creation.md)
