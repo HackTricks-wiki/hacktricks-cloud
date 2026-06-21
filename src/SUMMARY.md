@@ -466,6 +466,7 @@
     - [Az - OAuth Apps Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md)
     - [Az - Storage Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-storage-unauth.md)
     - [Az - VMs Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-vms-unauth.md)
+    - [Az - Monitor Alert Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-monitor-alert-phishing.md)
     - [Az - Device Code Authentication Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-device-code-authentication-phishing.md)
     - [Az - Password Spraying](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-password-spraying.md)
   - [Az - Services](pentesting-cloud/azure-security/az-services/README.md)
