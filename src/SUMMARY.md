@@ -43,6 +43,7 @@
   - [Airflow RBAC](pentesting-ci-cd/apache-airflow-security/airflow-rbac.md)
 - [Terraform Security](pentesting-ci-cd/terraform-security.md)
 - [Atlantis Security](pentesting-ci-cd/atlantis-security.md)
+- [Argo CD Security](pentesting-ci-cd/argocd-security.md)
 - [Cloudflare Security](pentesting-ci-cd/cloudflare-security/README.md)
   - [Cloudflare Domains](pentesting-ci-cd/cloudflare-security/cloudflare-domains.md)
   - [Cloudflare Workers Pass Through Proxy Ip Rotation](pentesting-ci-cd/cloudflare-security/cloudflare-workers-pass-through-proxy-ip-rotation.md)
