@@ -10,6 +10,7 @@ import tiktoken
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
 import traceback
+import re
 
 
 MASTER_BRANCH = "master"
@@ -84,6 +85,10 @@ def _get_encoding_for_model(model: str):
                 return tiktoken.get_encoding(encoding_name)
         print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
         return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
+
+def _fix_translated_shortcodes(text: str) -> str:
+    """Keep mdBook shortcode attribute names valid after translation."""
+    return re.sub(r'(\{\{#tab\s+)(?!name=)[^=\s}]+=', r'\1name=', text)
 
 def reportTokens(prompt, model):
     encoding = _get_encoding_for_model(model)
@@ -263,6 +268,7 @@ Also don't add any extra stuff in your response that is not part of the translat
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
     response_message = response_message.replace("Bypassy", "Bypasses")
     response_message = response_message.replace("-privec.md", "-privesc.md") # PL translations translates that from time to time
+    response_message = _fix_translated_shortcodes(response_message)
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
