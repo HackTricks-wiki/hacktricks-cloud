@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from openai import OpenAI #pip3 install openai
 import time
@@ -11,6 +12,8 @@ import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
 import traceback
 import re
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 MASTER_BRANCH = "master"
@@ -28,6 +31,41 @@ TOKENIZER_FALLBACKS = [
 ]
 
 FINAL_TOKENIZER_FALLBACK = "o200k_base"
+
+MODEL_ALIASES_ENDPOINT = os.environ.get(
+    "MODEL_ALIASES_ENDPOINT",
+    "https://6lj6nwv3krblocoano5k33zzna0uqebx.lambda-url.us-east-1.on.aws/",
+)
+DEFAULT_OPENAI_MODEL_ALIAS = "OPENAI_BEST_CHEAPEST"
+MODEL_ALIASES_TIMEOUT_SECONDS = 15
+
+
+def load_default_openai_model(endpoint: str = MODEL_ALIASES_ENDPOINT) -> str:
+    """Load the cheapest configured OpenAI model from the model-alias Lambda."""
+    request = Request(
+        endpoint,
+        headers={"Accept": "application/json", "User-Agent": "hacktricks-translator/2"},
+    )
+    try:
+        with urlopen(request, timeout=MODEL_ALIASES_TIMEOUT_SECONDS) as response:
+            payload = json.load(response)
+    except (HTTPError, URLError, OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"Could not load the default OpenAI model from {endpoint}: {exc}"
+        ) from exc
+
+    aliases = payload.get("model_aliases") if isinstance(payload, dict) else None
+    model = aliases.get(DEFAULT_OPENAI_MODEL_ALIAS) if isinstance(aliases, dict) else None
+    if not isinstance(model, str) or not model.strip():
+        raise RuntimeError(
+            f"Model alias {DEFAULT_OPENAI_MODEL_ALIAS} was not returned by {endpoint}"
+        )
+    return model.strip()
+
+
+def select_openai_model(requested_model: str | None) -> str:
+    """Honor an explicit model; otherwise resolve the centrally configured default."""
+    return requested_model or load_default_openai_model()
 
 def run_git_command_with_retry(cmd, max_retries=1, delay=5, **kwargs):
     """
@@ -438,7 +476,14 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--language', required=True, help='Target language for translation.')
     parser.add_argument('-b', '--branch', required=True, help='Branch name to copy translated files.')
     parser.add_argument('-k', '--api-key', required=True, help='API key to use.')
-    parser.add_argument('-m', '--model', default="gpt-5.4-mini", help='The openai model to use. By default: gpt-5.4-mini')
+    parser.add_argument(
+        '-m',
+        '--model',
+        help=(
+            'The OpenAI model to use. By default, load '
+            f'{DEFAULT_OPENAI_MODEL_ALIAS} from the configured model-alias endpoint.'
+        ),
+    )
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
@@ -450,7 +495,8 @@ if __name__ == "__main__":
     dest_folder = tempfile.mkdtemp()
     language = args.language.capitalize()
     branch = args.branch
-    model = args.model
+    model = select_openai_model(args.model)
+    print(f"Using OpenAI model: {model}")
     org_id = args.org_id 
     num_threads = args.threads
     #VERBOSE = args.verbose
