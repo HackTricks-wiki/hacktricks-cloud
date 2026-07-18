@@ -13,7 +13,7 @@ _Hacktricks logos & motion designed by_ [_@ppieranacho_](https://www.instagram.c
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
 
 # Select the language you want to use
-export LANG="master" # Leave master for English
+export HT_LANG="master" # Leave master for English
 # "af" for Afrikaans
 # "de" for German
 # "el" for Greek
@@ -32,10 +32,18 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
 
 Your local copy of HackTricks Cloud will be **available at [http://localhost:3377](http://localhost:3377)** after a minute.
+
+Alternatively, if you have Docker Compose, run this from the repository root:
+
+```bash
+docker compose up
+```
+
+The bundled `docker-compose.yml` serves your currently checked-out branch at [http://localhost:3377](http://localhost:3377) with live reload.
 
 ### **Pentesting CI/CD Methodology**
 

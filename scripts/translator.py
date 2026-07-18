@@ -22,6 +22,12 @@ MAX_TOKENS = 50000 #gpt-4-1106-preview
 DISALLOWED_SPECIAL = "<|endoftext|>"
 REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 
+# mdBook directives are executable document structure, not prose. Models can
+# occasionally translate directive names or attributes (for example
+# `name` -> `naam`), which makes preprocessors abort a whole language build.
+MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
+MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
+
 TOKENIZER_FALLBACKS = [
     ("gpt-5", "o200k_base"),
     ("gpt-4o", "o200k_base"),
@@ -124,9 +130,37 @@ def _get_encoding_for_model(model: str):
         print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
         return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
 
-def _fix_translated_shortcodes(text: str) -> str:
-    """Keep mdBook shortcode attribute names valid after translation."""
-    return re.sub(r'(\{\{#tab\s+)(?!name=)[^=\s}]+=', r'\1name=', text)
+def preserve_mdbook_directives(source: str, translated: str) -> str:
+    """Restore mdBook directives exactly as they appeared in the source.
+
+    Prompt instructions are not an integrity boundary: a translated directive
+    can still look plausible while being invalid to a preprocessor. When the
+    model preserves the number/order of directives, restore each one
+    byte-for-byte. If it adds or removes one, keep the source chunk instead of
+    committing structurally broken Markdown to a language branch.
+    """
+    source_directives = MDBOOK_DIRECTIVE_RE.findall(source)
+    if not source_directives:
+        return translated
+
+    translated_directives = MDBOOK_DIRECTIVE_RE.findall(translated)
+    if len(source_directives) != len(translated_directives):
+        print(
+            "Directive count changed during translation "
+            f"({len(source_directives)} -> {len(translated_directives)}); "
+            "returning the source chunk unchanged."
+        )
+        return source
+
+    directives = iter(source_directives)
+    restored = MDBOOK_DIRECTIVE_RE.sub(lambda _match: next(directives), translated)
+
+    for match in MDBOOK_TAB_OPEN_RE.finditer(restored):
+        if not re.search(r'\bname\s*=\s*(["\']).*?\1', match.group(1)):
+            print("Invalid mdBook tab directive after translation; returning the source chunk unchanged.")
+            return source
+
+    return restored
 
 def reportTokens(prompt, model):
     encoding = _get_encoding_for_model(model)
@@ -306,7 +340,10 @@ Also don't add any extra stuff in your response that is not part of the translat
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
     response_message = response_message.replace("Bypassy", "Bypasses")
     response_message = response_message.replace("-privec.md", "-privesc.md") # PL translations translates that from time to time
-    response_message = _fix_translated_shortcodes(response_message)
+
+    # Restore source directives after all model-provided text normalization.
+    # This preserves exact mdBook syntax while retaining translated prose.
+    response_message = preserve_mdbook_directives(text, response_message)
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
