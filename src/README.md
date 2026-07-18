@@ -4,15 +4,15 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Nembo za Hacktricks & mwendo zimetengenezwa na_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Nembo na motion za HackTricks zilibuniwa na_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
-### Endesha HackTricks Cloud Kwenye Mashine Yako
+### Endesha HackTricks Cloud Kwenye Mashine ya Ndani
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
 
 # Select the language you want to use
-export LANG="master" # Leave master for English
+export HT_LANG="master" # Leave master for English
 # "af" for Afrikaans
 # "de" for German
 # "el" for Greek
@@ -31,30 +31,34 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
 Nakala yako ya ndani ya HackTricks Cloud itakuwa **inapatikana kwenye [http://localhost:3377](http://localhost:3377)** baada ya dakika moja.
 
-### **Pentesting CI/CD Metodolojia**
+Vinginevyo, ikiwa una Docker Compose, endesha hii kutoka kwenye mzizi wa repository:
+```bash
+docker compose up
+```
+### **Pentesting CI/CD Methodology**
 
-**Kwenye HackTricks CI/CD Metodolojia utapata jinsi ya pentest miundombinu inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks CI/CD Methodology utapata jinsi ya kufanya pentest kwenye infrastructure inayohusiana na shughuli za CI/CD.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud Metodolojia
+### Pentesting Cloud Methodology
 
-**Kwenye HackTricks Cloud Metodolojia utapata jinsi ya pentest mazingira ya cloud.** Soma ukurasa ufuatao kwa **utangulizi:**
+**Katika HackTricks Cloud Methodology utapata jinsi ya kufanya pentest kwenye cloud environments.** Soma ukurasa ufuatao kwa **utangulizi:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Leseni & Taarifa ya kutokuwa na dhamana
+### Leseni na Kanusho
 
-**Angalia hizi katika:**
+**Ziangalie hapa:**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Takwimu za Github
+### Takwimu za HackTricks Cloud kwenye GitHub
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![Takwimu za HackTricks Cloud kwenye GitHub](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
