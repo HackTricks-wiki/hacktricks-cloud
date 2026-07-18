@@ -4,7 +4,7 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricksのロゴとモーションは_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_によってデザインされています。_
+_Hacktricksのロゴとモーションのデザイン：_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
 ### HackTricks Cloudをローカルで実行する
 ```bash
@@ -12,7 +12,7 @@ _Hacktricksのロゴとモーションは_ [_@ppieranacho_](https://www.instagra
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
 
 # Select the language you want to use
-export LANG="master" # Leave master for English
+export HT_LANG="master" # Leave master for English
 # "af" for Afrikaans
 # "de" for German
 # "el" for Greek
@@ -31,19 +31,25 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-あなたのローカルコピーのHackTricks Cloudは、**[http://localhost:3377](http://localhost:3377)**で**1分後に利用可能になります。**
+HackTricks Cloud のローカルコピーは、1分後に **[http://localhost:3377](http://localhost:3377)** で利用可能になります。
 
-### **ペンテストCI/CDメソッド**
+または、Docker Compose がある場合は、repository root から次を実行してください:
+```bash
+docker compose up
+```
+同梱の `docker-compose.yml` は、現在 checkout しているブランチを live reload 付きで [http://localhost:3377](http://localhost:3377) に提供します。
 
-**HackTricks CI/CDメソッドでは、CI/CD活動に関連するインフラストラクチャのペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクションを確認してください：**
+### **Pentesting CI/CD 方法論**
+
+**HackTricks CI/CD 方法論では、CI/CD に関連するインフラを pentest する方法を説明しています。** **導入編：**として以下のページをお読みください。
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### ペンテストクラウドメソッド
+### Pentesting Cloud 方法論
 
-**HackTricks Cloudメソッドでは、クラウド環境のペンテスト方法を見つけることができます。** 次のページを読んで**イントロダクションを確認してください：**
+**HackTricks Cloud 方法論では、Cloud 環境を pentest する方法を説明しています。** **導入編：**として以下のページをお読みください。
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
@@ -51,10 +57,10 @@ docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -
 
 **以下で確認してください：**
 
-[HackTricksの価値とFAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
+[HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github統計
+### GitHub Stats
 
-![HackTricks Cloud Github統計](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud GitHub Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
