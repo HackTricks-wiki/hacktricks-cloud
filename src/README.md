@@ -4,15 +4,15 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Τα λογότυπα και η κινούμενη εικόνα του Hacktricks σχεδιάστηκαν από_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Τα λογότυπα και το motion του Hacktricks σχεδιάστηκαν από_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
 
-### Τρέξτε το HackTricks Cloud τοπικά
+### Εκτέλεση του HackTricks Cloud τοπικά
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
 
 # Select the language you want to use
-export LANG="master" # Leave master for English
+export HT_LANG="master" # Leave master for English
 # "af" for Afrikaans
 # "de" for German
 # "el" for Greek
@@ -31,29 +31,35 @@ export LANG="master" # Leave master for English
 # "zh" for Chinese
 
 # Run the docker container indicating the path to the hacktricks-cloud folder
-docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
+docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Το τοπικό σας αντίγραφο του HackTricks Cloud θα είναι **διαθέσιμο στο [http://localhost:3377](http://localhost:3377)** μέσα σε ένα λεπτό.
+Το τοπικό αντίγραφο του HackTricks Cloud θα είναι **διαθέσιμο στη διεύθυνση [http://localhost:3377](http://localhost:3377)** μετά από ένα λεπτό.
 
-### **Pentesting CI/CD Μεθοδολογία**
+Εναλλακτικά, αν διαθέτετε Docker Compose, εκτελέστε το από τον ριζικό κατάλογο του repository:
+```bash
+docker compose up
+```
+Το συνοδευτικό `docker-compose.yml` εξυπηρετεί το branch που έχετε κάνει checkout στη διεύθυνση [http://localhost:3377](http://localhost:3377) με live reload.
 
-**Στη HackTricks CI/CD Μεθοδολογία θα βρείτε πώς να pentest την υποδομή που σχετίζεται με δραστηριότητες CI/CD.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
+### **Μεθοδολογία Pentesting CI/CD**
+
+**Στη HackTricks CI/CD Methodology θα βρείτε πώς να κάνετε pentest σε υποδομές που σχετίζονται με δραστηριότητες CI/CD.** Διαβάστε την ακόλουθη σελίδα για μια **εισαγωγή:**
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
-### Pentesting Cloud Μεθοδολογία
+### Μεθοδολογία Pentesting Cloud
 
-**Στην HackTricks Cloud Μεθοδολογία θα βρείτε πώς να pentest περιβάλλοντα cloud.** Διαβάστε την παρακάτω σελίδα για μια **εισαγωγή:**
+**Στη HackTricks Cloud Methodology θα βρείτε πώς να κάνετε pentest σε cloud environments.** Διαβάστε την ακόλουθη σελίδα για μια **εισαγωγή:**
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### Άδεια & Αποποίηση
+### Άδεια χρήσης και Αποποίηση ευθύνης
 
-**Ελέγξτε τα στο:**
+**Δείτε τα εδώ:**
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github Στατιστικά
+### Στατιστικά Github
 
 ![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
