@@ -28,7 +28,7 @@ REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
 MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
 
-TOKENIZER_FALLBACKS = [
+MODEL_PREFIX_ENCODINGS = [
     ("gpt-5", "o200k_base"),
     ("gpt-4o", "o200k_base"),
     ("gpt-4.1", "o200k_base"),
@@ -116,16 +116,19 @@ def _sanitize(text: str) -> str:
 
 def _get_encoding_for_model(model: str):
     """
-    Return a tokenizer for the requested model, with fallbacks for newer
-    model names that tiktoken may not recognize yet.
+    Return a tokenizer for the requested model.
+
+    Tiktoken does not necessarily know custom or newly released model names,
+    so resolve known model families by prefix before treating a model as
+    unknown. For example, ``gpt-5.6-luna`` uses the GPT-5 tokenizer even if
+    that exact name is absent from tiktoken's model registry.
     """
     try:
         return tiktoken.encoding_for_model(model)
     except KeyError:
         lowered_model = model.lower()
-        for prefix, encoding_name in TOKENIZER_FALLBACKS:
+        for prefix, encoding_name in MODEL_PREFIX_ENCODINGS:
             if lowered_model.startswith(prefix):
-                print(f"Tokenizer for model {model} not found. Falling back to {encoding_name}.")
                 return tiktoken.get_encoding(encoding_name)
         print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
         return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
