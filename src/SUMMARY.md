@@ -526,6 +526,7 @@
     - [Az API Management Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md)
     - [Az Azure Ai Foundry Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-azure-ai-foundry-post-exploitation.md)
     - [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
+    - [Az - Container Registry Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md)
     - [Az - CosmosDB Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-cosmosDB-post-exploitation.md)
     - [Az - File Share Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-file-share-post-exploitation.md)
     - [Az - Function Apps Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-function-apps-post-exploitation.md)
