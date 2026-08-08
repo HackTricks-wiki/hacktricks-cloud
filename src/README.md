@@ -2,11 +2,15 @@
 
 {{#include ./banners/hacktricks-training.md}}
 
+<sup>[[2]](#references)</sup>
+
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Logos et animation de HackTricks conçus par_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Logos et animations de Hacktricks conçus par_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)._ <sup>[[1]](#references)[[3]](#references)</sup>
 
 ### Exécuter HackTricks Cloud localement
+
+Le workflow ci-dessous suit les opérations `clone`, `checkout` et `pull` documentées par Git, ainsi que les branches de langue publiées du repository et sa configuration de conteneur. <sup>[[3]](#references)[[4]](#references)[[9]](#references)[[10]](#references)[[11]](#references)</sup>
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -33,34 +37,54 @@ export HT_LANG="master" # Leave master for English
 # Run the docker container indicating the path to the hacktricks-cloud folder
 docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-Votre copie locale de HackTricks Cloud sera **disponible à l'adresse [http://localhost:3377](http://localhost:3377)** après une minute.
+La commande du conteneur suit l'interface `run` documentée de Docker et utilise le serveur HTTP de prévisualisation de mdBook ; le dépôt mappe le port 3000 du conteneur vers le port local 3377. <sup>[[5]](#references)[[6]](#references)[[8]](#references)</sup>
 
-Sinon, si vous disposez de Docker Compose, exécutez ceci depuis la racine du dépôt :
+Votre copie locale de HackTricks Cloud sera **disponible à l'adresse [http://localhost:3377](http://localhost:3377)** après une minute. <sup>[[3]](#references)</sup>
+
+Sinon, si vous disposez de Docker Compose, exécutez cette commande depuis la racine du dépôt : <sup>[[3]](#references)[[7]](#references)</sup>
 ```bash
 docker compose up
 ```
-Le fichier `docker-compose.yml` fourni sert votre branche actuellement extraite à l’adresse [http://localhost:3377](http://localhost:3377) avec rechargement en direct.
+Le fichier `docker-compose.yml` inclus sert votre branche actuellement extraite à l’adresse [http://localhost:3377](http://localhost:3377) avec un live reload. <sup>[[3]](#references)[[7]](#references)[[8]](#references)</sup>
 
 ### **Méthodologie de pentesting CI/CD**
 
-**Dans la HackTricks CI/CD Methodology, vous trouverez comment effectuer le pentesting d’infrastructures liées aux activités CI/CD.** Consultez la page suivante pour une **introduction :**
+**Dans la HackTricks CI/CD Methodology, vous trouverez comment effectuer un pentesting de l’infrastructure liée aux activités CI/CD.** Consultez la page suivante pour une **introduction :** <sup>[[12]](#references)</sup>
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Méthodologie de pentesting Cloud
 
-**Dans la HackTricks Cloud Methodology, vous trouverez comment effectuer le pentesting d’environnements Cloud.** Consultez la page suivante pour une **introduction :**
+**Dans la HackTricks Cloud Methodology, vous trouverez comment effectuer un pentesting des environnements cloud.** Consultez la page suivante pour une **introduction :** <sup>[[13]](#references)</sup>
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
 ### Licence et avertissement
 
-**Consultez-les ici :**
+**Consultez-les ici :** <sup>[[14]](#references)</sup>
 
 [Valeurs et FAQ de HackTricks](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
 ### Statistiques Github
 
-![Statistiques Github de HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![Statistiques Github de HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg) <sup>[[15]](#references)</sup>
+
+## Références
+
+- [1] [Nacho Piera (@ppieranacho) sur Instagram](https://www.instagram.com/ppieranacho/)
+- [2] [Bannière de formation et de support HackTricks Cloud](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/banners/hacktricks-training.md)
+- [3] [Dépôt HackTricks-wiki/hacktricks-cloud](https://github.com/HackTricks-wiki/hacktricks-cloud)
+- [4] [Branches HackTricks Cloud](https://github.com/HackTricks-wiki/hacktricks-cloud/branches/all)
+- [5] [docker-compose.yml de HackTricks Cloud](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/docker-compose.yml)
+- [6] [Référence d’exécution d’un conteneur Docker](https://docs.docker.com/reference/cli/docker/container/run/)
+- [7] [Référence de la commande Docker Compose up](https://docs.docker.com/reference/cli/docker/compose/up/)
+- [8] [Référence de la commande mdBook serve](https://rust-lang.github.io/mdBook/cli/serve.html)
+- [9] [Documentation de Git clone](https://git-scm.com/docs/git-clone)
+- [10] [Documentation de Git checkout](https://git-scm.com/docs/git-checkout)
+- [11] [Documentation de Git pull](https://git-scm.com/docs/git-pull)
+- [12] [Méthodologie de pentesting CI/CD de HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [13] [Méthodologie de pentesting Cloud de HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
+- [14] [Valeurs et FAQ de HackTricks](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
+- [15] [Graphique des statistiques Repobeats pour HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
