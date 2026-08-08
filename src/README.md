@@ -2,11 +2,15 @@
 
 {{#include ./banners/hacktricks-training.md}}
 
+<sup>[[2]](#references)</sup>
+
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks 로고 및 모션 디자인:_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._
+_Hacktricks 로고 및 모션 디자인:_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_._ <sup>[[1]](#references)[[3]](#references)</sup>
 
 ### 로컬에서 HackTricks Cloud 실행
+
+아래 workflow는 Git에 문서화된 `clone`, `checkout`, `pull` 작업과 repository에서 공개한 language branch 및 container 설정을 따릅니다. <sup>[[3]](#references)[[4]](#references)[[9]](#references)[[10]](#references)[[11]](#references)</sup>
 ```bash
 # Download latest version of hacktricks cloud
 git clone https://github.com/HackTricks-wiki/hacktricks-cloud
@@ -33,34 +37,54 @@ export HT_LANG="master" # Leave master for English
 # Run the docker container indicating the path to the hacktricks-cloud folder
 docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
-잠시 후 로컬 HackTricks Cloud 사본을 **[http://localhost:3377](http://localhost:3377)**에서 사용할 수 있습니다.
+컨테이너 명령은 Docker의 문서화된 `run` 인터페이스를 따르며 mdBook의 HTTP preview server를 사용합니다. repository는 컨테이너의 포트 3000을 로컬 포트 3377에 매핑합니다. <sup>[[5]](#references)[[6]](#references)[[8]](#references)</sup>
 
-또는 Docker Compose가 있다면 repository root에서 다음을 실행하세요:
+잠시 후 로컬 HackTricks Cloud 사본을 **[http://localhost:3377](http://localhost:3377)**에서 이용할 수 있습니다. <sup>[[3]](#references)</sup>
+
+또는 Docker Compose가 설치되어 있다면 repository root에서 다음을 실행합니다: <sup>[[3]](#references)[[7]](#references)</sup>
 ```bash
 docker compose up
 ```
-번들된 `docker-compose.yml`은 live reload와 함께 현재 checkout된 branch를 [http://localhost:3377](http://localhost:3377)에서 제공합니다.
+번들로 제공되는 `docker-compose.yml`은 현재 checkout된 branch를 live reload와 함께 [http://localhost:3377](http://localhost:3377)에서 제공합니다. <sup>[[3]](#references)[[7]](#references)[[8]](#references)</sup>
 
 ### **Pentesting CI/CD Methodology**
 
-**HackTricks CI/CD Methodology에서는 CI/CD 활동과 관련된 infrastructure를 pentest하는 방법을 확인할 수 있습니다.** 다음 페이지에서 **소개를** 확인하세요:
+**HackTricks CI/CD Methodology에서는 CI/CD 활동과 관련된 인프라를 pentest하는 방법을 확인할 수 있습니다.** 다음 페이지에서 **소개:**를 확인하세요. <sup>[[12]](#references)</sup>
 
 [pentesting-ci-cd-methodology.md](pentesting-ci-cd/pentesting-ci-cd-methodology.md)
 
 ### Pentesting Cloud Methodology
 
-**HackTricks Cloud Methodology에서는 cloud environments를 pentest하는 방법을 확인할 수 있습니다.** 다음 페이지에서 **소개를** 확인하세요:
+**HackTricks Cloud Methodology에서는 cloud 환경을 pentest하는 방법을 확인할 수 있습니다.** 다음 페이지에서 **소개:**를 확인하세요. <sup>[[13]](#references)</sup>
 
 [pentesting-cloud-methodology.md](pentesting-cloud/pentesting-cloud-methodology.md)
 
-### License & Disclaimer
+### 라이선스 및 면책 조항
 
-**다음에서 확인하세요:**
+**다음에서 확인하세요:** <sup>[[14]](#references)</sup>
 
 [HackTricks Values & FAQ](https://app.gitbook.com/s/-L_2uGJGU7AVNRcqRvEi/welcome/hacktricks-values-and-faq)
 
-### Github Stats
+### GitHub 통계
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+![HackTricks Cloud GitHub 통계](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg) <sup>[[15]](#references)</sup>
+
+## 참고 문헌
+
+- [1] [Instagram의 Nacho Piera (@ppieranacho)](https://www.instagram.com/ppieranacho/)
+- [2] [HackTricks Cloud training 및 support 배너](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/banners/hacktricks-training.md)
+- [3] [HackTricks-wiki/hacktricks-cloud repository](https://github.com/HackTricks-wiki/hacktricks-cloud)
+- [4] [HackTricks Cloud branches](https://github.com/HackTricks-wiki/hacktricks-cloud/branches/all)
+- [5] [HackTricks Cloud docker-compose.yml](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/docker-compose.yml)
+- [6] [Docker container run reference](https://docs.docker.com/reference/cli/docker/container/run/)
+- [7] [Docker Compose up reference](https://docs.docker.com/reference/cli/docker/compose/up/)
+- [8] [mdBook serve command](https://rust-lang.github.io/mdBook/cli/serve.html)
+- [9] [Git clone documentation](https://git-scm.com/docs/git-clone)
+- [10] [Git checkout documentation](https://git-scm.com/docs/git-checkout)
+- [11] [Git pull documentation](https://git-scm.com/docs/git-pull)
+- [12] [HackTricks CI/CD Pentesting Methodology](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-ci-cd/pentesting-ci-cd-methodology.md)
+- [13] [HackTricks Cloud Pentesting Methodology](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
+- [14] [HackTricks Values & FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
+- [15] [HackTricks Cloud용 Repobeats 통계 그래픽](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
 {{#include ./banners/hacktricks-training.md}}
