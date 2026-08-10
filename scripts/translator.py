@@ -27,6 +27,13 @@ REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 # `name` -> `naam`), which makes preprocessors abort a whole language build.
 MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
 MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
+LINKED_CITATION_RE = re.compile(
+    r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+)
+REFERENCES_HEADING_RE = re.compile(r"^## References\s*$", re.MULTILINE)
+REFERENCE_LINE_RE = re.compile(
+    r"^- \[(\d+)\] \[([^\]\n]+)\]\((.+)\)\s*$", re.MULTILINE
+)
 
 MODEL_PREFIX_ENCODINGS = [
     ("gpt-5", "o200k_base"),
@@ -165,6 +172,50 @@ def preserve_mdbook_directives(source: str, translated: str) -> str:
 
     return restored
 
+
+def preserve_reference_markup(source: str, translated: str) -> str:
+    """Keep citation linkage and reference targets identical to the source.
+
+    Reference titles may be translated, but the References heading, citation
+    superscripts, numbering, order, and URLs are document structure. If the
+    model changes their counts, keep the source chunk instead of committing a
+    structurally incomplete translation.
+    """
+    source_headings = REFERENCES_HEADING_RE.findall(source)
+    source_citations = LINKED_CITATION_RE.findall(source)
+    source_references = list(REFERENCE_LINE_RE.finditer(source))
+
+    if not source_headings and not source_citations and not source_references:
+        return translated
+
+    translated_headings = REFERENCES_HEADING_RE.findall(translated)
+    translated_citations = LINKED_CITATION_RE.findall(translated)
+    translated_references = list(REFERENCE_LINE_RE.finditer(translated))
+
+    if (
+        len(source_headings) != len(translated_headings)
+        or len(source_citations) != len(translated_citations)
+        or len(source_references) != len(translated_references)
+    ):
+        print(
+            "Reference structure changed during translation; "
+            "returning the source chunk unchanged."
+        )
+        return source
+
+    citations = iter(source_citations)
+    restored = LINKED_CITATION_RE.sub(lambda _match: next(citations), translated)
+
+    source_reference_data = iter(
+        (match.group(1), match.group(3)) for match in source_references
+    )
+
+    def restore_reference(match):
+        number, url = next(source_reference_data)
+        return f"- [{number}] [{match.group(2)}]({url})"
+
+    return REFERENCE_LINE_RE.sub(restore_reference, restored)
+
 def reportTokens(prompt, model):
     encoding = _get_encoding_for_model(model)
     # print number of tokens in light gray, with first 50 characters of prompt in green. if truncated, show that it is truncated
@@ -287,6 +338,9 @@ Translate the relevant English text to {language} and return the translation kee
     - {{#ref}}macos-tcc-bypasses/{{#endref}}
     - {{#ref}}0.-basic-llm-concepts.md{{#endref}}
 - Don't translate any other tag, just return markdown and html content as is.
+- Keep the heading `## References` exactly in English.
+- Keep every `<sup>[[N]](#references)</sup>` citation unchanged.
+- In numbered reference bullets, translate only the source title. Do not change the number, order, or URL.
 
 Also don't add any extra stuff in your response that is not part of the translation and markdown syntax."""},
         {"role": "user", "content": text},
@@ -347,6 +401,7 @@ Also don't add any extra stuff in your response that is not part of the translat
     # Restore source directives after all model-provided text normalization.
     # This preserves exact mdBook syntax while retaining translated prose.
     response_message = preserve_mdbook_directives(text, response_message)
+    response_message = preserve_reference_markup(text, response_message)
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
