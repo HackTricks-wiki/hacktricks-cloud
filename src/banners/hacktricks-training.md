@@ -1,7 +1,7 @@
 > [!TIP]
-> Learn & practice AWS Hacking:<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://hacktricks-training.com/courses/arte)<img src="../../../../../images/arte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
-> Learn & practice GCP Hacking: <img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training GCP Red Team Expert (GRTE)**](https://hacktricks-training.com/courses/grte)<img src="../../../../../images/grte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
-> Learn & practice Az Hacking: <img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training Azure Red Team Expert (AzRTE)**](https://hacktricks-training.com/courses/azrte)<img src="../../../../../images/azrte.png" alt="" style="width:auto;height:24px;vertical-align:middle;">\
+> Learn & practice AWS Hacking:<img src="../../../../../images/arte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training AWS Red Team Expert (ARTE)**](https://hacktricks-training.com/courses/arte)<img src="../../../../../images/arte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">\
+> Learn & practice GCP Hacking: <img src="../../../../../images/grte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training GCP Red Team Expert (GRTE)**](https://hacktricks-training.com/courses/grte)<img src="../../../../../images/grte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">\
+> Learn & practice Az Hacking: <img src="../../../../../images/azrte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">[**HackTricks Training Azure Red Team Expert (AzRTE)**](https://hacktricks-training.com/courses/azrte)<img src="../../../../../images/azrte-badge-v1.webp" alt="" style="width:auto;height:24px;vertical-align:middle;">\
 > Browse the [**full HackTricks Training catalog**](https://hacktricks-training.com/courses/).
 >
 > <details>
@@ -13,7 +13,6 @@
 > - **Share hacking tricks by submitting PRs to the** [**HackTricks**](https://github.com/carlospolop/hacktricks) and [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos.
 >
 > </details>
-
 
 
 

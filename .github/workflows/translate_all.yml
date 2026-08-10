@@ -85,6 +85,10 @@ jobs:
           wget -O /tmp/translator.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/translator.py
           wget -O /tmp/seo_postprocess.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/seo_postprocess.py
           cp scripts/mark_unchanged_s3_files.py /tmp/mark_unchanged_s3_files.py
+          cp scripts/upload_immutable_images.sh /tmp/upload_immutable_images.sh
+          mkdir -p /tmp/immutable-images
+          cp src/images/{hacktricks-summer-discount-2026-v1.webp,arte-badge-v1.webp,grte-badge-v1.webp,azrte-badge-v1.webp} /tmp/immutable-images/
+          cp theme/discount.js /tmp/discount.js
 
       - name: Run get_and_save_refs.py
         run: |
@@ -152,6 +156,8 @@ jobs:
           git checkout "$BRANCH"
           git pull
           MDBOOK_BOOK__LANGUAGE=$BRANCH mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
+          cp /tmp/immutable-images/* ./book/images/
+          cp /tmp/discount.js ./book/discount.js
 
       - name: Push search index to hacktricks-searchindex repo
         shell: bash
@@ -284,6 +290,7 @@ jobs:
             --manifest /tmp/s3-branch-manifest.json \
             --remote-prefix "$BRANCH/"
           aws s3 sync ./book s3://hacktricks-cloud/$BRANCH --delete
+          bash /tmp/upload_immutable_images.sh hacktricks-cloud "$BRANCH"
           echo "Sync completed"
           echo "Cat 3 files from the book"
           find . -type f -name 'index.html' -print | head -n 3 | xargs -r cat
