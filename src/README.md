@@ -86,6 +86,4 @@ The bundled `docker-compose.yml` serves your currently checked-out branch at [ht
 - [13] [HackTricks Values & FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Repobeats statistics graphic for HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
 
-<!-- reference-refresh: 2026-08-10 -->
-
 {{#include ./banners/hacktricks-training.md}}
