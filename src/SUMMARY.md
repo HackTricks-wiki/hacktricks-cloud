@@ -62,6 +62,7 @@
 
 - [Pentesting Cloud Methodology](pentesting-cloud/pentesting-cloud-methodology.md)
   - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
+- [Environment Variable Injection to Code Execution](pentesting-cloud/environment-variable-injection.md)
 - [Kubernetes Pentesting](pentesting-cloud/kubernetes-security/README.md)
   - [Kubernetes Basics](pentesting-cloud/kubernetes-security/kubernetes-basics.md)
   - [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
@@ -324,6 +325,7 @@
   - [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md)
     - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md)
+    - [AWS - Batch Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md)
     - [AWS - Bedrock Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
     - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
