@@ -544,6 +544,7 @@
     - [Az - Virtual Desktop Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md)
     - [Az - VMs & Network Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md)
   - [Az - Privilege Escalation](pentesting-cloud/azure-security/az-privilege-escalation/README.md)
+    - [Az - High-impact Permission Abuse](pentesting-cloud/azure-security/az-privilege-escalation/az-high-impact-permissions.md)
     - [Az - Azure IAM Privesc (Authorization)](pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md)
     - [Az - AI Foundry Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md)
     - [Az - API Management Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md)
