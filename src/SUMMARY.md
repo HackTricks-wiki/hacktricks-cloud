@@ -570,6 +570,7 @@
     - [Az - Log Analytics Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-log-analytics-privesc.md)
     - [Az - Logic Apps Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md)
     - [Az - Maps Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-maps-privesc.md)
+    - [Az - Azure Monitor Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-monitor-privesc.md)
     - [Az - MySQL Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-mysql-privesc.md)
     - [Az - Notification Hubs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-notification-hubs-privesc.md)
     - [Az - PostgreSQL Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-postgresql-privesc.md)
