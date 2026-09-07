@@ -111,6 +111,7 @@
     * [GCP - Container Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md)
     * [GCP - Deploymentmaneger Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md)
     * [GCP - IAM Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md)
+    * [GCP - Workload Identity Federation Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md)
     * [GCP - KMS Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-kms-privesc.md)
     * [GCP - Orgpolicy Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md)
     * [GCP - Pubsub Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md)
