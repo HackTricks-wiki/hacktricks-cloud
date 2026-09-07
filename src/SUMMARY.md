@@ -437,6 +437,8 @@
     - [AWS - Step Functions Enum](pentesting-cloud/aws-security/aws-services/aws-stepfunctions-enum.md)
     - [AWS - STS Enum](pentesting-cloud/aws-security/aws-services/aws-sts-enum.md)
     - [AWS - Tax Settings Enum](pentesting-cloud/aws-security/aws-services/aws-tax-settings-enum.md)
+    - [AWS - WorkMail Enum](pentesting-cloud/aws-security/aws-services/aws-workmail-enum.md)
+    - [AWS - WorkSpaces Enum](pentesting-cloud/aws-security/aws-services/aws-workspaces-enum.md)
     - [AWS - Other Services Enum](pentesting-cloud/aws-security/aws-services/aws-other-services-enum.md)
   - [AWS - Unauthenticated Enum & Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/README.md)
     - [AWS - Accounts Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-accounts-unauthenticated-enum/README.md)
