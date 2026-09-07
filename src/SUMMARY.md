@@ -362,6 +362,7 @@
     - [AWS - RDS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md)
     - [AWS - Redshift Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md)
     - [AWS - Route53 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer/README.md)
+    - [AWS - Route 53 Domains Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-route53-domains-privesc/README.md)
     - [AWS - SNS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md)
     - [AWS - SQS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md)
     - [AWS - SSO & identitystore Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md)
