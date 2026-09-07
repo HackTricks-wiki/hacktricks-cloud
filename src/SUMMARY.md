@@ -95,6 +95,7 @@
     - [GCP - Artifact Registry Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md)
     - [GCP - Bigtable Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigtable-post-exploitation.md)
     - [GCP - Cloud Build Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-build-post-exploitation.md)
+    - [GCP - Cloud DNS Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-dns-post-exploitation.md)
     - [GCP - Cloud Functions Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-functions-post-exploitation.md)
     - [GCP - Cloud Run Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-run-post-exploitation.md)
     - [GCP - Cloud Shell Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-shell-post-exploitation.md)
