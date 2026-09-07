@@ -105,6 +105,7 @@
     - [GCP - IAM Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-iam-post-exploitation.md)
     - [GCP - KMS Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-kms-post-exploitation.md)
     - [GCP - Logging Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-logging-post-exploitation.md)
+    - [GCP - Memorystore Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-memorystore-post-exploitation.md)
     - [GCP - Monitoring Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-monitoring-post-exploitation.md)
     - [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
     - [GCP - Secretmanager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md)
