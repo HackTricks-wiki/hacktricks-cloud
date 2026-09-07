@@ -7,9 +7,13 @@ on:
     paths-ignore:
       - '.gitignore'
       - 'book/**'
+      - Dockerfile
+      - '.github/**'
   workflow_dispatch:
 
-concurrency: build_master
+concurrency:
+  group: build-master
+  cancel-in-progress: true
 
 permissions:
   packages: write
@@ -27,7 +31,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 #Needed to download everything to be able to access the master & language branches
+          fetch-depth: 1
       
       # Build the mdBook
       - name: Build mdBook
@@ -102,7 +106,7 @@ jobs:
 
             cd "${GITHUB_WORKSPACE}"
             rm -rf /tmp/searchindex-repo /tmp/searchindex-backup
-            git clone https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
+            git clone --depth 1 https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
 
             cd /tmp/searchindex-repo
             git config user.name "GitHub Actions"
@@ -148,7 +152,7 @@ jobs:
 
       # Login in AWs
       - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
