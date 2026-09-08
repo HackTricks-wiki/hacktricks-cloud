@@ -380,6 +380,7 @@
     - [AWS - Organizations Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-organizations-prinvesc/README.md)
     - [AWS - S3 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md)
     - [AWS - Sagemaker Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md)
+    - [AWS - Service Catalog Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md)
     - [AWS - Secrets Manager Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md)
     - [AWS - SSM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md)
     - [AWS - Step Functions Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md)
