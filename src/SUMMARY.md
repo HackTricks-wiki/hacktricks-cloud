@@ -407,6 +407,7 @@
     - [AWS - AppConfig Enum](pentesting-cloud/aws-security/aws-services/aws-appconfig-enum.md)
     - [AWS - AppSync Enum](pentesting-cloud/aws-security/aws-services/aws-appsync-enum.md)
     - [AWS - Aurora DSQL Enum](pentesting-cloud/aws-security/aws-services/aws-aurora-dsql-enum.md)
+    - [AWS - B2B Data Interchange Enum](pentesting-cloud/aws-security/aws-services/aws-b2b-data-interchange-enum.md)
     - [AWS - Batch Enum](pentesting-cloud/aws-security/aws-services/aws-batch-enum.md)
     - [AWS - Bedrock Enum](pentesting-cloud/aws-security/aws-services/aws-bedrock-enum.md)
     - [AWS - Certificate Manager (ACM) & Private Certificate Authority (PCA)](pentesting-cloud/aws-security/aws-services/aws-certificate-manager-acm-and-private-certificate-authority-pca.md)
