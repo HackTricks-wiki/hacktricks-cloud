@@ -354,6 +354,7 @@
     - [AWS - DynamoDB Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md)
     - [AWS - EBS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc/README.md)
     - [AWS - EC2 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md)
+    - [AWS - EC2 Image Builder Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-image-builder-privesc/README.md)
     - [AWS - ECR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md)
     - [AWS - ECS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md)
     - [AWS - EFS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md)
