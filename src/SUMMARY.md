@@ -362,6 +362,7 @@
     - [AWS - Elastic Beanstalk Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md)
     - [AWS - EMR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md)
     - [AWS - EventBridge Scheduler Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/eventbridgescheduler-privesc/README.md)
+    - [AWS - EventBridge Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md)
     - [AWS - Gamelift](pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md)
     - [AWS - Glue Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md)
     - [AWS - IAM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md)
