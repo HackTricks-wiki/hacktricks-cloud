@@ -275,6 +275,7 @@
     - [AWS - STS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sts-persistence/README.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
+    - [AWS - Backup Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-backup-post-exploitation/README.md)
     - [AWS - Bedrock Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md)
     - [AWS - CloudFront Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md)
     - [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/README.md)
