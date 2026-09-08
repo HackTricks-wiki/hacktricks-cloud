@@ -342,6 +342,7 @@
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
     - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
     - [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md)
+    - [AWS - CodeDeploy Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codedeploy-privesc/README.md)
     - [AWS - Codepipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md)
     - [AWS - Codestar Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md)
       - [codestar:CreateProject, codestar:AssociateTeamMember](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/codestar-createproject-codestar-associateteammember.md)
