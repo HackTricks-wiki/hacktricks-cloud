@@ -448,6 +448,7 @@
     - [AWS - Invoicing Enum](pentesting-cloud/aws-security/aws-services/aws-invoicing-enum.md)
     - [AWS - IoT Core Enum](pentesting-cloud/aws-security/aws-services/aws-iot-core-enum.md)
     - [AWS - IoT Wireless Enum](pentesting-cloud/aws-security/aws-services/aws-iot-wireless-enum.md)
+    - [AWS - Marketplace Enum](pentesting-cloud/aws-security/aws-services/aws-marketplace-enum.md)
     - [AWS - IoT Greengrass Enum](pentesting-cloud/aws-security/aws-services/aws-greengrass-enum.md)
     - [AWS - KMS Enum](pentesting-cloud/aws-security/aws-services/aws-kms-enum.md)
     - [AWS - Lambda Enum](pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md)
