@@ -472,6 +472,7 @@
     - [AWS - STS Enum](pentesting-cloud/aws-security/aws-services/aws-sts-enum.md)
     - [AWS - Tax Settings Enum](pentesting-cloud/aws-security/aws-services/aws-tax-settings-enum.md)
     - [AWS - Transcribe Enum](pentesting-cloud/aws-security/aws-services/aws-transcribe-enum.md)
+    - [AWS - Translate Enum](pentesting-cloud/aws-security/aws-services/aws-translate-enum.md)
     - [AWS - VPC Lattice Enum](pentesting-cloud/aws-security/aws-services/aws-vpc-lattice-enum.md)
     - [AWS - WorkMail Enum](pentesting-cloud/aws-security/aws-services/aws-workmail-enum.md)
     - [AWS - WorkSpaces Enum](pentesting-cloud/aws-security/aws-services/aws-workspaces-enum.md)
