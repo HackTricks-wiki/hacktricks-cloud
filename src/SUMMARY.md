@@ -419,6 +419,7 @@
       - [Cognito Identity Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-identity-pools.md)
       - [Cognito User Pools](pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-user-pools.md)
     - [AWS - DataPipeline, CodePipeline & CodeCommit Enum](pentesting-cloud/aws-security/aws-services/aws-datapipeline-codepipeline-codebuild-and-codecommit.md)
+    - [AWS - DataZone Enum](pentesting-cloud/aws-security/aws-services/aws-datazone-enum.md)
     - [AWS - Deadline Cloud Enum](pentesting-cloud/aws-security/aws-services/aws-deadline-cloud-enum.md)
     - [AWS - Directory Services / WorkDocs Enum](pentesting-cloud/aws-security/aws-services/aws-directory-services-workdocs-enum.md)
     - [AWS - DocumentDB Enum](pentesting-cloud/aws-security/aws-services/aws-documentdb-enum/README.md)
