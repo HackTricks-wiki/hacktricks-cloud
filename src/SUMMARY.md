@@ -440,6 +440,7 @@
     - [AWS - Managed Service for Apache Flink Enum](pentesting-cloud/aws-security/aws-services/aws-managed-flink-enum.md)
     - [AWS - Managed Service for Prometheus Enum](pentesting-cloud/aws-security/aws-services/aws-managed-prometheus-enum.md)
     - [AWS - HealthOmics Enum](pentesting-cloud/aws-security/aws-services/aws-healthomics-enum.md)
+    - [AWS - HealthImaging Enum](pentesting-cloud/aws-security/aws-services/aws-healthimaging-enum.md)
     - [AWS - IAM, Identity Center & SSO Enum](pentesting-cloud/aws-security/aws-services/aws-iam-enum.md)
     - [AWS - Invoicing Enum](pentesting-cloud/aws-security/aws-services/aws-invoicing-enum.md)
     - [AWS - IoT Core Enum](pentesting-cloud/aws-security/aws-services/aws-iot-core-enum.md)
