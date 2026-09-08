@@ -458,6 +458,7 @@
     - [AWS - MQ Enum](pentesting-cloud/aws-security/aws-services/aws-mq-enum.md)
     - [AWS - MSK Enum](pentesting-cloud/aws-security/aws-services/aws-msk-enum.md)
     - [AWS - Organizations Enum](pentesting-cloud/aws-security/aws-services/aws-organizations-enum.md)
+    - [AWS - OpenSearch Service Enum](pentesting-cloud/aws-security/aws-services/aws-opensearch-enum.md)
     - [AWS - Redshift Enum](pentesting-cloud/aws-security/aws-services/aws-redshift-enum.md)
     - [AWS - Relational Database (RDS) Enum](pentesting-cloud/aws-security/aws-services/aws-relational-database-rds-enum.md)
     - [AWS - Route53 Enum](pentesting-cloud/aws-security/aws-services/aws-route53-enum.md)
