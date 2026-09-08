@@ -177,6 +177,7 @@
     * [GCP - Storage Enum](pentesting-cloud/gcp-security/gcp-services/gcp-storage-enum.md)
     * [GCP - Workflows Enum](pentesting-cloud/gcp-security/gcp-services/gcp-workflows-enum.md)
   * [GCP <--> Workspace Pivoting](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md)
+    * [GCP - Agent Identity Auth Manager Credential Access](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-agent-identity-auth-manager-privesc.md)
     * [GCP - Understanding Domain-Wide Delegation](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-understanding-domain-wide-delegation.md)
   * [GCP - Unauthenticated Enum & Access](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/README.md)
     * [GCP - API Keys Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-api-keys-unauthenticated-enum.md)
