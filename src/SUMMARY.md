@@ -448,6 +448,7 @@
     - [AWS - EFS Enum](pentesting-cloud/aws-security/aws-services/aws-efs-enum.md)
     - [AWS - Entity Resolution Enum](pentesting-cloud/aws-security/aws-services/aws-entity-resolution-enum.md)
     - [AWS - EventBridge Scheduler Enum](pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md)
+    - [AWS - Fraud Detector Enum](pentesting-cloud/aws-security/aws-services/aws-fraud-detector-enum.md)
     - [AWS - Kinesis Data Firehose Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose-enum.md)
     - [AWS - Kinesis Data Streams Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-streams-enum.md)
     - [AWS - Keyspaces Enum](pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md)
