@@ -459,6 +459,7 @@
     - [AWS - Lightsail Enum](pentesting-cloud/aws-security/aws-services/aws-lightsail-enum.md)
     - [AWS - Macie Enum](pentesting-cloud/aws-security/aws-services/aws-macie-enum.md)
     - [AWS - MediaPackage v2 Enum](pentesting-cloud/aws-security/aws-services/aws-mediapackage-v2-enum.md)
+    - [AWS - MemoryDB Enum](pentesting-cloud/aws-security/aws-services/aws-memorydb-enum.md)
     - [AWS - MQ Enum](pentesting-cloud/aws-security/aws-services/aws-mq-enum.md)
     - [AWS - MSK Enum](pentesting-cloud/aws-security/aws-services/aws-msk-enum.md)
     - [AWS - Organizations Enum](pentesting-cloud/aws-security/aws-services/aws-organizations-enum.md)
