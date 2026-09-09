@@ -445,6 +445,7 @@
     - [AWS - Elemental Inference Enum](pentesting-cloud/aws-security/aws-services/aws-elemental-inference-enum.md)
     - [AWS - EMR Enum](pentesting-cloud/aws-security/aws-services/aws-emr-enum.md)
     - [AWS - EFS Enum](pentesting-cloud/aws-security/aws-services/aws-efs-enum.md)
+    - [AWS - Entity Resolution Enum](pentesting-cloud/aws-security/aws-services/aws-entity-resolution-enum.md)
     - [AWS - EventBridge Scheduler Enum](pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md)
     - [AWS - Kinesis Data Firehose Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose-enum.md)
     - [AWS - Kinesis Data Streams Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-streams-enum.md)
