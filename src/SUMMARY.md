@@ -192,6 +192,7 @@
     - [GCP - Secret Manager Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-secret-manager-persistence.md)
     - [GCP - Storage Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-storage-persistence.md)
     - [GCP - Token Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistence.md)
+    - [GCP - Workload Identity Federation Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-workload-identity-federation-persistence.md)
   - [GCP - Services](pentesting-cloud/gcp-security/gcp-services/README.md)
     - [GCP - AI Platform Enum](pentesting-cloud/gcp-security/gcp-services/gcp-ai-platform-enum.md)
     - [GCP - Analytics Hub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-analytics-hub-enum.md)
