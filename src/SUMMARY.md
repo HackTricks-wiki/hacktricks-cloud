@@ -429,6 +429,7 @@
     - [AWS - DataSync Enum](pentesting-cloud/aws-security/aws-services/aws-datasync-enum.md)
     - [AWS - Database Migration Service (DMS) Enum](pentesting-cloud/aws-security/aws-services/aws-dms-enum.md)
     - [AWS - Deadline Cloud Enum](pentesting-cloud/aws-security/aws-services/aws-deadline-cloud-enum.md)
+    - [AWS - Device Farm Enum](pentesting-cloud/aws-security/aws-services/aws-device-farm-enum.md)
     - [AWS - Directory Services / WorkDocs Enum](pentesting-cloud/aws-security/aws-services/aws-directory-services-workdocs-enum.md)
     - [AWS - DocumentDB Enum](pentesting-cloud/aws-security/aws-services/aws-documentdb-enum/README.md)
     - [AWS - DynamoDB Enum](pentesting-cloud/aws-security/aws-services/aws-dynamodb-enum.md)
