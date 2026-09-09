@@ -389,6 +389,7 @@
     - [AWS - CloudWatch Synthetics Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md)
     - [AWS - Step Functions Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md)
     - [AWS - STS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md)
+    - [AWS - Transfer Family Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md)
     - [AWS - WorkDocs Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md)
   - [AWS - Services](pentesting-cloud/aws-security/aws-services/README.md)
     - [AWS - Security & Detection Services](pentesting-cloud/aws-security/aws-services/aws-security-and-detection-services/README.md)
