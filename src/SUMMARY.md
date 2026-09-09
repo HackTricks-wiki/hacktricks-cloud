@@ -592,6 +592,7 @@
     - [Az - Batch Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md)
     - [Az - Bot Service Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md)
     - [Az - Communication Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md)
+    - [Az - Speech Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-speech-services-privesc.md)
     - [Az - Container Registry Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md)
     - [Az - Container Instances, Apps & Jobs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md)
     - [Az - CosmosDB Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md)
