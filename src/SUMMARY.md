@@ -387,6 +387,7 @@
     - [AWS - Secrets Manager Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md)
     - [AWS - SSM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md)
     - [AWS - CloudWatch Synthetics Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md)
+    - [AWS - Fault Injection Service Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-fis-privesc/README.md)
     - [AWS - Step Functions Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md)
     - [AWS - STS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md)
     - [AWS - Transfer Family Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md)
