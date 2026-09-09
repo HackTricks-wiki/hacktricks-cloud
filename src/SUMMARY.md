@@ -467,6 +467,8 @@
     - [AWS - IoT Greengrass Enum](pentesting-cloud/aws-security/aws-services/aws-greengrass-enum.md)
     - [AWS - KMS Enum](pentesting-cloud/aws-security/aws-services/aws-kms-enum.md)
     - [AWS - Lake Formation Enum](pentesting-cloud/aws-security/aws-services/aws-lake-formation-enum.md)
+    - [AWS - Mainframe Modernization Enum](pentesting-cloud/aws-security/aws-services/aws-mainframe-modernization-enum.md)
+    - [AWS - Managed Blockchain Enum](pentesting-cloud/aws-security/aws-services/aws-managed-blockchain-enum.md)
     - [AWS - Lambda Enum](pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md)
     - [AWS - Lex V2 Enum](pentesting-cloud/aws-security/aws-services/aws-lex-v2-enum.md)
     - [AWS - Lightsail Enum](pentesting-cloud/aws-security/aws-services/aws-lightsail-enum.md)
