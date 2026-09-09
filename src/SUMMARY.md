@@ -446,6 +446,7 @@
     - [AWS - EventBridge Scheduler Enum](pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md)
     - [AWS - Kinesis Data Firehose Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose-enum.md)
     - [AWS - Kinesis Data Streams Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-streams-enum.md)
+    - [AWS - Keyspaces Enum](pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md)
     - [AWS - Managed Service for Apache Flink Enum](pentesting-cloud/aws-security/aws-services/aws-managed-flink-enum.md)
     - [AWS - Managed Grafana Enum](pentesting-cloud/aws-security/aws-services/aws-managed-grafana-enum.md)
     - [AWS - Managed Service for Prometheus Enum](pentesting-cloud/aws-security/aws-services/aws-managed-prometheus-enum.md)
