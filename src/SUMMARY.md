@@ -186,6 +186,7 @@
     - [GCP - Essential Contacts Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-essential-contacts-persistence.md)
     - [GCP - Filestore Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-filestore-persistence.md)
     - [GCP - IAM Deny Policies Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iam-deny-policies-persistence.md)
+    - [GCP - Liens Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-liens-persistence.md)
     - [GCP - Logging Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-logging-persistence.md)
     - [GCP - Secret Manager Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-secret-manager-persistence.md)
     - [GCP - Storage Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-storage-persistence.md)
