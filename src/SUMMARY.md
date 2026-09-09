@@ -442,6 +442,7 @@
     - [AWS - EKS Enum](pentesting-cloud/aws-security/aws-services/aws-eks-enum.md)
     - [AWS - Elastic Beanstalk Enum](pentesting-cloud/aws-security/aws-services/aws-elastic-beanstalk-enum.md)
     - [AWS - ElastiCache](pentesting-cloud/aws-security/aws-services/aws-elasticache.md)
+    - [AWS - Elemental Inference Enum](pentesting-cloud/aws-security/aws-services/aws-elemental-inference-enum.md)
     - [AWS - EMR Enum](pentesting-cloud/aws-security/aws-services/aws-emr-enum.md)
     - [AWS - EFS Enum](pentesting-cloud/aws-security/aws-services/aws-efs-enum.md)
     - [AWS - EventBridge Scheduler Enum](pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md)
