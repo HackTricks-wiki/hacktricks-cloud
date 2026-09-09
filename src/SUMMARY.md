@@ -461,6 +461,7 @@
     - [AWS - IAM, Identity Center & SSO Enum](pentesting-cloud/aws-security/aws-services/aws-iam-enum.md)
     - [AWS - Invoicing Enum](pentesting-cloud/aws-security/aws-services/aws-invoicing-enum.md)
     - [AWS - IoT Core Enum](pentesting-cloud/aws-security/aws-services/aws-iot-core-enum.md)
+    - [AWS - Interactive Video Service (IVS) Enum](pentesting-cloud/aws-security/aws-services/aws-ivs-enum.md)
     - [AWS - IoT Wireless Enum](pentesting-cloud/aws-security/aws-services/aws-iot-wireless-enum.md)
     - [AWS - Marketplace Enum](pentesting-cloud/aws-security/aws-services/aws-marketplace-enum.md)
     - [AWS - IoT Greengrass Enum](pentesting-cloud/aws-security/aws-services/aws-greengrass-enum.md)
