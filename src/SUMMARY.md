@@ -176,6 +176,7 @@
     - [GCP - Cloud SQL Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-cloud-sql-persistence.md)
     - [GCP - Compute Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-compute-persistence.md)
     - [GCP - Dataflow Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-dataflow-persistence.md)
+    - [GCP - Essential Contacts Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-essential-contacts-persistence.md)
     - [GCP - Filestore Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-filestore-persistence.md)
     - [GCP - Logging Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-logging-persistence.md)
     - [GCP - Secret Manager Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-secret-manager-persistence.md)
