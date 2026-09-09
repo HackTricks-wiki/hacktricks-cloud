@@ -386,6 +386,7 @@
     - [AWS - Service Catalog Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md)
     - [AWS - Secrets Manager Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md)
     - [AWS - SSM Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md)
+    - [AWS - CloudWatch Synthetics Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md)
     - [AWS - Step Functions Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md)
     - [AWS - STS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md)
     - [AWS - WorkDocs Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md)
