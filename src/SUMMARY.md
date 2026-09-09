@@ -451,6 +451,7 @@
     - [AWS - Fraud Detector Enum](pentesting-cloud/aws-security/aws-services/aws-fraud-detector-enum.md)
     - [AWS - GameLift Servers Enum](pentesting-cloud/aws-security/aws-services/aws-gamelift-enum.md)
     - [AWS - GameLift Streams Enum](pentesting-cloud/aws-security/aws-services/aws-gamelift-streams-enum.md)
+    - [AWS - Global Accelerator Enum](pentesting-cloud/aws-security/aws-services/aws-global-accelerator-enum.md)
     - [AWS - Kinesis Data Firehose Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-firehose-enum.md)
     - [AWS - Kinesis Data Streams Enum](pentesting-cloud/aws-security/aws-services/aws-kinesis-data-streams-enum.md)
     - [AWS - Keyspaces Enum](pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md)
