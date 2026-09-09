@@ -159,6 +159,7 @@
     - [GCP - Secretmanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md)
     - [GCP - Serviceusage Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-serviceusage-privesc.md)
     - [GCP - Sourcerepos Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-sourcerepos-privesc.md)
+    - [GCP - Spanner Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-spanner-privesc.md)
     - [GCP - Storage Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md)
     - [GCP - Vertex AI Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md)
     - [GCP - Workflows Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md)
