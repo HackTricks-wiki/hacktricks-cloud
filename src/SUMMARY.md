@@ -91,6 +91,7 @@
   - [GCP - Permissions for a Pentest](pentesting-cloud/gcp-security/gcp-permissions-for-a-pentest.md)
   - [GCP - Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/README.md)
     - [GCP - Access Approval Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-access-approval-post-exploitation.md)
+    - [GCP - AlloyDB Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-alloydb-post-exploitation.md)
     - [GCP - API Gateway Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-api-gateway-post-exploitation.md)
     - [GCP - Apigee Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-apigee-post-exploitation.md)
     - [GCP - App Engine Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md)
