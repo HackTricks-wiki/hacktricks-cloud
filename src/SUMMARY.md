@@ -146,6 +146,7 @@
       - [GCP - Add Custom SSH Metadata](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/gcp-add-custom-ssh-metadata.md)
     - [GCP - Composer Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md)
     - [GCP - Container Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md)
+    - [GCP - Database Migration Service Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-database-migration-privesc.md)
     - [GCP - Dataproc Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataproc-privesc.md)
     - [GCP - Dataflow Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataflow-privesc.md)
     - [GCP - Dataform Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataform-privesc.md)
