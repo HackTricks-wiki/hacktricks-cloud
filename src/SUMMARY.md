@@ -163,6 +163,7 @@
     - [GCP - Pubsub Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md)
     - [GCP - Resourcemanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md)
     - [GCP - Run Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md)
+    - [GCP - Runtimeconfig Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-runtimeconfig-privesc.md)
     - [GCP - Secretmanager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md)
     - [GCP - Secure Source Manager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secure-source-manager-privesc.md)
     - [GCP - Serviceusage Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-serviceusage-privesc.md)
