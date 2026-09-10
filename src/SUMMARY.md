@@ -126,6 +126,7 @@
     - [GCP - Storage Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-post-exploitation.md)
     - [GCP - Storage Transfer Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-transfer-post-exploitation.md)
   - [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
+    - [GCP - Access Context Manager / VPC-SC Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md)
     - [GCP - Analytics Hub Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-analytics-hub-privesc.md)
     - [GCP - Apikeys Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apikeys-privesc.md)
     - [GCP - AppEngine Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md)
