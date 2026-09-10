@@ -129,6 +129,7 @@
   - [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
     - [GCP - Access Context Manager / VPC-SC Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md)
     - [GCP - Analytics Hub Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-analytics-hub-privesc.md)
+    - [GCP - Apigee Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apigee-privesc.md)
     - [GCP - Apikeys Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apikeys-privesc.md)
     - [GCP - AppEngine Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md)
     - [GCP - Artifact Registry Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md)
