@@ -95,6 +95,7 @@
     - [GCP - Apigee Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-apigee-post-exploitation.md)
     - [GCP - App Engine Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md)
     - [GCP - Artifact Registry Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md)
+    - [GCP - Backup and DR Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-backup-and-dr-post-exploitation.md)
     - [GCP - Bigtable Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigtable-post-exploitation.md)
     - [GCP - Binary Authorization Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-binary-authorization-post-exploitation.md)
     - [GCP - Certificate Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-certificate-manager-post-exploitation.md)
