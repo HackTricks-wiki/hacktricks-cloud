@@ -514,6 +514,7 @@
     - [AWS - Translate Enum](pentesting-cloud/aws-security/aws-services/aws-translate-enum.md)
     - [AWS - VPC Lattice Enum](pentesting-cloud/aws-security/aws-services/aws-vpc-lattice-enum.md)
     - [AWS - WorkMail Enum](pentesting-cloud/aws-security/aws-services/aws-workmail-enum.md)
+    - [AWS - Wickr Enum](pentesting-cloud/aws-security/aws-services/aws-wickr-enum.md)
     - [AWS - WorkSpaces Enum](pentesting-cloud/aws-security/aws-services/aws-workspaces-enum.md)
     - [AWS - Other Services Enum](pentesting-cloud/aws-security/aws-services/aws-other-services-enum.md)
   - [AWS - Unauthenticated Enum & Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/README.md)
