@@ -226,6 +226,7 @@
     - [GCP - Composer Enum](pentesting-cloud/gcp-security/gcp-services/gcp-composer-enum.md)
     - [GCP - Container Analysis Enum](pentesting-cloud/gcp-security/gcp-services/gcp-container-analysis-enum.md)
     - [GCP - Containers & GKE Enum](pentesting-cloud/gcp-security/gcp-services/gcp-containers-gke-and-composer-enum.md)
+    - [GCP - Data Fusion Enum](pentesting-cloud/gcp-security/gcp-services/gcp-data-fusion-enum.md)
     - [GCP - Dataflow Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataflow-enum.md)
     - [GCP - Dataform Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataform-enum.md)
     - [GCP - Dataplex Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataplex-enum.md)
