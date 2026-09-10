@@ -119,6 +119,7 @@
     - [GCP - Memorystore Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-memorystore-post-exploitation.md)
     - [GCP - Monitoring Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-monitoring-post-exploitation.md)
     - [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
+    - [GCP - reCAPTCHA Enterprise Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-recaptcha-enterprise-post-exploitation.md)
     - [GCP - Spanner Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-spanner-post-exploitation.md)
     - [GCP - Secretmanager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md)
     - [GCP - Security Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-security-post-exploitation.md)
