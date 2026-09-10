@@ -132,6 +132,7 @@
     - [GCP - Batch Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-batch-privesc.md)
     - [GCP - BigQuery Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md)
     - [GCP - Bigtable Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md)
+    - [GCP - Billing Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-billing-privesc.md)
     - [GCP - Certificate Authority Service Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-certificate-authority-service-privesc.md)
     - [GCP - ClientAuthConfig Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-clientauthconfig-privesc.md)
     - [GCP - Cloud Workstations Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md)
