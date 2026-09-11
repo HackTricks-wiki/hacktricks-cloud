@@ -453,6 +453,7 @@
     * [Az - Batch Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md)
     * [Az - Bot Service Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md)
     * [Az - Communication Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md)
+    * [Az - Container Apps Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-container-apps-privesc.md)
     * [Az - Data Factory Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md)
     * [Az - Databricks Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md)
     * [Az - Digital Twins Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md)
