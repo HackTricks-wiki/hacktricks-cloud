@@ -408,6 +408,7 @@
     * [Az - Automation Account](pentesting-cloud/azure-security/az-services/az-automation-account/README.md)
       * [Az - State Configuration RCE](pentesting-cloud/azure-security/az-services/az-automation-account/az-state-configuration-rce.md)
     * [Az - Azure App Service & Function Apps](pentesting-cloud/azure-security/az-services/az-azure-app-service.md)
+    * [Az - Chaos Studio](pentesting-cloud/azure-security/az-services/az-chaos-studio.md)
     * [Az - Intune](pentesting-cloud/azure-security/az-services/intune.md)
     * [Az - File Shares](pentesting-cloud/azure-security/az-services/az-file-shares.md)
     * [Az - Key Vault](pentesting-cloud/azure-security/az-services/keyvault.md)
