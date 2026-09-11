@@ -448,6 +448,7 @@
     * [Az - VMs & Network Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md)
   * [Az - Privilege Escalation](pentesting-cloud/azure-security/az-privilege-escalation/README.md)
     * [Az - Azure IAM Privesc (Authorization)](pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md)
+    * [Az - App Configuration Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md)
     * [Az - Attestation Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-attestation-privesc.md)
     * [Az - Batch Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md)
     * [Az - Bot Service Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md)
