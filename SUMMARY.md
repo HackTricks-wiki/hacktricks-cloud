@@ -414,6 +414,7 @@
     * [Az - Key Vault](pentesting-cloud/azure-security/az-services/keyvault.md)
     * [Az - Logic Apps](pentesting-cloud/azure-security/az-services/az-logic-apps.md)
     * [Az - Management Groups, Subscriptions & Resource Groups](pentesting-cloud/azure-security/az-services/az-management-groups-subscriptions-and-resource-groups.md)
+    * [Az - Monitor (Alerts & Action Groups)](pentesting-cloud/azure-security/az-services/az-monitor.md)
     * [Az - Queue Storage](pentesting-cloud/azure-security/az-services/az-queue-enum.md)
     * [Az - Service Bus](pentesting-cloud/azure-security/az-services/az-servicebus-enum.md)
     * [Az - SQL](pentesting-cloud/azure-security/az-services/az-sql.md)
