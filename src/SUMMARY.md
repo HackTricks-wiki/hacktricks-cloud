@@ -772,7 +772,6 @@
     - [Az - SignalR and Web PubSub Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md)
     - [Az - Azure SRE Agent Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md)
     - [Az - Static Web App Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md)
-    - [Az - Stream Analytics Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-stream-analytics-privesc.md)
     - [Az - Storage Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md)
     - [Az - Stream Analytics Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-stream-analytics-privesc.md)
     - [Az - SQL Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md)
