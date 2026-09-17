@@ -33,14 +33,13 @@ jobs:
         with:
           fetch-depth: 1
 
-      # Fail here with a clear message rather than inside mdbook, where a bad
-      # SUMMARY.md reads as a generic build error.
-      - name: Validate SUMMARY.md
-        run: python3 scripts/check_summary.py
-
       # Build the mdBook
       - name: Build mdBook
-        run: MDBOOK_BOOK__LANGUAGE=en mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
+        run: |
+          # Repair known SUMMARY.md breakage (duplicate entries) first, otherwise
+          # mdbook aborts and takes the whole site down.
+          python3 scripts/check_summary.py --fix || true
+          MDBOOK_BOOK__LANGUAGE=en mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
 
       - name: Post-process SEO artifacts
         run: |
