@@ -9,6 +9,11 @@ on:
       - Dockerfile
       - '.github/**'
   workflow_dispatch:
+    inputs:
+      files:
+        description: 'Comma-separated .md paths to translate (blank = files changed in the last master commit)'
+        required: false
+        default: ''
 
 permissions:
   packages: write
@@ -110,15 +115,29 @@ jobs:
           git push || echo "No changes to push"
 
       - name: Run translation script on changed files
+        env:
+          INPUT_FILES: ${{ inputs.files }}
         run: |
           git checkout master
           cp src/SUMMARY.md /tmp/master-summary.md
           export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          git diff --name-only HEAD~1 | grep -v "SUMMARY.md" | while read -r file; do
-            if echo "$file" | grep -qE '\.md$'; then
-              echo -n ",$file" >> /tmp/file_paths.txt
-            fi
-          done
+          if [ -n "$INPUT_FILES" ]; then
+            echo "Explicit file list supplied via workflow_dispatch"
+            printf '%s' "$INPUT_FILES" | tr ',' '\n' | while read -r file; do
+              file=$(echo "$file" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+              [ -z "$file" ] && continue
+              echo "$file" | grep -qE '\.md$' || { echo "Skipping non-md: $file"; continue; }
+              echo "$file" | grep -q 'SUMMARY\.md$' && { echo "Skipping SUMMARY.md"; continue; }
+              [ -f "$file" ] || { echo "Skipping missing file: $file"; continue; }
+              printf ',%s' "$file" >> /tmp/file_paths.txt
+            done
+          else
+            git diff --name-only HEAD~1 | grep -v "SUMMARY.md" | while read -r file; do
+              if echo "$file" | grep -qE '\.md$'; then
+                echo -n ",$file" >> /tmp/file_paths.txt
+              fi
+            done
+          fi
 
           echo "Files to translate (`wc -l < /tmp/file_paths.txt`):"
           cat /tmp/file_paths.txt
