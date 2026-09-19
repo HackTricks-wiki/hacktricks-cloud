@@ -4,15 +4,15 @@ Wskazówki dla przyszłych agentów pracujących w tym repozytorium.
 
 ## Kontekst repozytorium
 
-To repozytorium HackTricks Cloud mdBook. Powiązana główna książka znajduje się w:
+To jest repozytorium HackTricks Cloud mdBook. Powiązana główna książka znajduje się w:
 
 `/Users/carlospolop/git/hacktricks`
 
-Zmiany dotyczące wspólnego theme/search behavior często trzeba zastosować w obu repozytoriach.
+Zmiany dotyczące współdzielonego motywu lub działania wyszukiwania często trzeba zastosować w obu repozytoriach.
 
-## Kontrakt ładowania Search Index
+## Umowa ładowania indeksu wyszukiwania
 
-Niestandardowy interfejs search znajduje się w:
+Niestandardowy interfejs wyszukiwania znajduje się w:
 
 `theme/ht_searcher.js`
 
@@ -20,72 +20,70 @@ Może również istnieć wygenerowana kopia w:
 
 `book/theme/ht_searcher.js`
 
-Jeśli production wdraża już zbudowany katalog `book/`, zaktualizuj obie kopie albo przebuduj
-book przed deploymentem.
+Jeśli produkcja wdraża już zbudowany katalog `book/`, zaktualizuj obie kopie albo przebuduj
+book przed wdrożeniem.
 
-Kolejność ładowania search index jest istotna i kosztowa:
+Polityka źródła indeksu wyszukiwania jest istotna i wrażliwa na koszty:
 
-1. Załaduj każdy language-specific i fallback search index z repozytorium GitHub:
-`HackTricks-wiki/hacktricks-searchindex`
-2. Dopiero jeśli wszystkie candidates hostowane na GitHub zawiodą, użyj fallbacku do outputu mdBook
-   z tego samego origin.
+- Na publicznych hostach każdą kandydacką wersję językową i fallback ładuj wyłącznie z
+`HackTricks-wiki/hacktricks-searchindex`. Nigdy nie używaj fallbacku do outputu mdBook z tego samego originu;
+serwowanie dużego indeksu z `cloud.hacktricks.wiki` na produkcji jest kosztowne.
+- Na hostach localhost, `.local`/`.internal`, loopback, RFC1918, carrier-grade NAT, link-local lub
+prywatnych adresach IPv6 ładuj wyłącznie output mdBook z tego samego originu, aby lokalne/w kontenerach wdrożenia
+pozostały samowystarczalne.
 
-Nie umieszczaj lokalnego fallbacku `/searchindex.js` przed żadnym fallbackiem hostowanym na GitHub,
-takim jak `searchindex-cloud-en.js.gz`. Serwowanie `searchindex.js` z `cloud.hacktricks.wiki` w production
-jest kosztowne.
-
-Dla tego repo oczekiwany lokalny fallback to:
+Dla tego repozytorium oczekiwanym lokalnym fallbackiem jest:
 
 `/searchindex.js`
 
-Fallbackiem głównej książki dla tego repo jest:
+Fallbackiem głównej książki dla tego repozytorium jest:
 
 `/searchindex-book.js`
 
-Ten plik jest wyłącznie fallbackiem. Primary source musi pozostać zdalnymi plikami
-`searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` w
-`HackTricks-wiki/hacktricks-searchindex`.
+Te lokalne pliki są źródłami wyłącznie dla sieci prywatnych. Publiczne hosty muszą używać zdalnych
+plików `searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` w
+`HackTricks-wiki/hacktricks-searchindex` wyłącznie.
 
-## Publikowanie Search Index
+## Publikowanie indeksu wyszukiwania
 
-Workflowy publikujące encrypted compressed search indexes do `HackTricks-wiki/hacktricks-searchindex` to:
+Workflowy publikujące zaszyfrowane, skompresowane indeksy wyszukiwania do
+`HackTricks-wiki/hacktricks-searchindex` to:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Wygenerowany source file to `book/searchindex.js`. Nazwy publikowanych remote artifacts to:
+Wygenerowany plik źródłowy to `book/searchindex.js`. Nazwy publikowanych zdalnych artefaktów to:
 
-- `searchindex-cloud-v2-en.json.gz` (preferowany compact index)
-- `searchindex-cloud-v2-<lang>.json.gz` (preferowany compact index)
+- `searchindex-cloud-v2-en.json.gz` (preferowany kompaktowy indeks)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferowany kompaktowy indeks)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Browser loader preferuje compact v2 artifact i zachowuje artifact `.js.gz` jako legacy
-fallback. Oba są XOR-encrypted gzip payloads wykorzystującymi key zdefiniowany w
-`theme/ht_searcher.js`.
+Loader przeglądarki preferuje kompaktowy artefakt v2 i zachowuje artefakt `.js.gz` jako
+legacy fallback. Oba są payloadami gzip zaszyfrowanymi za pomocą XOR z użyciem klucza zdefiniowanego w `theme/ht_searcher.js`.
 
-Loader musi pozostać lazy: standardowa nawigacja po stronach nie może tworzyć search workera ani pobierać
-indexu, dopóki visitor nie otworzy ani nie użyje search. Zdalne compressed responses są przechowywane w Cache
-Storage przez 24 godziny dla każdego origin, aby kolejne strony mogły ich ponownie użyć. Zachowaj
-stale-cache fallback, gdy odświeżenie wygasłego entry zawiedzie.
+Loader musi pozostać lazy: zwykła nawigacja po stronach nie może tworzyć search workera ani pobierać indeksu,
+dopóki odwiedzający nie otworzy wyszukiwania lub z niego nie skorzysta. Zdalne skompresowane odpowiedzi są
+przechowywane w Cache Storage przez 24 godziny dla każdego originu, dzięki czemu kolejne strony mogą ich używać ponownie.
+Zachowaj fallback do nieaktualnego cache podczas odświeżania, jeśli odświeżenie wygasłego wpisu się nie powiedzie.
 
-## Build And Validation
+## Budowanie i walidacja
 
-Typowe lokalne checks:
+Typowe lokalne kontrole:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Jeśli `mdbook build` zawiedzie, sprawdź:
+Jeśli `mdbook build` zakończy się błędem, sprawdź:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Uwagi dotyczące edycji
 
-- Preferuj `rg` do wyszukiwania.
-- Nie dodawaj wygenerowanego outputu `book/` do commitów, chyba że wyraźnie o to poproszono. Search loader fixes
-  są wyjątkiem, gdy już zbudowane strony muszą zostać natychmiast poprawione.
-- Jeśli zmieniasz zachowanie wspólnego theme, porównaj i zaktualizuj odpowiedni plik w
-  `/Users/carlospolop/git/hacktricks`.
-- Nie cofaj niezwiązanych zmian lokalnych.
+- Do wyszukiwania preferuj `rg`.
+- Nie umieszczaj wygenerowanego outputu `book/` w commitach, chyba że wyraźnie o to poproszono. Poprawki search loadera
+są wyjątkiem, gdy już zbudowane strony muszą zostać natychmiast poprawione.
+- Jeśli zmieniasz działanie współdzielonego motywu, porównaj i zaktualizuj odpowiadający plik w
+`/Users/carlospolop/git/hacktricks`.
+- Nie cofaj niezwiązanych lokalnych zmian.
