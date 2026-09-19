@@ -1,82 +1,84 @@
 # AGENTS.md
 
-Вказівки для майбутніх agents, що працюють у цьому repository.
+Інструкції для майбутніх agents, які працюють у цьому repository.
 
-## Repository Context
+## Контекст repository
 
-This is the HackTricks Cloud mdBook repository. The related main book lives at:
+Це mdBook repository HackTricks Cloud. Пов’язана основна book розташована за адресою:
 
 `/Users/carlospolop/git/hacktricks`
 
-Зміни до shared theme/search behavior часто потрібно застосовувати в обох repositories.
+Зміни до спільної поведінки theme/search часто потрібно застосовувати в обох repositories.
 
-## Search Index Loading Contract
+## Контракт завантаження search index
 
-The custom search UI lives in:
+Користувацький search UI розташований у:
 
 `theme/ht_searcher.js`
 
-Може також існувати згенерована копія в:
+Також може існувати згенерована копія:
 
 `book/theme/ht_searcher.js`
 
-If production is deploying the already-built `book/` directory, update both copies or rebuild the
-book before deployment.
+Якщо production розгортає вже зібрану директорію `book/`, оновіть обидві копії або перебудуйте
+book перед deployment.
 
-The search index loading order is important and cost-sensitive:
+Порядок завантаження search index є важливим і чутливим до витрат:
 
-1. Load every language-specific and fallback search index from the GitHub repository:
+1. Завантажуйте кожен language-specific і fallback search index із GitHub repository:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Only if all GitHub-hosted candidates fail, fall back to the same-origin mdBook output.
+2. Лише якщо всі розміщені на GitHub candidates не завантажилися, використовуйте fallback з mdBook output того самого origin.
 
-Do not place the local `/searchindex.js` fallback before any GitHub-hosted fallback such as
-`searchindex-cloud-en.js.gz`. Serving `searchindex.js` from `cloud.hacktricks.wiki` in production is expensive.
+Не розміщуйте локальний `/searchindex.js` fallback перед будь-яким GitHub-hosted fallback, наприклад
+`searchindex-cloud-en.js.gz`. Розміщення `searchindex.js` з `cloud.hacktricks.wiki` у production є дорогим.
 
-For this repo, the expected local fallback is:
+Для цього repo очікуваний локальний fallback:
 
 `/searchindex.js`
 
-The main-book fallback for this repo is:
+Fallback основної book для цього repo:
 
 `/searchindex-book.js`
 
-That file is only a fallback. The primary source must remain the remote
-`searchindex-<lang>.js.gz` and `searchindex-cloud-<lang>.js.gz` files in
+Цей файл є лише fallback. Основним source мають залишатися віддалені файли
+`searchindex-<lang>.js.gz` і `searchindex-cloud-<lang>.js.gz` у
 `HackTricks-wiki/hacktricks-searchindex`.
 
-## Search Index Publishing
+## Публікація search index
 
-The workflows that publish encrypted compressed search indexes to
-`HackTricks-wiki/hacktricks-searchindex` are:
+Workflows, які публікують зашифровані стиснені search indexes у
+`HackTricks-wiki/hacktricks-searchindex`:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-The generated source file is `book/searchindex.js`. The published remote artifact names are:
+Згенерований source file: `book/searchindex.js`. Назви опублікованих remote artifacts:
 
+- `searchindex-cloud-v2-en.json.gz` (preferred compact index)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-The browser loader expects the remote `.js.gz` files to be XOR-encrypted gzip payloads using the
-key defined in `theme/ht_searcher.js`.
+Browser loader надає перевагу compact v2 artifact і зберігає artifact `.js.gz` як legacy
+fallback. Обидва є XOR-encrypted gzip payloads і використовують key, визначений у `theme/ht_searcher.js`.
 
-## Build And Validation
+## Build і validation
 
-Common local checks:
+Поширені локальні checks:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-If `mdbook build` fails, check:
+Якщо `mdbook build` завершується з помилкою, перевірте:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Нотатки щодо редагування
 
-- Prefer `rg` for searching.
-- Keep generated `book/` output out of commits unless explicitly requested. Search loader fixes are
-an exception when the already-built pages must be corrected immediately.
-- If changing shared theme behavior, compare and update the matching file in
+- Для пошуку надавайте перевагу `rg`.
+- Не додавайте згенерований output `book/` до commits, якщо це прямо не запитано. Виправлення search loader
+є винятком, коли вже зібрані pages потрібно негайно виправити.
+- Якщо змінюєте поведінку спільної theme, порівняйте та оновіть відповідний file у
 `/Users/carlospolop/git/hacktricks`.
-- Do not revert unrelated local changes.
+- Не скасовуйте сторонні локальні зміни.
