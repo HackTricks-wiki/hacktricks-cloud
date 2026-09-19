@@ -1,35 +1,34 @@
 # AGENTS.md
 
-भविष्य के agents के लिए निर्देश, जो इस repository पर काम कर रहे हैं।
+इस repository पर काम करने वाले future agents के लिए guidance।
 
 ## Repository Context
 
-यह HackTricks Cloud mdBook repository है। संबंधित main book यहाँ है:
+यह HackTricks Cloud mdBook repository है। संबंधित main book यहां मौजूद है:
 
 `/Users/carlospolop/git/hacktricks`
 
-shared theme/search behavior में बदलाव अक्सर दोनों repositories में लागू करने होते हैं।
+Shared theme/search behavior में किए गए changes को अक्सर दोनों repositories में लागू करना आवश्यक होता है।
 
 ## Search Index Loading Contract
 
-custom search UI यहाँ है:
+Custom search UI यहां मौजूद है:
 
 `theme/ht_searcher.js`
 
-एक generated copy भी हो सकती है:
+एक generated copy यहां भी हो सकती है:
 
 `book/theme/ht_searcher.js`
 
-अगर production पहले से built `book/` directory deploy कर रहा है, तो दोनों copies अपडेट करें या deployment से पहले book को rebuild करें।
+यदि production पहले से बनी हुई `book/` directory deploy कर रहा है, तो दोनों copies को update करें या deployment से पहले book को rebuild करें।
 
-search index loading order महत्वपूर्ण है और cost-sensitive है:
+Search index loading order महत्वपूर्ण और cost-sensitive है:
 
-1. GitHub repository से हर language-specific और fallback search index लोड करें:
+1. GitHub repository से हर language-specific और fallback search index load करें:
 `HackTricks-wiki/hacktricks-searchindex`
-2. सिर्फ तब, जब सभी GitHub-hosted candidates fail हों, same-origin mdBook output पर fallback करें।
+2. केवल तभी same-origin mdBook output पर fallback करें, जब GitHub-hosted सभी candidates fail हो जाएं।
 
-local `/searchindex.js` fallback को किसी भी GitHub-hosted fallback, जैसे
-`searchindex-cloud-en.js.gz`, से पहले न रखें। production में `cloud.hacktricks.wiki` से `searchindex.js` serve करना expensive है।
+`searchindex-cloud-en.js.gz` जैसे किसी भी GitHub-hosted fallback से पहले local `/searchindex.js` fallback न रखें। Production में `cloud.hacktricks.wiki` से `searchindex.js` serve करना महंगा है।
 
 इस repo के लिए expected local fallback है:
 
@@ -39,24 +38,24 @@ local `/searchindex.js` fallback को किसी भी GitHub-hosted fallba
 
 `/searchindex-book.js`
 
-वह file सिर्फ fallback है। primary source को remote
-`searchindex-<lang>.js.gz` और `searchindex-cloud-<lang>.js.gz` files in
-`HackTricks-wiki/hacktricks-searchindex` ही रहना चाहिए।
+यह file केवल fallback है। Primary source को `HackTricks-wiki/hacktricks-searchindex` में मौजूद remote
+`searchindex-<lang>.js.gz` और `searchindex-cloud-<lang>.js.gz` files ही रहना चाहिए।
 
 ## Search Index Publishing
 
-encrypted compressed search indexes को `HackTricks-wiki/hacktricks-searchindex` पर publish करने वाले workflows हैं:
+Encrypted compressed search indexes को `HackTricks-wiki/hacktricks-searchindex` पर publish करने वाले workflows हैं:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-generated source file है `book/searchindex.js`। published remote artifact names हैं:
+Generated source file है `book/searchindex.js`। Published remote artifact names हैं:
 
+- `searchindex-cloud-v2-en.json.gz` (preferred compact index)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-browser loader remote `.js.gz` files से XOR-encrypted gzip payloads expect करता है, using the
-key defined in `theme/ht_searcher.js`।
+Browser loader compact v2 artifact को प्राथमिकता देता है और `.js.gz` artifact को legacy fallback के रूप में रखता है। दोनों XOR-encrypted gzip payloads हैं और `theme/ht_searcher.js` में defined key का उपयोग करते हैं।
 
 ## Build And Validation
 
@@ -65,14 +64,14 @@ Common local checks:
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-अगर `mdbook build` fail होता है, तो check करें:
+यदि `mdbook build` fail हो, तो जांचें:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
 ## Editing Notes
 
-- Searching के लिए `rg` को prefer करें।
-- generated `book/` output को commits से बाहर रखें, जब तक explicitly requested न हो। Search loader fixes एक exception हैं जब already-built pages को तुरंत correct करना जरूरी हो।
-- अगर shared theme behavior बदल रहे हैं, तो matching file को `/Users/carlospolop/git/hacktricks` में compare और update करें।
-- unrelated local changes को revert न करें।
+- Searching के लिए `rg` को प्राथमिकता दें।
+- Generated `book/` output को commits से बाहर रखें, जब तक स्पष्ट रूप से अनुरोध न किया गया हो। जब पहले से बने pages को तुरंत correct करना हो, तब search loader fixes इसका exception हैं।
+- Shared theme behavior बदलते समय `/Users/carlospolop/git/hacktricks` में matching file की तुलना करें और उसे भी update करें।
+- Unrelated local changes को revert न करें।
