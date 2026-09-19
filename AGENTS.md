@@ -1,14 +1,14 @@
 # AGENTS.md
 
-Guidance pour les agents futurs travaillant dans ce dépôt.
+Instructions pour les futurs agents travaillant dans ce repository.
 
-## Contexte du dépôt
+## Contexte du repository
 
-Ceci est le dépôt mdBook HackTricks Cloud. Le livre principal associé se trouve à :
+Il s'agit du repository mdBook de HackTricks Cloud. Le livre principal associé se trouve à l'emplacement suivant :
 
 `/Users/carlospolop/git/hacktricks`
 
-Les changements concernant le thème partagé/le comportement de recherche doivent souvent être appliqués dans les deux dépôts.
+Les modifications du comportement partagé du thème et de la recherche doivent souvent être appliquées dans les deux repositories.
 
 ## Contrat de chargement de l'index de recherche
 
@@ -16,50 +16,52 @@ L'interface de recherche personnalisée se trouve dans :
 
 `theme/ht_searcher.js`
 
-Il peut aussi exister une copie générée dans :
+Il peut également exister une copie générée à l'emplacement suivant :
 
 `book/theme/ht_searcher.js`
 
-Si le déploiement de production utilise le répertoire `book/` déjà construit, mettez à jour les deux copies ou reconstruisez le livre avant le déploiement.
+Si la production déploie le répertoire `book/` déjà compilé, mettez à jour les deux copies ou recompilez le
+book avant le déploiement.
 
-L'ordre de chargement de l'index de recherche est important et sensible au coût :
+L'ordre de chargement de l'index de recherche est important et sensible aux coûts :
 
-1. Charger chaque index de recherche spécifique à la langue et de secours depuis le dépôt GitHub :
+1. Charger chaque index de recherche spécifique à une langue ainsi que l'index de repli depuis le repository GitHub :
 `HackTricks-wiki/hacktricks-searchindex`
-2. Ce n'est que si tous les candidats hébergés sur GitHub échouent qu'il faut revenir à la sortie mdBook du même origine.
+2. Ce n'est que si tous les candidats hébergés sur GitHub échouent qu'il faut utiliser le repli vers la sortie mdBook de la même origine.
 
-Ne placez pas le fallback local `/searchindex.js` avant un fallback hébergé sur GitHub tel que
+Ne placez pas le repli local `/searchindex.js` avant un repli hébergé sur GitHub tel que
 `searchindex-cloud-en.js.gz`. Servir `searchindex.js` depuis `cloud.hacktricks.wiki` en production est coûteux.
 
-Pour ce dépôt, le fallback local attendu est :
+Pour ce repo, le repli local attendu est :
 
 `/searchindex.js`
 
-Le fallback du livre principal pour ce dépôt est :
+Le repli du livre principal pour ce repo est :
 
 `/searchindex-book.js`
 
-Ce fichier n'est qu'un fallback. La source primaire doit rester les fichiers distants
+Ce fichier n'est qu'un repli. La source principale doit rester les fichiers distants
 `searchindex-<lang>.js.gz` et `searchindex-cloud-<lang>.js.gz` dans
 `HackTricks-wiki/hacktricks-searchindex`.
 
 ## Publication de l'index de recherche
 
-Les workflows qui publient des index de recherche compressés chiffrés vers
-`HackTricks-wiki/hacktricks-searchindex` sont :
+Les workflows qui publient les index de recherche compressés et chiffrés vers `HackTricks-wiki/hacktricks-searchindex` sont :
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
 Le fichier source généré est `book/searchindex.js`. Les noms des artefacts distants publiés sont :
 
+- `searchindex-cloud-v2-en.json.gz` (index compact préféré)
+- `searchindex-cloud-v2-<lang>.json.gz` (index compact préféré)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Le chargeur côté navigateur attend des fichiers distants `.js.gz` qui sont des charges utiles gzip chiffrées par XOR utilisant la
-clé définie dans `theme/ht_searcher.js`.
+Le loader du navigateur privilégie l'artefact compact v2 et conserve l'artefact `.js.gz` comme
+repli legacy. Les deux sont des payloads gzip chiffrés avec XOR à l'aide de la clé définie dans `theme/ht_searcher.js`.
 
-## Build et validation
+## Compilation et validation
 
 Vérifications locales courantes :
 
@@ -73,9 +75,8 @@ Si `mdbook build` échoue, vérifiez :
 
 ## Notes d'édition
 
-- Préférez `rg` pour rechercher.
-- Gardez la sortie générée `book/` hors des commits sauf demande explicite. Les corrections du chargeur de recherche sont
-une exception lorsque les pages déjà construites doivent être corrigées immédiatement.
-- Si vous modifiez le comportement du thème partagé, comparez et mettez à jour le fichier correspondant dans
+- Préférez `rg` pour les recherches.
+- Évitez d'inclure la sortie générée de `book/` dans les commits, sauf demande explicite. Les corrections du search loader font exception lorsque les pages déjà compilées doivent être corrigées immédiatement.
+- En cas de modification du comportement partagé du thème, comparez et mettez à jour le fichier correspondant dans
 `/Users/carlospolop/git/hacktricks`.
-- Ne rétablissez pas des modifications locales non liées.
+- Ne rétablissez pas les modifications locales sans rapport.
