@@ -1,65 +1,70 @@
 # AGENTS.md
 
-Smernice za buduće agente koji rade u ovom repozitorijumu.
+Smernice za buduće agente koji rade u ovom repository-ju.
 
-## Kontekst repozitorijuma
+## Kontekst repository-ja
 
-Ovo je HackTricks Cloud mdBook repozitorijum. Povezana glavna knjiga nalazi se na:
+Ovo je HackTricks Cloud mdBook repository. Povezana glavna knjiga nalazi se na:
 
 `/Users/carlospolop/git/hacktricks`
 
-Promene zajedničkog ponašanja teme/pretrage često treba primeniti u oba repozitorijuma.
+Promene ponašanja deljenog theme/search sistema često moraju da se primene u oba repository-ja.
 
-## Ugovor o učitavanju indeksa pretrage
+## Ugovor za učitavanje search index-a
 
-Prilagođeni interfejs pretrage nalazi se u:
+Prilagođeni search UI nalazi se u:
 
 `theme/ht_searcher.js`
 
-Možda postoji i generisana kopija na:
+Može postojati i generisana kopija na:
 
 `book/theme/ht_searcher.js`
 
-Ako se u produkciju postavlja već izgrađeni direktorijum `book/`, ažurirajte obe kopije ili ponovo izgradite knjigu.
+Ako se u production-u deploy-uje već izgrađeni `book/` direktorijum, ažurirajte obe kopije ili ponovo izgradite
+book pre deploy-a.
 
-Redosled učitavanja indeksa pretrage je važan i osetljiv na troškove:
+Redosled učitavanja search index-a je važan i osetljiv na troškove:
 
-1. Učitajte svaki jezički specifičan indeks pretrage i rezervni indeks iz GitHub repozitorijuma:
+1. Učitajte svaki language-specific i fallback search index iz GitHub repository-ja:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Samo ako svi kandidati hostovani na GitHubu ne uspeju, pređite na isti-origin mdBook izlaz.
+2. Samo ako svi kandidati hostovani na GitHub-u ne uspeju, pređite na isti-origin mdBook output.
 
-Ne postavljajte lokalni `/searchindex.js` fallback ispred bilo kog GitHub fallback-a, kao što je
-`searchindex-cloud-en.js.gz`. Posluživanje `searchindex.js` sa `cloud.hacktricks.wiki` u produkciji je skupo.
+Nemojte postavljati lokalni `/searchindex.js` fallback pre bilo kog GitHub-hostovanog fallback-a, kao što je
+`searchindex-cloud-en.js.gz`. Serviranje `searchindex.js` sa `cloud.hacktricks.wiki` u production-u je skupo.
 
-Za ovaj repozitorijum očekivani lokalni fallback je:
+Za ovaj repo očekivani lokalni fallback je:
 
 `/searchindex.js`
 
-Fallback glavne knjige za ovaj repozitorijum je:
+Fallback glavne knjige za ovaj repo je:
 
 `/searchindex-book.js`
 
-Ovaj fajl je samo fallback. Primarni izvor moraju ostati udaljeni fajlovi
-`searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` u
+Ovaj fajl je samo fallback. Primarni izvor moraju ostati udaljeni
+`searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` fajlovi u
 `HackTricks-wiki/hacktricks-searchindex`.
 
-## Objavljivanje indeksa pretrage
+## Objavljivanje search index-a
 
-Workflow-i koji objavljuju šifrovane kompresovane indekse pretrage u `HackTricks-wiki/hacktricks-searchindex` su:
+Workflow-i koji objavljuju enkriptovane kompresovane search index-e u `HackTricks-wiki/hacktricks-searchindex` su:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Generisani izvorni fajl je `book/searchindex.js`. Nazivi objavljenih udaljenih artefakata su:
+Generisani source fajl je `book/searchindex.js`. Imena objavljenih udaljenih artifact-a su:
 
-- `searchindex-cloud-v2-en.json.gz` (poželjni kompaktni indeks)
-- `searchindex-cloud-v2-<lang>.json.gz` (poželjni kompaktni indeks)
+- `searchindex-cloud-v2-en.json.gz` (preferirani kompaktni index)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferirani kompaktni index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Učitavač u pregledaču daje prednost v2 kompaktom artefaktu i zadržava `.js.gz` artefakt kao legacy fallback. Oba su XOR-šifrovani gzip sadržaji koji koriste ključ definisan u `theme/ht_searcher.js`.
+Browser loader daje prednost v2 compact artifact-u i zadržava `.js.gz` artifact kao legacy
+fallback. Oba su XOR-enkriptovani gzip payload-i koji koriste ključ definisan u `theme/ht_searcher.js`.
 
-## Izgradnja i validacija
+Loader mora ostati lazy: normalna navigacija između stranica ne sme kreirati search worker niti preuzimati index dok posetilac ne otvori ili ne koristi search. Udaljeni kompresovani odgovori čuvaju se u Cache Storage-u 24 sata po origin-u, tako da naredne stranice mogu da ih ponovo koriste. Sačuvajte stale-cache
+fallback kada osvežavanje isteklog unosa ne uspe.
+
+## Build i validacija
 
 Uobičajene lokalne provere:
 
@@ -71,10 +76,11 @@ Ako `mdbook build` ne uspe, proverite:
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Napomene o izmenama
+## Napomene za uređivanje
 
-- Prednost dajte alatu `rg` za pretragu.
-- Držite generisani `book/` izlaz van commit-a, osim ako to nije izričito zatraženo. Ispravke učitavača pretrage su izuzetak kada već izgrađene stranice moraju odmah biti ispravljene.
-- Ako menjate ponašanje zajedničke teme, uporedite i ažurirajte odgovarajući fajl u
+- Za pretragu preferirajte `rg`.
+- Držite generisani `book/` output van commit-a osim ako to nije izričito zatraženo. Ispravke search loader-a
+su izuzetak kada već izgrađene stranice moraju odmah da budu ispravljene.
+- Ako menjate ponašanje deljenog theme-a, uporedite i ažurirajte odgovarajući fajl u
 `/Users/carlospolop/git/hacktricks`.
-- Ne vraćajte nepovezane lokalne izmene.
+- Nemojte vraćati nepovezane lokalne promene.
