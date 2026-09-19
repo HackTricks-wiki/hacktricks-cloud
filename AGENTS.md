@@ -1,14 +1,14 @@
 # AGENTS.md
 
-面向在此仓库中工作的未来 agents 的指导。
+为未来在此 repository 中工作的 agents 提供指导。
 
 ## Repository Context
 
-这是 HackTricks Cloud mdBook 仓库。相关的主书位于：
+这是 HackTricks Cloud mdBook repository。相关的主 book 位于：
 
 `/Users/carlospolop/git/hacktricks`
 
-对共享 theme/search 行为的更改，通常需要在两个仓库中都应用。
+对共享 theme/search 行为的更改通常需要同时应用到两个 repository。
 
 ## Search Index Loading Contract
 
@@ -16,55 +16,54 @@
 
 `theme/ht_searcher.js`
 
-也可能有一个生成的副本位于：
+此外可能还有一个生成的副本：
 
 `book/theme/ht_searcher.js`
 
-如果 production 正在部署已经构建好的 `book/` 目录，请更新这两个副本，或者在部署前重新构建 book。
+如果 production 部署的是已经构建好的 `book/` directory，请更新两个副本，或在部署前重新构建 book。
 
-search index 的加载顺序很重要，而且对成本敏感：
+search index 的加载顺序非常重要，并且会影响成本：
 
-1. 先从 GitHub 仓库加载所有按语言区分的和 fallback 的 search index：
+1. 从 GitHub repository 加载所有 language-specific 和 fallback search index：
 `HackTricks-wiki/hacktricks-searchindex`
-2. 只有当所有 GitHub 托管的候选项都失败后，才回退到同源的 mdBook 输出。
+2. 仅当所有 GitHub-hosted candidates 都失败时，才回退到 same-origin mdBook output。
 
-不要把本地的 `/searchindex.js` fallback 放在任何 GitHub 托管的 fallback 之前，例如
-`searchindex-cloud-en.js.gz`。在 production 中从 `cloud.hacktricks.wiki` 提供 `searchindex.js` 代价很高。
+不要将本地 `/searchindex.js` fallback 放在任何 GitHub-hosted fallback（例如 `searchindex-cloud-en.js.gz`）之前。在 production 中从 `cloud.hacktricks.wiki` 提供 `searchindex.js` 的成本很高。
 
-对于这个仓库，预期的本地 fallback 是：
+对于此 repo，预期的本地 fallback 是：
 
 `/searchindex.js`
 
-主书的 fallback 是：
+此 repo 的主 book fallback 是：
 
 `/searchindex-book.js`
 
-该文件只是 fallback。主要来源必须仍然是远程
-`searchindex-<lang>.js.gz` 和 `searchindex-cloud-<lang>.js.gz` 文件，位于
-`HackTricks-wiki/hacktricks-searchindex`。
+该文件仅用于 fallback。primary source 必须继续使用 `HackTricks-wiki/hacktricks-searchindex` 中的远程 `searchindex-<lang>.js.gz` 和 `searchindex-cloud-<lang>.js.gz` 文件。
 
 ## Search Index Publishing
 
-发布加密压缩 search index 到 `HackTricks-wiki/hacktricks-searchindex` 的 workflows 是：
+向 `HackTricks-wiki/hacktricks-searchindex` 发布加密压缩 search index 的 workflows 是：
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-生成的源文件是 `book/searchindex.js`。发布到远程的 artifact 名称是：
+生成的 source file 是 `book/searchindex.js`。发布的 remote artifact 名称是：
 
+- `searchindex-cloud-v2-en.json.gz`（首选的 compact index）
+- `searchindex-cloud-v2-<lang>.json.gz`（首选的 compact index）
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-浏览器 loader 期望远程 `.js.gz` 文件是使用 `theme/ht_searcher.js` 中定义的 key 的 XOR-encrypted gzip payloads。
+browser loader 优先使用 compact v2 artifact，并将 `.js.gz` artifact 作为 legacy fallback。两者都是使用 `theme/ht_searcher.js` 中定义的 key 进行 XOR-encrypted 的 gzip payload。
 
 ## Build And Validation
 
-常见的本地检查：
+常用的本地检查：
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-如果 `mdbook build` 失败，检查：
+如果 `mdbook build` 失败，请检查：
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
@@ -72,6 +71,7 @@ search index 的加载顺序很重要，而且对成本敏感：
 ## Editing Notes
 
 - 搜索时优先使用 `rg`。
-- 除非明确要求，不要把生成的 `book/` 输出提交到 commits 中。Search loader 修复是一个例外，因为如果已经构建好的 pages 必须立即修正。
-- 如果修改共享 theme 行为，请对比并更新 `/Users/carlospolop/git/hacktricks` 中的匹配文件。
-- 不要回滚无关的本地更改。
+- 除非明确要求，否则不要将生成的 `book/` output 提交。若必须立即修复已经构建的 pages，search loader 修复除外。
+- 如果更改 shared theme behavior，请对比并更新
+`/Users/carlospolop/git/hacktricks` 中对应的 file。
+- 不要还原无关的本地更改。
