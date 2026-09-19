@@ -1,34 +1,32 @@
 # AGENTS.md
 
-इस repository में काम करने वाले भविष्य के agents के लिए guidance।
+इस repository में काम करने वाले future agents के लिए guidance।
 
 ## Repository Context
 
-यह HackTricks Cloud mdBook repository है। संबंधित मुख्य book यहाँ स्थित है:
+यह HackTricks Cloud mdBook repository है। संबंधित मुख्य book यहां मौजूद है:
 
 `/Users/carlospolop/git/hacktricks`
 
-Shared theme/search behavior में किए गए changes अक्सर दोनों repositories में लागू करने पड़ते हैं।
+Shared theme/search behavior में किए गए changes को अक्सर दोनों repositories में लागू करना आवश्यक होता है।
 
 ## Search Index Loading Contract
 
-Custom search UI यहाँ स्थित है:
+Custom search UI यहां मौजूद है:
 
 `theme/ht_searcher.js`
 
-एक generated copy यहाँ भी हो सकती है:
+एक generated copy यहां भी हो सकती है:
 
 `book/theme/ht_searcher.js`
 
-यदि production पहले से बनी हुई `book/` directory deploy कर रहा है, तो दोनों copies update करें या deployment से पहले book rebuild करें।
+यदि production पहले से built `book/` directory deploy कर रहा है, तो दोनों copies update करें या deployment से पहले book rebuild करें।
 
-Search index loading order महत्वपूर्ण और cost-sensitive है:
+Search index source policy महत्वपूर्ण और cost-sensitive है:
 
-1. GitHub repository से प्रत्येक language-specific और fallback search index load करें:
-`HackTricks-wiki/hacktricks-searchindex`
-2. केवल तभी same-origin mdBook output पर fallback करें जब GitHub-hosted सभी candidates fail हो जाएँ।
-
-Local `/searchindex.js` fallback को किसी भी GitHub-hosted fallback, जैसे `searchindex-cloud-en.js.gz`, से पहले न रखें। Production में `cloud.hacktricks.wiki` से `searchindex.js` serve करना महँगा है।
+- Public hosts पर, हर language-specific और fallback candidate केवल
+`HackTricks-wiki/hacktricks-searchindex` से load करें। Same-origin mdBook output पर कभी fallback न करें; production में `cloud.hacktricks.wiki` से large index serve करना महंगा है।
+- Localhost, `.local`/`.internal` hosts, loopback, RFC1918, carrier-grade NAT, link-local या private IPv6 addresses पर केवल same-origin mdBook output load करें, ताकि local/container deployments self-contained रहें।
 
 इस repo के लिए expected local fallback है:
 
@@ -38,16 +36,19 @@ Local `/searchindex.js` fallback को किसी भी GitHub-hosted fallba
 
 `/searchindex-book.js`
 
-यह केवल fallback है। Primary source remote `searchindex-<lang>.js.gz` और `searchindex-cloud-<lang>.js.gz` files ही रहनी चाहिए, जो `HackTricks-wiki/hacktricks-searchindex` में हैं।
+वे local files केवल private-network sources हैं। Public hosts को exclusively
+`HackTricks-wiki/hacktricks-searchindex` में मौजूद remote
+`searchindex-<lang>.js.gz` और `searchindex-cloud-<lang>.js.gz` files का उपयोग करना चाहिए।
 
 ## Search Index Publishing
 
-Encrypted compressed search indexes को `HackTricks-wiki/hacktricks-searchindex` पर publish करने वाले workflows हैं:
+Encrypted compressed search indexes को
+`HackTricks-wiki/hacktricks-searchindex` पर publish करने वाले workflows हैं:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Generated source file `book/searchindex.js` है। Published remote artifact names हैं:
+Generated source file है `book/searchindex.js`। Published remote artifact names हैं:
 
 - `searchindex-cloud-v2-en.json.gz` (preferred compact index)
 - `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
@@ -56,16 +57,16 @@ Generated source file `book/searchindex.js` है। Published remote artifact 
 
 Browser loader compact v2 artifact को प्राथमिकता देता है और `.js.gz` artifact को legacy fallback के रूप में रखता है। दोनों XOR-encrypted gzip payloads हैं और `theme/ht_searcher.js` में defined key का उपयोग करते हैं।
 
-Loader lazy रहना चाहिए: सामान्य page navigation को search worker create नहीं करना चाहिए या index download नहीं करना चाहिए, जब तक visitor search को open या use न करे। Remote compressed responses को प्रत्येक origin के लिए 24 घंटे तक Cache Storage में persist किया जाता है, ताकि subsequent pages उनका reuse कर सकें। Expired entry को refresh करते समय failure होने पर stale-cache fallback को बनाए रखें।
+Loader lazy रहना चाहिए: सामान्य page navigation को search worker create नहीं करना चाहिए और visitor के search खोलने या उपयोग करने तक index download नहीं करना चाहिए। Remote compressed responses को प्रति origin 24 घंटे के लिए Cache Storage में persist किया जाता है, ताकि subsequent pages उनका reuse कर सकें। Expired entry को refresh करते समय failure होने पर stale-cache fallback बनाए रखें।
 
 ## Build And Validation
 
-सामान्य local checks:
+Common local checks:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-यदि `mdbook build` fail हो, तो जाँच करें:
+यदि `mdbook build` fail हो, तो जांचें:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
@@ -73,6 +74,7 @@ Loader lazy रहना चाहिए: सामान्य page navigation 
 ## Editing Notes
 
 - Searching के लिए `rg` को प्राथमिकता दें।
-- Generated `book/` output को commits से बाहर रखें, जब तक विशेष रूप से अनुरोध न किया गया हो। जब पहले से बने हुए pages को तुरंत correct करना हो, तब search loader fixes इसका exception हैं।
-- Shared theme behavior बदलते समय `/Users/carlospolop/git/hacktricks` में matching file की तुलना करें और उसे update करें।
-- असंबंधित local changes को revert न करें।
+- Generated `book/` output को commits से बाहर रखें, जब तक विशेष रूप से अनुरोध न किया गया हो। जब पहले से built pages को तुरंत correct करना हो, तब search loader fixes इसका exception हैं।
+- Shared theme behavior बदलते समय matching file को
+`/Users/carlospolop/git/hacktricks` में compare और update करें।
+- Unrelated local changes को revert न करें।
