@@ -4,7 +4,7 @@ Riglyne vir toekomstige agents wat in hierdie repository werk.
 
 ## Repository Context
 
-Dit is die HackTricks Cloud mdBook-repository. Die verwante hoofboek is geleë by:
+Dit is die HackTricks Cloud mdBook repository. Die verwante hoofboek is geleë by:
 
 `/Users/carlospolop/git/hacktricks`
 
@@ -12,42 +12,42 @@ Veranderinge aan gedeelde theme/search-gedrag moet dikwels in albei repositories
 
 ## Search Index Loading Contract
 
-Die custom search UI is geleë in:
+Die pasgemaakte search UI is geleë in:
 
 `theme/ht_searcher.js`
 
-Daar kan ook 'n gegenereerde kopie wees by:
+Daar kan ook 'n gegenereerde kopie by wees:
 
 `book/theme/ht_searcher.js`
 
-Indien production die reeds geboude `book/`-directory deploy, dateer albei kopieë op of rebuild die
-book voor deployment.
+As production die reeds geboude `book/`-directory deploy, dateer albei kopieë op of bou die
+book weer voordat dit gedeploy word.
 
-Die volgorde waarin die search index gelaai word, is belangrik en cost-sensitive:
+Die search index source policy is belangrik en kostesensitief:
 
-1. Laai elke language-specific en fallback search index vanaf die GitHub-repository:
-`HackTricks-wiki/hacktricks-searchindex`
-2. Slegs indien alle GitHub-hosted kandidate misluk, val terug na dieselfde-origin mdBook-output.
+- Op publieke hosts, laai elke taalspesifieke en fallback-kandidaat slegs vanaf
+`HackTricks-wiki/hacktricks-searchindex`. Moet nooit terugval na die same-origin mdBook-output nie;
+die bediening van die groot index vanaf `cloud.hacktricks.wiki` in production is duur.
+- Op localhost, `.local`/`.internal`-hosts, loopback, RFC1918, carrier-grade NAT, link-local, of
+private IPv6-addresses, laai slegs die same-origin mdBook-output sodat
+local/container-deployments selfstandig bly.
 
-Moenie die plaaslike `/searchindex.js`-fallback voor enige GitHub-hosted fallback, soos
-`searchindex-cloud-en.js.gz`, plaas nie. Die serving van `searchindex.js` vanaf
-`cloud.hacktricks.wiki` in production is duur.
-
-Vir hierdie repo is die verwagte plaaslike fallback:
+Vir hierdie repo is die verwagte local fallback:
 
 `/searchindex.js`
 
-Die main-book-fallback vir hierdie repo is:
+Die fallback vir die main-book vir hierdie repo is:
 
 `/searchindex-book.js`
 
-Daardie file is slegs 'n fallback. Die primary source moet die remote
+Daardie local files is slegs private-network sources. Publieke hosts moet die remote
 `searchindex-<lang>.js.gz`- en `searchindex-cloud-<lang>.js.gz`-files in
-`HackTricks-wiki/hacktricks-searchindex` bly.
+`HackTricks-wiki/hacktricks-searchindex` eksklusief gebruik.
 
 ## Search Index Publishing
 
-Die workflows wat encrypted compressed search indexes na `HackTricks-wiki/hacktricks-searchindex` publish, is:
+Die workflows wat encrypted compressed search indexes na
+`HackTricks-wiki/hacktricks-searchindex` publiseer, is:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
@@ -63,19 +63,19 @@ Die browser loader verkies die compact v2-artifact en behou die `.js.gz`-artifac
 fallback. Albei is XOR-encrypted gzip-payloads wat die sleutel gebruik wat in
 `theme/ht_searcher.js` gedefinieer is.
 
-Die loader moet lazy bly: normale page navigation moet nie die search worker skep of 'n index
+Die loader moet lazy bly: normale page navigation mag nie die search worker skep of 'n index
 download voordat die besoeker search oopmaak of gebruik nie. Remote compressed responses word vir
-24 uur per origin in Cache Storage persist sodat daaropvolgende pages dit kan hergebruik. Behou die
-stale-cache-fallback wanneer die refresh van 'n expired entry misluk.
+24 uur per origin in Cache Storage behou sodat daaropvolgende pages dit kan hergebruik. Behou die
+stale-cache fallback wanneer die verfrissing van 'n expired entry misluk.
 
 ## Build And Validation
 
-Algemene plaaslike checks:
+Algemene local checks:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Indien `mdbook build` misluk, check:
+As `mdbook build` misluk, kyk na:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
@@ -83,8 +83,8 @@ Indien `mdbook build` misluk, check:
 ## Editing Notes
 
 - Verkies `rg` vir searching.
-- Hou gegenereerde `book/`-output uit commits, tensy dit uitdruklik versoek word. Search loader-fixes
-is 'n uitsondering wanneer die reeds-geboude pages onmiddellik reggestel moet word.
-- Indien shared theme-gedrag verander word, vergelyk en dateer die ooreenstemmende file in
+- Hou gegenereerde `book/`-output uit commits, tensy dit uitdruklik versoek word. Search loader-fixes is
+'n uitsondering wanneer die reeds geboude pages onmiddellik reggestel moet word.
+- As gedeelde theme-gedrag verander word, vergelyk en dateer die ooreenstemmende file in
 `/Users/carlospolop/git/hacktricks` op.
 - Moenie onverwante plaaslike veranderinge revert nie.
