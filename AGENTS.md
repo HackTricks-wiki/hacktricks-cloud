@@ -1,82 +1,78 @@
 # AGENTS.md
 
-Mwongozo kwa mawakala wa baadaye wanaofanya kazi katika repo hii.
+Mwongozo kwa agents wa baadaye wanaofanya kazi kwenye repository hii.
 
 ## Muktadha wa Repository
 
-Hii ni repository ya HackTricks Cloud mdBook. Kitabu kikuu kinachohusiana kiko katika:
+Hii ni repository ya HackTricks Cloud mdBook. Kitabu kikuu kinachohusiana kinapatikana kwenye:
 
 `/Users/carlospolop/git/hacktricks`
 
-Mabadiliko kwenye shared theme/search behavior mara nyingi yanahitaji kutumika katika repo zote mbili.
+Mabadiliko kwenye tabia ya shared theme/search mara nyingi yanahitaji kutekelezwa kwenye repositories zote mbili.
 
-## Search Index Loading Contract
+## Mkataba wa Kupakia Search Index
 
-Custom search UI iko katika:
+Search UI maalum iko kwenye:
 
 `theme/ht_searcher.js`
 
-Huenda pia kuna copy iliyozalishwa katika:
+Huenda pia kukawa na nakala iliyotengenezwa kwenye:
 
 `book/theme/ht_searcher.js`
 
-Ikiwa production inasambaza directory iliyokwisha-jengwa `book/`, sasisha nakala zote mbili au jenga upya
-kitabu kabla ya deployment.
+Ikiwa production inadeploy directory ya `book/` iliyokwisha tengenezwa, sasisha nakala zote mbili au rebuild kitabu kabla ya deployment.
 
-Mpangilio wa kupakia search index ni muhimu na unagharimu rasilimali:
+Mpangilio wa kupakia search index ni muhimu na unaathiri gharama:
 
-1. Pakia kila search index ya lugha mahususi na fallback search index kutoka GitHub repository:
+1. Pakia kila language-specific na fallback search index kutoka GitHub repository:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Ni ikiwa tu wagombea wote wanaohostiwa na GitHub watafail, tumia fallback ya same-origin mdBook output.
+2. Ni pale tu candidates zote zinazohifadhiwa kwenye GitHub zitakaposhindwa ndipo utumie fallback ya mdBook output yenye same-origin.
 
-Usiweke local `/searchindex.js` fallback kabla ya fallback yoyote inayohostiwa na GitHub kama
-`searchindex-cloud-en.js.gz`. Kuhudumia `searchindex.js` kutoka `cloud.hacktricks.wiki` katika production ni gharama kubwa.
+Usiweke local `/searchindex.js` fallback kabla ya fallback yoyote inayohifadhiwa kwenye GitHub, kama vile `searchindex-cloud-en.js.gz`. Kutumikia `searchindex.js` kutoka `cloud.hacktricks.wiki` kwenye production ni ghali.
 
-Kwa repo hii, expected local fallback ni:
+Kwa repository hii, local fallback inayotarajiwa ni:
 
 `/searchindex.js`
 
-Main-book fallback kwa repo hii ni:
+Main-book fallback ya repository hii ni:
 
 `/searchindex-book.js`
 
-Faili hiyo ni fallback tu. Chanzo cha msingi lazima kiendelee kuwa remote
-`searchindex-<lang>.js.gz` na `searchindex-cloud-<lang>.js.gz` files katika
+Faili hiyo ni fallback pekee. Primary source lazima ibaki kuwa faili za mbali za `searchindex-<lang>.js.gz` na `searchindex-cloud-<lang>.js.gz` katika
 `HackTricks-wiki/hacktricks-searchindex`.
 
-## Search Index Publishing
+## Kuchapisha Search Index
 
-Workflows zinazochapisha encrypted compressed search indexes kwenda
-`HackTricks-wiki/hacktricks-searchindex` ni:
+Workflows zinazochapisha search indexes zilizobanwa na kusimbwa kwa encryption kwenye `HackTricks-wiki/hacktricks-searchindex` ni:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Generated source file ni `book/searchindex.js`. Majina ya published remote artifact ni:
+Source file inayotengenezwa ni `book/searchindex.js`. Majina ya remote artifacts yanayochapishwa ni:
 
+- `searchindex-cloud-v2-en.json.gz` (compact index inayopendelewa)
+- `searchindex-cloud-v2-<lang>.json.gz` (compact index inayopendelewa)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Browser loader inatarajia remote `.js.gz` files ziwe XOR-encrypted gzip payloads zinazotumia
-key iliyofafanuliwa katika `theme/ht_searcher.js`.
+Browser loader hupendelea v2 artifact iliyoshikana na huhifadhi `.js.gz` artifact kama legacy fallback. Zote mbili ni XOR-encrypted gzip payloads zinazotumia key iliyofafanuliwa katika `theme/ht_searcher.js`.
 
-## Build And Validation
+## Build Na Validation
 
-Ukaguzi wa kawaida wa local:
+Ukaguzi wa kawaida wa ndani:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Ikiwa `mdbook build` itafeli, angalia:
+Ikiwa `mdbook build` itashindwa, angalia:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Maelezo ya Kuhariri
 
 - Pendelea `rg` kwa kutafuta.
-- Weka generated `book/` output nje ya commits isipokuwa ikiombwa waziwazi. Search loader fixes ni
-exception wakati pages zilizokwisha-jengwa zinahitaji kusahihishwa mara moja.
-- Ikiwa unabadilisha shared theme behavior, linganisha na urekebishe faili linalolingana katika
+- Weka generated `book/` output nje ya commits isipokuwa ikiwa imeombwa wazi. Marekebisho ya search loader ni exception wakati pages zilizokwisha tengenezwa zinapaswa kusahihishwa mara moja.
+- Ukibadilisha tabia ya shared theme, linganisha na usasishe faili inayolingana katika
 `/Users/carlospolop/git/hacktricks`.
-- Usirudishe mabadiliko ya ndani yasiyohusiana.
+- Usirevert mabadiliko ya ndani yasiyohusiana.
