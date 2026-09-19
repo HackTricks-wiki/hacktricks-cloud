@@ -1,67 +1,70 @@
 # AGENTS.md
 
-将来このリポジトリで作業するエージェント向けのガイダンス。
+この repository で作業する future agents 向けのガイダンス。
 
 ## Repository Context
 
-これは HackTricks Cloud の mdBook リポジトリです。関連するメインブックは以下にあります:
+これは HackTricks Cloud mdBook repository です。関連する main book は次の場所にあります。
 
 `/Users/carlospolop/git/hacktricks`
 
-共有テーマ/search の動作を変更する場合は、両方のリポジトリに適用する必要があることがあります。
+shared theme/search behavior への変更は、両方の repository に適用する必要がある場合があります。
 
 ## Search Index Loading Contract
 
-カスタム search UI は以下にあります:
+custom search UI は次の場所にあります。
 
 `theme/ht_searcher.js`
 
-生成済みのコピーが以下にある場合もあります:
+generated copy が次の場所に存在する場合もあります。
 
 `book/theme/ht_searcher.js`
 
-本番環境がすでにビルド済みの `book/` ディレクトリをデプロイしている場合は、両方のコピーを更新するか、デプロイ前に book を再ビルドしてください。
+production がすでに build 済みの `book/` directory を deploy している場合は、両方の copy を更新するか、book を rebuild してください。
 
-search index の読み込み順序は重要で、コストにも影響します:
+search index の loading order は重要であり、cost-sensitive です。
 
-1. GitHub リポジトリから各言語固有および fallback の search index をすべて読み込む:
+1. GitHub repository から、すべての language-specific および fallback search index を load する：
 `HackTricks-wiki/hacktricks-searchindex`
-2. すべての GitHub ホスト候補が失敗した場合のみ、同一オリジンの mdBook 出力に fallback する。
+2. GitHub-hosted candidates がすべて失敗した場合に限り、same-origin mdBook output に fallback する。
 
-local の `/searchindex.js` fallback を、`searchindex-cloud-en.js.gz` のような GitHub ホストの fallback より前に置かないでください。production で `cloud.hacktricks.wiki` から `searchindex.js` を配信すると高コストです。
+`searchindex-cloud-en.js.gz` などの GitHub-hosted fallback より前に、local `/searchindex.js` fallback を配置しないでください。production で `cloud.hacktricks.wiki` から `searchindex.js` を serve すると高コストになります。
 
-このリポジトリでは、期待される local fallback は以下です:
+この repo で想定される local fallback は次のとおりです。
 
 `/searchindex.js`
 
-このリポジトリの main-book fallback は以下です:
+この repo の main-book fallback は次のとおりです。
 
 `/searchindex-book.js`
 
-このファイルはあくまで fallback です。primary source は、`HackTricks-wiki/hacktricks-searchindex` 内の remote `searchindex-<lang>.js.gz` および `searchindex-cloud-<lang>.js.gz` ファイルのままにしてください。
+これは fallback にすぎません。primary source は、引き続き `HackTricks-wiki/hacktricks-searchindex` にある remote の
+`searchindex-<lang>.js.gz` および `searchindex-cloud-<lang>.js.gz` ファイルでなければなりません。
 
 ## Search Index Publishing
 
-`HackTricks-wiki/hacktricks-searchindex` に暗号化された圧縮 search index を publish する workflows は以下です:
+encrypted compressed search indexes を `HackTricks-wiki/hacktricks-searchindex` に publish する workflows は次のとおりです。
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-生成元の source file は `book/searchindex.js` です。publish される remote artifact 名は以下です:
+generated source file は `book/searchindex.js` です。published remote artifact names は次のとおりです。
 
+- `searchindex-cloud-v2-en.json.gz` (preferred compact index)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-browser loader は、`theme/ht_searcher.js` で定義された key を使った XOR-encrypted gzip payload の remote `.js.gz` ファイルを期待しています。
+browser loader は compact v2 artifact を優先し、`.js.gz` artifact を legacy fallback として保持します。どちらも `theme/ht_searcher.js` で定義された key を使用する XOR-encrypted gzip payloads です。
 
 ## Build And Validation
 
-一般的な local check は以下です:
+一般的な local checks：
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-`mdbook build` が失敗した場合は、以下を確認してください:
+`mdbook build` が失敗した場合は、次を確認してください：
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
@@ -69,6 +72,6 @@ browser loader は、`theme/ht_searcher.js` で定義された key を使った 
 ## Editing Notes
 
 - 検索には `rg` を優先してください。
-- 明示的に要求されない限り、生成された `book/` の出力はコミットに含めないでください。すでにビルド済みのページを直ちに修正する必要がある場合は、search loader の修正は例外です。
-- 共有テーマの動作を変更する場合は、`/Users/carlospolop/git/hacktricks` の対応するファイルも比較して更新してください。
-- 関連のない local changes は revert しないでください。
+- 明示的に要求されない限り、generated `book/` output を commits に含めないでください。すでに build 済みの pages を直ちに修正する必要がある場合は、search loader fixes は例外です。
+- shared theme behavior を変更する場合は、`/Users/carlospolop/git/hacktricks` にある対応する file と比較し、更新してください。
+- 無関係な local changes を revert しないでください。
