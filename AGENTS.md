@@ -1,82 +1,79 @@
 # AGENTS.md
 
-Riglyne vir toekomstige agente wat in hierdie repository werk.
+Riglyne vir toekomstige agents wat in hierdie repository werk.
 
-## Repository Context
+## Repository-konteks
 
-Hierdie is die HackTricks Cloud mdBook repository. Die verwante hoofboek is by:
+Dit is die HackTricks Cloud mdBook-repository. Die verwante hoofboek is geleë by:
 
 `/Users/carlospolop/git/hacktricks`
 
-Veranderings aan gedeelde tema/soek-gedrag moet dikwels in albei repositories toegepas word.
+Veranderinge aan gedeelde theme-/search-gedrag moet dikwels in albei repositories toegepas word.
 
-## Search Index Loading Contract
+## Kontrak vir die laai van die search-index
 
-Die pasgemaakte soek-UI is in:
+Die pasgemaakte search-UI is geleë in:
 
 `theme/ht_searcher.js`
 
-Daar mag ook ’n gegenereerde kopie wees by:
+Daar kan ook 'n gegenereerde kopie by wees:
 
 `book/theme/ht_searcher.js`
 
-As production die reeds-geboude `book/` gids ontplooi, werk albei kopieë by of bou die
-boek weer voor ontplooiing.
+As production die reeds geboude `book/`-directory ontplooi, werk albei kopieë by of bou die boek voordat dit ontplooi word.
 
-Die soekindeks-laaivolgorde is belangrik en koste-gevoelig:
+Die laai-orde van die search-index is belangrik en kostesensitief:
 
-1. Laai elke taal-spesifieke en fallback soekindeks vanaf die GitHub repository:
+1. Laai elke taalspesifieke en fallback-search-index vanaf die GitHub-repository:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Slegs as alle GitHub-gehoste kandidate faal, val terug na die selfde-oorsprong mdBook-uitset.
+2. Slegs as al die GitHub-gehoste kandidate misluk, val terug na dieselfde-oorsprong mdBook-output.
 
-Moenie die plaaslike `/searchindex.js` fallback voor enige GitHub-gehoste fallback soos
-`searchindex-cloud-en.js.gz` plaas nie. Om `searchindex.js` vanaf `cloud.hacktricks.wiki` in production te bedien is duur.
+Moenie die plaaslike `/searchindex.js`-fallback voor enige GitHub-gehoste fallback, soos `searchindex-cloud-en.js.gz`, plaas nie. Om `searchindex.js` vanaf `cloud.hacktricks.wiki` in production te bedien, is duur.
 
 Vir hierdie repo is die verwagte plaaslike fallback:
 
 `/searchindex.js`
 
-Die hoof-boek fallback vir hierdie repo is:
+Die hoofboek se fallback vir hierdie repo is:
 
 `/searchindex-book.js`
 
-Daardie lêer is slegs ’n fallback. Die primêre bron moet die remote
-`searchindex-<lang>.js.gz` en `searchindex-cloud-<lang>.js.gz` lêers in
+Daardie lêer is slegs 'n fallback. Die primêre bron moet die afgeleë
+`searchindex-<lang>.js.gz`- en `searchindex-cloud-<lang>.js.gz`-lêers in
 `HackTricks-wiki/hacktricks-searchindex` bly.
 
-## Search Index Publishing
+## Publisering van die search-index
 
-Die workflows wat geënkripteerde gekompresseerde soekindekse na
-`HackTricks-wiki/hacktricks-searchindex` publiseer, is:
+Die workflows wat geënkripteerde, saamgeperste search-indexes na `HackTricks-wiki/hacktricks-searchindex` publiseer, is:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Die gegenereerde bronlêer is `book/searchindex.js`. Die gepubliseerde remote artifact name is:
+Die gegenereerde bronlêer is `book/searchindex.js`. Die gepubliseerde afgeleë artefakname is:
 
+- `searchindex-cloud-v2-en.json.gz` (voorkeur-kompakte index)
+- `searchindex-cloud-v2-<lang>.json.gz` (voorkeur-kompakte index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Die browser loader verwag die remote `.js.gz` lêers om XOR-geënkripteerde gzip-payloads te wees met die
-sleutel gedefinieer in `theme/ht_searcher.js`.
+Die browser-loader verkies die kompakte v2-artefak en behou die `.js.gz`-artefak as 'n legacy-fallback. Albei is XOR-geënkripteerde gzip-payloads wat die sleutel gebruik wat in `theme/ht_searcher.js` gedefinieer is.
 
-## Build And Validation
+## Bou en validering
 
 Algemene plaaslike kontroles:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-As `mdbook build` misluk, kyk na:
+As `mdbook build` misluk, kontroleer:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Redigeringsnotas
 
-- Verkies `rg` vir soek.
-- Hou gegenereerde `book/` uitsette uit commits tensy uitdruklik versoek. Regstellings aan die soeklaaier is
-’n uitsondering wanneer die reeds-geboude bladsye onmiddellik reggestel moet word.
-- As gedeelde tema-gedrag verander, vergelyk en werk die ooreenstemmende lêer in
-`/Users/carlospolop/git/hacktricks`.
-- Moenie onverwante plaaslike veranderings terugdraai nie.
+- Verkies `rg` vir soektogte.
+- Hou gegenereerde `book/`-output uit commits, tensy dit uitdruklik versoek word. Search-loader-regstellings is 'n uitsondering wanneer die reeds geboude bladsye onmiddellik reggestel moet word.
+- As gedeelde theme-gedrag verander word, vergelyk en werk die ooreenstemmende lêer in
+`/Users/carlospolop/git/hacktricks` by.
+- Moenie onverwante plaaslike veranderinge terugrol nie.
