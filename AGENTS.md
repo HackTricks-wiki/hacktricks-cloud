@@ -54,11 +54,13 @@ The workflows that publish encrypted compressed search indexes to
 
 The generated source file is `book/searchindex.js`. The published remote artifact names are:
 
+- `searchindex-cloud-v2-en.json.gz` (preferred compact index)
+- `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-The browser loader expects the remote `.js.gz` files to be XOR-encrypted gzip payloads using the
-key defined in `theme/ht_searcher.js`.
+The browser loader prefers the compact v2 artifact and keeps the `.js.gz` artifact as a legacy
+fallback. Both are XOR-encrypted gzip payloads using the key defined in `theme/ht_searcher.js`.
 
 ## Build And Validation
 

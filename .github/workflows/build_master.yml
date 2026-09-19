@@ -60,8 +60,10 @@ jobs:
           set -euo pipefail
 
           ASSET="book/searchindex.js"
+          COMPACT_ASSET="/tmp/searchindex-v2.json"
           TARGET_REPO="HackTricks-wiki/hacktricks-searchindex"
           FILENAME="searchindex-cloud-en.js"
+          COMPACT_FILENAME="searchindex-cloud-v2-en.json"
 
           if [ ! -f "$ASSET" ]; then
             echo "Expected $ASSET to exist after build" >&2
@@ -76,7 +78,9 @@ jobs:
 
           # First, compress the original file (in the build directory)
           cd "${GITHUB_WORKSPACE}"
+          node .github/build_compact_search_index.mjs "$ASSET" "$COMPACT_ASSET"
           gzip -9 -k -f "$ASSET"
+          gzip -9 -k -f "$COMPACT_ASSET"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
@@ -102,6 +106,7 @@ jobs:
           print(f"Encrypted: {len(data)} bytes")
           EOF
           python3 /tmp/xor_encrypt.py "$KEY" "${ASSET}.gz" "${ASSET}.gz.enc"
+          python3 /tmp/xor_encrypt.py "$KEY" "${COMPACT_ASSET}.gz" "${COMPACT_ASSET}.gz.enc"
           
           # Rebuild and force-push with retries to handle concurrent updates.
           MAX_RETRIES=20
@@ -133,6 +138,7 @@ jobs:
 
             # Update English searchindex artifact.
             cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
+            cp "${COMPACT_ASSET}.gz.enc" "${COMPACT_FILENAME}.gz"
 
             git add -A
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")

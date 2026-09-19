@@ -192,8 +192,10 @@ jobs:
           set -euo pipefail
 
           ASSET="book/searchindex.js"
+          COMPACT_ASSET="/tmp/searchindex-v2.json"
           TARGET_REPO="HackTricks-wiki/hacktricks-searchindex"
           FILENAME="searchindex-cloud-${BRANCH}.js"
+          COMPACT_FILENAME="searchindex-cloud-v2-${BRANCH}.json"
 
           if [ ! -f "$ASSET" ]; then
             echo "Expected $ASSET to exist after build" >&2
@@ -210,7 +212,9 @@ jobs:
           git clone --depth 1 https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
           
           # Compress the searchindex file
+          node .github/build_compact_search_index.mjs "$ASSET" "$COMPACT_ASSET"
           gzip -9 -k -f "$ASSET"
+          gzip -9 -k -f "$COMPACT_ASSET"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
@@ -236,9 +240,11 @@ jobs:
           print(f"Encrypted: {len(data)} bytes")
           EOF
           python3 /tmp/xor_encrypt.py "$KEY" "${ASSET}.gz" "${ASSET}.gz.enc" 
+          python3 /tmp/xor_encrypt.py "$KEY" "${COMPACT_ASSET}.gz" "${COMPACT_ASSET}.gz.enc"
           
           # Copy ONLY the encrypted .gz version to the searchindex repo (no uncompressed .js)
           cp "${ASSET}.gz.enc" "/tmp/searchindex-repo/${FILENAME}.gz"
+          cp "${COMPACT_ASSET}.gz.enc" "/tmp/searchindex-repo/${COMPACT_FILENAME}.gz"
           
           # Commit and push with retry logic resilient to concurrent writers/history rewrites
           cd /tmp/searchindex-repo
@@ -255,7 +261,8 @@ jobs:
             git fetch origin master
             git checkout -B master origin/master
             cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
-            git add "${FILENAME}.gz"
+            cp "${COMPACT_ASSET}.gz.enc" "${COMPACT_FILENAME}.gz"
+            git add "${FILENAME}.gz" "${COMPACT_FILENAME}.gz"
 
             if git diff --staged --quiet; then
               echo "No changes to commit"
