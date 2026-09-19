@@ -4,34 +4,34 @@ Smernice za buduće agente koji rade u ovom repozitorijumu.
 
 ## Kontekst repozitorijuma
 
-Ovo je HackTricks Cloud mdBook repozitorijum. Povezana glavna knjiga se nalazi na:
+Ovo je HackTricks Cloud mdBook repozitorijum. Povezana glavna knjiga nalazi se na:
 
 `/Users/carlospolop/git/hacktricks`
 
-Promene u deljenom theme/search ponašanju često moraju da se primene u oba repozitorijuma.
+Promene zajedničkog ponašanja teme/pretrage često treba primeniti u oba repozitorijuma.
 
-## Search Index Loading Contract
+## Ugovor o učitavanju indeksa pretrage
 
-Prilagođeni search UI se nalazi u:
+Prilagođeni interfejs pretrage nalazi se u:
 
 `theme/ht_searcher.js`
 
-Može postojati i generisana kopija na:
+Možda postoji i generisana kopija na:
 
 `book/theme/ht_searcher.js`
 
-Ako se u produkciji deploy-uje već izgrađeni `book/` direktorijum, ažuriraj obe kopije ili ponovo izgradi knjigu pre deploy-a.
+Ako se u produkciju postavlja već izgrađeni direktorijum `book/`, ažurirajte obe kopije ili ponovo izgradite knjigu.
 
-Redosled učitavanja search index-a je važan i osetljiv na troškove:
+Redosled učitavanja indeksa pretrage je važan i osetljiv na troškove:
 
-1. Učitaj svaki jezički specifičan i fallback search index iz GitHub repozitorijuma:
+1. Učitajte svaki jezički specifičan indeks pretrage i rezervni indeks iz GitHub repozitorijuma:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Samo ako svi GitHub-hosted kandidati fail-uju, pređi na same-origin mdBook output.
+2. Samo ako svi kandidati hostovani na GitHubu ne uspeju, pređite na isti-origin mdBook izlaz.
 
-Ne stavljaj lokalni `/searchindex.js` fallback pre bilo kog GitHub-hosted fallback-a kao što je
-`searchindex-cloud-en.js.gz`. Serviranje `searchindex.js` sa `cloud.hacktricks.wiki` u produkciji je skupo.
+Ne postavljajte lokalni `/searchindex.js` fallback ispred bilo kog GitHub fallback-a, kao što je
+`searchindex-cloud-en.js.gz`. Posluživanje `searchindex.js` sa `cloud.hacktricks.wiki` u produkciji je skupo.
 
-Za ovaj repozitorijum, očekivani lokalni fallback je:
+Za ovaj repozitorijum očekivani lokalni fallback je:
 
 `/searchindex.js`
 
@@ -39,42 +39,42 @@ Fallback glavne knjige za ovaj repozitorijum je:
 
 `/searchindex-book.js`
 
-Ta datoteka je samo fallback. Primarni izvor mora ostati remote
-`searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` fajlovi u
+Ovaj fajl je samo fallback. Primarni izvor moraju ostati udaljeni fajlovi
+`searchindex-<lang>.js.gz` i `searchindex-cloud-<lang>.js.gz` u
 `HackTricks-wiki/hacktricks-searchindex`.
 
-## Search Index Publishing
+## Objavljivanje indeksa pretrage
 
-Workflows koji objavljuju encrypted compressed search indexes u
-`HackTricks-wiki/hacktricks-searchindex` su:
+Workflow-i koji objavljuju šifrovane kompresovane indekse pretrage u `HackTricks-wiki/hacktricks-searchindex` su:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Generisana source datoteka je `book/searchindex.js`. Nazivi objavljenih remote artifact-a su:
+Generisani izvorni fajl je `book/searchindex.js`. Nazivi objavljenih udaljenih artefakata su:
 
+- `searchindex-cloud-v2-en.json.gz` (poželjni kompaktni indeks)
+- `searchindex-cloud-v2-<lang>.json.gz` (poželjni kompaktni indeks)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Browser loader očekuje da su remote `.js.gz` fajlovi XOR-encrypted gzip payload-i koristeći
-ključ definisan u `theme/ht_searcher.js`.
+Učitavač u pregledaču daje prednost v2 kompaktom artefaktu i zadržava `.js.gz` artefakt kao legacy fallback. Oba su XOR-šifrovani gzip sadržaji koji koriste ključ definisan u `theme/ht_searcher.js`.
 
-## Build And Validation
+## Izgradnja i validacija
 
 Uobičajene lokalne provere:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Ako `mdbook build` fail-uje, proveri:
+Ako `mdbook build` ne uspe, proverite:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Napomene o izmenama
 
-- Preferiraj `rg` za pretragu.
-- Drži generisani `book/` output van commit-ova osim ako nije izričito traženo. Ispravke search loader-a su izuzetak kada već izgrađene stranice moraju odmah da se poprave.
-- Ako menjaš deljeno theme ponašanje, uporedi i ažuriraj odgovarajuću datoteku u
+- Prednost dajte alatu `rg` za pretragu.
+- Držite generisani `book/` izlaz van commit-a, osim ako to nije izričito zatraženo. Ispravke učitavača pretrage su izuzetak kada već izgrađene stranice moraju odmah biti ispravljene.
+- Ako menjate ponašanje zajedničke teme, uporedite i ažurirajte odgovarajući fajl u
 `/Users/carlospolop/git/hacktricks`.
-- Ne vraćaj nepovezane lokalne izmene.
+- Ne vraćajte nepovezane lokalne izmene.
