@@ -1,76 +1,77 @@
 # AGENTS.md
 
-Gelecekte bu depoda çalışan ajanlar için rehber.
+Bu depoda gelecekte çalışacak agent'lar için yönergeler.
 
-## Repository Bağlamı
+## Repository Context
 
-Bu, HackTricks Cloud mdBook reposudur. İlgili ana kitap şurada bulunur:
+Bu, HackTricks Cloud mdBook deposudur. İlgili ana kitap şu konumda bulunur:
 
 `/Users/carlospolop/git/hacktricks`
 
-Paylaşılan theme/search davranışındaki değişikliklerin genellikle her iki repoda da uygulanması gerekir.
+Paylaşılan tema/search davranışında yapılan değişikliklerin genellikle her iki depoya da uygulanması gerekir.
 
-## Search Index Yükleme Sözleşmesi
+## Search Index Loading Contract
 
-Özel arama UI'sı şurada bulunur:
+Özel search arayüzü şu konumda bulunur:
 
 `theme/ht_searcher.js`
 
-Ayrıca oluşturulmuş bir kopya da olabilir:
+Ayrıca şu konumda oluşturulmuş bir kopya da bulunabilir:
 
 `book/theme/ht_searcher.js`
 
-Eğer production zaten oluşturulmuş `book/` dizinini deploy ediyorsa, her iki kopyayı da güncelleyin veya deploydan önce
-book'u yeniden build edin.
+Production, önceden oluşturulmuş `book/` dizinini deploy ediyorsa her iki kopyayı da güncelleyin veya kitabı yeniden oluşturun.
 
-Search index yükleme sırası önemlidir ve maliyet açısından kritiktir:
+Search index yükleme sırası önemlidir ve maliyete duyarlıdır:
 
-1. GitHub repository'sinden her dil-özgü ve fallback search index'i yükle:
+1. GitHub repository'sinden tüm dile özgü ve fallback search index'lerini yükleyin:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Sadece tüm GitHub-hosted adaylar başarısız olursa, aynı-origin mdBook çıktısına fallback yap.
+2. Yalnızca GitHub üzerinde barındırılan tüm adaylar başarısız olursa aynı-origin mdBook çıktısına fallback yapın.
 
-Yerel `/searchindex.js` fallback'ini, `searchindex-cloud-en.js.gz` gibi herhangi bir GitHub-hosted fallback'ten önce koymayın. Production'da `cloud.hacktricks.wiki` üzerinden `searchindex.js` servis etmek pahalıdır.
+Yerel `/searchindex.js` fallback'ini, `searchindex-cloud-en.js.gz` gibi GitHub üzerinde barındırılan herhangi bir fallback'in önüne koymayın. Production'da `cloud.hacktricks.wiki` üzerinden `searchindex.js` sunmak maliyetlidir.
 
-Bu repo için beklenen yerel fallback şudur:
+Bu repo için beklenen yerel fallback:
 
 `/searchindex.js`
 
-Ana kitap için bu repodaki fallback şudur:
+Bu repo için ana-book fallback'i:
 
 `/searchindex-book.js`
 
-Bu dosya yalnızca bir fallback'tir. Birincil kaynak, `HackTricks-wiki/hacktricks-searchindex` içindeki remote
+Bu dosya yalnızca fallback'tir. Birincil kaynak, `HackTricks-wiki/hacktricks-searchindex` içindeki uzak
 `searchindex-<lang>.js.gz` ve `searchindex-cloud-<lang>.js.gz` dosyaları olarak kalmalıdır.
 
-## Search Index Yayınlama
+## Search Index Publishing
 
-Şifrelenmiş sıkıştırılmış search index'leri `HackTricks-wiki/hacktricks-searchindex` içine yayınlayan workflow'lar şunlardır:
+Şifrelenmiş sıkıştırılmış search index'lerini `HackTricks-wiki/hacktricks-searchindex` adresine publish eden workflow'lar şunlardır:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Oluşturulan kaynak dosya `book/searchindex.js`'dir. Yayınlanan remote artifact adları şunlardır:
+Oluşturulan kaynak dosya `book/searchindex.js` dosyasıdır. Publish edilen uzak artifact adları şunlardır:
 
+- `searchindex-cloud-v2-en.json.gz` (tercih edilen compact index)
+- `searchindex-cloud-v2-<lang>.json.gz` (tercih edilen compact index)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-Tarayıcı loader, `theme/ht_searcher.js` içinde tanımlı anahtarı kullanan XOR-şifrelenmiş gzip payload'ları olan remote `.js.gz` dosyalarını bekler.
+Browser loader, compact v2 artifact'ini tercih eder ve `.js.gz` artifact'ini legacy fallback olarak korur. Her ikisi de `theme/ht_searcher.js` içinde tanımlanan key kullanılarak XOR ile şifrelenmiş gzip payload'larıdır.
 
-## Build Ve Validation
+## Build And Validation
 
 Yaygın yerel kontroller:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-`mdbook build` başarısız olursa, şunları kontrol edin:
+`mdbook build` başarısız olursa şunları kontrol edin:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notları
+## Editing Notes
 
-- Arama için `rg` kullanmayı tercih edin.
-- Özellikle istenmedikçe oluşturulmuş `book/` çıktısını commitlere dahil etmeyin. Search loader düzeltmeleri, zaten oluşturulmuş sayfaların hemen düzeltilmesi gerektiğinde istisnadır.
-- Paylaşılan theme davranışını değiştiriyorsanız, `/Users/carlospolop/git/hacktricks` içindeki eşleşen dosyayı karşılaştırın ve güncelleyin.
+- Arama yapmak için `rg` kullanmayı tercih edin.
+- Açıkça istenmediği sürece oluşturulan `book/` çıktısını commit'lere dahil etmeyin. Zaten oluşturulmuş sayfaların hemen düzeltilmesi gerektiğinde search loader düzeltmeleri istisnadır.
+- Paylaşılan tema davranışını değiştiriyorsanız `/Users/carlospolop/git/hacktricks` içindeki eşleşen dosyayı karşılaştırın ve güncelleyin.
 - İlgisiz yerel değişiklikleri geri almayın.
