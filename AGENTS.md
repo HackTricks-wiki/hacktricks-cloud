@@ -1,46 +1,46 @@
 # AGENTS.md
 
-Guía para futuros agentes que trabajen en este repositorio.
+Orientación para futuros agentes que trabajen en este repositorio.
 
 ## Contexto del repositorio
 
-Este es el repositorio mdBook de HackTricks Cloud. El libro principal relacionado vive en:
+Este es el repositorio mdBook de HackTricks Cloud. El libro principal relacionado se encuentra en:
 
 `/Users/carlospolop/git/hacktricks`
 
-Los cambios en el comportamiento compartido del tema/búsqueda a menudo necesitan aplicarse en ambos repositorios.
+Los cambios en el comportamiento compartido del tema o de la búsqueda a menudo deben aplicarse en ambos repositorios.
 
 ## Contrato de carga del índice de búsqueda
 
-La interfaz de búsqueda personalizada vive en:
+La interfaz de búsqueda personalizada se encuentra en:
 
 `theme/ht_searcher.js`
 
-También puede haber una copia generada en:
+También puede existir una copia generada en:
 
 `book/theme/ht_searcher.js`
 
-Si producción está desplegando el directorio ya compilado `book/`, actualiza ambas copias o recompila el
+Si production implementa el directorio `book/` ya compilado, actualiza ambas copias o vuelve a compilar el
 libro antes del despliegue.
 
-El orden de carga del índice de búsqueda es importante y sensible al coste:
+El orden de carga del índice de búsqueda es importante y sensible a los costos:
 
-1. Carga cada índice de búsqueda específico del idioma y de fallback desde el repositorio de GitHub:
+1. Carga todos los índices de búsqueda específicos de cada idioma y de reserva desde el repositorio de GitHub:
 `HackTricks-wiki/hacktricks-searchindex`
-2. Solo si todos los candidatos alojados en GitHub fallan, recurre al mdBook del mismo origen.
+2. Solo si todos los candidatos alojados en GitHub fallan, utiliza como reserva el resultado de mdBook del mismo origen.
 
-No coloques el fallback local `/searchindex.js` antes de ningún fallback alojado en GitHub, como
-`searchindex-cloud-en.js.gz`. Servir `searchindex.js` desde `cloud.hacktricks.wiki` en producción es costoso.
+No coloques la reserva local `/searchindex.js` antes de ninguna reserva alojada en GitHub, como
+`searchindex-cloud-en.js.gz`. Servir `searchindex.js` desde `cloud.hacktricks.wiki` en production es costoso.
 
-Para este repositorio, el fallback local esperado es:
+Para este repositorio, la reserva local esperada es:
 
 `/searchindex.js`
 
-El fallback del libro principal para este repositorio es:
+La reserva del libro principal para este repositorio es:
 
 `/searchindex-book.js`
 
-Ese archivo es solo un fallback. La fuente principal debe seguir siendo los archivos remotos
+Ese archivo solo es una reserva. La fuente principal debe seguir siendo los archivos remotos
 `searchindex-<lang>.js.gz` y `searchindex-cloud-<lang>.js.gz` en
 `HackTricks-wiki/hacktricks-searchindex`.
 
@@ -54,29 +54,30 @@ Los workflows que publican índices de búsqueda comprimidos y cifrados en
 
 El archivo fuente generado es `book/searchindex.js`. Los nombres de los artefactos remotos publicados son:
 
+- `searchindex-cloud-v2-en.json.gz` (índice compacto preferido)
+- `searchindex-cloud-v2-<lang>.json.gz` (índice compacto preferido)
 - `searchindex-cloud-en.js.gz`
 - `searchindex-cloud-<lang>.js.gz`
 
-El cargador del navegador espera que los archivos remotos `.js.gz` sean cargas gzip cifradas con XOR usando la
-clave definida en `theme/ht_searcher.js`.
+El loader del navegador prioriza el artefacto compacto v2 y conserva el artefacto `.js.gz` como
+reserva heredada. Ambos son payloads gzip cifrados con XOR mediante la clave definida en `theme/ht_searcher.js`.
 
 ## Compilación y validación
 
-Comprobaciones locales comunes:
+Comprobaciones locales habituales:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Si `mdbook build` falla, revisa:
+Si `mdbook build` falla, comprueba:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
 ## Notas de edición
 
-- Prefiere `rg` para buscar.
-- Mantén la salida generada `book/` fuera de los commits salvo que se solicite explícitamente. Las correcciones del cargador de búsqueda son
-una excepción cuando las páginas ya compiladas deben corregirse inmediatamente.
+- Prefiere `rg` para realizar búsquedas.
+- Mantén el resultado generado de `book/` fuera de los commits, salvo que se solicite explícitamente. Las correcciones del loader de búsqueda son una excepción cuando sea necesario corregir inmediatamente las páginas ya compiladas.
 - Si cambias el comportamiento compartido del tema, compara y actualiza el archivo correspondiente en
 `/Users/carlospolop/git/hacktricks`.
 - No reviertas cambios locales no relacionados.
