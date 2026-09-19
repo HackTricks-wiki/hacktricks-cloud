@@ -2,57 +2,57 @@
 
 Οδηγίες για μελλοντικούς agents που εργάζονται σε αυτό το repository.
 
-## Repository Context
+## Πλαίσιο του Repository
 
-Αυτό είναι το repository HackTricks Cloud mdBook. Το σχετικό κύριο βιβλίο βρίσκεται στη διεύθυνση:
+Αυτό είναι το HackTricks Cloud mdBook repository. Το σχετικό κύριο book βρίσκεται στο:
 
 `/Users/carlospolop/git/hacktricks`
 
-Οι αλλαγές στη συμπεριφορά του shared theme/search συχνά πρέπει να εφαρμοστούν και στα δύο repositories.
+Οι αλλαγές στη συμπεριφορά του shared theme/search συχνά πρέπει να εφαρμόζονται και στα δύο repositories.
 
-## Search Index Loading Contract
+## Συμβόλαιο Φόρτωσης του Search Index
 
 Το custom search UI βρίσκεται στο:
 
 `theme/ht_searcher.js`
 
-Ενδέχεται να υπάρχει επίσης ένα generated αντίγραφο στη διεύθυνση:
+Ενδέχεται επίσης να υπάρχει ένα generated αντίγραφο στο:
 
 `book/theme/ht_searcher.js`
 
-Αν το production κάνει deploy τον ήδη-built κατάλογο `book/`, ενημέρωσε και τα δύο αντίγραφα ή κάνε rebuild το
+Αν το production κάνει deploy τον ήδη-built κατάλογο `book/`, ενημερώστε και τα δύο αντίγραφα ή κάντε rebuild το
 book πριν από το deployment.
 
-Η σειρά φόρτωσης του search index είναι σημαντική και cost-sensitive:
+Η πολιτική προέλευσης του search index είναι σημαντική και cost-sensitive:
 
-1. Φόρτωσε κάθε language-specific και fallback search index από το GitHub repository:
-`HackTricks-wiki/hacktricks-searchindex`
-2. Μόνο αν αποτύχουν όλοι οι candidates που φιλοξενούνται στο GitHub, κάνε fallback στο same-origin mdBook output.
-
-Μην τοποθετήσεις το local `/searchindex.js` fallback πριν από οποιοδήποτε GitHub-hosted fallback, όπως το
-`searchindex-cloud-en.js.gz`. Το serving του `searchindex.js` από το `cloud.hacktricks.wiki` στο production είναι expensive.
+- Σε public hosts, φορτώνετε κάθε language-specific και fallback candidate μόνο από το
+`HackTricks-wiki/hacktricks-searchindex`. Μην κάνετε ποτέ fallback στο same-origin mdBook output·
+η παροχή του μεγάλου index από το `cloud.hacktricks.wiki` σε production είναι ακριβή.
+- Σε localhost, hosts με `.local`/`.internal`, loopback, RFC1918, carrier-grade NAT, link-local ή
+private IPv6 addresses, φορτώνετε μόνο το same-origin mdBook output, ώστε τα local/container deployments
+να παραμένουν self-contained.
 
 Για αυτό το repo, το αναμενόμενο local fallback είναι:
 
 `/searchindex.js`
 
-Το main-book fallback για αυτό το repo είναι:
+Το fallback του κύριου book για αυτό το repo είναι:
 
 `/searchindex-book.js`
 
-Αυτό το αρχείο είναι μόνο fallback. Η primary source πρέπει να παραμείνει τα remote
-`searchindex-<lang>.js.gz` και `searchindex-cloud-<lang>.js.gz` αρχεία στο
+Αυτά τα local files είναι sources μόνο για private networks. Τα public hosts πρέπει να χρησιμοποιούν αποκλειστικά
+τα remote `searchindex-<lang>.js.gz` και `searchindex-cloud-<lang>.js.gz` files στο
 `HackTricks-wiki/hacktricks-searchindex`.
 
-## Search Index Publishing
+## Δημοσίευση του Search Index
 
-Τα workflows που κάνουν publish encrypted compressed search indexes στο
+Τα workflows που δημοσιεύουν encrypted compressed search indexes στο
 `HackTricks-wiki/hacktricks-searchindex` είναι:
 
 - `.github/workflows/build_master.yml`
 - `.github/workflows/translate_all.yml`
 
-Το generated source file είναι το `book/searchindex.js`. Τα published remote artifact names είναι:
+Το generated source file είναι το `book/searchindex.js`. Τα ονόματα των published remote artifacts είναι:
 
 - `searchindex-cloud-v2-en.json.gz` (preferred compact index)
 - `searchindex-cloud-v2-<lang>.json.gz` (preferred compact index)
@@ -60,28 +60,31 @@ book πριν από το deployment.
 - `searchindex-cloud-<lang>.js.gz`
 
 Ο browser loader προτιμά το compact v2 artifact και διατηρεί το `.js.gz` artifact ως legacy
-fallback. Και τα δύο είναι XOR-encrypted gzip payloads που χρησιμοποιούν το key που ορίζεται στο `theme/ht_searcher.js`.
+fallback. Και τα δύο είναι XOR-encrypted gzip payloads που χρησιμοποιούν το key το οποίο ορίζεται στο
+`theme/ht_searcher.js`.
 
-Ο loader πρέπει να παραμείνει lazy: η κανονική πλοήγηση σε σελίδες δεν πρέπει να δημιουργεί το search worker ή να κάνει download ενός index μέχρι ο visitor να ανοίξει ή να χρησιμοποιήσει το search. Τα remote compressed responses αποθηκεύονται στο Cache
-Storage για 24 ώρες ανά origin, ώστε οι επόμενες σελίδες να μπορούν να τα επαναχρησιμοποιήσουν. Διατήρησε το stale-cache
+Ο loader πρέπει να παραμένει lazy: η κανονική πλοήγηση στις σελίδες δεν πρέπει να δημιουργεί το search worker ή να
+κατεβάζει index μέχρι ο visitor να ανοίξει ή να χρησιμοποιήσει το search. Οι remote compressed responses αποθηκεύονται στο Cache
+Storage για 24 ώρες ανά origin, ώστε οι επόμενες σελίδες να μπορούν να τις επαναχρησιμοποιήσουν. Διατηρήστε το stale-cache
 fallback όταν η ανανέωση ενός expired entry αποτυγχάνει.
 
-## Build And Validation
+## Build και Validation
 
-Συνηθισμένοι τοπικοί έλεγχοι:
+Συνηθισμένοι local έλεγχοι:
 
 - `node --check theme/ht_searcher.js`
 - `mdbook build`
 
-Αν το `mdbook build` αποτύχει, έλεγξε:
+Αν το `mdbook build` αποτύχει, ελέγξτε:
 
 - `hacktricks-preprocessor-error.log`
 - `hacktricks-preprocessor.log`
 
-## Editing Notes
+## Σημειώσεις Επεξεργασίας
 
-- Προτίμησε το `rg` για αναζητήσεις.
-- Κράτησε το generated `book/` output εκτός των commits, εκτός αν ζητηθεί ρητά. Οι διορθώσεις του search loader αποτελούν εξαίρεση όταν οι ήδη-built σελίδες πρέπει να διορθωθούν άμεσα.
-- Αν αλλάζεις τη συμπεριφορά του shared theme, σύγκρινε και ενημέρωσε το αντίστοιχο αρχείο στο
+- Προτιμήστε το `rg` για searching.
+- Κρατήστε το generated `book/` output εκτός των commits, εκτός αν ζητηθεί ρητά. Οι διορθώσεις στον search loader
+αποτελούν εξαίρεση όταν οι ήδη-built σελίδες πρέπει να διορθωθούν άμεσα.
+- Αν αλλάζετε τη συμπεριφορά του shared theme, συγκρίνετε και ενημερώστε το αντίστοιχο file στο
 `/Users/carlospolop/git/hacktricks`.
-- Μην κάνεις revert άσχετες τοπικές αλλαγές.
+- Μην κάνετε revert άσχετων local changes.
