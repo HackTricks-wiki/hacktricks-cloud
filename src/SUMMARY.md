@@ -398,6 +398,7 @@
     - [AWS - CodeBuild Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/README.md)
       - [AWS Codebuild - Token Leakage](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md)
       - [AWS CodeBuild - Untrusted PR Webhook Bypass (CodeBreach-style)](pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-untrusted-pr-webhook-bypass.md)
+    - [AWS - Cognito Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-post-exploitation/README.md)
     - [AWS - Config Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-config-post-exploitation/README.md)
     - [AWS - Control Tower Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-control-tower-post-exploitation/README.md)
     - [AWS - Cost Explorer Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cost-explorer-post-exploitation/README.md)
