@@ -19,6 +19,8 @@ permissions:
   packages: write
   id-token: write
   contents: write
+  actions: read
+  pull-requests: read
 
 jobs:
   run-translation:
@@ -32,10 +34,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      
+
       # Build the mdBook
       - name: Build mdBook
-        run: MDBOOK_BOOK__LANGUAGE=en mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
+        run: |
+          # Repair known SUMMARY.md breakage (duplicate entries) first, otherwise
+          # mdbook aborts and takes the whole site down.
+          python3 scripts/check_summary.py --fix || true
+          MDBOOK_BOOK__LANGUAGE=en mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
 
       - name: Post-process SEO artifacts
         run: |
@@ -54,8 +60,10 @@ jobs:
           set -euo pipefail
 
           ASSET="book/searchindex.js"
+          COMPACT_ASSET="/tmp/searchindex-v2.json"
           TARGET_REPO="HackTricks-wiki/hacktricks-searchindex"
           FILENAME="searchindex-cloud-en.js"
+          COMPACT_FILENAME="searchindex-cloud-v2-en.json"
 
           if [ ! -f "$ASSET" ]; then
             echo "Expected $ASSET to exist after build" >&2
@@ -70,7 +78,9 @@ jobs:
 
           # First, compress the original file (in the build directory)
           cd "${GITHUB_WORKSPACE}"
+          python3 .github/build_compact_search_index.py "$ASSET" "$COMPACT_ASSET"
           gzip -9 -k -f "$ASSET"
+          gzip -9 -k -f "$COMPACT_ASSET"
           
           # Show compression stats
           ORIGINAL_SIZE=$(wc -c < "$ASSET")
@@ -96,6 +106,7 @@ jobs:
           print(f"Encrypted: {len(data)} bytes")
           EOF
           python3 /tmp/xor_encrypt.py "$KEY" "${ASSET}.gz" "${ASSET}.gz.enc"
+          python3 /tmp/xor_encrypt.py "$KEY" "${COMPACT_ASSET}.gz" "${COMPACT_ASSET}.gz.enc"
           
           # Rebuild and force-push with retries to handle concurrent updates.
           MAX_RETRIES=20
@@ -127,6 +138,7 @@ jobs:
 
             # Update English searchindex artifact.
             cp "${GITHUB_WORKSPACE}/${ASSET}.gz.enc" "${FILENAME}.gz"
+            cp "${COMPACT_ASSET}.gz.enc" "${COMPACT_FILENAME}.gz"
 
             git add -A
             TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -192,7 +204,19 @@ jobs:
           aws s3 cp ./src/robots.txt s3://hacktricks-cloud/robots.txt --content-type text/plain --cache-control max-age=300
           aws s3 cp ./src/robots.txt s3://hacktricks-cloud/en/robots.txt --content-type text/plain --cache-control max-age=300
 
+      # A push to the default branch fans out into several workflows that each
+      # invalidate an overlapping set of paths, and CloudFront bills every path
+      # past the first 1000 a month. Skip the ones another run already covers.
+      - name: Check whether this invalidation is still needed
+        id: invalidation
+        uses: ./.github/actions/invalidation-needed
+        with:
+          github-token: ${{ github.token }}
+          covered-by: translate_all.yml
+          merge-comment-author: ""
+
       - name: Invalidate CloudFront HTML and SEO assets
+        if: steps.invalidation.outputs.needed == 'true'
         run: |
           # /en/* covers /en/robots.txt and /en/sitemap.xml; only invalidate
           # root SEO files separately.
