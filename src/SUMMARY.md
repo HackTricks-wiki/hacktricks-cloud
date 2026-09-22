@@ -769,6 +769,7 @@
   - [Az - Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/README.md)
     - [Az API Management Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md)
     - [Az Azure Ai Foundry Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-azure-ai-foundry-post-exploitation.md)
+    - [Az - Automation Accounts Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md)
     - [Az - Blob Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md)
     - [Az - Cloud Shell Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-cloud-shell-post-exploitation.md)
     - [Az - Container Registry Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md)
