@@ -840,6 +840,7 @@
     - [Az - IoT Hub Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md)
     - [Az - Key Vault Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md)
     - [Az - Kubernetes Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md)
+    - [Az - Load Testing Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-load-testing-privesc.md)
     - [Az - Log Analytics Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-log-analytics-privesc.md)
     - [Az - Synapse Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md)
     - [Az - Azure Managed Grafana Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md)
