@@ -82,10 +82,36 @@ jobs:
         run: |
           gh --version
           wget --version | head -n 1
-          wget -O /tmp/get_and_save_refs.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/get_and_save_refs.py
-          wget -O /tmp/compare_and_fix_refs.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/compare_and_fix_refs.py
-          wget -O /tmp/translator.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/translator.py
-          wget -O /tmp/seo_postprocess.py https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/seo_postprocess.py
+
+          # Download with retries so a transient network/TLS hiccup (e.g. a
+          # GnuTLS "Error in the pull function" from raw.githubusercontent.com)
+          # doesn't fail an otherwise-good translation job. Retries on ANY
+          # failure (wget --tries does not reliably retry TLS handshake errors)
+          # and verifies the saved file is non-empty before accepting it.
+          download_with_retry() {
+            local url="$1" out="$2"
+            local max_attempts=5 attempt=1 sleep_for=5
+            while true; do
+              if wget --timeout=30 --tries=1 -O "$out" "$url" && [ -s "$out" ]; then
+                echo "Downloaded $out (attempt $attempt)"
+                return 0
+              fi
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "ERROR: failed to download $url after $max_attempts attempts" >&2
+                return 1
+              fi
+              echo "Download of $url failed (attempt $attempt/$max_attempts); retrying in ${sleep_for}s..." >&2
+              rm -f "$out"
+              sleep "$sleep_for"
+              attempt=$((attempt + 1))
+              sleep_for=$((sleep_for * 2))
+            done
+          }
+
+          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/get_and_save_refs.py /tmp/get_and_save_refs.py
+          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/compare_and_fix_refs.py /tmp/compare_and_fix_refs.py
+          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/translator.py /tmp/translator.py
+          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/seo_postprocess.py /tmp/seo_postprocess.py
           cp scripts/mark_unchanged_s3_files.py /tmp/mark_unchanged_s3_files.py
           cp scripts/upload_immutable_images.sh /tmp/upload_immutable_images.sh
           cp .github/build_compact_search_index.py /tmp/build_compact_search_index.py
