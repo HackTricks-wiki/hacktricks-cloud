@@ -420,6 +420,7 @@
     - [AWS - ECS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-ecs-post-exploitation/README.md)
     - [AWS - EFS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation/README.md)
     - [AWS - EKS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eks-post-exploitation/README.md)
+    - [AWS - EMR Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-emr-post-exploitation/README.md)
     - [AWS - Elastic Beanstalk Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-elastic-beanstalk-post-exploitation/README.md)
     - [AWS - EventBridge Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-post-exploitation/README.md)
     - [AWS - EventBridge Scheduler Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-scheduler-post-exploitation.md)
