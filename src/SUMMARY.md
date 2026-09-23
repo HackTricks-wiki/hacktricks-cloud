@@ -377,6 +377,7 @@
       - [AWS - Lambda Layers Persistence](pentesting-cloud/aws-security/aws-persistence/aws-lambda-persistence/aws-lambda-layers-persistence.md)
       - [AWS - Lambda Exec Wrapper Persistence](pentesting-cloud/aws-security/aws-persistence/aws-lambda-persistence/aws-lambda-exec-wrapper-persistence.md)
     - [AWS - Lightsail Persistence](pentesting-cloud/aws-security/aws-persistence/aws-lightsail-persistence/README.md)
+    - [AWS - MemoryDB Persistence](pentesting-cloud/aws-security/aws-persistence/aws-memorydb-persistence/README.md)
     - [AWS - RDS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence/README.md)
     - [AWS - S3 Persistence](pentesting-cloud/aws-security/aws-persistence/aws-s3-persistence/README.md)
     - [Aws Sagemaker Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md)
