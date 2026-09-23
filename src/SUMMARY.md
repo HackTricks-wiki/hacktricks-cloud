@@ -284,6 +284,7 @@
     - [GCP - Private Catalog Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-private-catalog-persistence.md)
     - [GCP - Privileged Access Manager (PAM) Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-pam-persistence.md)
     - [GCP - Secret Manager Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-secret-manager-persistence.md)
+    - [GCP - Spanner Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-spanner-persistence.md)
     - [GCP - Token Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistence.md)
     - [GCP - Workflows Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-workflows-persistence.md)
     - [GCP - Workload Identity Federation Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-workload-identity-federation-persistence.md)
