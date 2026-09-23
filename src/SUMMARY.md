@@ -265,6 +265,7 @@
     - [GCP - Firebase App Hosting Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-firebase-app-hosting-persistence.md)
     - [GCP - Firebase Data Connect Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-firebase-data-connect-persistence.md)
     - [GCP - IAM Deny Policies Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iam-deny-policies-persistence.md)
+    - [GCP - IAP Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iap-persistence.md)
     - [GCP - Liens Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-liens-persistence.md)
     - [GCP - Logging Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-logging-persistence.md)
     - [GCP - Monitoring Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-monitoring-persistence.md)
