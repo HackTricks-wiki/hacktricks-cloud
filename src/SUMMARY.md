@@ -453,6 +453,7 @@
     - [AWS - Network Firewall Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-network-firewall-post-exploitation/README.md)
     - [AWS - Organizations Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-organizations-post-exploitation/README.md)
     - [AWS - Payment Cryptography Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-payment-cryptography-post-exploitation/README.md)
+    - [AWS - Pinpoint Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-pinpoint-post-exploitation/README.md)
     - [AWS - RDS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md)
     - [AWS - Redshift Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-redshift-post-exploitation/README.md)
     - [AWS - SageMaker Post-Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md)
