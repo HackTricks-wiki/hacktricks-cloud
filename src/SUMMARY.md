@@ -884,6 +884,7 @@
     - [Az - Azure Policy Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-policy-privesc.md)
     - [Az - Sentinel Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-sentinel-privesc.md)
     - [Az - Virtual Machines & Network Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md)
+    - [Az - Virtual Network Manager Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-network-manager-privesc.md)
     - [Az - Azure AI Video Indexer Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-video-indexer-privesc.md)
     - [Az - VMware Solution (AVS) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md)
     - [Az - Guest Configuration Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md)
