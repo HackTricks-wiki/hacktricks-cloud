@@ -547,6 +547,7 @@
     - [AWS - MSK Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc/README.md)
     - [AWS - OpenSearch Serverless Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-opensearch-serverless-privesc/README.md)
     - [AWS - PassRole to ML/Analytics Data-Access Roles](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md)
+    - [AWS - PCA Connector for AD Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md)
     - [AWS - Proton Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-proton-privesc/README.md)
     - [AWS - QuickSight Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md)
     - [AWS - RDS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md)
