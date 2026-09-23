@@ -843,6 +843,7 @@
     - [Az - DevTest Labs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-devtest-labs-privesc.md)
     - [Az - EntraID Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md)
       - [Az - Conditional Access Policies & MFA Bypass](pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/az-conditional-access-policies-mfa-bypass.md)
+      - [Az - Connect Health Abuse](pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/az-connect-health-abuse.md)
       - [Az - Dynamic Groups Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/dynamic-groups.md)
     - [Az - Event Hubs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-event-hubs-privesc.md)
     - [Az - Event Grid Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md)
