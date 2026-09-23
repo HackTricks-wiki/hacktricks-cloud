@@ -433,6 +433,7 @@
     - [AWS - EventBridge Scheduler Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-scheduler-post-exploitation.md)
     - [AWS - Firewall Manager Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-firewall-manager-post-exploitation/README.md)
     - [AWS - FSx Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-fsx-post-exploitation/README.md)
+    - [AWS - Global Accelerator Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-global-accelerator-post-exploitation/README.md)
     - [AWS - Glue Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-glue-post-exploitation/README.md)
     - [AWS - GuardDuty Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-guardduty-post-exploitation/README.md)
     - [AWS - IAM Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md)
