@@ -295,6 +295,7 @@
     - [GCP - Bare Metal Solution Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-bare-metal-solution-persistence.md)
   - [GCP - Services](pentesting-cloud/gcp-security/gcp-services/README.md)
     - [GCP - AI Platform Enum](pentesting-cloud/gcp-security/gcp-services/gcp-ai-platform-enum.md)
+    - [GCP - AlloyDB Enum](pentesting-cloud/gcp-security/gcp-services/gcp-alloydb-enum.md)
     - [GCP - Analytics Hub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-analytics-hub-enum.md)
     - [GCP - API Gateway Enum](pentesting-cloud/gcp-security/gcp-services/gcp-api-gateway-enum.md)
     - [GCP - API Keys Enum](pentesting-cloud/gcp-security/gcp-services/gcp-api-keys-enum.md)
