@@ -453,6 +453,7 @@
       - [AWS - Lambda Steal Requests](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-warm-lambda-persistence.md)
       - [AWS - Lambda VPC Egress Bypass](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-vpc-egress-bypass.md)
     - [AWS - Lightsail Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md)
+    - [AWS - Macie Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-macie-post-exploitation/README.md)
     - [AWS - MediaConnect Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-mediaconnect-post-exploitation/README.md)
     - [AWS - MWAA Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md)
     - [AWS - Network Firewall Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-network-firewall-post-exploitation/README.md)
