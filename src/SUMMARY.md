@@ -362,6 +362,7 @@
     - [AWS - EKS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-eks-persistence/README.md)
     - [AWS - Elastic Beanstalk Persistence](pentesting-cloud/aws-security/aws-persistence/aws-elastic-beanstalk-persistence/README.md)
     - [AWS - EFS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-efs-persistence/README.md)
+    - [AWS - ElastiCache Persistence](pentesting-cloud/aws-security/aws-persistence/aws-elasticache-persistence/README.md)
     - [AWS - Firewall Manager Persistence](pentesting-cloud/aws-security/aws-persistence/aws-firewall-manager-persistence/README.md)
     - [AWS - EventBridge Persistence](pentesting-cloud/aws-security/aws-persistence/aws-eventbridge-persistence/README.md)
     - [AWS - GuardDuty Persistence](pentesting-cloud/aws-security/aws-persistence/aws-guardduty-persistence/README.md)
