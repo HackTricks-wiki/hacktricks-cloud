@@ -835,6 +835,7 @@
     - [Az - CosmosDB Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md)
     - [Az - Data Explorer (Kusto) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md)
     - [Az - Data Factory Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md)
+    - [Az - Database Migration Service (DMS) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-database-migration-service-privesc.md)
     - [Az - Databricks Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md)
     - [Az - Digital Twins Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md)
     - [Az - Dev Center (Deployment Environments & Dev Box) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-dev-center-privesc.md)
