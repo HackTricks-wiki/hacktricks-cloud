@@ -805,6 +805,7 @@
     - [Az - WAF Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-waf-post-exploitation.md)
     - [Az - VMs & Network Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md)
     - [Az - Storage Tasks Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-storage-tasks-post-exploitation.md)
+    - [Az - Storage Mover Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-storage-mover-post-exploitation.md)
     - [Az - Trusted Signing Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-trusted-signing-post-exploitation.md)
     - [Az - Data Share Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-data-share-post-exploitation.md)
     - [Az - Healthcare APIs Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-healthcare-apis-post-exploitation.md)
