@@ -145,6 +145,7 @@
     - [GCP - Managed Microsoft AD Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-managed-microsoft-ad-post-exploitation.md)
     - [GCP - Service Directory Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-service-directory-post-exploitation.md)
     - [GCP - Vertex AI Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-vertex-ai-post-exploitation.md)
+    - [GCP - Web Security Scanner Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-web-security-scanner-post-exploitation.md)
     - [GCP - Workflows Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-workflows-post-exploitation.md)
     - [GCP - Storage Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-post-exploitation.md)
     - [GCP - Storage Transfer Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-storage-transfer-post-exploitation.md)
