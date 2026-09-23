@@ -446,6 +446,7 @@
       - [AWS - Lambda VPC Egress Bypass](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-vpc-egress-bypass.md)
     - [AWS - Lightsail Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md)
     - [AWS - MWAA Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md)
+    - [AWS - Network Firewall Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-network-firewall-post-exploitation/README.md)
     - [AWS - Organizations Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-organizations-post-exploitation/README.md)
     - [AWS - RDS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md)
     - [AWS - Redshift Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-redshift-post-exploitation/README.md)
