@@ -845,6 +845,7 @@
       - [Az - Dynamic Groups Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/dynamic-groups.md)
     - [Az - Event Hubs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-event-hubs-privesc.md)
     - [Az - Event Grid Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md)
+    - [Az - Microsoft Fabric Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-fabric-privesc.md)
     - [Az - Fluid Relay Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-fluid-relay-privesc.md)
     - [Az - Functions App Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md)
     - [Az - HDInsight Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md)
