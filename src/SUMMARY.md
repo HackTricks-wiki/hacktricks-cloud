@@ -478,6 +478,7 @@
     - [AWS - WAF Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md)
     - [AWS - WorkMail Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md)
     - [AWS - WorkSpaces Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-post-exploitation/README.md)
+    - [AWS - WorkSpaces Web Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-web-post-exploitation/README.md)
   - [AWS - Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/README.md)
     - [AWS - Amplify Hosting Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md)
     - [AWS - Apigateway Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md)
