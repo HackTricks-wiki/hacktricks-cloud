@@ -484,6 +484,7 @@
     - [AWS - AppRunner Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md)
     - [AWS - Batch Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md)
     - [AWS - Bedrock Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md)
+    - [AWS - Chatbot Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chatbot-privesc/README.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
     - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
     - [AWS - Codebuild Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md)
