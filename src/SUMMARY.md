@@ -517,6 +517,8 @@
     - [AWS - MQ Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-mq-privesc/README.md)
     - [AWS - MSK Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc/README.md)
     - [AWS - OpenSearch Serverless Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-opensearch-serverless-privesc/README.md)
+    - [AWS - Proton Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-proton-privesc/README.md)
+    - [AWS - QuickSight Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md)
     - [AWS - RDS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md)
     - [AWS - Redshift Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md)
     - [AWS - Route53 Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer/README.md)
