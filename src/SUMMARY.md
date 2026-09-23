@@ -490,6 +490,7 @@
     - [AWS - Config Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-config-privesc/README.md)
     - [AWS - Control Tower Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-control-tower-privesc/README.md)
     - [AWS - Datapipeline Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-datapipeline-privesc/README.md)
+    - [AWS - DataSync Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-datasync-privesc/README.md)
     - [AWS - Directory Services Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md)
     - [AWS - DynamoDB Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md)
     - [AWS - EBS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc/README.md)
