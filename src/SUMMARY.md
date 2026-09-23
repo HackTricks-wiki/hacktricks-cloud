@@ -241,6 +241,7 @@
     - [GCP - VMware Engine (GCVE) Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vmwareengine-gcve-privesc.md)
     - [GCP - Bare Metal Solution Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bare-metal-solution-privesc.md)
   - [GCP - Persistence](pentesting-cloud/gcp-security/gcp-persistence/README.md)
+    - [GCP - AlloyDB Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-alloydb-persistence.md)
     - [GCP - API Keys Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-api-keys-persistence.md)
     - [GCP - App Engine Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-app-engine-persistence.md)
     - [GCP - Artifact Registry Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md)
