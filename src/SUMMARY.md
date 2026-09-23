@@ -889,6 +889,7 @@
     - [Az - VMware Solution (AVS) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md)
     - [Az - Guest Configuration Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md)
     - [Az - Managed Applications Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-managed-applications-privesc.md)
+    - [Az - Managed DevOps Pools Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-managed-devops-pools-privesc.md)
     - [Az - Entra ID Governance (Entitlement Management) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-entra-id-governance-privesc.md)
     - [Az - Analysis Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-analysis-services-privesc.md)
   - [Az - Persistence](pentesting-cloud/azure-security/az-persistence/README.md)
