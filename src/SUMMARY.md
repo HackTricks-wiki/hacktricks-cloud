@@ -446,6 +446,7 @@
     - [AWS - MWAA Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md)
     - [AWS - Organizations Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-organizations-post-exploitation/README.md)
     - [AWS - RDS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md)
+    - [AWS - Redshift Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-redshift-post-exploitation/README.md)
     - [AWS - SageMaker Post-Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md)
       - [Feature Store Poisoning](pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/feature-store-poisoning.md)
     - [AWS - S3 Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md)
