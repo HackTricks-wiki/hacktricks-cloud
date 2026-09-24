@@ -95,3 +95,17 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
   in `gcp-workload-identity-federation-persistence.md`. Test infra torn down.
 - Method note: resource-type-token diff (not just service-prefix) is where remaining gaps live —
   undocumented *sub-resources within already-documented services*.
+- **2nd GAP FOUND & SHIPPED (same batch):** **`networkservices.googleTagGatewayPolicies`** (Google
+  Tag Gateway / "first-party mode", zero wiki mention). `perDomainConfig[].tagId` +
+  `performTagInitialization` let an attacker with `googleTagGatewayPolicies.create`/`update`
+  (roles/networkservices.editor|admin, editor/owner) make the external Application LB serve an
+  attacker-controlled GTM container **first-party** → arbitrary JS on every visitor, CSP-bypassing,
+  invisible to app code. Shipped to `gcp-networkservices-privesc.md` with explicit alpha/preview +
+  not-live-verified caveats (perm confirmed in roles; resource is v1alpha1 REST-only).
+- Re-confirmed covered/niche (no ship): GKE Backup cross-project channels (cross-project
+  backup/restore exfil already documented across Filestore/Firestore/Spanner/NetApp), KMS
+  `kajPolicyConfigs` (KAJ "zero access reasons" lockout already on the KMS post-ex page), Storage
+  Insights datasetConfigs, Developer Connect (35 mentions).
+- **This iteration shipped 3 real gaps** (authzExtensions, iam.oauthClients, googleTagGatewayPolicies)
+  from the ground-truth diff. Remaining zero-mention resource types are ML/analytics/SOAR internals
+  or covered-concept plumbing.
