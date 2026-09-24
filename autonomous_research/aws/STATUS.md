@@ -43,7 +43,11 @@ Everything else removable has been removed (residue sweep cont.53, 2026-09-24).
 - Glue — no dedicated `aws-services/` enum page (organizational only; GetConnection creds already
   documented in post-ex — verified 2026-09-24, see glue/).
 - `aws-vpn-post-exploitation` — empty stub.
-- SSO / Identity Center — persistence angle not yet a page.
+- ~~SSO / Identity Center — persistence angle not yet a page.~~ **STALE/WRONG**: verified cont.66 —
+  `aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md` comprehensively covers the
+  persistence-relevant primitives (CreatePermissionSet + policy inject + CreateAccountAssignment,
+  identitystore/sso-directory CreateUser, CreateGroupMembership, GetRoleCredentials cache theft, plus
+  Detach/Delete defense-evasion variants). No separate persistence page needed.
 - Redshift — privesc+post exist; no persistence/enum-deepen.
 
 ## Net-new since the all-433 sweep
