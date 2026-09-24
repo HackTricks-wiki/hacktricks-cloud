@@ -22,3 +22,27 @@
 - **Disposition:** NEW "## Privilege Escalation" section on aws-deadline-cloud-enum.md (refs [4][5][6]);
   also corrected the enum's "session policy Deadline applies" line (only -ForRead is narrowed).
   Impact + Logs block. Min-perms stated.
+
+## Fleet-role privesc: CreateFleet/UpdateFleet + PassRole + CreateWorker -> AssumeFleetRoleForWorker — VERIFIED live
+
+- **Date:** 2026-09-24. Lab acct 228478051196, us-east-1.
+- **Key result:** `AssumeFleetRoleForWorker` vends the fleet role's FULL creds (un-narrowed), like
+  AssumeQueueRoleForUser. Contrast AssumeFleetRoleForRead (read-narrowed, already documented).
+- **NO-COMPUTE path:** a Customer-Managed Fleet (`configuration.customerManaged`, mode NO_SCALING)
+  provisions no EC2; `CreateWorker` registers a purely LOGICAL worker; then AssumeFleetRoleForWorker
+  vends. Entire chain is API-only.
+- **End-to-end (torn down):** create-farm -> role trusting credentials.deadline.amazonaws.com w/
+  worker perms (deadline:UpdateWorker etc. — VALIDATED at CreateFleet) + distinctive s3:ListAllMyBuckets
+  -> create-fleet CMF --role-arn -> wait ACTIVE -> create-worker -> assume-fleet-role-for-worker ->
+  creds ARE the fleet role; s3:ListAllMyBuckets SUCCEEDED; iam:ListUsers DENIED "no identity-based
+  policy" => full role, not narrowed. Teardown: update-worker STOPPED, delete-worker, delete-fleet
+  (ResourceNotFound), delete-farm (farms=0), delete-role (NoSuchEntity after force-clearing 2 inline
+  policies). VERIFIED clean.
+- **Precondition nuance:** CreateFleet validates the role holds worker perms => realistic target is an
+  EXISTING over-permissioned fleet role (worker perms + extra data access), or attach worker perms to a
+  passable role. Trust must include credentials.deadline.amazonaws.com.
+- **Disposition:** added as a 2nd technique in the enum "## Privilege Escalation" section (refs [7][8][9]).
+- **Gotcha:** writing command output that contains an AWS CLI ERROR into an env file via `echo ... >`
+  then `source`-ing it causes a bash syntax error ("(" unexpected) AND leaves stale/empty vars ->
+  teardown ran with empty role name and silently no-oped; always verify teardown with NoSuchEntity and
+  hardcode ids for cleanup.
