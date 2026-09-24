@@ -41,3 +41,17 @@ enabled, cost model changes, or a helper library becomes available).
   Private-CA device onboarding.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
+
+## Scanner-tail deferrals (cont.58, 2026-09-24 — real secret-out/role-in but blocked)
+
+- **codecatalyst `CreateAccessToken.secret`** — mints a CodeCatalyst PAT (persistence). Blocked:
+  CodeCatalyst identity is AWS Builder ID / Identity Center space membership, a **separate identity
+  plane** from the IAM account role — not cleanly reachable/testable via the lab account role. Niche.
+- **finspace-data** (`GetProgrammaticAccessCredentials.credentials`,
+  `GetExternalDataViewAccessDetails.credentials`, `ResetUserPassword.temporaryPassword`) — real
+  credential-returning ops, but FinSpace is niche + not onboarded + cost-blocked (see finspace-kx).
+- **qapps `CreatePresignedUrl`** — needs a Q Business subscription (same gate as QApps generally).
+- **iot-managed-integrations** (`CreateProvisioningProfile.ClaimCertificatePrivateKey`,
+  `GetConnectorDestination.SecretsManager`) — preview / account-not-enabled / no endpoint (cont.41).
+  Real device-provisioning-key primitive if enabled; revisit when GA + onboardable.
+- **security-ir** — NOT deferred: documented from model (see security-ir/tested.md).
