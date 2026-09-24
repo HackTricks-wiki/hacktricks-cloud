@@ -61,3 +61,21 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
 - **Deferred (verification-only):** Org Policy v2 CreatePolicy/UpdatePolicy audit-class check.
 - Backlog empty → generating new candidate batch (WIF federation, Storage Transfer confused-deputy,
   BQ Data Transfer scheduled-query persistence, Cloud Asset exportAssets, Backup&DR, Datastream).
+
+### 2026-09-24 — batch 2 (named-candidate brainstorm) — 12 candidates, ALL already documented
+- Checked (all COVERED, no ship): WIF pool/provider backdoor, Storage Transfer confused-deputy,
+  BQ Data Transfer scheduled-query persistence, Cloud Asset exportAssets, Backup&DR anti-recovery,
+  Datastream CDC exfil, Certificate Authority Service (leaf+subordinate), Cloud DNS response-policy
+  MITM, Eventarc Advanced pipelines/messagebus, Certificate Manager trust-config poisoning,
+  Cloud Billing detach-DoS/bill-shift, Service Directory endpoint poisoning.
+- **Conclusion:** the wiki is at saturation for named/well-known primitives. Switched method to a
+  ground-truth permission-surface diff (per `gcp-wiki-gap-analysis-method`).
+
+### 2026-09-24 — batch 3 (ground-truth permission diff) — found a real gap
+- Diffed all 13,681 project-testable permissions' service prefixes against the wiki text; triaged the
+  zero-mention prefixes. Most are niche/managed/analytics/preview (no attack primitive).
+- **GAP FOUND & SHIPPED:** Service Extensions **`networkservices.authzExtensions.*`** (+ siblings
+  `lbEdgeExtensions`, `swpSecurityExtensions`) had zero wiki mention — the existing Service Extensions
+  section covered only traffic/route/WASM extensions. Added the ext_authz authorization-callout hijack
+  (auth bypass / per-request credential exfil / DoS) to `gcp-networkservices-privesc.md`.
+- Ground-truth diff is the productive method at this maturity; named-candidate brainstorming is not.
