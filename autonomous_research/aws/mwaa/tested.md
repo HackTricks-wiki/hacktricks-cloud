@@ -16,3 +16,20 @@
 - **Disposition:** NEW section on aws-mwaa-post-exploitation/README.md (classic, distinct from the
   Serverless airflow-serverless:CreateWorkflow section already there). Refs [14][15][16]. Impact + Logs.
   This fills the "classic MWAA DAG-replacement below" forward-reference that had no section.
+
+## UpdateEnvironment execution-role repoint (privesc) — authz VERIFIED (cont.64)
+
+- **What:** `aws mwaa update-environment --execution-role-arn <target>` swaps the env's execution
+  role onto any `airflow.amazonaws.com`-trusting role; then a minted CLI/web token (or any DAG) runs
+  as that role. Companion to the classic token technique.
+- **Authz probe:** role trusted by ChackBotAdministratorRole, inline policy = ONLY
+  `airflow:UpdateEnvironment` + `iam:PassRole` (Resource:*). Assumed it, called update-environment on a
+  non-existent env -> **ResourceNotFoundException** (IAM gate PASSED). First probe used `mwaa:` prefix
+  and got AccessDenied — the IAM action prefix for MWAA is **`airflow:`**, not `mwaa:` (CLI is `aws mwaa`).
+- **Precondition:** target role trusts `airflow.amazonaws.com`; iam:PassRole permits it.
+- **Not fully fired:** end-to-end trigger needs a live MWAA env (~$0.49/hr min, and UpdateEnvironment
+  applies asynchronously over ~30 min, recycling workers) -> cost/time exception; gate proven, trigger
+  path is the already-documented token/DAG exec.
+- **Teardown:** probe role deleted, verified NoSuchEntity. No infra left.
+- **Wiki:** MWAA post-exploitation README, section "Repoint the execution role:
+  airflow:UpdateEnvironment + iam:PassRole" with per-technique impact + Logs generated block. Ref [17].
