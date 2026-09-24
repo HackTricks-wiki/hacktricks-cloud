@@ -65,3 +65,10 @@ The Azure privesc / post-exploitation / persistence / env-var-RCE / unauthentica
 This tracking folder **backfills** the verified test history and captures the remaining frontier: the
 many techniques flagged **UNVERIFIED** on the wiki (real, documented, but never live-fired) — those
 are the live checklist items, prioritized by whether the lab can actually fire them cheaply.
+
+## Test loop log
+
+| Date | Service | Test | Result | Infra torn down? |
+|------|---------|------|--------|------------------|
+| 2026-09-24 | Key Vault | `enableRbacAuthorization` flip (both directions) | **WORKS** — RBAC→policy revives lingering policy (data read w/ `vaults/write` alone); policy→RBAC = `ForbiddenByRbac` lockout | Yes (vault purged, RG deleted) |
+| 2026-09-24 | IoT Hub / DPS | Group-key fleet forgery → arbitrary device foothold | **WORKS** — never-enrolled device `assigned`, enabled in registry, live D2C accepted | Yes (RG deleted; hub+DPS gone) |
