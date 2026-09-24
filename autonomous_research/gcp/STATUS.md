@@ -109,3 +109,15 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
 - **This iteration shipped 3 real gaps** (authzExtensions, iam.oauthClients, googleTagGatewayPolicies)
   from the ground-truth diff. Remaining zero-mention resource types are ML/analytics/SOAR internals
   or covered-concept plumbing.
+- Then ran two more diff axes + a fresh-catalog delta to confirm exhaustion: **setIamPolicy/use/actAs**
+  diff (compute LB internals, all covered-concept), **credential/token-mint** diff (only irrelevant
+  `fpnv.phoneNumberTokens.*` undocumented; every real token-mint primitive covered), and a **fresh
+  testable-permissions pull** (13,698 vs 13,681 — only 21 new perms since session 8, none
+  attack-relevant: compute.regionSslPolicies.setIamPolicy, dataplex.entryLinkTypes.*, AI noise).
+  Added an Instant Snapshots NOTE to compute post-ex (distinct perm, same exfil family — not a
+  duplicate technique).
+- **Saturation is genuine across six axes.** Open frontier + monitoring cadence recorded in
+  `autonomous_research/gcp/_frontier.md`. Next iterations: re-pull the catalog periodically and
+  triage newly-GA/preview sub-resources (the productive vein); live-verify the two deferred
+  end-to-end items (tag-gateway JS injection, oauthClients token-exchange) if the infra becomes
+  standable. Do NOT manufacture marginal techniques to fill the loop — ship only real gaps.
