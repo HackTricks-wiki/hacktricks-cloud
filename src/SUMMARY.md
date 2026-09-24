@@ -696,6 +696,7 @@
     - [Az - Cosmos DB Unauthenticated Enumeration](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-cosmosdb-unauth.md)
     - [Az - Azure DevOps Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-devops-unauth.md)
     - [Az - Event Grid & Messaging Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-event-grid-messaging-unauth.md)
+    - [Az - IoT Hub / DPS Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-iot-hub-dps-unauth.md)
     - [Az - Key Vault Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-keyvault-unauth.md)
     - [Az - Logic Apps Unauth](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-logic-apps-unauth.md)
     - [Az - OAuth Apps Phishing](pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md)
