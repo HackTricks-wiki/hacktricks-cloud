@@ -121,3 +121,21 @@ result, and — if it works and clears the no-garbage bar — into the public bo
     CHAP, ds SharedSecret, cloudhsmv2 PreCoPassword, wickr OIDC) are the same redacted-in-Describe class →
     not chased. If ever revisited, must be empirically re-tested, not assumed.
 - **Cumulative: ~47 net-new + 27 format-fixed.** All test infra torn down + verified each cycle.
+
+## Saturation update (cont.73-74, 2026-09-25)
+- **Verified net-new shipped this session:** #47 Lambda UpdateFunctionConfiguration --role repoint; #48
+  Amazon S3 Files (new page: CreateFileSystem+PassRole data-access + PutFileSystemPolicy cross-account
+  matrix row [66] + mount-target exposure); #49 EKS UpdatePodIdentityAssociation repoint (role swap +
+  target-role cross-account chaining + disable-session-tags ABAC bypass). All authz-verified two-sided.
+- **Lenses confirmed saturated/dead this session:**
+  - Update*+PassRole "repoint an existing resource's role": saturated after Lambda + EKS (Redshift both
+    cluster+serverless, Batch, ECS exhaustive, CodeBuild, App Runner, Step Functions, MWAA, Transfer,
+    Amplify all done). Remaining role-input Update ops = niche ML/legacy or no-vend-value (rds:ModifyDBProxy
+    role doesn't change configured secret; batch serviceRole limited; s3control:UpdateAccessGrantsLocation
+    = marginal Update of documented Create).
+  - Code/script injection into an existing execution path: Glue EXHAUSTIVE (StartJobRun --scriptLocation,
+    UpdateJob, s3:PutObject on script, workflow stored-authority, blueprints), CodeBuild/ECS/Lambda covered.
+  - Describe/List secret-disclosure: DEAD (AppStream/DMS redact; sensitive:true = log-scrub only).
+- **New-service frontier:** s3files shipped; iot-managed-integrations parked (irreversible RegisterCustomEndpoint
+  onboarding gate); rest of 2024+ services = no security primitives.
+- **Cumulative: ~49 net-new + 28 format/matrix.** All test infra torn down + verified each cycle.
