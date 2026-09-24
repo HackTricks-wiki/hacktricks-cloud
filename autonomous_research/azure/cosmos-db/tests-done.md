@@ -9,6 +9,18 @@ Wiki: `az-cosmosdb-privesc.md` / post-exploitation, unauth `az-cosmosdb-unauth`.
 | 3 | CMK revocation ransom | `databaseAccounts/write`+KV | DOC-ONLY |
 | 4 | Data-plane Users/Permissions **resource-token** persistence | data-plane | DOC-ONLY (separate plane = blind spot) |
 | 5 | Throughput cost-DoS | `databaseAccounts/.../throughputSettings/write` | DOC-ONLY |
-| 6 | `sqlRoleAssignments` native-RBAC self-grant (data-plane) | `sqlRoleAssignments/write` | DOC-ONLY (not in Activity Log) |
+| 6 | `sqlRoleAssignments` native-RBAC self-grant | `sqlRoleDefinitions/write`+`read` **and** `sqlRoleAssignments/write`+`read` | **WORKS** — lab-verified 2026-09-24 |
 
-**Note:** Cosmos native (SQL) RBAC = separate plane, not in Activity Log = detection blind spot.
+**Note (CORRECTED via lab test #3, 2026-09-24):** the native-RBAC **grant itself IS logged** — creating
+a `sqlRoleAssignment` emits `Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write` (Started +
+Accepted, with `caller`) in the Activity Log ~2-3 min later. The real blind spot is twofold: (1) it is
+**NOT** `Microsoft.Authorization/roleAssignments/write`, so a SOC rule watching Azure RBAC assignments
+misses it entirely; (2) the resulting **data-plane document access** (via the native-RBAC token, master
+key or connection string) is not in the Activity Log — only in `DataPlaneRequests` diagnostics (off by
+default), with no per-principal attribution for key/connection-string access. The wiki page
+(`az-cosmosDB-privesc.md` lines 67-72) already states this precisely; no wiki change needed.
+
+**Lab record (test #3):** RG `htrc-cosmosrbac`, serverless account `htrccosmos21640`. Created a
+`sqlRoleAssignment` binding built-in *Cosmos DB Data Contributor* (`00000000-...-002`) to the operating
+SP at scope `/` (account-wide) with NO `Microsoft.Authorization` change. Confirmed the
+`sqlRoleAssignments/write` event appeared in Activity Log. **Teardown:** `az group delete htrc-cosmosrbac`.
