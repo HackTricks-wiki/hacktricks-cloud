@@ -785,6 +785,7 @@
     - [Az - PostgreSQL Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-postgresql-post-exploitation.md)
     - [Az - Queue Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-queue-post-exploitation.md)
     - [Az - Service Bus Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-servicebus-post-exploitation.md)
+    - [Az - Service Connector Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-service-connector-post-exploitation.md)
     - [Az - Table Storage Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-table-storage-post-exploitation.md)
     - [Az - SQL Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-sql-post-exploitation.md)
     - [Az - Virtual Desktop Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md)
