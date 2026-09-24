@@ -6,7 +6,7 @@ Lab: `azure-labs-owCfs7hi`. Wiki pages: `az-key-vault-privesc.md`, `az-keyvault-
 | # | Technique | Min perms | Status | Notes |
 |---|-----------|-----------|--------|-------|
 | 1 | Unauth GET on `https://<name>.vault.azure.net` → 401 + `WWW-Authenticate` header leaks **tenant ID** + resource URI | none (unauth) | **WORKS** | Verified: bogus name → NXDOMAIN; real vault resolves (CNAME → vaultcore) and returns the Bearer authority. Tenant-ID disclosure oracle. On unauth page. |
-| 2 | `enableRbacAuthorization` toggle (flip access model to gain data-plane) | `Microsoft.KeyVault/vaults/write` | **DOC-ONLY** | Control-plane op catalog-confirmed (isDataAction=false); logged in Activity Log. |
+| 2 | `enableRbacAuthorization` toggle (swap authorization model) | `Microsoft.KeyVault/vaults/write` (no data-plane perm) | **WORKS** | **Re-verified 2026-09-24.** (a) RBAC→access-policy flip **revives a lingering stored access policy** → secret read with `vaults/write` ALONE, no role assignment (access policies are ignored, never deleted, in RBAC mode). (b) access-policy→RBAC flip → all access-policy principals get `ForbiddenByRbac` (lockout/DoS); regaining access then needs `roleAssignments/write` to self-assign a KV data role (also confirmed). Wiki page already documents both + Logs block. |
 | 3 | Private-endpoint approval to expose/reach a restricted vault | `.../privateEndpointConnections/write` | **DOC-ONLY** | Catalog-confirmed. |
 | 4 | `keys/unwrapKey` data-plane crypto abuse | KV data-plane Crypto User | **DOC-ONLY** | Data-plane; not in Activity Log (diag off by default). |
 | 5 | Whole-vault purge (destroy soft-deleted secrets/keys) | `vaults/purge` or KV role | **DOC-ONLY** | Blocked in lab where purge-protection is on. |
