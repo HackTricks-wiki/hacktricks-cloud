@@ -688,6 +688,7 @@
     - [AWS - SQS Enum](pentesting-cloud/aws-security/aws-services/aws-sqs-and-sns-enum.md)
     - [AWS - S3, Athena & Glacier Enum](pentesting-cloud/aws-security/aws-services/aws-s3-athena-and-glacier-enum.md)
     - [AWS - S3 Tables and S3 Vectors Enum](pentesting-cloud/aws-security/aws-services/aws-s3-tables-and-vectors-enum.md)
+    - [AWS - S3 Files Enum](pentesting-cloud/aws-security/aws-services/aws-s3-files-enum.md)
     - [AWS - Step Functions Enum](pentesting-cloud/aws-security/aws-services/aws-stepfunctions-enum.md)
     - [AWS - Storage Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-storage-gateway-enum.md)
     - [AWS - STS Enum](pentesting-cloud/aws-security/aws-services/aws-sts-enum.md)
