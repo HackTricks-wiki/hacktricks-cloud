@@ -79,3 +79,19 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
   section covered only traffic/route/WASM extensions. Added the ext_authz authorization-callout hijack
   (auth bypass / per-request credential exfil / DoS) to `gcp-networkservices-privesc.md`.
 - Ground-truth diff is the productive method at this maturity; named-candidate brainstorming is not.
+
+### 2026-09-24 — batch 4 (permission-level + resource-type diff) — found a real gap
+- Refined the diff from service-prefix to **individual write-permission** and then to **resource-type
+  token** (4,428 write-perms → 3,624 undocumented strings → 845 zero-mention resource types).
+- Found the string-level diff has false positives (wiki covers the *concept* w/o the exact dotted
+  perm): IAM deny policies, NSI packet-mirroring/intercept, SCC detector-disable, NGFW
+  firewallEndpoints all re-confirmed **already covered** — even the newest NSI
+  intercept/mirroring endpoint groups are documented (`gcp-ids-post-exploitation.md`).
+- **GAP FOUND & SHIPPED:** IAM **`oauthClients`** / **`oauthClientCredentials`** (Workforce Identity
+  Federation OAuth clients, GA 2024) had zero wiki coverage (all "oauth client" mentions are DWD
+  client-id or IAP `clientauthconfig`). Live-verified the attacker-controlled half (create client +
+  secret, cloud-platform scope, attacker redirect URI, plaintext-secret readback, **invisible to the
+  project IAM allow policy**); shipped as a project-level workforce-federation persistence backdoor
+  in `gcp-workload-identity-federation-persistence.md`. Test infra torn down.
+- Method note: resource-type-token diff (not just service-prefix) is where remaining gaps live —
+  undocumented *sub-resources within already-documented services*.
