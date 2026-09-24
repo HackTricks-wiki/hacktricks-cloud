@@ -69,3 +69,27 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Remaining threads are compute-gated (Deadline CreateJob->RCE, response-plan/replication-set
   end-to-end, AgentCore token-vault/payments) -> parked in per-service checklists for a
   compute-authorized run.
+
+## Saturation update (cont.62-66, 2026-09-24)
+- **Net-new this stretch (all pipelined to PR #413):**
+  - #42 MWAA classic token->DAG exec-as-execution-role (`airflow:CreateWebLoginToken`/`CreateCliToken`).
+  - #43 MWAA exec-role repoint (`airflow:UpdateEnvironment --execution-role-arn` + PassRole) — authz
+    VERIFIED. GOTCHA: MWAA IAM prefix is `airflow:`, not `mwaa:`.
+  - #44 IoT Core credential-provider role alias (`iot:CreateRoleAlias`/`UpdateRoleAlias` + PassRole ->
+    vend any credentials.iot-trusting role via X.509 cert at the cred-provider endpoint) — VERIFIED
+    END-TO-END, zero cost. Vend leaves NO CloudTrail event (stealth persistence).
+  - #45 Transfer Family role-choice (`transfer:CreateUser`/`UpdateUser`/`CreateAccess` + PassRole binds
+    a chosen role to an SFTP identity) — authz VERIFIED. Distinct from pre-existing ImportSshPublicKey.
+  - Deadline fleet-role privesc (VERIFIED live, no-compute CMF worker), earlier in stretch.
+- **Saturation CONFIRMED across the whole credential/role-vending seam:** Cognito identity pools
+  (SetIdentityPoolRoles/unauth vend/RBAC), SSM CreateActivation, IAM Roles Anywhere
+  (CreateTrustAnchor+Profile / UpdateTrustAnchor / STS privesc), App Runner (CreateService RCE +
+  UpdateService + mutable-tag auto-deploy), Glue GetConnection creds, RDS IAM auth — ALL already
+  documented. The generic PassRole-into-job family is exhaustively catalogued in
+  aws-ml-dataaccess-passrole-privesc (MSK Connect, Braket, m2, Panorama, DAX, pcs, osis, timestream,
+  chime, ... all listed). Net-new only comes from DISTINCT mechanisms the catalog doesn't model.
+- **Cumulative: ~45 net-new + 27 format-fixed. All test infra torn down + verified each cycle.**
+- **Primed threads for a compute-authorized run:** Transfer custom-IdP Lambda (attacker-controlled
+  auth Lambda mints arbitrary Role/Policy per login); IoT provisioning-template role selection +
+  UpdateCACertificate autoregistration persistence; MWAA end-to-end env exploitation; Deadline
+  CreateJob->RCE-on-worker.
