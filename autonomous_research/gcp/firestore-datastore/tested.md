@@ -9,3 +9,9 @@ import/export documented on the enum page). No per-database setIamPolicy permiss
 
 ## Standing item to verify
 - `datastore.indexes.*` permission name may be stale (modern IAM may use `datastore.schemas.*`).
+
+## `datastore.indexes.*` naming — VERIFIED not stale (2026-09-24)
+Dumped all 13,681 testable permissions on the project. Both `datastore.indexes.{create,delete,get,
+list,update}` and `datastore.schemas.{create,delete,get,list,update}` exist in the current catalog.
+The concern that `datastore.indexes.*` was stale is disproven — it is a valid permission family. No
+wiki change. (schemas.* is the Firestore-with-MongoDB-compat/Datastore-mode schema surface, additive.)

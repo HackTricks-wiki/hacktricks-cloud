@@ -2,7 +2,6 @@
 
 Open ideas — Security Command Center.
 
-- [ ] **Integrated/rapid vuln-scanner settings REST pass (deferred).** Check whether
-  `integratedVulnerabilityScannerSettings` / `rapidVulnerabilityDetectionSettings` update calls let a
-  caller silently disable vulnerability scanning (defense evasion) and their audit class. Ship as a
-  post-ex/evasion technique only if it disables detection with a job-function-plausible role.
+- (none open) — mute-config/notification/bqexport/detector-disable defense-evasion AND scanner-as-recon
+  are ALREADY documented (`gcp-security-command-center-enum.md` + web-security-scanner enum). Coverage
+  sweep found nothing meaningful missing. Verified duplicate → nothing to ship.

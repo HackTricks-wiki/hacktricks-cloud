@@ -2,9 +2,8 @@
 
 Open ideas — Secret Manager.
 
-- [ ] **`secrets.rotate` / `enableManagedRotation` confused-deputy (UNVERIFIED).** Set a secret's
-  rotation topic / managed-rotation config and determine whether the rotation mechanism performs any
-  action *as a Google service agent* that a caller holding only `secretmanager.secrets.update` could
-  abuse (e.g. publish to an attacker topic, or trigger a rotation function as a higher-priv identity).
-  Confirm min-perm and that it is not merely a self-scheduled notification. Ship only if a real
-  confused-deputy / privilege-crossing effect is demonstrated.
+- (none open) — the managed-rotation confused-deputy hypothesis collapses into the ALREADY-documented
+  "Rotation misuse" section of `gcp-secrets-manager-enum.md` (redirect the rotation Pub/Sub topic /
+  modify the rotation worker via `secrets.update`). No distinct privilege-crossing effect beyond that.
+  Minor optional enhancement only: the doc could name the `secretmanager.secrets.rotate` /
+  `enableManagedRotation` trigger perms explicitly — a one-line addition, not a new technique.
