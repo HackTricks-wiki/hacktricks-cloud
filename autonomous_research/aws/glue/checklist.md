@@ -1,14 +1,17 @@
 # Glue — open ideas
 
 Glue already has privesc + post-exploitation coverage (catalog/job code-exec, DataAccessRole
-confused-deputy). Missing a dedicated **enum** page under `aws-services/`.
+confused-deputy, **GetConnection plaintext-credential harvest**). Only a dedicated **enum** page
+under `aws-services/` is organizationally missing.
 
-- [ ] **Enum page** — `GetDatabases`/`GetTables`/`GetConnections`/`GetJobs`/`GetDevEndpoints`:
-  recon of data-catalog schema, JDBC `Connections` (which may embed credentials in
-  `ConnectionProperties` — check `GetConnection --hide-password false` behavior), job script S3
-  locations (`Command.ScriptLocation` → read the script from S3 for secrets/logic).
-- [ ] **Connection password disclosure** — verify whether `GetConnection` returns the password or
-  only metadata by default, and whether `glue:GetConnection` alone (no `PASSWORD` decrypt perm)
-  leaks reusable DB creds. If it does, that's a clean recon/creds technique.
-- [ ] **Catalog resource-policy** — `glue:PutResourcePolicy` cross-account catalog share already in
-  the resource-policy matrix; confirm no separate enum-side exposure (e.g. Lake Formation hybrid).
+- [ ] **(organizational, low priority)** Dedicated enum page under `aws-services/` gathering the
+  read-only recon surface (`GetDatabases`/`GetTables`/`GetConnections`/`GetJobs`/`GetDevEndpoints`,
+  job `ScriptLocation` S3 reads). Not a new *technique* — the credential-disclosure vector is
+  already in the post-exploitation page. Only worth doing if the enum section is desired for parity
+  with other services; must NOT duplicate the post-ex GetConnection content.
+
+## Resolved (moved from open)
+
+- [x] **GetConnection password disclosure** — VERIFIED live 2026-09-24 and found ALREADY DOCUMENTED
+  in `aws-glue-post-exploitation` (`## glue:GetConnection — plaintext connection credentials`).
+  See tested.md. Not a gap.
