@@ -55,3 +55,18 @@ enabled, cost model changes, or a helper library becomes available).
   `GetConnectorDestination.SecretsManager`) — preview / account-not-enabled / no endpoint (cont.41).
   Real device-provisioning-key primitive if enabled; revisit when GA + onboardable.
 - **security-ir** — NOT deferred: documented from model (see security-ir/tested.md).
+
+## cont.61 (2026-09-24) — zero-coverage sweep tail (133 services cross-referenced)
+
+- **payment-cryptography / payment-cryptography-data** — real crypto primitives but excluded as
+  niche/covered-by-permission: `ExportKey` is HSM-wrapped (TR-31/TR-34/RSA, needs a KEK the service
+  trusts — NO plaintext key exfil, like KMS); `DecryptData`->PlainText, `GeneratePinData`/
+  `TranslatePinData`->PIN blocks are "the permission does what it says" on a PCI-PIN service used by
+  a tiny population. `payment-cryptography:PutResourcePolicy` (cross-account key share) is the only
+  structural vector — candidate matrix row if ever a customer uses the service. Not a page.
+- **Remaining zero-coverage set** = runtime/data-plane variants (lex-runtime, personalize-runtime,
+  *-data), deprecated (machinelearning, iotthingsgraph, mturk, swf, simpledbv2, importexport,
+  marketplacecommerceanalytics), no-primitive read/catalog (controlcatalog, service-quotas,
+  compute-optimizer, resource-explorer-2, geo-*, polly), or already deferred (finspace-data,
+  codecatalyst, iot-managed-integrations, qapps, s3files). No further net-new privesc/persist/post
+  primitive found in the tail beyond ssm-incidents (documented).
