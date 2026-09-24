@@ -447,6 +447,7 @@
     - [AWS - Inspector Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-inspector-post-exploitation/README.md)
     - [AWS - Kendra Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-kendra-post-exploitation/README.md)
     - [AWS - KMS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-kms-post-exploitation/README.md)
+    - [AWS - Lake Formation Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md)
     - [AWS - Lambda Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md)
       - [AWS - Lambda EFS Mount Injection](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-efs-mount-injection.md)
       - [AWS - Lambda Event Source Mapping Hijack](pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-event-source-mapping-hijack.md)
