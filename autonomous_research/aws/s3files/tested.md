@@ -19,8 +19,13 @@
   (+ network foothold in the VPC to mount). Data-access privesc / exfil.
 - **Status:** SHIPPED — aws-services/aws-s3-files-enum.md (new page), SUMMARY wired, PR #413.
 
+## VERIFIED (authz) — `s3files:PutFileSystemPolicy` cross-account resource policy
+- Caller with only `s3files:PutFileSystemPolicy`, policy naming external account 418720621023:root,
+  well-formed nonexistent fsid => `ResourceNotFoundException: File system does not exist` (NOT
+  AccessDenied) and the external principal was accepted for evaluation => passes IAM authz on the
+  permission alone. Added to cross-account resource-policy matrix as row [66]. (2026-09-25)
+- `DeleteFileSystemPolicy` strips a restrictive policy (defense evasion), same class.
+
 ## Doc-grounded (not live-tested; would need a real file system => cost/VPC)
-- `s3files:PutFileSystemPolicy`/`DeleteFileSystemPolicy` — file-system resource policy => cross-account
-  data exposure (same class as S3/EFS resource policies). Add to cross-account resource-policy matrix.
 - `s3files:CreateMountTarget`/`UpdateMountTarget` — security-group/subnet control => network exposure of
   the NFS data plane (lateral movement).
