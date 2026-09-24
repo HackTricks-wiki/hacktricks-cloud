@@ -149,3 +149,9 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - SHIPPED #51 (VERIFIED two-sided): batch:RegisterJobDefinition + iam:PassRole (+ SubmitJob) run-container-as-passed-role, new first section on aws-batch-privesc/README.md. Complements existing SubmitJob-only technique. Commit 6693993d7; PR #413 bullet added.
 - Repoint/compute-exec lens sweep: Glue UpdateJob/UpdateDevEndpoint, CodeBuild UpdateProject, Step Functions UpdateStateMachine, CodePipeline UpdatePipeline all covered. Batch's Register+PassRole was the one primary-path gap (only parenthetical before) - now closed.
 - Teardown verified: no ht-* roles, no ACTIVE ht-batch-probe defs (INACTIVE remain, no hard-delete available).
+
+## Saturation update (cont.77) — NEW SERVICE Bedrock AgentCore
+- SHIPPED #52 (NEW PAGE, 2 techniques VERIFIED two-sided): aws-bedrock-agentcore-privesc/README.md. CreateCodeInterpreter+PassRole (POS created READY interpreter); CreateAgentRuntime(+CreateAgentRuntimeEndpoint)+PassRole (POS advanced past PassRole to endpoint gate, NEG PassRole AccessDenied). + Update-repoint (doc), + data-plane cred vend GetWorkloadAccessToken->GetResourceApiKey/Oauth2Token plaintext (doc, sensitive:true). SUMMARY wired. Commit 1b5051e17; PR #413 bullet.
+- Found via comprehensive credential-vend sweep across all 423 botocore services (autonomous_research method). AgentCore = biggest net-new frontier surfaced.
+- Calibration reconfirmed: control-plane Get*CredentialProvider returns only Secrets Manager ARN; data-plane GetResourceApiKey returns plaintext (sensitive:true).
+- Teardown verified clean.
