@@ -1,14 +1,12 @@
-# AWS Bedrock AgentCore — open ideas (compute/GA-gated; non-duplicate)
+# Bedrock AgentCore — attack ideas queue
 
-- [ ] **SetTokenVaultCMK re-key** — point the AgentCore Identity token vault at an attacker-influenced
-  KMS key, or a key later denied/deleted, to lock out / control access to all stored OAuth tokens &
-  API keys (DoS/persistence over the identity plane). Verify it's a real access-control pivot vs pure
-  DoS before documenting. Needs AgentCore Identity onboarded.
-- [ ] **AgentCore Payments** (`CreatePaymentCredentialProvider`, `CreatePaymentConnector`,
-  `GetResourcePaymentToken`, `GetPaymentInstrumentBalance`) — brand-new payment credential plane;
-  investigate whether GetResourcePaymentToken vends a usable payment token to any authorized caller
-  (secret-exfil parallel to GetResourceOauth2Token). Revisit when public docs/GA exist.
-- [ ] **CreateApiKeyCredentialProvider / CreateOauth2CredentialProvider persistence** — plant an
-  attacker credential provider so agents authenticate outbound with attacker-controlled creds, or
-  read clientSecretArn/apiKeySecretArn (points at Secrets Manager) — check if distinct from the
-  existing GetResource* vend coverage.
+## To verify (needs more setup / real integrations)
+- [ ] End-to-end InvokeCodeInterpreter/InvokeAgentRuntime confirming code runs as the role (fetch 169.254 creds / boto3 sts get-caller-identity in the sandbox). PassRole gate already proven; runtime exec left doc-grounded.
+- [ ] GetResourceApiKey full chain against a real api-key credential provider (create provider -> workload identity -> vend plaintext). Needs a provider + workload.
+- [ ] GetWorkloadAccessTokenForUserId impersonation: mint a token for another user's workload identity.
+- [ ] CreateGatewayTarget / interceptor abuse: register an attacker MCP tool target on an existing gateway (tool-poisoning of an agent).
+- [ ] SetTokenVaultCMK / GetTokenVault: repoint token-vault KMS key (persistence/defense-evasion on stored secrets).
+- [ ] CreateApiKeyCredentialProvider persistence: plant an attacker credential provider agents will use.
+
+## Notes
+- authorizerConfiguration.customJWTAuthorizer on CreateAgentRuntime/CreateGateway = the runtime trusts a JWT issuer -> rogue-issuer angle analogous to Identity Center TTI (see identity-center/tested.md). Potential IdP-backdoor lens on AgentCore.
