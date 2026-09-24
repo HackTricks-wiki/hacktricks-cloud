@@ -144,3 +144,8 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - SHIPPED (doc-grounded) #50: `sso-admin:CreateTrustedTokenIssuer` rogue TTI → impersonate any Identity Center user via JWT-bearer grant / CreateTokenWithIAM into trusted-identity-propagation apps (Q Business, Redshift, QuickSight, S3 Access Grants). Commit c8980fe16 on research/aws-technique-audit; PR #413 bullet added; autonomous_research/aws/identity-center/{tested,checklist}.md.
 - Book-wide grep confirmed TTI/TTP was 0-hit (genuinely undocumented). Lab is Org MEMBER acct (no IdC instance) → doc-grounded per precondition exception; parked end-to-end verify for an IdC-enabled account.
 - Identity-provider lens status: IAM SAML/OIDC + Cognito IdP = already covered; TTI = the net-new gap, now shipped. iot:CreateAuthorizer / apigateway:CreateAuthorizer = low IAM-privesc value (app-scoped auth bypass), parked in checklist for possible enum-page mention.
+
+## Saturation update (cont.76) — Batch RegisterJobDefinition+PassRole
+- SHIPPED #51 (VERIFIED two-sided): batch:RegisterJobDefinition + iam:PassRole (+ SubmitJob) run-container-as-passed-role, new first section on aws-batch-privesc/README.md. Complements existing SubmitJob-only technique. Commit 6693993d7; PR #413 bullet added.
+- Repoint/compute-exec lens sweep: Glue UpdateJob/UpdateDevEndpoint, CodeBuild UpdateProject, Step Functions UpdateStateMachine, CodePipeline UpdatePipeline all covered. Batch's Register+PassRole was the one primary-path gap (only parenthetical before) - now closed.
+- Teardown verified: no ht-* roles, no ACTIVE ht-batch-probe defs (INACTIVE remain, no hard-delete available).
