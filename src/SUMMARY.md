@@ -710,6 +710,7 @@
     - [AWS - EC2 Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ec2-unauthenticated-enum/README.md)
     - [AWS - ECR Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ecr-unauthenticated-enum/README.md)
     - [AWS - ECS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ecs-unauthenticated-enum/README.md)
+    - [AWS - EKS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-eks-unauthenticated-enum/README.md)
     - [AWS - Elastic Beanstalk Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elastic-beanstalk-unauthenticated-enum/README.md)
     - [AWS - Elasticsearch Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elasticsearch-unauthenticated-enum/README.md)
     - [AWS - IAM & STS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-iam-and-sts-unauthenticated-enum/README.md)
