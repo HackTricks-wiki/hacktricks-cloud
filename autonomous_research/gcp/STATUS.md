@@ -45,3 +45,19 @@ Page counts (branch `gcp-techniques-audit-2026-09`): **75 privesc · 75 post-ex 
 Seeded into `<service>/checklist.md`. The eternal loop: when a checklist item is tested it moves to
 that service's `tested.md` with the result (and, if it works and is non-duplicate, to the wiki);
 when no checklist items remain, generate more non-duplicate candidate ideas.
+
+## Loop iteration log
+
+### 2026-09-24 — batch 1 (initial seeded backlog worked through)
+- **Dataplex `tasks.update` actAs-bypass** — live-tested, **REJECTED**: update re-validates
+  `iam.serviceAccounts.actAs` on the bound SA for any field, like create. No privesc.
+- **Pub/Sub GCS import-topic injection** — live-tested, **SHIPPED**: standing message-injection /
+  persistence via `topics.create`/`update` ingestion source (attacker bucket → all subscribers).
+- **Artifact Registry `exportArtifact`** — API-verified, **SHIPPED**: reader-level server-side exfil
+  to arbitrary GCS bucket.
+- **Closed as verified duplicates (already documented, no ship):** ACM `replaceAll` teardown,
+  SCC scanner/mute-config evasion, IAP tunnel egress, Secret Manager managed-rotation misuse,
+  Cloud Build gen2 `repositories.create` (execution still gated by triggers+actAs).
+- **Deferred (verification-only):** Org Policy v2 CreatePolicy/UpdatePolicy audit-class check.
+- Backlog empty → generating new candidate batch (WIF federation, Storage Transfer confused-deputy,
+  BQ Data Transfer scheduled-query persistence, Cloud Asset exportAssets, Backup&DR, Datastream).
