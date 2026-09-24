@@ -719,6 +719,7 @@
     - [AWS - Media Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-media-unauthenticated-enum/README.md)
     - [AWS - MQ Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-mq-unauthenticated-enum/README.md)
     - [AWS - MSK Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-msk-unauthenticated-enum/README.md)
+    - [AWS - Neptune Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-neptune-unauthenticated-enum/README.md)
     - [AWS - QuickSight & Q Business Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-quicksight-unauthenticated-enum/README.md)
     - [AWS - RDS Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-rds-unauthenticated-enum/README.md)
     - [AWS - Redshift Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-redshift-unauthenticated-enum/README.md)
