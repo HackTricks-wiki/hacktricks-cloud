@@ -21,3 +21,11 @@ forwarding-rule hijack; Front Door/CDN origin repoint, rules-engine, App Gateway
 Load Balancer backend/NAT.
 
 **Teardown:** `htrc-rg` (VM/gallery) deleted. No residue.
+
+**Lab record (test #4, 2026-09-24):** Run Command re-confirmed. RG `htrc-vmrun`, B1s Ubuntu VM
+`htrcvm11931` (no public IP, no NSG). `az vm run-command invoke --command-id RunShellScript` ran as
+**root** (uid=0, read `/etc/shadow`) purely via the ARM plane — no SSH, no public IP. Min perm =
+`Microsoft.Compute/virtualMachines/runCommand/action` (catalog isDataAction=false) + `virtualMachines/read`.
+Activity Log: the `runCommand/action` event IS logged (Started+Accepted, caller), but the executed
+**script body/output is NOT** in the Activity Log. Matches the wiki page (`az-virtual-machines-and-network-privesc.md`
+lines 511-560, already "verified in lab") — no wiki change. **Teardown:** `az group delete htrc-vmrun`.
