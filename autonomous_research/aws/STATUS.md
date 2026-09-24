@@ -36,12 +36,22 @@ Everything else removable has been removed (residue sweep cont.53, 2026-09-24).
 
 ## Known content gaps still worth a page (tracked as per-service checklists)
 
-- ElastiCache — has persistence page, still **no enum/privesc/post** pages.
+- ~~ElastiCache — no enum/privesc/post~~ **STALE/WRONG**: `aws-services/aws-elasticache.md` exists
+  with enum + 2 post-ex techniques (ModifyUser password reset, CopySnapshot→S3 exfil) + persistence
+  page. Only a distinct *privesc* framing might be marginally addable (low value).
 - MemoryDB — persistence only; no privesc/post.
-- Glue — no dedicated `aws-services/` enum page.
+- Glue — no dedicated `aws-services/` enum page (organizational only; GetConnection creds already
+  documented in post-ex — verified 2026-09-24, see glue/).
 - `aws-vpn-post-exploitation` — empty stub.
 - SSO / Identity Center — persistence angle not yet a page.
 - Redshift — privesc+post exist; no persistence/enum-deepen.
+
+## Net-new since the all-433 sweep
+
+- **AppFabric** (`aws-services/aws-appfabric-enum.md`, 2026-09-24) — zero prior coverage. Enum +
+  `appfabric:CreateIngestionDestination` SaaS-audit-log redirect/exfil + SOC-blinding (authz gate
+  verified, end-to-end doc-scoped due to SaaS-OAuth precondition). Defensive negative: AppFabric
+  does NOT leak stored SaaS credentials via API. See appfabric/.
 
 ## Open-idea backlog lives per service
 
