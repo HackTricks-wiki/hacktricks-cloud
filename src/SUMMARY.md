@@ -578,6 +578,7 @@
     - [AWS - Amazon Q in Connect Enum](pentesting-cloud/aws-security/aws-services/aws-q-in-connect-enum.md)
     - [AWS - API Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-api-gateway-enum.md)
     - [AWS - AppConfig Enum](pentesting-cloud/aws-security/aws-services/aws-appconfig-enum.md)
+    - [AWS - AppFabric Enum](pentesting-cloud/aws-security/aws-services/aws-appfabric-enum.md)
     - [AWS - AppFlow Enum](pentesting-cloud/aws-security/aws-services/aws-appflow-enum.md)
     - [AWS - AppSync Enum](pentesting-cloud/aws-security/aws-services/aws-appsync-enum.md)
     - [AWS - Aurora DSQL Enum](pentesting-cloud/aws-security/aws-services/aws-aurora-dsql-enum.md)
