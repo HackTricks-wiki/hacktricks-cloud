@@ -97,3 +97,27 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   auth Lambda mints arbitrary Role/Policy per login); IoT provisioning-template role selection +
   UpdateCACertificate autoregistration persistence; MWAA end-to-end env exploitation; Deadline
   CreateJob->RCE-on-worker.
+
+## Saturation update (cont.68-70, 2026-09-25)
+- **#47 Lambda exec-role repoint** (`lambda:UpdateFunctionConfiguration --role` + PassRole + Invoke) —
+  authz VERIFIED live (two-sided). Shipped: aws-lambda-privesc/README.md. PR #413. ~47 net-new.
+- **Repoint/attach-role lens CONFIRMED SATURATED:** Redshift already covers BOTH `ModifyClusterIamRoles`
+  and serverless `UpdateNamespace` with two-sided PassRole proof; Batch covers RegisterJobDefinition
+  PassRole + SubmitJob (live); CodeBuild/CloudFormation/App Runner/Step Functions all covered. Lambda
+  was the last clean gap in this family.
+- **DEAD LENS — "Describe/List returns a stored password":** systematically scanned botocore for read-op
+  output shapes with secret-like fields (password/secret/credential/token/privatekey). Empirically tested
+  the two strongest candidates:
+  - AppStream `DescribeDirectoryConfigs.ServiceAccountCredentials` → **AccountPassword REDACTED**, only
+    `AccountName` (DOMAIN\user) returned. (appstream/tested.md)
+  - DMS `DescribeEndpoints` → **Password removed from output shape**; no value returned. (dms/tested.md)
+  - **Calibration:** botocore `sensitive:true` = scrub-from-logs, NOT returned-in-response. AWS redacts
+    stored passwords from Describe/List. The ONLY reliable secret vends are purpose-built
+    `Get*Credentials`/`GetSecretValue`/`GetAuthorizationToken`/`GetRoleCredentials`/`GetCredentialsForIdentity`/
+    `DownloadDefaultKeyPair`/`GetInstanceAccessDetails`/`GetTemporary*Credentials`/`GetDataAccess` — ALL
+    already documented (Lightsail, Lake Formation, S3 Access Grants, SSO, Cognito, ECR, CodeArtifact,
+    STS, EMR GetClusterSessionCredentials, Redshift GetClusterCredentials, Glue GetConnection).
+  - Remaining `sensitive` fields (EMR KerberosAttributes, RDS/docdb/neptune MasterUserPassword, storagegateway
+    CHAP, ds SharedSecret, cloudhsmv2 PreCoPassword, wickr OIDC) are the same redacted-in-Describe class →
+    not chased. If ever revisited, must be empirically re-tested, not assumed.
+- **Cumulative: ~47 net-new + 27 format-fixed.** All test infra torn down + verified each cycle.
