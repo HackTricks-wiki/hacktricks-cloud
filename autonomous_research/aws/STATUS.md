@@ -139,3 +139,8 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - **New-service frontier:** s3files shipped; iot-managed-integrations parked (irreversible RegisterCustomEndpoint
   onboarding gate); rest of 2024+ services = no security primitives.
 - **Cumulative: ~49 net-new + 28 format/matrix.** All test infra torn down + verified each cycle.
+
+## Saturation update (cont.75) — identity-provider / trusted-token-issuer lens
+- SHIPPED (doc-grounded) #50: `sso-admin:CreateTrustedTokenIssuer` rogue TTI → impersonate any Identity Center user via JWT-bearer grant / CreateTokenWithIAM into trusted-identity-propagation apps (Q Business, Redshift, QuickSight, S3 Access Grants). Commit c8980fe16 on research/aws-technique-audit; PR #413 bullet added; autonomous_research/aws/identity-center/{tested,checklist}.md.
+- Book-wide grep confirmed TTI/TTP was 0-hit (genuinely undocumented). Lab is Org MEMBER acct (no IdC instance) → doc-grounded per precondition exception; parked end-to-end verify for an IdC-enabled account.
+- Identity-provider lens status: IAM SAML/OIDC + Cognito IdP = already covered; TTI = the net-new gap, now shipped. iot:CreateAuthorizer / apigateway:CreateAuthorizer = low IAM-privesc value (app-scoped auth bypass), parked in checklist for possible enum-page mention.
