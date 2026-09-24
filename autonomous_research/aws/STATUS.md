@@ -57,3 +57,15 @@ Everything else removable has been removed (residue sweep cont.53, 2026-09-24).
 
 See `<service>/checklist.md`. When an idea is tested it moves to `<service>/tested.md` with the
 result, and — if it works and clears the no-garbage bar — into the public book.
+
+## Saturation update (cont.61, 2026-09-24)
+- Systematic zero-coverage sweep: ALL botocore services cross-referenced vs the whole book -> 133
+  zero-coverage services; signal-scanned the tail; only ssm-incidents yielded a net-new page. Rest =
+  runtime/data-plane variants, deprecated, no-primitive, or already-deferred.
+- Newest 2024 services (bedrock-agentcore) confirmed ALREADY comprehensively covered (token-vault
+  vending, execution-role pivots, sandbox escape, resource-policy) — no net-new.
+- This continuation net-new: CloudTrail Lake EDS anti-forensics; Deadline queue-role privesc
+  (VERIFIED live); Incident Manager counter-IR. Cumulative ~40 net-new + 27 format-fixed.
+- Remaining threads are compute-gated (Deadline CreateJob->RCE, response-plan/replication-set
+  end-to-end, AgentCore token-vault/payments) -> parked in per-service checklists for a
+  compute-authorized run.
