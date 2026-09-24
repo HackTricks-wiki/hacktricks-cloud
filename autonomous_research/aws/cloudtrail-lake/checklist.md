@@ -6,7 +6,8 @@
   (cross-account poisoning). Fits the cross-account resource-policy matrix — check whether the
   channel resource type is already enumerated there; add a row if not. (Lake closed to new
   customers, so lab-untestable.)
-- [ ] **EDS deletion / retention tamper** — `cloudtrail:DeleteEventDataStore` /
-  `UpdateEventDataStore --retention-period` to shrink/destroy the Lake investigation history
-  (anti-forensics). Termination protection + 7-day wait may apply. Compare to the existing
-  StopLogging/DeleteTrail tamper coverage before documenting.
+- [x] **EDS deletion / retention tamper** — DONE, authz VERIFIED, documented (post-ex, new
+  subsection "Destroy or shrink a CloudTrail Lake event data store"). See tested.md. Retention-shrink
+  = immediate/irreversible purge (no restore); delete = needs termination-protection cleared first +
+  7-day PENDING_DELETION restore grace. Distinct from the trail-level StopLogging/DeleteTrail family
+  because the EDS is a separate managed store.

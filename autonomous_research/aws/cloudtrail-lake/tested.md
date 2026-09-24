@@ -19,3 +19,22 @@
   cross-store Lake queries + cost. Precondition: existing Lake custom channel (Lake closed to new
   customers). Verified-gate + doc-scoped mechanism, same honesty pattern as AppFabric.
 - **Teardown:** probe role deleted, verified NoSuchEntity. No EDS was created (creation errored).
+
+## EDS anti-forensics — DeleteEventDataStore / UpdateEventDataStore (post-ex) — VERIFIED authz
+
+- **Date:** 2026-09-24. Lab acct 228478051196, us-east-1.
+- **Authz probe:** least-priv role granted ONLY `cloudtrail:UpdateEventDataStore` +
+  `cloudtrail:DeleteEventDataStore`, assumed, called both against a bogus EDS ARN →
+  `EventDataStoreARNInvalidException` (service resource error) on BOTH, not AccessDenied ⇒ IAM gate
+  passes; no iam:PassRole, no read perms needed. Role torn down (NoSuchEntity verified). No EDS
+  created (Lake closed to new customers — create-event-data-store rejected earlier), so end-to-end
+  purge not run; semantics taken from the botocore model + AWS docs.
+- **Two primitives (model-confirmed):**
+  - `UpdateEventDataStore --retention-period 7` → immediately + IRREVERSIBLY purges events older than
+    the new window; NO restore; EDS stays ENABLED/healthy. Sharpest anti-forensics move.
+  - `DeleteEventDataStore` → blocked by `EventDataStoreTerminationProtectedException` unless
+    `--no-termination-protection-enabled` first; after delete → PENDING_DELETION 7 days, recoverable
+    via `RestoreEventDataStore`. Louder + recoverable.
+- **Disposition:** NEW subsection in aws-cloudtrail-post-exploitation/README.md under "Modifying
+  CloudTrail Config" (refs [18][19]). Impact + Logs block. Distinct from trail StopLogging/DeleteTrail
+  family (separate managed store). Org EDS additionally needs mgmt-account caller.
