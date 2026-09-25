@@ -10,14 +10,14 @@ Generate-more triggers (only if a new IAM surface ships):
 - [ ] Watch for new Workforce/Workload federation subresources (managedIdentities, scim*) gaining
   `setIamPolicy`-free membership levers.
 
-## Open lead — Managed Workload Identity attestation-rule persistence (2026-09-25)
-- [ ] **`managedIdentities.addAttestationRule` / `setAttestationRules`** (Managed Workload Identity, the
-  newer WIF managed-identity model — distinct from the classic pool/provider). An attestation rule
-  names *who* (which workload attributes) may assume a managed identity; adding a rule for an
-  attacker-controlled workload is a candidate `setIamPolicy`-free membership backdoor analogous to the
-  shipped `iam.oauthClients` workforce backdoor. Needs live confirmation that a rule grants token
-  minting without touching the project allow policy, + the min-perm role. Cost-light (no compute) —
-  prioritize next infra-standable iteration.
+## Resolved — Managed Workload Identity attestation-rule persistence — SHIPPED (2026-09-25)
+- [x] **`workloadIdentityPoolManagedIdentities.setAttestationRules`** (correct string; the guessed
+  `managedIdentities.addAttestationRule` was wrong). Live-verified control plane: a principal with ONLY
+  a custom role holding the attestation-rule write (no `setIamPolicy` anywhere) added a rule enrolling
+  an attacker workload into a privileged managed identity; membership is INVISIBLE to `getIamPolicy`
+  (managed-identities/namespaces have no get-iam-policy surface). `roles/iam.workloadIdentityPoolAdmin`
+  grants it without broad IAM. Rule write IS logged (`AddAttestationRule`, Admin Activity); resulting
+  membership + token mint are not. SHIPPED → `gcp-workload-identity-federation-persistence.md`. See tested.md.
 
 ## Assessed this iteration — NOT primitives (2026-09-25)
 - WIF **`providerKeys`** = SAML-response encryption keys only (decrypt inbound SAML); not a

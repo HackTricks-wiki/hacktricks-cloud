@@ -144,3 +144,16 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
   `iam-and-credentials/checklist.md`.
 - **This iteration shipped:** 1 confirmation-upgrade (Cloud SQL pg_cron) + 1 fold note (PSC). No
   marginal techniques manufactured. Loop continues.
+
+### 2026-09-25 — batch 6 (worked the batch-5 lead) — 1 REAL gap SHIPPED
+- **Managed Workload Identity attestation-rule membership backdoor — SHIPPED (live-verified control
+  plane).** The batch-5 lead paid off. A principal with only the attestation-rule write
+  (`workloadIdentityPoolManagedIdentities.setAttestationRules`, or `roles/iam.workloadIdentityPoolAdmin`,
+  **no `setIamPolicy` anywhere**) enrolls an attacker workload into a privileged managed identity; the
+  membership is **invisible to `getIamPolicy`** (managed-identities/namespaces have no get-iam-policy
+  surface). Not a duplicate — zero prior wiki coverage of Managed Workload Identity / attestation rules.
+  Shipped to `gcp-workload-identity-federation-persistence.md`. Rule write is Admin-Activity-logged;
+  membership + downstream token mint are not. Full teardown verified (pool tombstoned, all else deleted).
+- Corrected the permission string (guessed `iam.managedIdentities.addAttestationRule` was wrong; real =
+  `iam.googleapis.com/workloadIdentityPoolManagedIdentities.setAttestationRules`).
+- **This iteration shipped 1 real gap.** Loop continues; frontier updated (lead resolved).

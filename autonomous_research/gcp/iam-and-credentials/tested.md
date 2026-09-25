@@ -27,3 +27,31 @@ the book; recorded here for the LIVE-FIRE facts that correct common assumptions.
 - WIF X.509 / provider Keys / AWS provider / extra-attributes — saturated, rejected.
 
 Three independent closure passes (service enum, permission-level, fan-out) converged on 0 gaps.
+
+## Managed Workload Identity attestation-rule membership backdoor — SHIPPED (2026-09-25)
+Live-verified (control plane, end-to-end on the membership grant). NOT a duplicate: the only WIF wiki
+pages cover the classic pool+provider model; zero coverage of Managed Workload Identity / attestation
+rules anywhere in `src/`.
+- **Primitive:** Managed Workload Identity (pool `--mode=trust-domain`) hierarchy pool→namespace→
+  managed-identity; an **attestation rule** names a `--google-cloud-resource` (e.g. GCE VM attached-SA
+  uid) allowed to attest AS the managed identity and receive its SPIFFE/mTLS creds. Adding a rule is the
+  SOLE membership mechanism and a separate API surface from the IAM allow policy.
+- **Min-perm (proven):** custom role with only `workloadIdentityPoolManagedIdentities.{getAttestationRules,
+  setAttestationRules,get}` + `namespaces.get` + `workloadIdentityPools.get` + `resourcemanager.projects.get`
+  sufficed to add a rule while the same principal was DENIED project get/setIamPolicy. Predefined
+  `roles/iam.workloadIdentityPoolAdmin` grants the write with NO project `setIamPolicy`.
+  (Correct string: `iam.googleapis.com/workloadIdentityPoolManagedIdentities.setAttestationRules` —
+  the guessed `iam.managedIdentities.addAttestationRule` was WRONG.)
+- **Stealth (crux, confirmed):** managed-identities/namespaces have NO get-iam-policy command/perm;
+  pool `get-iam-policy` returned `{}`. Membership invisible to allow-policy review — analogous to the
+  shipped `iam.oauthClients` backdoor.
+- **Logs:** `AddAttestationRule`/`SetAttestationRules` (`google.iam.v1.WorkloadIdentityPools`) = Admin
+  Activity NOTICE, always-on, verified live with attacker principalEmail. `getAttestationRules` = Data
+  Access (off). Downstream cert/token mint by the attested workload = separate data-plane event.
+- **Live-fired vs doc:** control plane fully live-fired (pool/namespace/MI create; min-perm role + test
+  SA added a 2nd rule; setIamPolicy denial; getIamPolicy invisibility; Admin Activity entry). NOT
+  live-fired: final token/cert mint by an attested workload (needs a real GCE VM matching the rule uid —
+  disproportionate); documented from Google docs, no false "end-to-end token mint" claim in the page.
+- **Teardown:** MI, namespace, SA+key, custom role, project IAM binding all deleted; pool soft-deleted
+  (tombstone, auto-purges); local key + isolated gcloud config removed. No ACTIVE test residue.
+- **Wiki:** new section in `gcp-workload-identity-federation-persistence.md` (+ refs 5,6).

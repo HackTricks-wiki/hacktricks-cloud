@@ -8,12 +8,13 @@ session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
 ## Open, genuinely-uncovered leads deferred for lack of testable infra (verify when feasible)
-- [ ] **Managed Workload Identity attestation-rule persistence** — `managedIdentities.addAttestationRule`
-      / `setAttestationRules` as a `setIamPolicy`-free membership backdoor (analogous to the shipped
-      `iam.oauthClients` workforce backdoor). Cost-light (no compute) → **prioritize next iteration**:
-      confirm a rule grants token minting without touching the project allow policy, capture the
-      min-perm role, then ship if it holds. WIF `providerKeys` (SAML-decrypt-only) and `namespaces`
-      already assessed as non-primitives (batch 5). Tracked in `iam-and-credentials/checklist.md`.
+- [x] **Managed Workload Identity attestation-rule persistence — RESOLVED/SHIPPED (batch 6, 2026-09-25).**
+      Live-verified control plane: `workloadIdentityPoolManagedIdentities.setAttestationRules` (or
+      `roles/iam.workloadIdentityPoolAdmin`, no `setIamPolicy`) enrolls an attacker workload into a
+      privileged managed identity, invisible to `getIamPolicy`. Shipped to
+      `gcp-workload-identity-federation-persistence.md`. Downstream token/cert mint by the attested
+      workload is the only doc-grounded piece (needs a real matching GCE VM). WIF `providerKeys`
+      (SAML-decrypt) + `namespaces` were dismissed as non-primitives (batch 5).
 - [ ] **googleTagGatewayPolicies end-to-end** — SHIPPED from API surface (batch 4). When the resource
       reaches GA + gcloud support, live-verify the first-party-JS injection by standing up an external
       Application LB + backend + attaching a policy in the lab, and confirm an attacker GTM tagId's
