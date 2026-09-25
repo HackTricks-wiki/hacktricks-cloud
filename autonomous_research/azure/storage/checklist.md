@@ -1,8 +1,13 @@
 # Storage — Candidate Attacks (not yet lab-fired)
 
-- [ ] Live-fire wildcard-CORS exfil: set `*` CORS on blob, confirm cross-origin browser read of private
-      blobs via a user-delegation/SAS context, record whether the CORS write is the only logged event.
-- [ ] Confirm disabling versioning+soft-delete+change-feed removes recoverability with a single
-      `storageAccounts/write` and what one Activity Log entry it produces.
-- [ ] Storage Tasks: fire a benign no-op task assignment on a throwaway account to confirm the MI-backed
-      recurrence model + logs (then delete).
+Verify-first sweep (2026-09-25): all previously-listed items are ALREADY documented+lab-verified —
+removed to prevent duplicate work (per the no-duplicates loop contract):
+- Wildcard-CORS browser exfil → `az-storage-persistence.md` §"Wildcard CORS rule" (lab-verified:
+  OPTIONS preflight returns `Access-Control-Allow-Origin: <arbitrary origin>` + `Allow-Credentials: true`).
+- Disable versioning/soft-delete/change-feed → irrecoverable destruction is covered in
+  `az-blob-storage-post-exploitation.md` (soft-delete/versioning/change-feed all disabled = permanent loss,
+  ransomware payload step) and `az-storage-persistence.md` (object-replication + soft-delete sections);
+  the `storageAccounts/write` / `blobServices/write` control-plane logging is documented.
+- Storage Tasks MI-backed recurrence + logs → fully documented in `az-storage-tasks-post-exploitation.md`.
+
+(none open — refill with new REAL candidates if/when identified.)
