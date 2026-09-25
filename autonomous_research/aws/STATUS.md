@@ -160,3 +160,8 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - SHIPPED #53 (doc+partial-verify): ses:PutIdentityPolicy / sesv2:PutEmailIdentityPolicy cross-account sending-authorization backdoor, new section on aws-ses-post-exploitation. Commit 1a0931630; PR #413 bullet.
 - Found via all-services resource-policy-setter sweep (Put*Policy/Add*Permission vs cross-account matrix). SES identity policy was a proper-section gap (matrix had only 1 line). 
 - Other sweep candidates parked/rejected: s3control PutMultiRegionAccessPointPolicy (MRAP cross-account - candidate), signer AddProfilePermission (code-signing cross-account - niche), waf*/PutPermissionPolicy (rulegroup share - low), mediastore PutContainerPolicy (service EOL). Scaling/read policies discarded.
+
+## Saturation update (cont.79) — Budgets CreateBudgetAction privesc
+- SHIPPED #54 (NEW PAGE, PassRole gate VERIFIED two-sided): aws-budgets-privesc/README.md. CreateBudgetAction APPLY_IAM_POLICY/APPLY_SCP_POLICY/RUN_SSM_DOCUMENTS + iam:PassRole -> self-attach admin / org SCP / SSM code-exec via ExecutionRoleArn. Execution timing-gated (Standby->Pending on budget eval). Commit 346ff079c; PR #413 bullet.
+- Found via all-services Create*/Update* role-passing sweep. Filtered out variant-op noise (sagemaker 21 ops, comprehend/transcribe covered by aws-ml-dataaccess-passrole-privesc). Budgets = genuine net-new (only defensive coverage existed).
+- Parked from same sweep for later: kendra (post-exploit only, CreateIndex+PassRole), amplify computeRoleArn, proton (EOL) cross-account connection, ecs ExpressGatewayService (new), guardduty CreateMalwareProtectionPlan.
