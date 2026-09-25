@@ -7,7 +7,7 @@ Wiki: `az-monitor-post-exploitation.md` (+ Log Analytics pages), unauth `az-moni
 | 1 | App Insights instrumentation key / live-token abuse | data-plane | **WORKS** (5 primitives lab-verified, commit 03e90018b) |
 | 2 | Action-group callback abuse | `actionGroups/write` | **WORKS** |
 | 3 | Alert linked-auth abuse | alert write | **WORKS** |
-| 4 | `dataCollectionRules/write` AMA file exfil | that action | DOC-ONLY |
+| 4 | `dataCollectionRules/write` AMA file exfil | `dataCollectionRules/write` + `dataCollectionRuleAssociations/write` (+ table/DCE write to build the sink) | **WORKS — lab-verified 2026-09-25** |
 | 5 | `dataCollectionRules/data/write` forge logs (modern Entra/DCR Logs Ingestion API) | Monitoring Metrics Publisher on the DCR (+ setup: DCE/DCR/table write) | **WORKS — lab-verified 2026-09-25** |
 | 6 | `autoscale`/`logProfiles` teardown / purge notes | those actions | DOC-ONLY |
 
@@ -25,4 +25,19 @@ Data Collector API injection already on the wiki. DCR-based custom-table columns
 `_s` suffix, unlike the legacy path). Wiki: added a "Log forgery via the modern Logs Ingestion API" section +
 Logs-generated block to `az-log-analytics-privesc.md`. **Teardown:** `az group delete htrc-logforge`.
 
-**Teardown:** App Insights test resources deleted; `htrc-logforge` deleted. No residue.
+**Lab record (test, 2026-09-25 — AMA custom-text-log file exfil):** RG `htrc-amaexfil`, VM `htvm`
+(Ubuntu 22.04 B1s, **no public IP**), cloud-init seeded `/var/log/htapp/app.log` with fake secret lines
+(`db_password=HT-EXFIL-PROOF-htvm token=…`) every 20s. Built workspace `htwsexf`, DCR-based custom table
+`HTAppLog_CL` (`TimeGenerated`/`RawData`), DCE `htdce`, and DCR `htdcr` with a **`logFiles` data source**
+(`filePatterns:["/var/log/htapp/*.log"]`, `format:text`, `settings.text.recordStartTimestampFormat: "ISO 8601"`,
+stream `Custom-HTAppLog_CL` → workspace, `transformKql: source`); associated to the VM via DCRA `htdcra`.
+AMA tailed the file and shipped each line verbatim → `HTAppLog_CL | where RawData contains 'HT-EXFIL-PROOF'`
+returned **8** rows, `RawData` = the whole raw line (secrets intact), queryable ~4–5 min after AMA pulled
+the config. **KEY GOTCHA:** the VM must have a **managed identity** — AMA authenticates to Azure Monitor as
+the VM MI; with none, `mdsd.err` shows `Failed to get MSI token from IMDS` and `config-cache/configchunks`
+stays empty (nothing ships). Not an attack limit (production AMA-monitored VMs always have an MI); in-lab we
+had to `az vm identity assign` first, then restart `azuremonitoragent`. Wiki: added a lab-verified TIP to the
+`dataCollectionRules/write` file-exfiltrator section of `az-monitor-post-exploitation.md`. **Teardown:**
+`az group delete htrc-amaexfil` (removes VM + system MI + workspace + DCE + DCR).
+
+**Teardown:** App Insights test resources deleted; `htrc-logforge` deleted; `htrc-amaexfil` deleted. No residue.
