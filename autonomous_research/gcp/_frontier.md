@@ -8,6 +8,12 @@ session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
 ## Open, genuinely-uncovered leads deferred for lack of testable infra (verify when feasible)
+- [ ] **Managed Workload Identity attestation-rule persistence** — `managedIdentities.addAttestationRule`
+      / `setAttestationRules` as a `setIamPolicy`-free membership backdoor (analogous to the shipped
+      `iam.oauthClients` workforce backdoor). Cost-light (no compute) → **prioritize next iteration**:
+      confirm a rule grants token minting without touching the project allow policy, capture the
+      min-perm role, then ship if it holds. WIF `providerKeys` (SAML-decrypt-only) and `namespaces`
+      already assessed as non-primitives (batch 5). Tracked in `iam-and-credentials/checklist.md`.
 - [ ] **googleTagGatewayPolicies end-to-end** — SHIPPED from API surface (batch 4). When the resource
       reaches GA + gcloud support, live-verify the first-party-JS injection by standing up an external
       Application LB + backend + attaching a policy in the lab, and confirm an attacker GTM tagId's
@@ -19,7 +25,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
-      NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump: 13,698 perms.
+      NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump: 13,701 perms
+      (batch 5; +3 vs 13,698, AI/analytics/preview noise, none attack-relevant).
 - [ ] Watch newly-GA GCP features (release notes) for identity/traffic/exec/exfil surfaces; those are
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 

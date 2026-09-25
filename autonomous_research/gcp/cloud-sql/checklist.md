@@ -2,8 +2,9 @@
 
 Open ideas — Cloud SQL.
 
-- [ ] **Live-confirm pg_cron / event_scheduler persistence (cost-gated).** If a small disposable Cloud
-  SQL instance can be stood up within the cost/time budget, confirm end-to-end that `enable_pg_cron`
-  (Postgres) or `event_scheduler=ON` (MySQL) + a superuser-scheduled job re-executes attacker SQL on a
-  timer and survives IAM changes. Tear down the instance immediately (deletion is fast). Otherwise keep
-  as doc-grounded.
+No open actionable candidates. All known primitives verified or documented.
+
+## Resolved (moved to tested.md)
+- [x] **Live-confirm pg_cron / event_scheduler persistence** — DONE 2026-09-25. pg_cron CONFIRMED
+  end-to-end (job fired on timer, survives IAM revocation + restart); wiki upgraded from doc-grounded
+  to verified. MySQL `event_scheduler` left as the documented analogue. See tested.md.

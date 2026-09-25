@@ -20,3 +20,23 @@ Found by the permission-surface diff: the existing Service Extensions technique 
 
 **SHIPPED** → `gcp-networkservices-privesc.md` new section
 "`networkservices.authzExtensions.*` — Service Extensions authorization-callout hijack".
+
+## PSC producer-authz — FOLD note (2026-09-25)
+
+`networkconnectivity.pscAuthorizationPolicies.create` / `serviceConnectionMaps.create`
+(+`serviceClasses.use`) is a **parallel producer-side authz surface** to the already-documented
+Private Service Connect service-attachment consumer-accept-list. Not a new primitive class: same
+"widen reach / DoS via a different permission family" outcome, gated by `roles/networkconnectivity.admin`.
+`AUTHORIZATION_MODE_TRANSITIVE_TO_SERVICE_ATTACHMENT` broadens which consumers connect. Admin Activity
+logs the policy write; the data-plane connection itself is **not** audit-logged.
+- Action: added as a **FOLD note bullet** to `gcp-vpc-and-networking.md` (after the DoS bullet, before
+  the PSC role-map NOTE) rather than a standalone technique — it augments the existing PSC section.
+- Not live-fired: producer service-attachment + consumer endpoint across projects is disproportionate;
+  the authz-write mechanism is understood from the API surface.
+
+## Multicloud data-transfer — REJECTED (2026-09-25)
+
+Storage Transfer / BigQuery multicloud "transfer from another cloud" configs examined as a possible
+exfil/confused-deputy lever. **REJECTED, not a real useful attack:** these are billing/ingest configs
+that pull INTO the project (require the attacker to already control the source or its creds); no
+outbound exfil primitive beyond the already-documented Storage Transfer confused-deputy. No ship.

@@ -1,6 +1,6 @@
 # GCP audit — status
 
-Last updated: 2026-09-24
+Last updated: 2026-09-25
 
 ## Completion state per axis
 
@@ -121,3 +121,26 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
   triage newly-GA/preview sub-resources (the productive vein); live-verify the two deferred
   end-to-end items (tag-gateway JS injection, oauthClients token-exchange) if the infra becomes
   standable. Do NOT manufacture marginal techniques to fill the loop — ship only real gaps.
+
+### 2026-09-25 — batch 5 (fresh catalog delta + one confirmation + one fold)
+- **Catalog re-pull:** 13,701 project-testable permissions (+3 vs the 13,698 of batch 4). The delta is
+  AI/analytics/preview noise — no attack-relevant primitive. Ground-truth surface remains **saturated**.
+- **CONFIRMED & wiki-upgraded — Cloud SQL pg_cron in-engine scheduled-task persistence.** Stood up a
+  throwaway POSTGRES_15 db-f1-micro, `cloudsql.enable_pg_cron=on` + `cron.schedule`, verified the job
+  fires every minute with no client session, survives IAM revocation + restart. Upgraded
+  `gcp-cloud-sql-persistence.md` from "not live-verified" to confirmed; sharpened min-perms
+  (`cloudsql.instances.update` + `cloudsqlsuperuser` DB login; connect optional) and logs (only the
+  flag write hits Admin Activity; recurring exec is engine-internal, no Cloud Audit Log). Instance
+  deleted, teardown verified. See `cloud-sql/tested.md`.
+- **FOLD (not a new technique) — PSC producer-authz.** `networkconnectivity.pscAuthorizationPolicies` /
+  `serviceConnectionMaps` is a parallel producer-side authz family to the documented PSC consumer
+  accept-list. Added as a FOLD note bullet to `gcp-vpc-and-networking.md`. See `networkservices/tested.md`.
+- **REJECTED — multicloud data-transfer.** Storage Transfer / BQ multicloud configs pull INTO the
+  project (attacker must already own the source); no new exfil primitive. No ship.
+- **New open lead (cost-light, next iteration):** Managed Workload Identity
+  `managedIdentities.addAttestationRule`/`setAttestationRules` as a `setIamPolicy`-free membership
+  backdoor (analogous to the shipped `iam.oauthClients` workforce backdoor). WIF `providerKeys`
+  (SAML-decrypt-only) and `namespaces` assessed and dismissed as non-primitives. See
+  `iam-and-credentials/checklist.md`.
+- **This iteration shipped:** 1 confirmation-upgrade (Cloud SQL pg_cron) + 1 fold note (PSC). No
+  marginal techniques manufactured. Loop continues.
