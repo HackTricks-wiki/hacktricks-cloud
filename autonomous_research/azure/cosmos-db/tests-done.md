@@ -42,5 +42,9 @@ in-window containment is taking the data plane offline (CMK-revoke blocked state
 waiting out the TTL. This **corrects** the wiki's prior remediation note (rotate keys) AND my own first
 correction (delete permission/user). Wiki updated (`az-cosmosDB-post-exploitation.md` resource-token
 section: WARNING enumerates all three ineffective actions + Stealth:high + corrected Hunt + "mint short
-TTL" prevention). A long TTL-expiry poller is running to pin the exact death age (~3600s expected).
-**Teardown:** `az group delete htrc-cosmostok` done; `htrc-costok2` to be deleted after the TTL poll.
+TTL" prevention). **TTL-expiry poller result:** the token read OK through age 3862s and **failed at
+age 3923s** with `403 (Forbidden) The authorization token is not valid at the current time` — the error
+named `token start time` and `token expiry time` exactly **1h apart** (default TTL). So it dies precisely
+on its TTL clock, not on any revocation; the ~5min beyond nominal 3600s is Cosmos's clock-skew grace.
+**Teardown:** `az group delete htrc-cosmostok` and `htrc-costok2` both issued (--no-wait); no Cosmos
+residue.
