@@ -165,3 +165,8 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - SHIPPED #54 (NEW PAGE, PassRole gate VERIFIED two-sided): aws-budgets-privesc/README.md. CreateBudgetAction APPLY_IAM_POLICY/APPLY_SCP_POLICY/RUN_SSM_DOCUMENTS + iam:PassRole -> self-attach admin / org SCP / SSM code-exec via ExecutionRoleArn. Execution timing-gated (Standby->Pending on budget eval). Commit 346ff079c; PR #413 bullet.
 - Found via all-services Create*/Update* role-passing sweep. Filtered out variant-op noise (sagemaker 21 ops, comprehend/transcribe covered by aws-ml-dataaccess-passrole-privesc). Budgets = genuine net-new (only defensive coverage existed).
 - Parked from same sweep for later: kendra (post-exploit only, CreateIndex+PassRole), amplify computeRoleArn, proton (EOL) cross-account connection, ecs ExpressGatewayService (new), guardduty CreateMalwareProtectionPlan.
+
+## cont.80 (2026-09-25)
+- Saturation re-confirmed: EventBridge family, SSM CreateActivation (ssm+ecs pages), DataSync/Transfer/FIS/IoT/GameLift privesc, Kendra CreateDataSource+PassRole — all covered.
+- SHIPPED #55: AWS AppFlow CreateFlow attacker-defined transfer (aws-appflow-enum.md). Verified live S3->S3 exfil end-to-end; UpdateFlow endpoint-immutability verified; SaaS-connector-profile source doc-grounded. No PassRole (service-linked + connector authority). Residue zero.
+- Lens-sweep log cont.76-79 written (parked: s3control MRAP policy, signer AddProfilePermission, finspace-data/emr-containers cred-vends).
