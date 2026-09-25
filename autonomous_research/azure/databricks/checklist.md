@@ -5,6 +5,7 @@ before firing, and tear down immediately.
 
 - [ ] Live-fire notebook/init-script RCE and dump the workspace MSI token via IMDS from the driver;
       confirm what (if anything) lands in Activity Log vs. workspace audit (separate plane).
-- [ ] Confirm `updateDenyAssignment` behaviour (UNVERIFIED) — does the workspace RP let a caller alter
-      the managed-RG deny assignment to gain direct control-plane access?
 - [ ] Test KV-backed secret-scope read as a cross-service credential-access pivot.
+
+<!-- Cleared 2026-09-25: `updateDenyAssignment` (row 7) REFUTED and documented — Geneva-only, and the
+     managed-RG deny assignment's dataActions:['*'] neutralises any Storage data-role self-grant. -->
