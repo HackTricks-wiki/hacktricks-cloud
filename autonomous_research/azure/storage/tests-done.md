@@ -14,6 +14,7 @@ unauth `az-storage-unauth` (pre-existing).
 | 7 | Wildcard CORS exfil channel (persistence) | `storageAccounts/write` | DOC-ONLY |
 | 8 | Storage Tasks fleet blob destruction/Archive/expiry (Microsoft.StorageActions) | Storage Actions Contributor + Task Assignment Contributor + Blob Data Operator | DOC-ONLY | Task Assignment Contributor does NOT include roleAssignments/write (corrected). |
 | 9 | SFTP `localUsers` **survives Shared-Key-disable + key rotation** (persistence eviction-bypass) | `localUsers/write` on HNS+SFTP account | **WORKS** — lab-verified 2026-09-25 |
+| 10 | SAS **revocation matrix** — which lever kills which SAS type | `generateUserDelegationKey/action` + data role (UDS); account key (svc SAS) | **WORKS/CONFIRMED** — lab-verified 2026-09-25; UDS≠service SAS revocation |
 
 **Lab record (test, 2026-09-25 — SFTP local-user eviction-bypass):** RG `htrc-sftp`, account
 `htrcsftp26935` (StorageV2, HNS on, SFTP on). Created container `sftphome` + SFTP `localUser` `htsvc` with
@@ -27,3 +28,18 @@ still logged in and uploaded a new file** (`sftp_after_hardening.txt`). What DID
 the SFTP feature, delete the `localUser`, or delete the account. Wiki updated (`az-storage-persistence.md`
 SFTP section: added lab-verified WARNING). Outbound port 22 from the harness to `*.blob.core.windows.net`
 works, so SFTP data-plane tests are feasible here. **Teardown:** `az group delete htrc-sftp`.
+
+**Lab record (test, 2026-09-25 — SAS revocation matrix):** RG `htrc-udsas`, account `htrcuds14629`, blob
+`data/secret.txt`. Minted a **user-delegation SAS** (`--auth-mode login --as-user`, SP had *Storage Blob
+Data Reader*) and an account-key **service SAS**; both read the blob (curl 200). Findings, all curl-verified
+(the SAS request carries no identity, so this is pure bearer-token behaviour):
+- **Rotate both account keys:** service SAS → `403` within ~15–30 s (control: key1 value changed);
+  user-delegation SAS → **still 200** (Entra/UDK-signed, not key-signed).
+- **Remove the SP's `Storage Blob Data Reader` role:** user-delegation SAS → `403` within **~20 s** — i.e.
+  a UDS **is re-authorized against the delegating principal's live RBAC on every request** (opposite of the
+  Cosmos resource-token behaviour, which ignored revocation until TTL).
+- **`az storage account revoke-delegation-keys`:** a freshly-minted UDS → `403` within **~15 s**.
+So account/service SAS is killed only by key rotation; user-delegation SAS is killed by role-removal or
+`revoke-delegation-keys` but NOT by key rotation. Wiki updated (`az-storage-persistence.md` "Long-lived SAS"
+section: added a lab-verified revocation-matrix WARNING + fixed the "rotate both account keys" response
+line). **Teardown:** role assignment removed + `az group delete htrc-udsas`.
