@@ -185,3 +185,7 @@ dedup — do NOT re-chase):
 **No ship. No lab resources created (read-only). Do not manufacture marginal techniques.** Next iteration
 = periodic catalog re-pull + newly-GA/preview sub-resource triage (the productive vein), best after a
 delay for the API surface to actually change. Loop stays alive.
+
+### 2026-09-26 — Secret Manager stealth audit
+- Reconciled all 12 Secret Manager privesc/post-exploitation headings against their existing audit-event tables and the current Google audit-logging reference. Added 9 missing per-technique stealth ratings; 1 regional-CMEK rating and 2 persistence ratings already existed. No new technique was warranted.
+- Documentation-only pass: no GCP API mutations, spend, or teardown required. Recorded details in `secret-manager/tested.md`. Next iteration: choose another service with missing ratings, or triage genuinely new API resources in the permission catalog.
