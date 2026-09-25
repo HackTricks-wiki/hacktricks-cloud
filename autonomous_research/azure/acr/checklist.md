@@ -4,5 +4,3 @@
       HTTP trigger) to confirm push-event payload exfil end-to-end + logs.
 - [ ] Tag-poisoning / importImage on a private repo: confirm min perms and whether the overwrite is
       logged distinctly from a normal push.
-- [ ] Test `tokens`/`scopeMaps` (ABAC repo tokens) as a scoped persistence backdoor — durability after
-      admin credential rotation.
