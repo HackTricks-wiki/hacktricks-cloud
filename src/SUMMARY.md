@@ -505,6 +505,7 @@
     - [AWS - Bedrock Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md)
     - [AWS - Bedrock AgentCore Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md)
     - [AWS - Chatbot Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chatbot-privesc/README.md)
+    - [AWS - Budgets Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-budgets-privesc/README.md)
     - [AWS - Chime Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md)
     - [AWS - Cloud Control API Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudcontrol-privesc/README.md)
     - [AWS - CloudFront](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md)
