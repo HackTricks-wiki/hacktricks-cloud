@@ -29,3 +29,12 @@ Load Balancer backend/NAT.
 Activity Log: the `runCommand/action` event IS logged (Started+Accepted, caller), but the executed
 **script body/output is NOT** in the Activity Log. Matches the wiki page (`az-virtual-machines-and-network-privesc.md`
 lines 511-560, already "verified in lab") — no wiki change. **Teardown:** `az group delete htrc-vmrun`.
+
+**Lab record (test, 2026-09-25 — disk SAS export revocation latency):** RG `htrc-disksas`, 4GiB detached
+Standard_LRS disk `htrcdisk32039`. `az disk grant-access --access-level Read --duration-in-seconds 3600`
+returned an `accessSAS` on `md-*.blob.storage.azure.net`; a Range GET (`-r 0-511`) returned `206`/512 bytes
+(baseline). Then `az disk revoke-access` → the same SAS URL returned **HTTP 403 within ~8s**. So the
+VHD-export SAS lives for its full requested duration but `revoke-access`/`endGetAccess` is a **prompt,
+effective kill switch** (~8s) — contrast with the Cosmos resource token which ignores revocation until TTL.
+Added a lab-verified NOTE to `az-virtual-machines-and-network-privesc.md` (disk SAS section). **Teardown:**
+`az group delete htrc-disksas`.
