@@ -25,3 +25,17 @@
 - EventBridge family: Scheduler, Pipes, EventBridge (rules/targets) — privesc+persistence+post-exploit+enum all present.
 - Snapshot/backup cross-account exfil; IAM cred-generation; sts:AssumeRoot/root-cred-mgmt; identity-provider backdoors (IAM SAML/OIDC, Cognito IdP, Identity Center TTI).
 - Credential-disclosure calibration: control-plane Describe/Get REDACT secrets (return Secrets Manager ARNs); only purpose-built data-plane vend APIs return plaintext (confirmed again on AgentCore).
+
+## cont.80 addendum — arc results + definitive catalogs (2026-09-25)
+SHIPPED this arc:
+- #55 AppFlow CreateFlow attacker-defined transfer (aws-appflow-enum.md) — VERIFIED live S3->S3 exfil.
+- Signer AddProfilePermission — cross-account matrix row 53 upgraded to Verified (real external acct accepted; StartSigningJob --profile-owner signs under victim trusted profile).
+- EMR on EKS GetManagedEndpointSessionCredentials + PassRole (aws-emr-serverless-privesc) — interactive-endpoint session as execution role (doc-grounded; PassRole class already verified).
+
+DEFINITIVE CATALOGS (do NOT re-vet these service sets in future cycles):
+- aws-ml-dataaccess-passrole-privesc/README.md = ~40-service PassRole confused-deputy catalog. Two tables: ML/data-access-role jobs (Comprehend/Transcribe/Translate/Textract/HealthLake/Personalize/Omics/Neptune/DataBrew/QBusiness/CleanRoomsML...) + execution-role long tail (Braket/Deadline/MSKConnect/m2/Panorama/SimSpaceWeaver/DeviceFarm/OSIS/EntityResolution/Timestream/BackupSearch/DAX/Grafana/PCS/AIOps/Chime/MediaPackageVOD). High-value standalone compute has dedicated pages (EMR/SageMaker/Glue/Bedrock/Batch/AppRunner/CodeBuild/Pipes/Proton/CloudControl/AgentCore/Budgets).
+- resource-policy-and-shared-resource-attacks.md = ~65-row cross-account resource-policy/share matrix (most rows Verified). Covers every Put*Policy/Add*Permission/Share* class swept.
+
+Remaining parked (all marginal / covered-by-generic-table): ecs CreateExpressGatewayService (ECS task/exec-role PassRole already generic), guardduty CreateMalwareProtectionPlan (low value), amplify computeRoleArn (hosting SSR, low), s3control MRAP policy (MRAP policy alone != data access; both MRAP+bucket policy required -> weak), finspace-data GetProgrammaticAccessCredentials (niche service).
+
+VERDICT: AWS privesc/post-expl/persistence + cross-account lenses are at deep saturation. Net-new frontier now requires either brand-new AWS services at GA or novel mechanism classes; continue monitoring new service launches (AgentCore/AppFlow-class discoveries) rather than re-vetting the covered surface.
