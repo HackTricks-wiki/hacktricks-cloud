@@ -32,8 +32,15 @@ read of the seeded item returned `top-secret-value`. Then regenerated the **seco
 read OK) and the **primary** key (token still read OK, immediately). Rotated **primary two more times**;
 the listed primary value changed on each rotation (proving rotation lands) and a corrupted key was
 rejected (control) — yet the **original** resource token kept reading after 3× primary + 1× secondary
-rotation. **Finding:** master-key rotation does **not** invalidate outstanding resource tokens; they
-persist to their TTL (default 1h, max 5h). This **corrects** the wiki's prior remediation note that
-claimed rotating keys invalidates minted tokens. Wiki updated (`az-cosmosDB-post-exploitation.md`,
-resource-token section: added lab-verified WARNING + Stealth:high + corrected Hunt line — real eviction =
-delete the `user`/`permission`). **Teardown:** `az group delete htrc-cosmostok` (issued --no-wait).
+rotation. **Then (RG `htrc-costok2`, account `htrctok212432`) extended the test to the other two
+containment actions:** deleted the token's `permission` resource → token **still read for >10 min** of
+continuous 20s-interval polling; deleted the `user` resource → token **still read** immediately after.
+**Finding (stronger than first thought):** an outstanding resource token is **effectively irrevocable
+until its TTL** (default 1h, max 5h) — NONE of {rotate both master keys, delete the permission, delete the
+user} promptly evicts it; the gateway honours the issued token for its lifetime. The only reliable
+in-window containment is taking the data plane offline (CMK-revoke blocked state / delete account) or
+waiting out the TTL. This **corrects** the wiki's prior remediation note (rotate keys) AND my own first
+correction (delete permission/user). Wiki updated (`az-cosmosDB-post-exploitation.md` resource-token
+section: WARNING enumerates all three ineffective actions + Stealth:high + corrected Hunt + "mint short
+TTL" prevention). A long TTL-expiry poller is running to pin the exact death age (~3600s expected).
+**Teardown:** `az group delete htrc-cosmostok` done; `htrc-costok2` to be deleted after the TTL poll.
