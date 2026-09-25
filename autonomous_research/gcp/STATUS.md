@@ -157,3 +157,31 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
 - Corrected the permission string (guessed `iam.managedIdentities.addAttestationRule` was wrong; real =
   `iam.googleapis.com/workloadIdentityPoolManagedIdentities.setAttestationRules`).
 - **This iteration shipped 1 real gap.** Loop continues; frontier updated (lead resolved).
+
+### 2026-09-25 — batch 7 (next-lead gap-hunt) — NOTHING SHIPPABLE (saturation re-confirmed)
+Read-only whole-service gap scan (317 service prefixes, zero-mention triage on identity/exec-relevant
+ones; catalog still 13,701). No genuinely-uncovered cost-light primitive found. Ruled out (record for
+dedup — do NOT re-chase):
+- **`iamconnectors.connectors.retrieveCredentials`** — DUPLICATE: `iamconnectors.*` is the backend twin
+  namespace of the **Agent Identity auth-manager** (`agentidentity.*`), already documented in
+  `gcp-agent-identity-auth-manager-privesc.md`. The public API is `agentidentity.googleapis.com`
+  (`iamconnectors.googleapis.com` 404s). Same retrieveCredentials-vault-read / token-endpoint concept.
+- **`dataprocrm.nodes.mintOAuthToken`** — REJECT: internal node↔control-plane protocol method, no public
+  REST/gcloud, mints for the calling node's own identity. Backend-protocol only (0-day-class if at all).
+- **`cloudsql.instances.createTestingAgentSession`** — REJECT: `create` only in `cloudsql.admin` (already
+  full DB compromise); get/list/cancel are Gemini-in-DB agent-session control, no new lever.
+- **`aiplatform.sandboxEnvironments.execute` / `extensions.execute` / `sessions.run`** — REJECT
+  (false-positive gap): Google-managed sandboxes, no project SA on metadata server. Real Vertex run-as-SA
+  family (customJobs/pipelineJobs/reasoningEngines/tuningJobs/... all actAs-gated) fully documented.
+- **`firebaseauth.users.createSession` / `firebasedataconnect.connectors.impersonateQuery`** — DUPLICATE:
+  session-cookie mint / custom-token / Data Connect end-user impersonation all in the Firebase pages.
+- **`confidentialcomputing.challenges.*`** — REJECT: Confidential Space attestation → WIF; needs a real
+  TEE VM (not cost-light) and token only issues against genuine hardware evidence (abuse = attestation
+  0-day, out of scope).
+- **`networkmanagement.providers.generateProviderAccessToken` / `developerconnect...generateGitHubStateToken`**
+  — REJECT: niche NGFW-integration token / OAuth CSRF state token, not credentials.
+- Whole-service gaps `remotebuildexecution`/`workloadmanager`/`saasservicemgmt`/`runapps`/`dataprocessing`
+  + Maps/retail/commerce — no actAs-free exec-as-SA, token-mint, or IAM self-grant primitive.
+**No ship. No lab resources created (read-only). Do not manufacture marginal techniques.** Next iteration
+= periodic catalog re-pull + newly-GA/preview sub-resource triage (the productive vein), best after a
+delay for the API surface to actually change. Loop stays alive.

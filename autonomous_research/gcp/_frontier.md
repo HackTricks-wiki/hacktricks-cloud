@@ -32,6 +32,13 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 
 ## Assessed and intentionally NOT authored (no-garbage bar)
+- **(batch 7, 2026-09-25)** iamconnectors.retrieveCredentials (= Agent Identity, documented),
+  dataprocrm.nodes.mintOAuthToken (internal node protocol), cloudsql.createTestingAgentSession
+  (admin-only / Gemini agent), aiplatform.sandboxEnvironments/extensions/sessions execute
+  (Google-managed identity, no project SA), firebaseauth.createSession / firebasedataconnect
+  impersonate (documented in Firebase pages), confidentialcomputing.challenges (TEE-gated, not
+  cost-light, attestation-0day if abusable), networkmanagement.generateProviderAccessToken /
+  developerconnect.generateGitHubStateToken (niche/non-credential). All ruled out — see STATUS batch 7.
 - compute.instantSnapshots — same disk-exfil family; annotated as a NOTE, not a technique.
 - compute.regionSslPolicies.setIamPolicy, dataplex.entryLinkTypes.* — generic self-grant / catalog
   metadata; no distinct primitive.
