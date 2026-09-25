@@ -2,5 +2,6 @@
 
 Cost note: verify hourly cost before provisioning; if over gate, keep DOC-ONLY.
 
-- [ ] Confirm `filesExport/action` produces an attacker-readable export and whether the append-only
-      guarantee still lets an attacker read all historical entries.
+(none currently — `ledgers/write` self-grant verified (test #1); `filesExport/action` tested and found
+not usable on a standard Public/Standard ledger (404), see tests-done #2. Refill with new REAL candidates
+if/when identified.)
