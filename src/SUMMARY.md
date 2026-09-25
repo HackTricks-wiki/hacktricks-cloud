@@ -826,6 +826,7 @@
     - [Az - NetApp Files Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-netapp-files-post-exploitation.md)
     - [Az - Elastic SAN Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-elastic-san-post-exploitation.md)
     - [Az - Azure Migrate Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-migrate-post-exploitation.md)
+    - [Az - Chaos Studio Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-chaos-studio-post-exploitation.md)
   - [Az - Privilege Escalation](pentesting-cloud/azure-security/az-privilege-escalation/README.md)
     - [Az - Azure IAM Privesc (Authorization)](pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md)
     - [Az - AI Foundry Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md)
