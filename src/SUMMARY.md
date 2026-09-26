@@ -323,6 +323,7 @@
     - [GCP - Cloud Shell Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-shell-enum.md)
     - [GCP - Cloud SQL Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-sql-enum.md)
     - [GCP - Cloud Scheduler Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-scheduler-enum.md)
+    - [GCP - Cloud Tasks Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-tasks-enum.md)
     - [GCP - Compute Enum](pentesting-cloud/gcp-security/gcp-services/gcp-compute-instances-enum/README.md)
       - [GCP - Compute Instances](pentesting-cloud/gcp-security/gcp-services/gcp-compute-instances-enum/gcp-compute-instance.md)
       - [GCP - VPC & Networking](pentesting-cloud/gcp-security/gcp-services/gcp-compute-instances-enum/gcp-vpc-and-networking.md)
