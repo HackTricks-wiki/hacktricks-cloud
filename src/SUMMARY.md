@@ -398,6 +398,7 @@
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
     - [AWS - App Mesh Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-app-mesh-post-exploitation/README.md)
+    - [AWS - AppSync Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appsync-post-exploitation/README.md)
     - [AWS - Athena Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-athena-post-exploitation/README.md)
     - [AWS - Audit Manager Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-audit-manager-post-exploitation/README.md)
     - [AWS - B2B Data Interchange Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-b2bi-post-exploitation/README.md)
