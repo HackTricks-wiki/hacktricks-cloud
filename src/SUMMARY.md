@@ -391,6 +391,7 @@
     - [GCP - VM Migration Enum](pentesting-cloud/gcp-security/gcp-services/gcp-vm-migration-enum.md)
     - [GCP - VMware Engine (GCVE) Enum](pentesting-cloud/gcp-security/gcp-services/gcp-vmwareengine-gcve-enum.md)
     - [GCP - Web Security Scanner Enum](pentesting-cloud/gcp-security/gcp-services/gcp-web-security-scanner-enum.md)
+    - [GCP - Workload & Workforce Identity Federation Enum](pentesting-cloud/gcp-security/gcp-services/gcp-identity-federation-enum.md)
     - [GCP - Workflows Enum](pentesting-cloud/gcp-security/gcp-services/gcp-workflows-enum.md)
   - [GCP <--> Workspace Pivoting](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md)
     - [GCP - Agent Identity Auth Manager Credential Access](pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-agent-identity-auth-manager-privesc.md)

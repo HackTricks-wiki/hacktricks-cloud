@@ -55,3 +55,9 @@ rules anywhere in `src/`.
 - **Teardown:** MI, namespace, SA+key, custom role, project IAM binding all deleted; pool soft-deleted
   (tombstone, auto-purges); local key + isolated gcloud config removed. No ACTIVE test residue.
 - **Wiki:** new section in `gcp-workload-identity-federation-persistence.md` (+ refs 5,6).
+
+## Identity federation service-enumeration coverage — SHIPPED (2026-09-26)
+
+- Added `gcp-identity-federation-enum.md` under GCP services. It inventories classic Workload Identity Federation, organization-scoped Workforce Identity Federation, project-scoped workforce OAuth clients/credentials, and managed workload identities/attestation rules in one place.
+- Enumeration includes soft-deleted pools/providers/clients, provider trust and claim mappings, pool policies, Cloud Asset searches for external-principal bindings, service-account policies, workforce bindings, OAuth client secrets, and attestation-rule membership that is invisible to `getIamPolicy`.
+- Live read-only validation against the lab confirmed classic pool/provider listing and pool IAM, soft-deleted OAuth-client listing, Cloud Asset IAM search syntax, and namespace enumeration. A deleted trust-domain pool cannot be traversed as an active parent, as expected. No resource or policy was changed.

@@ -243,3 +243,6 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — Cloud Tasks service-enumeration page
 - Added the missing Cloud Tasks enum page with location-wide queue discovery, queue configuration/IAM/CMEK inspection, task `BASIC`/`FULL` inspection, security-review cues, logging visibility, and links to privesc, post-exploitation, persistence, and unauthenticated-access pages. Live read-only checks confirmed the location field and queue activity-log identifiers. Removed duplicate secret-read and queue-DoS entries from privesc; their authoritative post-exploitation entries remain. No resource or configuration was changed. See `cloud-tasks/tested.md`.
+
+### 2026-09-26 — identity-federation service-enumeration page
+- Added a unified service page for classic workload pools/providers, org-scoped workforce pools/providers, project-scoped workforce OAuth clients/credentials, and managed workload identities/attestation rules. The page joins trust configuration to IAM principal bindings and explicitly inventories soft-deleted/revivable resources and membership surfaces absent from `getIamPolicy`. Read-only live checks validated the project-level commands; no GCP state changed. See `iam-and-credentials/tested.md`.
