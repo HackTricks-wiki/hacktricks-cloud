@@ -610,6 +610,7 @@
     - [AWS - DataPipeline, CodePipeline & CodeCommit Enum](pentesting-cloud/aws-security/aws-services/aws-datapipeline-codepipeline-codebuild-and-codecommit.md)
     - [AWS - DataSync Enum](pentesting-cloud/aws-security/aws-services/aws-datasync-enum.md)
     - [AWS - Glue DataBrew Enum](pentesting-cloud/aws-security/aws-services/aws-databrew-enum.md)
+    - [AWS - Glue Enum](pentesting-cloud/aws-security/aws-services/aws-glue-enum.md)
     - [AWS - Database Migration Service (DMS) Enum](pentesting-cloud/aws-security/aws-services/aws-dms-enum.md)
     - [AWS - DataZone Enum](pentesting-cloud/aws-security/aws-services/aws-datazone-enum.md)
     - [AWS - Deadline Cloud Enum](pentesting-cloud/aws-security/aws-services/aws-deadline-cloud-enum.md)
