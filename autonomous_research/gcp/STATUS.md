@@ -9,7 +9,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 21/405 privesc, 23/404 post-exploitation, 157/157 persistence headings with Impact + Logs generated have a rating; 765 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 34/405 privesc, 23/404 post-exploitation, 157/157 persistence headings with Impact + Logs generated have a rating; 752 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
@@ -201,3 +201,6 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — Secure Source Manager audit correction
 - Google's SSM audit table classifies Git fetch as `DATA_READ` and Git push plus `CreateAnySshKey` as `DATA_WRITE`, all disabled by default. Corrected the prior book claims that fetch/push had no Cloud Audit method and cross-identity SSH-key creation was always-on Admin Activity. Added stealth ratings across five privesc sections; flagged branch-rule/hook/link audit mappings as unverified instead of inventing a log category. No SSM infrastructure created; see `secure-source-manager/tested.md`.
+
+### 2026-09-26 — Cloud Run visibility sweep
+- Added stealth ratings to all 13 Cloud Run privesc sections using the page's prior live audit captures: create/update/IAM changes are attributable Admin Activity, while `run.jobs.run` and overrides emit an unattributed System Event and template reads have no audit entry even with Data Access on. The allowlist-gated SSH path remains explicitly provisional. Reviewed the new Cloud Run instances preview: ordinary `instances.create` + `actAs` duplicates the known Run-as-SA family; investigate update/start boundaries before adding a technique. No new Run resource was created; see `cloud-run/checklist.md`.
