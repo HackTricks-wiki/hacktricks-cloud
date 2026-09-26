@@ -47,7 +47,16 @@ enabled, cost model changes, or a helper library becomes available).
   executable code (regex `definition$` noise).
 - **glacier SetVaultAccessPolicy** — legacy; reinstated to the cross-account matrix with an explicit
   "existing vaults only" caveat (not a new-account vector).
-- **iotthingsgraph** deprecated; **machinelearning / marketplacecommerceanalytics** deprecated/legacy.
+- **iotthingsgraph** deprecated; **machinelearning** deprecated/legacy.
+- **Marketplace Commerce Analytics `StartSupportDataExport(roleNameArn)`** — Product Support
+  Connection and its customer-contact sharing ended in November 2022; the residual API/SDK target is
+  explicitly deprecated. It historically exported sensitive opted-in subscriber contacts to a
+  caller-selected S3/SNS destination, but only through the pre-enrolled role's exact resource policy.
+  Despite the role ARN input, the caller needs no `iam:PassRole`; the authorization table defines only
+  `marketplacecommerceanalytics:StartSupportDataExport` on `*`. The lab has no enrolled delivery role,
+  matching bucket/topic, or recent events, and an AMI-product catalog preflight was empty. No asynchronous
+  request was started. No current primitive; see
+  `marketplacecommerceanalytics/support-data-export-2026-09-26.md`.
 - Governance/finance/collab tail (wellarchitected/resiliencehub/auditmanager/etc.) — no distinct
   privesc/postexploit/persistence primitive beyond what the resource-policy matrix already covers.
 
@@ -150,8 +159,9 @@ enabled, cost model changes, or a helper library becomes available).
   a tiny population. `payment-cryptography:PutResourcePolicy` (cross-account key share) is the only
   structural vector — candidate matrix row if ever a customer uses the service. Not a page.
 - **Remaining zero-coverage set** = runtime/data-plane variants (lex-runtime, personalize-runtime,
-  *-data), deprecated (machinelearning, iotthingsgraph, mturk, swf, simpledbv2, importexport,
-  marketplacecommerceanalytics), no-primitive read/catalog (controlcatalog, service-quotas,
+  *-data), deprecated (machinelearning, iotthingsgraph, mturk, swf, simpledbv2, importexport), legacy
+  seller-only (`marketplacecommerceanalytics`; PSC export deprecated but `GenerateDataSet` remains),
+  no-primitive read/catalog (controlcatalog, service-quotas,
   compute-optimizer, resource-explorer-2, geo-*, polly), or already deferred (finspace-data,
   codecatalyst, iot-managed-integrations, qapps, s3files). No further net-new privesc/persist/post
   primitive found in the tail beyond ssm-incidents (documented).
