@@ -293,3 +293,7 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — Access Approval metadata and audit-method review
 - Added minimum permissions and stealth ratings to both Access Approval post-exploitation techniques, and replaced inferred method names with Google's fully qualified audited methods.
 - Recorded the useful visibility boundary: settings/request mutations are always-on Admin Activity, while the corresponding get/list reconnaissance methods produce no audit log. No cloud resource or setting was changed; see `access-approval/tested.md`.
+
+### 2026-09-26 — Pub/Sub post-exploitation quality and visibility audit
+- Completed minimum-permission and stealth metadata for all 16 retained Pub/Sub post-exploitation techniques. Corrected message operations to “never audited” and `Seek` to Data Access `ADMIN_READ` (off by default, auditable when enabled), matching both the current official method table and the prior live research record.
+- Removed two entries below the book's quality bar: schema deletion was explicitly documented as useless for validation bypass, and schema IAM self-grant had no standalone impact outside the already documented schema-attachment chain. No cloud resource was created; see `pub-sub/tested.md`.

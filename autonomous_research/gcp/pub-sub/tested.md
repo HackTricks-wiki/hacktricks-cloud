@@ -33,3 +33,16 @@ and `topics.update` are in `roles/pubsub.editor` and `roles/editor`. Source buck
 (attacker's own project), so the injection origin lives outside the victim boundary.
 **SHIPPED** → `gcp-pub-sub-post-exploitation.md` new section
 "`pubsub.topics.create` / `pubsub.topics.update` — import-topic (Cloud Storage ingestion) message injection".
+
+## 2026-09-26 post-exploitation quality and visibility audit
+
+- Reconciled all retained Pub/Sub post-exploitation techniques with the current official audit table.
+  Corrected stale statements that `Publish`/`Pull` were merely disabled-by-default (Google explicitly
+  excludes these message methods even when Data Access logging is enabled) and restored the verified
+  `Seek` classification: `ADMIN_READ`, disabled by default but auditable when that exact toggle is on.
+- Added exact minimum permissions and categorical stealth ratings to all 16 retained techniques.
+- Removed the standalone `pubsub.schemas.delete` entry because the page itself established that it did
+  not bypass validation and labelled it useless. Removed the standalone schema `setIamPolicy` entry
+  because it had no impact without the separately documented topic-update/schema-attachment chain.
+  These permission facts remain known but do not meet the book's technique-quality threshold.
+- Documentation/official-reference pass only; no Pub/Sub or other cloud resource was created.
