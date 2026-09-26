@@ -13,7 +13,7 @@ ops whose input has a *role*arn* member. Full output in session log.
 - machinelearning (Amazon ML, no new customers), iotthingsgraph (EOL).
 
 ## Niche parked candidates (low prevalence; vet only if a distinct primitive emerges)
-- [ ] ssm-quicksetup UpdateConfigurationDefinition (LocalDeploymentAdministrationRoleArn/ExecutionRoleName): deploys via CloudFormation StackSets org-wide. LIKELY subsumed by aws-cloudformation-privesc StackSets coverage — QuickSetup is a wrapper. Check if it adds a distinct org-wide-deploy path (mgmt/delegated-admin gated) worth a note on the control-tower/cfn pages.
+- [x] ssm-quicksetup UpdateConfigurationDefinition (LocalDeploymentAdministrationRoleArn/ExecutionRoleName): reviewed 2026-09-26. Fixed AWS-owned configuration types and an explicit `iam:PassRole` dependency make this a constrained CloudFormation/StackSets wrapper, not arbitrary-template execution. The one arbitrary-policy-looking type, SSM Change Manager, is closed to new customers and creates a job-function invocation role rather than granting the updater permission to use it. Lab has no configuration managers or local Quick Setup deployment roles; onboarding would create persistent service/StackSet state. Reasoned exclusion recorded in `ssm-quicksetup/update-definition-2026-09-26.md`.
 - [ ] snowball CreateJob/CreateCluster (RoleARN): EXPORT job reads S3 as role onto a PHYSICAL device shipped to an address -> slow physical exfil. Distinctive but device-gated.
 - [ ] resource-groups StartTagSyncTask (RoleArn): tag-sync assumes a role to manage group membership by tag -> ABAC angle. Niche.
 - [ ] observabilityadmin CreateS3TableIntegration (RoleArn): telemetry -> S3 tables as role. New/niche.
