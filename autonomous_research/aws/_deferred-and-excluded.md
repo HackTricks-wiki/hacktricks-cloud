@@ -50,6 +50,12 @@ enabled, cost model changes, or a helper library becomes available).
 - **Route 53 Global Resolver `GetAccessToken`** — the service requires `us-east-2`, where the lab SCP
   (`p-oat9rg2i`) explicitly denies `ListGlobalResolvers`. No resource was created and no token path
   was tested. Revisit only in an account/OU that permits the service.
+- **Amazon Connect `CreateAuthCode` session minting** — IAM authorization and exact multi-resource
+  behavior were verified, but every fully associated Customer Profiles request returned a service
+  HTTP 500, including administrator calls. No authorization code was issued, so this is neither a
+  public technique nor a security-impact bug report yet. See
+  `connect/auth-code-session-boundary-2026-09-26.md` and revisit after AWS documents the remaining
+  prerequisite or fixes the new API.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
 
