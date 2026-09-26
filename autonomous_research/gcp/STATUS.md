@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — BigQuery Engine for Apache Flink resource-model correction
+- Corrected all Managed Flink pages to match the current API: jobs carry executable graphs/JARs/
+  artifacts, while deployments carry capacity, network, shared-secret and workload-identity
+  configuration only. Replaced the false deployment-code/self-restart persistence claim with a
+  long-running streaming-job foothold and removed the undocumented metadata-server guarantee.
+- Documented deployment identity inheritance, but kept the possible `jobs.create`-without-`actAs`
+  path out of privilege escalation because the service's attachment check is not public and the
+  preview API is disabled/possibly allowlisted in the lab. Replaced guessed Managed Flink audit
+  methods/categories with an explicit telemetry unknown and a controlled validation checklist.
+- Added complete impact, minimum-permission, Medium-stealth and expandable logging metadata to the
+  retained post-exploitation technique. No API was enabled and no resource/IAM state was created;
+  see `managed-flink/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Policy Troubleshooter authorization and telemetry correction
 - Removed the nonexistent `policytroubleshooter.troubleshoot` permission and
   `roles/policytroubleshooter.policyReviewer` role from all three relevant pages. Replaced them with
@@ -121,7 +134,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 49/403 privesc, 49/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 707 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 49/403 privesc, 50/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 706 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
