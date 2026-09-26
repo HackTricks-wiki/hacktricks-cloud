@@ -118,4 +118,3 @@ roles were deleted. Final account inventory showed:
 No AWS malfunction or authorization bypass was found. `WithPrivilegedAccess` is security-sensitive
 but explicitly documented and guarded by its dedicated IAM action in addition to
 `RegisterResource`. No private vulnerability report was created.
-
