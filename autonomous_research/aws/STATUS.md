@@ -375,3 +375,26 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Three disposable endpoint cycles were deleted, never stopped. Independent inventory was empty for
   matching servers, log deliveries/groups, IAM roles, and inline policies. Total cost remained far
   below the authorized ceiling.
+
+## cont.92 (2026-09-26) — Amazon Location API-key boundaries and persistence
+- SHIPPED #68 (VERIFIED exact-resource minimum): `geo:CreateKey` plus the exact delegated
+  `geo-maps:GetTile` permission minted a no-expiry public bearer key that remained usable after its
+  creator IAM role was deleted. `CreateKey` alone failed, and an update could not add Places access
+  that the issuer lacked, so this is service-level persistence rather than privilege escalation.
+- SHIPPED #69 (format + verified semantics): corrected the Location unauthenticated-access page to
+  explain that `AllowReferers` matches a caller-controlled header. Missing and confused referrers
+  failed, while a custom client supplying the exact allowed value succeeded by design. Added explicit
+  impact, High stealth, optional provider-data-event logging, and honest action/resource/Region negatives.
+- Secure parser/boundary results: wrong Region, cross-service Places, unauthorized static-map action,
+  malformed key, uppercase parameter name, and header-only key all failed. Percent-decoded `k%65y`
+  worked as the same logical name; duplicate query keys selected the last value without composing
+  permissions, so no parser/authz desynchronization was found.
+- Recently used keys required documented `ForceUpdate`/`ForceDelete`. Tightening applied immediately.
+  Three update-then-delete repetitions accepted one immediate request and rejected by two seconds;
+  one earlier cycle lasted at least seven seconds. Recorded as a short distributed invalidation caveat,
+  not a vulnerability, with broader timing tests left open.
+- Event History confirmed that `CreateKey` records complete actions/resources and `NoExpiry` but
+  redacts the returned key as `***`; `UpdateKey` redacts referrer values while exposing actions,
+  resources and `ForceUpdate`; `DeleteKey` records `forceDelete:true`.
+- Every disposable key was force-deleted; final `HTLocation*` inventory was empty and the test role did
+  not exist. No maps, VPCs, compute, or logging fixtures were created. No private AWS report.
