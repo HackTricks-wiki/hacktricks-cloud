@@ -71,6 +71,15 @@ enabled, cost model changes, or a helper library becomes available).
   configuration change and was not justified for an isolated credential boundary check. Revisit only
   after the account owner enables the feature or provides an enabled disposable account. See
   `sts/outbound-web-identity-2026-09-26.md`.
+- **License Manager `CreateToken` / `GetAccessToken`** — a real long-lived external credential
+  primitive for seller-issued licenses, but not a broadly useful AWS-account persistence technique.
+  The refresh token can repeatedly obtain one-hour OIDC tokens and reach only a preconfigured role
+  trusting `openid-license-manager.amazonaws.com`; AWS's standard consumption role is limited to
+  license-consumption operations. The lab is not onboarded, has no seller licenses or compatible
+  role, and a complete fixture would leave License Manager onboarding state plus KMS key-deletion
+  residue. Revisit only in an existing ISV seller-license deployment, especially when a custom
+  trusting role has broader permissions or weak issuer conditions. See
+  `license-manager/external-consumption-token-2026-09-26.md`.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
 
