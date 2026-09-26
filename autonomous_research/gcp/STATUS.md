@@ -301,3 +301,7 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — unauthenticated-technique service navigation audit
 - Added missing service-page links to the existing unauthenticated-access pages for API Gateway, BigQuery, Bigtable, Cloud DNS, Firebase, IAP, Pub/Sub, and Secret Manager. Also restored the missing Firebase and Pub/Sub privilege-escalation links.
 - Verified every new mdBook ref target locally. Navigation-only change; no cloud API call or resource mutation was needed.
+
+### 2026-09-26 — service-to-technique crosslink audit
+- Restored 37 missing links from 15 existing service-enumeration pages to their matching privesc, post-exploitation, and persistence pages: Config Controller, Bare Metal Solution, Looker, Managed Kafka, VMware Engine, VM Migration, BigLake, NetApp Volumes, Container Analysis, Cloud Deploy, Spanner, Eventarc, Contact Center Insights, Document AI, and Managed Flink.
+- Added only links whose target pages exist and verified every relative target locally. Navigation-only change; no cloud API call or resource mutation was needed.
