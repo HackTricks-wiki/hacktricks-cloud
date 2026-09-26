@@ -356,3 +356,22 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Both empty clusters reached not-found, all mappings/database roles were removed best-effort, all
   three IAM roles/policies were deleted, and no Aurora DSQL service-linked role remained. Independent
   cluster and IAM inventories were empty. No AWS vulnerability report.
+
+## cont.91 (2026-09-26) — Transfer Family logging defense evasion
+- SHIPPED #67 (VERIFIED exact-server minimum): `transfer:UpdateServer` alone cleared both legacy
+  `LoggingRole` and structured destinations on an ONLINE server. The restricted caller could not
+  DescribeServer and had explicit denies on every `logs:*` action and `iam:PassRole`.
+- Individual clears preserved the other logger; a fresh server with both configured accepted
+  `LoggingRole:""` plus `StructuredLogDestinations:[]` together in one call and immediately described
+  with both empty while remaining ONLINE.
+- Published as post-exploitation/defense evasion, not persistence. It suppresses future Transfer
+  CloudWatch protocol telemetry but does not erase history, hide the default `UpdateServer` management
+  event, or disable independently enabled S3 data events.
+- Re-enabling a structured destination immediately after clearing it returned a delivery-conflict
+  error for at least 150 seconds. This rollback lag is recorded as an operational caveat, not a new
+  permission or security boundary.
+- CloudTrail retained the exact empty logging fields in the default `UpdateServer` management event
+  (`readOnly:false`); no separate caller-attributed `DeleteDelivery` event was found after propagation.
+- Three disposable endpoint cycles were deleted, never stopped. Independent inventory was empty for
+  matching servers, log deliveries/groups, IAM roles, and inline policies. Total cost remained far
+  below the authorized ceiling.
