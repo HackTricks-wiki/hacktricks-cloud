@@ -382,6 +382,7 @@
       - [AWS - Lambda Exec Wrapper Persistence](pentesting-cloud/aws-security/aws-persistence/aws-lambda-persistence/aws-lambda-exec-wrapper-persistence.md)
     - [AWS - Location Service Persistence](pentesting-cloud/aws-security/aws-persistence/aws-location-service-persistence/README.md)
     - [AWS - Lightsail Persistence](pentesting-cloud/aws-security/aws-persistence/aws-lightsail-persistence/README.md)
+    - [AWS - MediaConnect Persistence](pentesting-cloud/aws-security/aws-persistence/aws-mediaconnect-persistence/README.md)
     - [AWS - MemoryDB Persistence](pentesting-cloud/aws-security/aws-persistence/aws-memorydb-persistence/README.md)
     - [AWS - RAM Persistence](pentesting-cloud/aws-security/aws-persistence/aws-ram-persistence/README.md)
     - [AWS - RDS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence/README.md)
