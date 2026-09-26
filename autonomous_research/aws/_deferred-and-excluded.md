@@ -72,6 +72,14 @@ enabled, cost model changes, or a helper library becomes available).
   creating the fixture would require third-party Slack OAuth/app installation. No state was changed.
   Revisit only with an existing test-owned authorized workspace and synthetic support case. See
   `support-app/slack-channel-role-2026-09-26.md`.
+- **Backup Gateway `PutHypervisorPropertyMappings(IamRoleArn)`** — this stores VMware-to-AWS tag
+  mappings; the passed role is used only to list/tag/untag Backup Gateway `vm/*` resources during a
+  separate metadata sync. It does not vend credentials, access VM disks, or provide arbitrary role
+  execution. The only conditional effect is tag manipulation that might influence tag-based backup
+  selection or unusual ABAC. The lab has no gateway, hypervisor, VM, trusted role, or managed-policy
+  attachment. A nonexistent-resource put failed at the gateway-version readiness check and created no
+  state. A real fixture requires external VMware/vCenter plus a deployed gateway, and mappings have no
+  dedicated delete API. Reasoned exclusion; see `backup-gateway/checklist.md`.
 - **STS `GetDelegatedAccessToken` as a standalone technique** — a real credential exchange, but only
   for AWS Partner temporary delegation. IAM permission alone is insufficient: the caller must be an onboarded/registered partner
   and hold a trade-in token delivered after a customer associates and approves a delegation request.
