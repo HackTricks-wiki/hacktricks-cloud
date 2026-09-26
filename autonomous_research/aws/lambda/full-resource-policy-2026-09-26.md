@@ -6,7 +6,20 @@ AWS [launched full Lambda resource policies](https://aws.amazon.com/about-aws/wh
 
 In account `228478051196`, a disposable IAM user with **no identity-based Lambda policy** successfully called `UpdateFunctionCode` on an active test function after an administrator used `PutResourcePolicy` to allow that user ARN to call `lambda:UpdateFunctionCode`. The function's code changed. This confirms that full policy control can lead to code execution under an existing function role, a privilege escalation when that role is stronger than the policy editor. No function execution was needed for the authorization test. CloudTrail Event History showed `PutResourcePolicy` and `UpdateFunctionCode20150331v2` as `lambda.amazonaws.com` management events in `us-east-1`.
 
-A separate disposable user with only `lambda:PutResourcePolicy`, `lambda:AddPermission`, and `lambda:RemovePermission` on `*` successfully called `PutResourcePolicy` once. However, later attempts with the same action set on the exact function ARN, and then on `*`, returned `AccessDeniedException` despite IAM policy simulation returning `allowed`. The behavior was inconsistent across short-lived test users; do not infer an undocumented authorization bypass or assert exact resource-scoping behavior. The public entry follows AWS's stated action dependencies and the confirmed effect of the policy grant.
+A follow-up used one durable disposable user whose only identity policy allowed
+`lambda:PutResourcePolicy`, `lambda:AddPermission`, and `lambda:RemovePermission` on the **exact
+function ARN**. Before the full policy existed, that user was denied `Invoke`. A policy replacement
+against a different function ARN was also denied by IAM. After propagation, `PutResourcePolicy` on
+the exact ARN succeeded, `GetResourcePolicy` returned the expected document, and the same user then
+invoked the function successfully (`StatusCode: 200`) even though its identity policy still contained
+no `lambda:InvokeFunction`. This resolves the earlier short-lived-user ambiguity: the three policy
+management permissions support normal function-ARN resource scoping, and the resource-policy grant
+alone authorizes a same-account IAM user to invoke.
+
+CloudTrail Event History recorded the successful `PutResourcePolicy` as a default management event.
+Both `requestParameters.policy` and `responseElements.policy` contained the complete replacement
+policy, including the principal ARN, action, and function ARN. The direct `Invoke` did not appear in
+Event History, consistent with Lambda invocation being an opt-in data event.
 
 ## Negative branch and cleanup
 
@@ -16,7 +29,7 @@ Each temporary Lambda function, execution role, IAM user, access key, and inline
 
 ## Next checks
 
-- [ ] Recheck exact-function ARN scoping after a longer IAM propagation interval using a single durable test user, then delete it.
+- [x] Recheck exact-function ARN scoping after a longer IAM propagation interval using a single durable test user, then delete it. Confirmed: exact ARN succeeds; a different ARN is denied.
 - [ ] Test a cross-account code update using a caller with its own identity-based `UpdateFunctionCode` allow in a disposable second account.
-- [ ] Confirm direct `Invoke` via the full policy with an IAM user lacking an identity allow.
+- [x] Confirm direct `Invoke` via the full policy with an IAM user lacking an identity allow. Confirmed with a 200 response and expected function payload.
 - [ ] Check explicit deny, permissions boundary, and code-signing interactions in isolated functions.

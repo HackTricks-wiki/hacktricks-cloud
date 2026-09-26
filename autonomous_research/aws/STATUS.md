@@ -6,7 +6,7 @@ Last updated: 2026-09-26
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
 
-Current next checks: Lambda full-policy IAM resource scoping and direct Invoke behavior; Sign-In network enforcement only in a disposable account; Identity Center applications-only instance effects; resource-share acceptance and retention without moving a production account; broader 2026 IAM/service action coverage. Do not publish unexpected security-impact candidates until separately validated and written in the local private AWS report folder.
+Current next checks: Sign-In network enforcement only in a disposable account; Identity Center applications-only instance effects; resource-share acceptance and retention without moving a production account; broader 2026 IAM/service action coverage. Do not publish unexpected security-impact candidates until separately validated and written in the local private AWS report folder.
 
 ## 2026-09-24 sweep checkpoint (historical)
 
@@ -176,3 +176,13 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Saturation re-confirmed: EventBridge family, SSM CreateActivation (ssm+ecs pages), DataSync/Transfer/FIS/IoT/GameLift privesc, Kendra CreateDataSource+PassRole — all covered.
 - SHIPPED #55: AWS AppFlow CreateFlow attacker-defined transfer (aws-appflow-enum.md). Verified live S3->S3 exfil end-to-end; UpdateFlow endpoint-immutability verified; SaaS-connector-profile source doc-grounded. No PassRole (service-linked + connector authority). Residue zero.
 - Lens-sweep log cont.76-79 written (parked: s3control MRAP policy, signer AddProfilePermission, finspace-data/emr-containers cred-vends).
+
+## 2026-09-26 Lambda full-policy follow-up
+- VERIFIED end-to-end with a least-privilege disposable IAM user: the documented three
+  policy-management permissions work when scoped to one exact function ARN; a PutResourcePolicy
+  attempt against a different ARN was denied.
+- The same user was denied Invoke before the full policy and received a successful `200` invocation
+  after the resource policy granted `lambda:InvokeFunction`, despite never having an identity-based
+  invoke allow.
+- Teardown verified: function, execution role, IAM user, inline policy, access key, and temporary SDK
+  environment are absent. Zero persistent residue.
