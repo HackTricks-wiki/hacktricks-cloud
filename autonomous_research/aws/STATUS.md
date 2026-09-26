@@ -8,6 +8,8 @@ Research remains active. The September 24 saturation table below records that sp
 
 Current next checks: Sign-In network enforcement only in a disposable account; Identity Center applications-only instance effects; resource-share acceptance and retention without moving a production account; broader 2026 IAM/service action coverage. Do not publish unexpected security-impact candidates until separately validated and written in the local private AWS report folder.
 
+Latest verified expected technique: EMR Serverless `GetSessionEndpoint` exact-session permission returns a portable Spark Connect bearer token to a principal other than `session.createdBy`; that client used the existing session's execution role to read a canary it could not access directly. Requires no `iam:PassRole`, `StartSession`, `GetSession`, or `ListSessions`. Public technique and detailed `emr/session-endpoint-2026-09-26.md` evidence added; all disposable test cycles fully cleaned.
+
 ## 2026-09-24 sweep checkpoint (historical)
 
 | Axis | State | Notes |
