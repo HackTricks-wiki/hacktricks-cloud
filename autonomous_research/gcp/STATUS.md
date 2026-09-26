@@ -9,7 +9,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 38/403 privesc, 23/404 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 746 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 43/403 privesc, 32/404 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 732 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
@@ -224,3 +224,7 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — Database Migration Service prerequisite review
 - Corrected the DMS exfil page to require a usable source connection profile, source database privileges, destination setup, and network reach. Removed the unsupported claim that `roles/editor` alone guarantees arbitrary victim database exfil and the duplicate section that inferred arbitrary Cloud SQL/AlloyDB API calls from the broad DMS service-agent role. The `--dump-path` flag is a dump *source* in relevant modes, not a generic exfil sink. No migration infrastructure created; see `database-migration/tested.md`.
+
+### 2026-09-26 — Cloud KMS visibility and Autokey prerequisite review
+- Added explicit stealth ratings to all five KMS privilege-escalation and nine post-exploitation techniques. Crypto-use operations are high-stealth under default logging (`DATA_READ`, off by default); lifecycle/configuration writes are lower-stealth Admin Activity, with Autokey split across folder, resource-project, and key-project scopes.
+- Corrected the Autokey repoint minimum permissions: the caller needs `cloudkms.autokeyConfigs.update` on the parent and `cloudkms.cryptoKeys.setIamPolicy` on the proposed key project. This preserves the attacker-owned-project custody path but removes the implication that the folder permission alone can choose an arbitrary destination. No GCP resource was created; see `kms/tested.md`.

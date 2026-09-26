@@ -47,5 +47,5 @@ sub-resources within already-documented services** — a slow trickle, not a bac
   mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
 
 ## Documentation-quality backlog: per-technique stealth
-- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique. A 2026-09-26 heading scan (excluding README indexes) found **746 unrated** sections that already have Impact + Logs generated: 365/403 privesc and 381/404 post-exploitation. Persistence is 156/156 rated. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud Run, and IAP were handled in this iteration.
+- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique. A 2026-09-26 heading scan (excluding README indexes) now has **732 unrated** sections that already have Impact + Logs generated: 360/403 privesc and 372/404 post-exploitation. Persistence is 156/156 rated. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud Run, IAP, and Cloud KMS were handled in this iteration.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
