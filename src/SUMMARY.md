@@ -597,6 +597,7 @@
     - [AWS - Bedrock Enum](pentesting-cloud/aws-security/aws-services/aws-bedrock-enum.md)
     - [AWS - Certificate Manager (ACM) & Private Certificate Authority (PCA)](pentesting-cloud/aws-security/aws-services/aws-certificate-manager-acm-and-private-certificate-authority-pca.md)
     - [AWS - Chime SDK Messaging Enum](pentesting-cloud/aws-security/aws-services/aws-chime-sdk-enum.md)
+    - [AWS - Cloud Control API Enum](pentesting-cloud/aws-security/aws-services/aws-cloud-control-api-enum.md)
     - [AWS - CloudFormation & Codestar Enum](pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md)
     - [AWS - Cloud Map Enum](pentesting-cloud/aws-security/aws-services/aws-cloud-map-enum.md)
     - [AWS - CloudHSM Enum](pentesting-cloud/aws-security/aws-services/aws-cloudhsm-enum.md)
