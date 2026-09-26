@@ -49,7 +49,10 @@ enabled, cost model changes, or a helper library becomes available).
   `us-west-2`; there was no existing safe fixture to probe.
 - **Route 53 Global Resolver `GetAccessToken`** — the service requires `us-east-2`, where the lab SCP
   (`p-oat9rg2i`) explicitly denies `ListGlobalResolvers`. No resource was created and no token path
-  was tested. Revisit only in an account/OU that permits the service.
+  was tested. Current review additionally confirmed that the AWS-managed
+  `AmazonRoute53GlobalResolverReadOnlyAccess` policy grants the secret-returning action on `*`, making
+  the documented technique particularly relevant to read-only-role compromise. Revisit live only in an
+  account/OU that permits the service.
 - **Amazon Connect `CreateAuthCode` session minting** — IAM authorization and exact multi-resource
   behavior were verified, but every fully associated Customer Profiles request returned a service
   HTTP 500, including administrator calls. No authorization code was issued, so this is neither a
