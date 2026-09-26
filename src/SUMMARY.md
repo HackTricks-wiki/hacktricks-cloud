@@ -689,6 +689,7 @@
     - [AWS - SageMaker Enum](pentesting-cloud/aws-security/aws-services/aws-sagemaker-enum/README.md)
     - [AWS - Secrets Manager Enum](pentesting-cloud/aws-security/aws-services/aws-secrets-manager-enum.md)
     - [AWS - Security Hub Enum](pentesting-cloud/aws-security/aws-services/aws-security-hub-enum.md)
+    - [AWS - Security Lake Enum](pentesting-cloud/aws-security/aws-services/aws-security-lake-enum.md)
     - [AWS - Security Incident Response Enum](pentesting-cloud/aws-security/aws-services/aws-security-incident-response-enum.md)
     - [AWS - Systems Manager Incident Manager Enum](pentesting-cloud/aws-security/aws-services/aws-systems-manager-incident-manager-enum.md)
     - [AWS - SES Enum](pentesting-cloud/aws-security/aws-services/aws-ses-enum.md)
