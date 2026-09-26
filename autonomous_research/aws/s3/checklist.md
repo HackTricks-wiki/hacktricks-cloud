@@ -12,3 +12,6 @@ novelty — NOT shipped to avoid duplicating the existing technique. Revisit onl
   repeated/encoded separators, double encoding, backslashes, Unicode slash variants, and wildcard
   forms did not produce credentials usable against a sibling `denied/*` object. See
   `access-grants-canonicalization-2026-09-26.md`.
+- [x] S3 Express `CreateSession` bucket/mode/credential binding. Exact-bucket `ReadOnly` sessions
+  could not write, cross to a sibling bucket, or gain rights by mixing/mutating tuple fields. Omitted
+  mode fell back to the maximum allowed (`ReadOnly`). See `s3express-session-binding-2026-09-26.md`.

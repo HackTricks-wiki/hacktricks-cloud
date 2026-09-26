@@ -318,3 +318,23 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Two API Gateway test cycles were fully deleted in `finally`, including both Transfer servers, REST
   APIs, roles/policies, bucket/objects, and access credentials. Combined Transfer custom-IdP inventory
   remained empty; no server was left stopped or billable.
+
+## cont.89 (2026-09-26) — S3 Express session boundary audit
+- SHIPPED #65 (VERIFIED expected data-access behavior): expanded the existing S3 Express
+  `s3express:CreateSession` broker coverage with exact-bucket/minimum IAM, `ReadOnly`/`ReadWrite`
+  impact, High stealth, and an expandable CloudTrail table. Session issuance and object calls are
+  optional S3 Express data events, not default Event History management events.
+- NEGATIVE / secure boundary: an exact-bucket-A, `SessionMode=ReadOnly` caller read/listed A but
+  could not write/delete, mint ReadWrite, mint for bucket B, or use its A tuple against B. Omitted
+  mode fell back to ReadOnly as documented.
+- Session credential fields were indivisible: mutation, cross-bucket splices, same-bucket ReadOnly /
+  privileged-ReadWrite token splices, and even a splice between two same-scope ReadOnly sessions all
+  failed closed. An intact tuple replayed before expiry; a freshly signed request after its returned
+  five-minute expiration was denied.
+- Raw REST required `x-amz-content-sha256` on the empty CreateSession GET. A session-authenticated
+  HEAD against its own Zonal bucket returned 200 despite documentation preferring IAM credentials;
+  the same tuple against bucket B returned 403, so this remains a compatibility note without security
+  impact and no AWS vulnerability report.
+- Three complete two-bucket cycles and two preliminary header-diagnostic cycles ran through `finally`.
+  Every object, directory bucket, inline policy, and test role was deleted; independent inventory for
+  the `ht-s3e-` prefix was empty.
