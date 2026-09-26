@@ -35,8 +35,6 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## Honest niche exclusions (real primitive, low value / untestable)
 
-- **signin `CreateOAuth2Token`** — returns creds but `signin` is an internal console-federation
-  service, not a normal IAM-callable API. Unverifiable.
 - **pca-connector-scep `GetChallengePassword`** — SCEP enrollment challenge password; very niche
   Private-CA device onboarding.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
