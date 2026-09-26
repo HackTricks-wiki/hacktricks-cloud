@@ -64,6 +64,14 @@ enabled, cost model changes, or a helper library becomes available).
   public technique nor a security-impact bug report yet. See
   `connect/auth-code-session-boundary-2026-09-26.md` and revisit after AWS documents the remaining
   prerequisite or fixes the new API.
+- **AWS Support App `CreateSlackChannelConfiguration` / `UpdateSlackChannelConfiguration` role
+  binding** — this can conditionally expose support cases and future case notifications to every user
+  in a configured Slack channel, but it is not generic execution as the passed role. The documented
+  Slack interface is limited to Support and Service Quotas workflows. The lab has no authorized Slack
+  workspace/channel, no role trusting `supportapp.amazonaws.com`, and no premium Support entitlement;
+  creating the fixture would require third-party Slack OAuth/app installation. No state was changed.
+  Revisit only with an existing test-owned authorized workspace and synthetic support case. See
+  `support-app/slack-channel-role-2026-09-26.md`.
 - **STS `GetDelegatedAccessToken` as a standalone technique** — a real credential exchange, but only
   for AWS Partner temporary delegation. IAM permission alone is insufficient: the caller must be an onboarded/registered partner
   and hold a trade-in token delivered after a customer associates and approves a delegation request.
