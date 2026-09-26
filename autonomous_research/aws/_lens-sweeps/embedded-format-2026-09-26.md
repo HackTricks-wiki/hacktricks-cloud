@@ -17,4 +17,11 @@ A heading scan of `aws-services/` identified offensive techniques embedded insid
 
 Follow-up factual checks: [CodeArtifact repository-policy docs](https://docs.aws.amazon.com/codeartifact/latest/ug/repo-policies.html) require an external identity-policy allow and a domain-policy `GetAuthorizationToken` grant for package-manager access. Direct known-asset API reads use their own authorization path. [Incident Manager's availability notice](https://docs.aws.amazon.com/incident-manager/latest/userguide/incident-manager-availability-change.html) limits these techniques to existing enabled customers since November 7, 2025.
 
+Dedicated privesc retrofit continues beyond the embedded-page sweep:
+
+| Page | Fields and corrections | Evidence |
+| --- | --- | --- |
+| Secrets Manager privesc | Stealth for `GetSecretValue` and resource-policy self-grant; qualified the extra KMS `Decrypt` detection signal | [Secrets Manager CloudTrail guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/monitoring-cloudtrail.html); [KMS CloudTrail guide](https://docs.aws.amazon.com/kms/latest/developerguide/logging-using-cloudtrail.html) permits KMS event exclusion on a trail |
+| KMS privesc | Stealth for key-policy edit, grant, replication and decrypt; narrowed impact to obtainable ciphertext, required context and service permissions | [KMS Decrypt API](https://docs.aws.amazon.com/kms/latest/APIReference/API_Decrypt.html); [encryption context](https://docs.aws.amazon.com/kms/latest/developerguide/encrypt_context.html) |
+
 No new cloud infrastructure was launched for this format sweep. Continue scanning actual embedded techniques while excluding reference-only headings.
