@@ -186,3 +186,13 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   invoke allow.
 - Teardown verified: function, execution role, IAM user, inline policy, access key, and temporary SDK
   environment are absent. Zero persistent residue.
+
+## 2026-09-26 S3 Access Grants canonicalization test
+- NEGATIVE / secure behavior: a 24-case `GetDataAccess` matrix did not escape an `allowed/*` grant
+  into a sibling `denied/*` object. Accepted dot/encoding strings were scoped literally under
+  `Minimal`; `Default` stayed at the matching `allowed/*` grant. Other variants were denied or
+  rejected as invalid.
+- This is research-ledger-only, not public-book content. Full result:
+  `s3/access-grants-canonicalization-2026-09-26.md`.
+- Two test cycles fully torn down; Access Grants instance, bucket, objects, IAM user/key/policy, and
+  location role/policy all verified absent.
