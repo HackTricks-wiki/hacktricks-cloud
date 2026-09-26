@@ -14,8 +14,11 @@
   `logs:FilterLogEvents`; published as Transfer Family post-exploitation.
 - [x] **API Gateway custom IdP takeover** — VERIFIED. Exact integration-response PATCH plus production
   deployment accepted an attacker password and selected a Transfer role without PassRole.
-- [ ] **Secrets Manager / DynamoDB IdP-record poisoning** — change role/policy/key/password/home without
-  Lambda or Transfer mutation permissions, following the AWS templates/toolkit.
+- [x] **Secrets Manager legacy IdP-record poisoning** — VERIFIED end to end. Exact-secret
+  `PutSecretValue` installed an attacker password and selected a high Transfer role without Get,
+  PassRole, Transfer/Lambda/API Gateway, or direct S3 access.
+- [ ] **DynamoDB toolkit IdP-record poisoning** — change the newer toolkit's role/policy/home record
+  without Lambda or Transfer mutation permissions; keep distinct from its Secrets Manager credential.
 - [x] **UpdateServer logging disable** — VERIFIED. Exact-server UpdateServer alone, with explicit
   `logs:*` and PassRole denies, cleared legacy and structured logging separately and together ONLINE.
 - [x] **TestIdentityProvider oracle** — VERIFIED exact-user scope, caller-controlled `SourceIp`,

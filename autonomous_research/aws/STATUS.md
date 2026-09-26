@@ -398,3 +398,21 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   resources and `ForceUpdate`; `DeleteKey` records `forceDelete:true`.
 - Every disposable key was force-deleted; final `HTLocation*` inventory was empty and the test role did
   not exist. No maps, VPCs, compute, or logging fixtures were created. No private AWS report.
+
+## cont.93 (2026-09-26) — Transfer Family Secrets Manager identity poisoning
+- SHIPPED #70 (VERIFIED end to end): exact-secret `secretsmanager:PutSecretValue` replaced a legacy
+  custom-IdP user's password and selected a high Transfer role. A real SFTP login read the protected
+  marker while the baseline role had been denied it. The restricted caller could not Get the secret,
+  pass a role, mutate Transfer/Lambda/API Gateway, or access S3 directly.
+- The successful new version automatically became `AWSCURRENT`; the old password stopped working.
+  The escalation is limited to S3/EFS operations Transfer performs through the pre-existing trusted
+  role and does not return STS credentials.
+- The AWS-managed `aws/secretsmanager` key needed no positive KMS grant, but a preliminary explicit
+  `Deny kms:*` blocked `PutSecretValue` because Secrets Manager requests a data key on the caller's
+  behalf. Customer-managed keys retain their KMS authorization gate.
+- Public coverage is explicitly limited to legacy/compatible IdPs that store authorization fields in
+  the secret. The newer toolkit keeps Role/Policy/home in DynamoDB; that datastore mutation remains
+  a separate open test.
+- Two disposable server cycles were deleted, never stopped. Final independent inventory was empty for
+  matching Transfer servers, REST APIs, Lambda functions/log groups, secrets, S3 buckets, and roles.
+  API Gateway account settings were never touched. Expected functionality; no private AWS report.

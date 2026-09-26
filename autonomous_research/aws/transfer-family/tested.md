@@ -58,3 +58,22 @@
   can already return the high role directly. Response precedence did not cross another tenant,
   principal, or authorization boundary, so it is retained as a regression/implementation note rather
   than an AWS vulnerability report or standalone public attack.
+
+## Secrets Manager custom-IdP record poisoning — VERIFIED (cont.93)
+
+- A caller with only `secretsmanager:PutSecretValue` on one exact
+  `aws/transfer/<server-id>/<username>` secret wrote a complete new credential/authorization record.
+  It could not read the secret, pass a role, mutate Transfer/Lambda/API Gateway, or access S3.
+- Before the write, its baseline password read the low marker and was denied the high marker. The
+  poisoned version became `AWSCURRENT`; the attacker password then authenticated over real SFTP and
+  read the high marker through the injected pre-existing Transfer role. The old password failed.
+- On `aws/secretsmanager`, no positive KMS grant was needed. A preliminary role with explicit
+  `Deny kms:*` failed `PutSecretValue` with `Access to KMS is not allowed`, confirming that the service
+  still obtains a data key on the caller's behalf. Customer-managed keys have an additional KMS gate.
+- Scope is the AWS legacy template/compatible designs that colocate Password/PublicKey and
+  Role/Policy/home fields in one secret. The newer toolkit stores authorization attributes in
+  DynamoDB, so its secret-only variant is credential impersonation rather than role selection.
+- CloudTrail logs Put/Get as management events but omits secret values; KMS `GenerateDataKey` can
+  expose the secret/version encryption context. Protocol and S3 visibility remain separately opt-in.
+- Both server cycles and every API, Lambda/log, secret, S3, role, and policy fixture were deleted.
+  Independent final inventory was empty. This is expected functionality; no AWS vulnerability report.
