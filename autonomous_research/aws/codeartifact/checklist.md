@@ -15,4 +15,3 @@
 - [ ] Service bearer-token Region binding and dual-stack endpoint behavior.
 
 Only promote a result if it crosses a documented domain/repository/action boundary or survives a settled explicit deny. Expected token lifetime beyond an assumed-role session is documented behavior when duration is nonzero, not a vulnerability.
-

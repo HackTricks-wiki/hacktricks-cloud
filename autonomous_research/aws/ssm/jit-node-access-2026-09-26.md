@@ -73,4 +73,3 @@ Do not enable JIT in a populated shared account for testing because pricing appl
 - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSSystemsManagerJustInTimeAccessTokenPolicy.html
 - https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html
 - https://aws.amazon.com/systems-manager/pricing/
-

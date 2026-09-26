@@ -9,7 +9,7 @@
 ## Comprehensive sweeps run (methods reusable)
 1. All-services credential-vend op sweep (Get*Credential/*Token/vend) vs wiki -> surfaced Bedrock AgentCore (shipped). Others: finspace-data GetProgrammaticAccessCredentials, emr-containers GetManagedEndpointSessionCredentials (parked), codecatalyst/route53globalresolver CreateAccessToken (niche PAT), workmail PATs (niche).
 2. All-services resource-policy setter sweep (Put*Policy/Add*Permission) vs cross-account matrix -> SES PutIdentityPolicy (shipped). Parked: s3control:PutMultiRegionAccessPointPolicy (MRAP cross-account), signer:AddProfilePermission (code-signing cross-account supply-chain), waf*/PutPermissionPolicy (rulegroup share, low), mediastore PutContainerPolicy (EOL).
-3. All-services Create*/Update*/Run*/Start*/Register* role-field sweep vs wiki -> Budgets CreateBudgetAction (shipped). Filtered variant-op noise: sagemaker(21 ops, canonical covered), comprehend/transcribe/comprehendmedical (covered by aws-ml-dataaccess-passrole-privesc), glue/eks/dms/ecs (covered). 
+3. All-services Create*/Update*/Run*/Start*/Register* role-field sweep vs wiki -> Budgets CreateBudgetAction (shipped). Filtered variant-op noise: sagemaker(21 ops, canonical covered), comprehend/transcribe/comprehendmedical (covered by aws-ml-dataaccess-passrole-privesc), glue/eks/dms/ecs (covered).
 
 ## Parked genuine candidates (verify/ship in a future cycle)
 - kendra: post-exploit page only, NO privesc page. CreateIndex/CreateDataSource + RoleArn (Kendra reads data sources as passed role). Niche service, moderate value.

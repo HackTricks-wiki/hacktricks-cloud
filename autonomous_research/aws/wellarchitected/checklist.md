@@ -7,4 +7,3 @@
 - [ ] Verify `ListShareInvitations` never exposes another recipient's invitation metadata.
 
 See `share-invitation-binding-2026-09-26.md` for the completed same-account preflight and cleanup.
-

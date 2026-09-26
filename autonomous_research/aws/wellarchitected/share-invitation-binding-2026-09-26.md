@@ -43,4 +43,3 @@ The `finally` handler deleted the workload, both access keys, both inline polici
 - https://docs.aws.amazon.com/wellarchitected/latest/APIReference/API_ListShareInvitations.html
 - https://docs.aws.amazon.com/wellarchitected/latest/userguide/workloads-sharing.html
 - https://docs.aws.amazon.com/service-authorization/latest/reference/list_wellarchitected.html
-

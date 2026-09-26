@@ -10,4 +10,3 @@
 - [ ] Confirm a session remains open past approval-window expiry unless Session Manager duration/idle preferences terminate it.
 
 See `jit-node-access-2026-09-26.md`.
-

@@ -45,4 +45,3 @@ returned `InvalidIamRole`. The retry run treated that response as eventual consi
 the matrix. Both attempts used `finally` teardown. The access grant, location, Access Grants instance,
 access key, IAM user/policy, location role/policy, both objects, and bucket were deleted. Final probes
 returned `AccessGrantsInstanceNotExistsError`, S3 `404`, and IAM `NoSuchEntity` for the user and role.
-

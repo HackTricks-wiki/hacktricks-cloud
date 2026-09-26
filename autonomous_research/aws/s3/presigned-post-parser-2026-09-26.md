@@ -99,4 +99,3 @@ Independent post-test inventory returned no bucket or IAM role starting with `ht
 - https://docs.aws.amazon.com/prescriptive-guidance/latest/presigned-url-best-practices/overview.html
 - https://docs.aws.amazon.com/prescriptive-guidance/latest/presigned-url-best-practices/faq.html
 - https://docs.aws.amazon.com/prescriptive-guidance/latest/presigned-url-best-practices/identifying-requests.html
-
