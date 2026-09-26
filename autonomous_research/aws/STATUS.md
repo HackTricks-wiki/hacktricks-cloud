@@ -301,3 +301,20 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   the result stays in the research ledger and no AWS vulnerability report was created.
 - Five short endpoint cycles were deleted immediately, never merely stopped. Final independent inventory
   was empty for matching Transfer servers, Lambdas, IAM roles, S3 buckets, and log groups.
+
+## cont.88 (2026-09-26) — API Gateway custom IdP takeover and test oracle
+- SHIPPED #63 (VERIFIED end to end): exact-resource `apigateway:PATCH` on the Transfer IdP's GET/200
+  integration response plus `apigateway:POST` on that REST API's deployment collection replaced the
+  response template with an attacker-selected role/home. After deployment, a real password SFTP login
+  read the protected S3 marker through that role. The caller had an explicit `iam:PassRole` deny and
+  could not read the integration response.
+- SHIPPED #64 (VERIFIED exact-user scope): `transfer:TestIdentityProvider` on one exact user ARN, with
+  `DescribeServer` denied, disclosed the IdP-selected role, home, and API URL. Its caller-controlled
+  `SourceIp` satisfied an IdP allow rule even though a real SFTP login from the actual IP failed; the
+  action creates no session and is documented as post-exploitation recon/password-oracle behavior.
+- CloudTrail later confirmed `UpdateIntegrationResponse` records the complete malicious template;
+  `CreateDeployment` records API/stage/deployment; and `TestIdentityProvider` redacts the password but
+  records the chosen source IP plus full IdP response. The latter appeared as `readOnly:false`.
+- Two API Gateway test cycles were fully deleted in `finally`, including both Transfer servers, REST
+  APIs, roles/policies, bucket/objects, and access credentials. Combined Transfer custom-IdP inventory
+  remained empty; no server was left stopped or billable.
