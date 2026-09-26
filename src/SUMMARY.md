@@ -361,6 +361,7 @@
     - [GCP - Migration Center Enum](pentesting-cloud/gcp-security/gcp-services/gcp-migration-center-enum.md)
     - [GCP - Monitoring Enum](pentesting-cloud/gcp-security/gcp-services/gcp-monitoring-enum.md)
     - [GCP - NetApp Volumes Enum](pentesting-cloud/gcp-security/gcp-services/gcp-netapp-volumes-enum.md)
+    - [GCP - Network Services Enum](pentesting-cloud/gcp-security/gcp-services/gcp-network-services-enum.md)
     - [GCP - OS Config Enum](pentesting-cloud/gcp-security/gcp-services/gcp-os-config-enum.md)
     - [GCP - Oracle Database@GCP Enum](pentesting-cloud/gcp-security/gcp-services/gcp-oracle-database-enum.md)
     - [GCP - Private Catalog Enum](pentesting-cloud/gcp-security/gcp-services/gcp-private-catalog-enum.md)

@@ -1,5 +1,20 @@
 # Network Services (Service Extensions) — tested
 
+## 2026-09-26 — full service-enumeration coverage
+
+- Added `gcp-network-services-enum.md` covering mesh routes and endpoint policies, Service
+  Extensions, the newer Agent Gateway/connectivity-template and extension-binding resources, and
+  allowlist-gated Cloud Multicast.
+- Validated current stable `gcloud network-services` and `gcloud service-extensions` list/describe
+  groups and the v1/v1alpha1 discovery resource surface. The authorized lab project's Network
+  Services API is disabled; read-only list requests returned `PERMISSION_DENIED`, so no API was
+  enabled and no resource was created.
+- Agent Gateway and multicast additions were recorded as inventory and research leads, not promoted
+  into attacks without a distinct verified security impact.
+- Rechecked the current predefined roles: both Network Services Editor and Admin now include
+  `agentGateways.*` and `wasmPlugins.use`; only Admin adds `httpfilters.setIamPolicy`. Updated the
+  role summary and added explicit stealth ratings to all six retained attack sections.
+
 ## `networkservices.authzExtensions.*` authorization-callout hijack — SHIPPED (gap found via ground-truth diff)
 
 Found by the permission-surface diff: the existing Service Extensions technique in

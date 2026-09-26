@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Network Services enumeration and new-surface triage
+- Added the missing Network Services enumeration page for meshes/routes, endpoint policy, Service
+  Extensions, Agent Gateways, extension bindings and allowlist-gated Cloud Multicast. Linked it from
+  the existing Network Services attack page.
+- The API is disabled in the authorized lab. Validated current CLI/discovery surfaces and sent only
+  read-only list requests; did not enable the API or create infrastructure. Agent Gateway update and
+  extension-binding boundaries are tracked as candidates rather than asserted as attacks. Corrected
+  the current Editor/Admin role map and added stealth ratings to all six retained Network Services
+  attack sections. See `networkservices/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Integration Connectors service enumeration
 - Added the missing Integration Connectors service-enumeration page and linked it from both existing
   attack pages. It covers full connection configuration, resource IAM, runtime schemas, events,
