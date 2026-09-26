@@ -1,5 +1,16 @@
 # Cloud Run — open leads
 
+## Documentation and audit drift
+- [x] Reconcile Cloud Run get/list and `RunJob` logging against the current audit reference instead
+      of treating an older missing-log capture as an immutable platform contract.
+- [ ] In a future disposable job test, enable the exact `ADMIN_READ` and `DATA_WRITE` audit config,
+      invoke through both v1 and v2, and determine whether current successful `RunJob` calls emit an
+      attributed Data Access entry in addition to `/Jobs.RunJob`. Remove the job immediately.
+- [ ] Capture the exact custom-role permission checks for attaching a pre-existing connector via a
+      raw v2 service patch. Current documentation and role definitions identify
+      `vpcaccess.connectors.get` plus `compute.networks.access`; do not create a connector solely for
+      this check.
+
 ## Image export
 - [x] Test whether `run.locations.exportImage` is custom-role grantable and whether it exports a private revision image without source Artifact Registry access. Confirmed: the permission alone is sufficient when the source project's Cloud Run service agent can write to the destination package path; caller registry access is unnecessary. See `tested.md` and the Cloud Run post-exploitation page.
 - [ ] If a second disposable project becomes available, repeat with a physically cross-project destination and confirm whether organisation policies or VPC Service Controls add any boundary beyond destination-repository IAM.

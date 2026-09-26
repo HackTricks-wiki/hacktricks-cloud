@@ -1,5 +1,21 @@
 # Cloud Run — tested
 
+## 2026-09-26 — post-exploitation permission and audit drift review
+- Corrected an outdated absolute claim that service/job/revision reads and `RunJob` can never be
+  attributed. The current Cloud Run audit table maps the reads to Data Access `ADMIN_READ` and
+  `RunJob` to `DATA_WRITE`; both remain disabled by default. Preserved the earlier contrary live
+  observation as a reason for defenders to validate delivery, not as the documented contract.
+- Corrected the image-recovery workflow to use the immutable v1 revision `status.imageDigest` and
+  export the assembled container filesystem. `spec.containers[].image` can retain the input tag and
+  is not itself proof of the digest that the revision serves.
+- Corrected the nonexistent `vpcaccess.connectors.use` permission. Attaching an existing connector
+  relies on `vpcaccess.connectors.get` plus `compute.networks.access`; the supported predefined
+  grant is `roles/vpcaccess.user`, with Compute Viewer also documented for deployment tooling.
+- Added exact minimum permissions and categorical stealth ratings to all five post-exploitation
+  techniques, and removed the overclaim that deletion erases Cloud Audit/request/container logs.
+- The lab currently contains no Cloud Run services. Enumeration was read-only; no service,
+  connector, image or other infrastructure was created.
+
 ## 2026-09-26 — `run.locations.exportImage` source-registry bypass
 - Created a custom role containing exactly `run.locations.exportImage`; GCP accepted the permission even though it is absent from the common Cloud Run/basic predefined roles. A caller with only that role successfully called `ExportImage` and `ExportStatus` for a known revision without `run.revisions.get` or any Artifact Registry permission.
 - Destination authorization is evaluated as the source project's Cloud Run service agent, not the caller: giving the caller `roles/artifactregistry.writer` did not allow upload; removing that grant and granting Writer only to `service-<SOURCE_PROJECT_NUMBER>@serverless-robot-prod.iam.gserviceaccount.com` succeeded.
