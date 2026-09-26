@@ -1,8 +1,14 @@
 # AWS audit — status
 
-Last updated: 2026-09-24
+Last updated: 2026-09-26
 
-## Completion state per axis
+## Active 2026-09-26 checkpoint
+
+Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
+
+Current next checks: Lambda full-policy IAM resource scoping and direct Invoke behavior; Sign-In network enforcement only in a disposable account; Identity Center applications-only instance effects; resource-share acceptance and retention without moving a production account; broader 2026 IAM/service action coverage. Do not publish unexpected security-impact candidates until separately validated and written in the local private AWS report folder.
+
+## 2026-09-24 sweep checkpoint (historical)
 
 | Axis | State | Notes |
 |---|---|---|
