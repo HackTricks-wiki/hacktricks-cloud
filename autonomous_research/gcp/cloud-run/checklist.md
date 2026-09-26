@@ -5,3 +5,7 @@
 - [ ] Check whether `run.instances.start` after a stopped-instance configuration change creates a separate authorization boundary, and record actual Admin Activity/System Event and container logs. Delete every instance immediately after testing; [the preview resource](https://docs.cloud.google.com/run/docs/instances/create-and-manage-instances) bills for dedicated compute and is unavailable in `us-central1`.
 
 The ordinary `run.instances.create` + `iam.serviceAccounts.actAs` path is the same service-account execution family as Cloud Run services/jobs, so it is not a separate book technique without a distinct boundary. The current wiki already mentions `run.instances.sshRead`/`sshRoot` as a direct path into an existing instance. API permission reference: https://docs.cloud.google.com/run/docs/reference/iam/permissions.
+
+## System-managed Agent Identity (Preview, announced 2026-09-01)
+- [x] Test whether a caller holding only `run.services.update` (no service-account `actAs`) can change code or environment on an existing Cloud Run agent using `--identity-type=agent-identity`. The v2 update was denied because the caller lacked `actAs` on the underlying Compute Engine default service account; see `tested.md`. This does not yield a one-permission run-as-agent-identity technique.
+- [x] If creation/registration is unavailable in the lab, record the exact blocking control. Creation worked after disabling the preview workload certificate; the first attempt failed at certificate mount and was cleaned up.
