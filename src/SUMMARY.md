@@ -677,6 +677,7 @@
     - [AWS - MediaConnect Enum](pentesting-cloud/aws-security/aws-services/aws-mediaconnect-enum.md)
     - [AWS - MediaLive Enum](pentesting-cloud/aws-security/aws-services/aws-medialive-enum.md)
     - [AWS - Lambda Enum](pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md)
+    - [AWS - Launch Wizard Enum](pentesting-cloud/aws-security/aws-services/aws-launch-wizard-enum.md)
     - [AWS - Lex V2 Enum](pentesting-cloud/aws-security/aws-services/aws-lex-v2-enum.md)
     - [AWS - Lightsail Enum](pentesting-cloud/aws-security/aws-services/aws-lightsail-enum.md)
     - [AWS - Macie Enum](pentesting-cloud/aws-security/aws-services/aws-macie-enum.md)
