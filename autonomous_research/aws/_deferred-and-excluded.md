@@ -23,6 +23,16 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## No distinct primitive (verified-none — do not manufacture a page)
 
+- **BCM Dashboards `UpdateDashboard` / `UpdateScheduledReport`** — `UpdateDashboard` has no role
+  input. `UpdateScheduledReport` can replace the same-account execution role and depends on
+  `iam:PassRole`, but the modeled workflow is limited to fixed dashboard/cost/budget reads and PDF
+  generation: there is no code, command, arbitrary destination, credential return, or raw-result
+  return. Reports are stored in AWS-managed S3 and delivered through separately configured AWS User
+  Notifications; the report APIs do not choose recipients. Shared dashboards expose configuration,
+  while recipients query their own account data and maintain independent report configurations. The
+  lab had only read-only managed dashboards and no scheduled reports, so no fixture was created. No
+  role escalation or distinct post-exploitation primitive; see
+  `bcm-dashboards/role-boundary-2026-09-26.md`.
 - **Application Auto Scaling `RegisterScalableTarget` for `custom-resource`** — not a generic
   PassRole or arbitrary AWS API primitive. AWS documents a fixed SigV4 GET/PATCH protocol through API
   Gateway and uses `AWSServiceRoleForApplicationAutoScaling_CustomResource`; its managed policy is
@@ -122,12 +132,14 @@ enabled, cost model changes, or a helper library becomes available).
   `sts/delegated-access-token-2026-09-26.md`.
 - **License Manager `CreateToken` / `GetAccessToken`** — a real long-lived external credential
   primitive for seller-issued licenses, but not a broadly useful AWS-account persistence technique.
-  The refresh token can repeatedly obtain one-hour OIDC tokens and reach only a preconfigured role
-  trusting `openid-license-manager.amazonaws.com`; AWS's standard consumption role is limited to
-  license-consumption operations. The lab is not onboarded, has no seller licenses or compatible
-  role, and a complete fixture would leave License Manager onboarding state plus KMS key-deletion
-  residue. Revisit only in an existing ISV seller-license deployment, especially when a custom
-  trusting role has broader permissions or weak issuer conditions. See
+  `CreateToken` has no PassRole dependency and AWS says it does not check whether its embedded role
+  ARNs are in use, but that is not direct delegation: the refresh token can repeatedly obtain
+  one-hour OIDC tokens and reach only a preconfigured role whose web-identity trust accepts
+  `openid-license-manager.amazonaws.com` and the issuer-account `amr`. AWS's standard consumption role
+  is limited to license-consumption operations. The lab is not onboarded, has no seller licenses or
+  compatible role, and a complete fixture would leave License Manager onboarding state plus KMS
+  key-deletion residue. Revisit only in an existing ISV seller-license deployment, especially when a
+  custom trusting role has broader permissions or weak issuer conditions. See
   `license-manager/external-consumption-token-2026-09-26.md`.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
@@ -146,8 +158,12 @@ enabled, cost model changes, or a helper library becomes available).
   lab can reach it in `eu-west-1`, but every meaningful fixture requires the account to first call
   `RegisterCustomEndpoint`. AWS exposes no deregister/delete operation, so that onboarding would leave
   irreversible account-level state. The unonboarded lab safely confirmed the prerequisite error and
-  currently has no custom endpoint. Revisit in an already-onboarded account; do not register the lab
-  merely to test these candidates. See `iot-managed-integrations/checklist.md`.
+  currently has no custom endpoint. The current `CreateDestination` contract is Kinesis-only and
+  explicitly requires exact-role PassRole to `iotmanagedintegrations.amazonaws.com`; the role writes
+  records, while a separate `CreateNotificationConfiguration` selects and activates event delivery.
+  This is conditional device-event exfiltration, not arbitrary role execution. Revisit in an
+  already-onboarded account; do not register the lab merely to test these candidates. See
+  `iot-managed-integrations/checklist.md`.
 - **security-ir** — NOT deferred: documented from model (see security-ir/tested.md).
 
 ## cont.61 (2026-09-24) — zero-coverage sweep tail (133 services cross-referenced)

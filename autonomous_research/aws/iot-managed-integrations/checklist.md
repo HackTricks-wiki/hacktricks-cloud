@@ -23,11 +23,20 @@ account (or a real engagement).
       end-to-end onboarding actually yields a usable device identity before claiming privesc.
       Min perm: `iotmanagedintegrations:CreateProvisioningProfile` (+ account onboarded). Persistence/
       initial-access. Cheap to verify (single Create+Delete) ONCE the account is onboarded.
-- [ ] **`iotmanagedintegrations:CreateDestination` + `iam:PassRole`.** Requires DeliveryDestinationArn
-      (KINESIS only), DeliveryDestinationType, RoleArn. Repoint device event/notification delivery to an
-      attacker-owned Kinesis stream using a passed role => device-event exfiltration + PassRole. Verify
-      the PassRole gate with the bogus-resource two-sided probe (once onboarded). Delivery-role value is
-      limited unless the role is independently useful; primary value is event exfil.
+- [x] **`iotmanagedintegrations:CreateDestination` + `iam:PassRole` — official contract reconciled;
+      live delivery correctly deferred.** Requires `DeliveryDestinationArn` (currently Kinesis only),
+      `DeliveryDestinationType=KINESIS`, and `RoleArn`. AWS's notification guide requires wildcard
+      `iotmanagedintegrations:CreateDestination` plus PassRole on the exact delivery role with
+      `iam:PassedToService=iotmanagedintegrations.amazonaws.com`. The role trusts that same service
+      principal, should constrain `aws:SourceAccount` and `aws:SourceArn`, and needs only
+      `kinesis:PutRecord` on the destination stream. `CreateNotificationConfiguration` is a separate
+      permission and operation that selects the event type and actually routes notifications to the
+      named destination. A caller holding only CreateDestination can therefore create a destination
+      definition but cannot independently activate a new event feed. The primary conditional impact
+      is future device-event exfiltration to a Kinesis stream the delivery role can write; this is not
+      arbitrary execution as the role. The Service Authorization Reference now also lists PassRole as
+      a CreateDestination dependency. Do not run the two-sided probe until an already-onboarded account
+      is available because `RegisterCustomEndpoint` remains irreversible in the current API surface.
 - [ ] **`iotmanagedintegrations:PutDefaultEncryptionConfiguration`** — sets the ACCOUNT-WIDE encryption
       config (encryptionType + kmsKeyArn). Swapping to an attacker-controlled KMS key = potential data
       access / defense evasion at account scope. Account-level change — test with extreme care (may not
@@ -41,3 +50,10 @@ account (or a real engagement).
 - [ ] **Account associations** (`RegisterAccountAssociation`/`ListAccountAssociations`/`GetAccountAssociation`)
       link third-party (C2C) cloud accounts — recon of connected external device clouds; possible
       hijack of the association's OAuth linkage.
+
+## Current official sources
+
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_Operations.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_RegisterCustomEndpoint.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/devguide/managedintegrations-notifications.html>
+- <https://docs.aws.amazon.com/service-authorization/latest/reference/list_iot-managed-integrations.html>

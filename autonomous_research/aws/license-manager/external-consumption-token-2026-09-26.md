@@ -18,13 +18,16 @@ weak `amr`/issuer conditions.
 
 - `CreateToken` can be scoped to the exact seller-license ARN and supports resource-tag conditions.
 - The creator supplies `RoleArns` and up to three token properties; no `iam:PassRole` dependency is
-  documented.
+  documented. The current API contract explicitly says License Manager does not check whether the
+  embedded roles are in use. This is not direct role delegation: STS still evaluates the target
+  role's `AssumeRoleWithWebIdentity` trust policy when the access token is redeemed.
 - The raw refresh token is returned only when created. `ListTokens` returns metadata, not the token.
 - `DeleteToken` revokes it.
 - `GetAccessToken` is authorized on `*` for IAM callers, but the intended external-customer flow is
   bearer-token redemption without AWS credentials.
 - `AssumeRoleWithWebIdentity` requires no identity-policy permission from the token holder; the
-  target role trust policy is the boundary.
+  target role trust policy is the boundary. AWS's example trusts the federated principal
+  `openid-license-manager.amazonaws.com` and constrains its `amr` to the expected token-issuer account.
 
 A no-sign-request probe with a synthetic invalid JWT reached token validation and returned
 `Invalid token`, consistent with the documented bearer-token flow. No genuine token was used or
