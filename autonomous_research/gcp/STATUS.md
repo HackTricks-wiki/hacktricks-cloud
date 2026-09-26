@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Service Management / API Gateway rollout-boundary correction
+- Corrected the unsupported claim that API Gateway auto-pulls direct Service Management rollouts.
+  Managed rollout applies to Cloud Endpoints ESP/ESPv2; API Gateway pins an immutable API config and
+  requires a new config plus explicit gateway update. Removed a second unsupported inference that
+  the gateway could disclose OAuth access tokens merely because its service-agent role contains
+  `getAccessToken`; the documented and verified backend primitive is an audience-bound ID token.
+  Corrected Service Management audit method names and completed minimum-permission/stealth metadata
+  on both related pages.
+- The lab Service Management API is disabled. Made one read-only list request, did not enable it,
+  and created no resources. See `service-management/tested.md`/`checklist.md` and
+  `api-gateway/tested.md`.
+
 ### 2026-09-26 — Cloud Workstations enumeration and logging correction
 - Added the missing Cloud Workstations service page covering clusters, configurations,
   workstations, runtime identities, VPC/public exposure, boot code, persistent disks, resource IAM,
@@ -47,7 +59,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 46/403 privesc, 33/405 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 729 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 48/403 privesc, 35/405 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 725 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
