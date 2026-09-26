@@ -246,3 +246,7 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — identity-federation service-enumeration page
 - Added a unified service page for classic workload pools/providers, org-scoped workforce pools/providers, project-scoped workforce OAuth clients/credentials, and managed workload identities/attestation rules. The page joins trust configuration to IAM principal bindings and explicitly inventories soft-deleted/revivable resources and membership surfaces absent from `getIamPolicy`. Read-only live checks validated the project-level commands; no GCP state changed. See `iam-and-credentials/tested.md`.
+
+### 2026-09-26 — Apigee enumeration and historical-vulnerability correction
+- Added the missing authenticated Apigee service-enumeration page across ingress, proxy/shared-flow deployment, backend routing, credentials/secrets, trace/debug and resource-IAM surfaces. The lab has no accessible Apigee organization, so only credential-wide organization listing was live-run; no resource was created.
+- Corrected the post-exploitation page: `GatewayToHeaven` is CVE-2025-13292, fixed for managed Apigee in `1-16-0-apigee-3` per GCP-2026-010. Consolidated five current-looking chain steps into one historical/unpatched-Hybrid technique with the official remediation floor, impact, stealth and logs. See `apigee/tested.md`.

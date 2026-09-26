@@ -305,6 +305,7 @@
     - [GCP - Analytics Hub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-analytics-hub-enum.md)
     - [GCP - API Gateway Enum](pentesting-cloud/gcp-security/gcp-services/gcp-api-gateway-enum.md)
     - [GCP - API Keys Enum](pentesting-cloud/gcp-security/gcp-services/gcp-api-keys-enum.md)
+    - [GCP - Apigee Enum](pentesting-cloud/gcp-security/gcp-services/gcp-apigee-enum.md)
     - [GCP - App Engine Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-engine-enum.md)
     - [GCP - App Hub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-hub-enum.md)
     - [GCP - Artifact Registry Enum](pentesting-cloud/gcp-security/gcp-services/gcp-artifact-registry-enum.md)
