@@ -266,3 +266,19 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   logging table to the existing Step Functions TestState+PassRole privesc technique.
 - Combined fixture torn down and independently verified absent: state machine/execution, Connection/generated
   secret, Lambda/Function URL, log group, all four roles, and policies.
+
+## cont.86 (2026-09-26) — S3 Tables replication
+- SHIPPED #60 (VERIFIED end to end, two-sided): `s3tables:PutTableBucketReplication` plus exact-role
+  `iam:PassRole` configured continuous bucket-level table replication. Put without PassRole was denied on
+  the exact role; initial Put with PassRole succeeded without Get and returned the version token.
+- Bucket-level behavior was confirmed across destination replacement: an existing table was created in the
+  new destination while its old replica remained, and a later source table appeared only in the active
+  destination. Deleting the configuration likewise retained both destinations' replicas.
+- Existing-rule replacement and deletion failed closed without the current version token. A caller that
+  retained the token from its own previous write needed no Get permission. Empty/no-snapshot tables remained
+  `pending`, so committed data-copy fidelity is explicitly doc-grounded rather than overclaimed as live-tested.
+- CloudTrail recorded replication APIs as default management events, but successful Put omitted the entire
+  configuration, replication-role ARN, and destination ARN. Service-driven `CreateNamespace`/`CreateTable`
+  events exposed destination identifiers under the replication role.
+- Four disposable cycles were cleaned; final inventory found no matching table bucket or IAM role. Cross-account
+  policy setup is documented but was not live-tested without a second explicitly authorized account.
