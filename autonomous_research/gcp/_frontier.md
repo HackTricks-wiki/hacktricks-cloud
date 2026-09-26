@@ -45,3 +45,7 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - fpnv.phoneNumberTokens.* — telco/payments test tokens, not a GCP-access primitive.
 - KMS kajPolicyConfigs, GKE Backup channels, Storage Insights, Developer Connect, NSI
   mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
+
+## Documentation-quality backlog: per-technique stealth
+- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique. A 2026-09-26 heading scan (excluding README indexes) found **765 unrated** sections that already have Impact + Logs generated: 384/405 privesc and 381/404 post-exploitation. Persistence is 157/157 rated. Secret Manager, Cloud Tasks, Parameter Manager, and Secure Source Manager were handled in this iteration.
+- [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

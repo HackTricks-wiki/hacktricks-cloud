@@ -1,6 +1,6 @@
 # GCP audit — status
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
 ## Completion state per axis
 
@@ -9,6 +9,7 @@ Last updated: 2026-09-25
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 21/405 privesc, 23/404 post-exploitation, 157/157 persistence headings with Impact + Logs generated have a rating; 765 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
@@ -193,3 +194,10 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — Cloud Tasks audit-log correction
 - The current Google audit reference explicitly excludes `CreateTask` from Cloud Audit Logs even with Data Access logging enabled. Corrected the three Cloud Tasks pages; `RunTask` is `DATA_WRITE` rather than `DATA_READ`. Queue Admin Activity events remain always logged, and dispatch platform logs require queue sampling. These distinctions matter for incident response and stealth ratings.
 - Added 11 missing per-technique stealth ratings across the Cloud Tasks privesc and post-exploitation pages; all three persistence headings already had ratings. Documentation/prior-evidence review only; no lab resource created. See `cloud-tasks/tested.md` and `cloud-tasks/checklist.md`.
+
+### 2026-09-26 — permission catalog and Parameter Manager review
+- Fresh `list-testable-permissions` pull: **13,701** project-testable permissions, unchanged in count from batch 7. Triaging credential/token names found no immediately shippable permission-level gap; `backupdr.bvdataSources.fetchAccessToken` is documented as internal-only and returns a downscoped backup-location token, so it remains an untested candidate rather than a book entry.
+- Rechecked Parameter Manager's newer template/tag features and audit classifications; both post-exploitation techniques now have explicit stealth ratings. No new primitive or lab infrastructure for this review.
+
+### 2026-09-26 — Secure Source Manager audit correction
+- Google's SSM audit table classifies Git fetch as `DATA_READ` and Git push plus `CreateAnySshKey` as `DATA_WRITE`, all disabled by default. Corrected the prior book claims that fetch/push had no Cloud Audit method and cross-identity SSH-key creation was always-on Admin Activity. Added stealth ratings across five privesc sections; flagged branch-rule/hook/link audit mappings as unverified instead of inventing a log category. No SSM infrastructure created; see `secure-source-manager/tested.md`.
