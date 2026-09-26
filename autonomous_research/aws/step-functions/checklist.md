@@ -10,7 +10,15 @@
 - [ ] Cross-account callback-token rejection: test only when a second account is explicitly authorized.
 - [ ] Callback-token binding across `.waitForTaskToken` SDK integrations: revisit only with a security
   hypothesis beyond the Activity behavior already tested.
-- [ ] `InvokeHTTPEndpoint` request/response and EventBridge connection-secret boundaries: inspect whether
-  a caller can redirect or extract authenticated HTTP material without the corresponding connection access.
+- [x] Dynamic HTTP Task endpoint: verified that `states:StartExecution` alone can redirect a fixed
+  EventBridge Connection's API key to a controlled endpoint when execution input supplies `ApiEndpoint`
+  and the execution role does not constrain `states:HTTPEndpoint`. See
+  `http-task-dynamic-endpoint-2026-09-26.md`.
+- [ ] `TestState` + `iam:PassRole` HTTP oracle without `states:RevealSecrets`: validate direct connection
+  credential capture and authenticated request/response behavior.
+- [ ] HTTP Task endpoint-condition redirect: allow endpoint A only, make A redirect to B, and verify that
+  connection credentials are not forwarded outside the IAM-approved endpoint.
+- [ ] OAuth `UpdateConnection` authorization-endpoint-only replacement: verify omitted stored client
+  parameters are not reused against a newly supplied authorization endpoint.
 - [ ] Distributed Map redrive/update concurrency boundaries: check whether `UpdateMapRun` can exceed
   documented failure/concurrency limits or affect a sibling Map Run.

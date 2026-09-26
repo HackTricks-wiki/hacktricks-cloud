@@ -238,3 +238,19 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   therefore needs `Resource: "*"`; only `GetActivityTask` can be scoped to the Activity ARN.
 - Both test cycles torn down. Independent checks found zero matching Activities and IAM roles; deleted state
   machines entered the service's asynchronous `DELETING` state.
+
+## cont.84 (2026-09-26) — Step Functions dynamic HTTP Task credential capture
+- SHIPPED #58 (VERIFIED end to end): `states:StartExecution` alone redirected a fixed EventBridge
+  Connection's API-key header to an account-owned HTTPS collector because the existing workflow sourced
+  `ApiEndpoint` from execution input. The restricted caller's `DescribeStateMachine` was denied and it had
+  no EventBridge, Secrets Manager, update, or PassRole access.
+- The execution role needed `states:InvokeHTTPEndpoint` on the exact state-machine ARN,
+  `events:RetrieveConnectionCredentials` on the connection, and Get/Describe on its managed secret. A
+  twenty-second IAM propagation wait was needed; early five-second attempts failed closed.
+- CloudTrail showed `StartExecution` with redacted input and a service-driven `GetSecretValue` under the
+  execution role naming the connection secret. The attacker endpoint remained absent without optional
+  `InvokeHTTPEndpoint` state-machine data events or endpoint-side logs.
+- Public StartExecution coverage now includes this high-value sink, minimum roles, impact, explicit stealth,
+  logs, and the `states:HTTPEndpoint`/`states:HTTPMethod` mitigations.
+- Five disposable cycles fully torn down; final inventory showed no matching state machine, Connection or
+  generated secret, Lambda/Function URL, log group, or IAM role.
