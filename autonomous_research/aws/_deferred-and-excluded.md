@@ -56,6 +56,13 @@ enabled, cost model changes, or a helper library becomes available).
   public technique nor a security-impact bug report yet. See
   `connect/auth-code-session-boundary-2026-09-26.md` and revisit after AWS documents the remaining
   prerequisite or fixes the new API.
+- **STS outbound identity federation / `GetWebIdentityToken`** — the API mints an AWS-signed JWT for
+  authenticating to an external OIDC-aware service, but the feature is disabled for the lab account.
+  `GetOutboundWebIdentityFederationInfo` returned `FeatureDisabled` and a regional token request
+  returned `OutboundWebIdentityFederationDisabledException`. Enabling it is a persistent account-level
+  configuration change and was not justified for an isolated credential boundary check. Revisit only
+  after the account owner enables the feature or provides an enabled disposable account. See
+  `sts/outbound-web-identity-2026-09-26.md`.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
 
