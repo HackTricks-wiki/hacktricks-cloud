@@ -1,0 +1,6 @@
+# Database Migration Service — assessed
+
+## 2026-09-26 — migration-job boundary correction
+- Reviewed the [migration-job API guide](https://docs.cloud.google.com/database-migration/docs/postgres/api-migration-jobs), [quick-start prerequisites](https://docs.cloud.google.com/database-migration/docs/postgres/quick-start-migrations-guide), and the current gcloud job-create reference. A DMS job needs a usable source connection profile (with valid DB credentials or configured IAM DB authentication), supported destination, and relevant destination/network authorization. `datamigration.*` alone does not supply an unknown source database password. The earlier book text incorrectly treated any project Editor as guaranteed to exfiltrate any victim DB, and treated `--dump-path` as an exfil target; corrected both.
+- Removed a duplicate service-agent section that inferred arbitrary Cloud SQL/AlloyDB `executeSql`, import, and delete caller paths solely from the agent's broad role. The agent role describes what DMS can do internally; it does not establish a caller-controlled API for every permission. The valid managed migration path remains described with its prerequisites.
+- No migration job, profile, database, or network resource was launched for this documentation review.

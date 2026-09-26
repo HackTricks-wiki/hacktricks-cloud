@@ -1,0 +1,6 @@
+# Secure Source Manager — checked
+
+## 2026-09-26 — audit classification review
+- Compared all five privesc sections with Google's current [Secure Source Manager audit logging table](https://docs.cloud.google.com/secure-source-manager/docs/audit-logging). Corrected `FetchRepository` to `DATA_READ`, `PushRepository` to `DATA_WRITE`, and `CreateAnySshKey` to `DATA_WRITE` — all Data Access, off by default. The prior page incorrectly said Git fetch/push had no Cloud Audit method and SSH-key creation was always-on Admin Activity.
+- Instance/repository `SetIamPolicy` remains Admin Activity, always on. `WritePullRequest` is `DATA_WRITE`, but the table does not map branch-rule edits or approve/merge to exact audit methods; hook mutations and `linkDeveloperConnect` are also absent from the published table. Changed unsupported categorical log claims to explicit unverified entries rather than treating undocumented methods as proven silent or always logged.
+- Added a stealth rating to all five techniques, with provisional ratings where audit mappings are not established. No SSM instance was created: this pass is source-grounded, with no cost or cleanup. The 2026-09-21 Code Owners/Developer Connect update was reviewed; its controls do not yet establish a distinct exploitable permission boundary beyond the documented branch-rule/PR and CI supply-chain families.
