@@ -56,3 +56,11 @@ Firebase App Hosting.
 Every service in the botocore-equivalent GCP API surface was diffed against the wiki. Services with
 no distinct abusable primitive beyond existing coverage, or that are retired/preview/niche, were not
 given pages. (See `gcp-technique-audit-progress` memory for the full ground-truth diff record.)
+
+## Technique-level exclusions (tested but not useful enough for the book)
+
+| Service / primitive | Result and exclusion reason |
+|---|---|
+| Bigtable `bigtable.authorizedViews.create` | **Excluded from post-exploitation.** Creating a view also requires base-table read and mutate access, and making it accessible to a new principal additionally requires `bigtable.authorizedViews.setIamPolicy`. The view cannot expose data beyond its own subset, so this adds no meaningful capability over the caller's existing base-table access. Keep the real `authorizedViews.update` boundary-broadening technique in the privesc page. |
+| Cloud Functions `cloudfunctions.functions.update` without `iam.serviceAccounts.actAs` | **Excluded from privilege escalation.** Live testing with only `functions.update` + `functions.get` produced `403` even for an environment-only patch that retained the same identities. The failed update and a separate denied `iam.serviceAccounts.actAs` check are Admin Activity logs. The useful chain is already documented as `functions.update` + `actAs`; the standalone permission is not an attack technique. |
+| Cloud Functions `cloudfunctions.functions.generateUploadUrl` alone | **Excluded from privilege escalation.** It creates a time-limited staging URL but cannot change or deploy a function; a later update still requires `cloudfunctions.functions.update` and `iam.serviceAccounts.actAs`. Live testing also found that the v1 audit entry falsely reports `cloudfunctions.functions.sourceCodeSet` as granted when the caller held only `generateUploadUrl`; that audit-integrity issue is retained as a private report in `$HOME/cloud_bb/gcp/cloud-functions-v1-generateuploadurl-false-authorizationinfo.md`. |
