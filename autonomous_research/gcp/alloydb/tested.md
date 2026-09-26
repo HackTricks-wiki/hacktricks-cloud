@@ -1,0 +1,6 @@
+# AlloyDB — assessed
+
+## 2026-09-26 — Studio SQL authentication and audit review
+- Compared the existing post-exploitation page with Google's [Studio access guide](https://docs.cloud.google.com/alloydb/docs/manage-data-using-studio) and [audit method table](https://docs.cloud.google.com/alloydb/docs/audit-logging). Studio requires database authentication and database-level grants even when `alloydb.instances.executeSql` is allowed; Google's client-library sample passes a database user and password. The prior claim of password-free full DB access from this IAM permission alone was incorrect. `roles/alloydb.viewer` includes `executeSqlReadOnly`, but that alone does not provision a database identity. The v1 audit table additionally lists `alloydb.users.login` for `ExecuteSqlReadOnly`.
+- Corrected `ExecuteSql` to `DATA_WRITE`, and distinguished direct PostgreSQL connections from Cloud Audit methods. Added explicit stealth ratings to all six post-exploitation sections. User and control-plane changes remain Admin Activity; Studio SQL is Data Access, disabled by default.
+- This was a documentation/API-reference review; no AlloyDB cluster was created. The corrected page describes only the permission/authentication conditions supported by Google documentation.
