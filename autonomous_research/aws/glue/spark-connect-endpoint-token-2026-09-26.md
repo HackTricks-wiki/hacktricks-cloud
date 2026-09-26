@@ -55,7 +55,7 @@ The test proved credential issuance under the minimal IAM policy but deliberatel
 
 ## Logging and stealth
 
-Glue documents its API calls as CloudTrail management events. Treat `GetSessionEndpoint` as the high-fidelity issuance event and separately retain interactive-session/runtime logs; do not assume each gRPC Spark operation becomes its own CloudTrail event. Downstream AWS calls remain subject to the target service's logging and appear under the session execution role.
+The successful call appeared in CloudTrail Event History with `eventSource=glue.amazonaws.com`, `eventName=GetSessionEndpoint`, `readOnly=true`, `managementEvent=true`, `eventCategory=Management`, the session ID in `requestParameters`, and `responseElements=null`. Treat that as the high-fidelity issuance event and separately retain interactive-session/runtime logs; do not assume each gRPC Spark operation becomes its own CloudTrail event. Downstream AWS calls remain subject to the target service's logging and appear under the session execution role.
 
 Stealth rating: **Medium**. The issuance read is logged and relatively uncommon, while the subsequent Spark command channel has different observability.
 
