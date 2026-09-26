@@ -189,3 +189,7 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — Secret Manager stealth audit
 - Reconciled all 12 Secret Manager privesc/post-exploitation headings against their existing audit-event tables and the current Google audit-logging reference. Added 9 missing per-technique stealth ratings; 1 regional-CMEK rating and 2 persistence ratings already existed. No new technique was warranted.
 - Documentation-only pass: no GCP API mutations, spend, or teardown required. Recorded details in `secret-manager/tested.md`. Next iteration: choose another service with missing ratings, or triage genuinely new API resources in the permission catalog.
+
+### 2026-09-26 — Cloud Tasks audit-log correction
+- The current Google audit reference explicitly excludes `CreateTask` from Cloud Audit Logs even with Data Access logging enabled. Corrected the three Cloud Tasks pages; `RunTask` is `DATA_WRITE` rather than `DATA_READ`. Queue Admin Activity events remain always logged, and dispatch platform logs require queue sampling. These distinctions matter for incident response and stealth ratings.
+- Added 11 missing per-technique stealth ratings across the Cloud Tasks privesc and post-exploitation pages; all three persistence headings already had ratings. Documentation/prior-evidence review only; no lab resource created. See `cloud-tasks/tested.md` and `cloud-tasks/checklist.md`.
