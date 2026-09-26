@@ -88,7 +88,8 @@ when no checklist items remain, generate more non-duplicate candidate ideas.
 - **Closed as verified duplicates (already documented, no ship):** ACM `replaceAll` teardown,
   SCC scanner/mute-config evasion, IAP tunnel egress, Secret Manager managed-rotation misuse,
   Cloud Build gen2 `repositories.create` (execution still gated by triggers+actAs).
-- **Deferred (verification-only):** Org Policy v2 CreatePolicy/UpdatePolicy audit-class check.
+- **Resolved:** the official Org Policy audit table confirms v2 CreatePolicy/UpdatePolicy are
+  always-on Admin Activity; legacy v1 setOrgPolicy logs under Cloud Resource Manager instead.
 - Backlog empty → generating new candidate batch (WIF federation, Storage Transfer confused-deputy,
   BQ Data Transfer scheduled-query persistence, Cloud Asset exportAssets, Backup&DR, Datastream).
 
@@ -283,3 +284,8 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — SUMMARY navigation audit
 - Added the two existing GCP technique pages omitted from the category navigation: Pub/Sub post-exploitation and Storage persistence. Both pages were already reachable from service content; this change makes them visible in their complete post-exploitation and persistence trees.
 - Documentation-only correction; no GCP API call or resource mutation was required.
+
+### 2026-09-26 — Access Context Manager and Org Policy metadata/correctness audit
+- Added exact minimum permissions, categorical stealth ratings, and expandable audit-event tables to all seven Access Context Manager and four Organization Policy techniques.
+- Corrected two material scope/logging errors: folder/project IAM grants do not confer ACM policy access (authority must come from the organization or target access-policy IAM, and Organization Admin has no ACM permissions); legacy v1 Org Policy writes log under `cloudresourcemanager.googleapis.com`, while v2 uses `orgpolicy.googleapis.com`.
+- Verified current predefined-role contents with read-only `gcloud iam roles describe` calls and current official audit/access-control references. No GCP resource or configuration was changed.
