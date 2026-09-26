@@ -416,3 +416,19 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Two disposable server cycles were deleted, never stopped. Final independent inventory was empty for
   matching Transfer servers, REST APIs, Lambda functions/log groups, secrets, S3 buckets, and roles.
   API Gateway account settings were never touched. Expected functionality; no private AWS report.
+
+## cont.94 (2026-09-26) — Timestream deferral and IVS Chat token boundaries
+- Timestream Query's unusually explicit `NextToken` principal/query/five-use/parent-child guarantees
+  were converted into a bounded test plan. Preflight stopped cleanly because the account is not an
+  existing LiveAnalytics customer; both `ListDatabases` and `DescribeEndpoints` returned the
+  documented closed-new-customer AccessDenied. No Timestream or IAM resources were created.
+- NEGATIVE / secure boundary: an exact-room `ivschat:CreateChatToken` caller minted a synthetic
+  token while List/Get and a different room ARN were denied. Sequential replay, mutation,
+  wrong-Region use, and a duplicate while the first socket was live all failed with HTTP 400; the
+  untouched first use returned HTTP 101.
+- Five independent eight-way races each produced exactly one HTTP 101 and seven HTTP 400 results,
+  confirming atomic enforcement of the documented single-use property under the tested concurrency.
+  Raw tokens were never logged, messages were not sent, and no AWS vulnerability report was created.
+- Filled the existing IVS Chat technique's missing explicit impact, stealth, minimum permission, and
+  expandable log table. The disposable room and exact-room minter role/policy were removed; final IVS
+  Chat and IAM inventories were empty.
