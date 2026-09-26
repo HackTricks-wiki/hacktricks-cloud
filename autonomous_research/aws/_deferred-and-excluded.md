@@ -35,8 +35,21 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## Honest niche exclusions (real primitive, low value / untestable)
 
-- **pca-connector-scep `GetChallengePassword`** — SCEP enrollment challenge password; very niche
-  Private-CA device onboarding.
+- **pca-connector-scep live challenge/enrollment proof** — the permission boundary is documented in
+  the book, but a complete disposable connector could not be created in this lab. Two attempts
+  established additional prerequisites (a root CA certificate with at least one full year remaining,
+  then an AWS RAM share to the SCEP service principal); the share is restricted to the AWS
+  Organization and organization sharing is not enabled for this account. Changing that persistent
+  organization setting was out of scope for a fixture-only test. Revisit in an organization-enabled
+  account. See `pca-connector-scep/challenge-live-boundary-2026-09-26.md`.
+- **Audit Manager live evidence/report fixture** — `GetAccountStatus` returned `INACTIVE`. Audit
+  Manager is closed to new customers, so the lab cannot safely create the prerequisite assessment
+  data. Existing IAM-authorization-only documentation remains; do not claim a live artifact read.
+- **ACM ACME endpoint token paths** — `ListAcmeEndpoints` returned no endpoints in `us-east-1` and
+  `us-west-2`; there was no existing safe fixture to probe.
+- **Route 53 Global Resolver `GetAccessToken`** — the service requires `us-east-2`, where the lab SCP
+  (`p-oat9rg2i`) explicitly denies `ListGlobalResolvers`. No resource was created and no token path
+  was tested. Revisit only in an account/OU that permits the service.
 - **s3files** (EFS-analog, has PutFileSystemPolicy/CreateMountTarget/CreateAccessPoint) — no
   confident public product name/citation, so NOT asserted. Candidate only.
 
