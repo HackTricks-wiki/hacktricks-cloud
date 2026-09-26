@@ -18,8 +18,8 @@ enabled, cost model changes, or a helper library becomes available).
   in us-east-1 (authz probed OK) but preview with under-documented semantics. Deferred.
 - **devops-agent / aidevops** — `UpdateOperatorAppIdpConfig` (rogue-IdP shape). No in-region
   endpoint / preview. Page correctly labeled "documented from public docs" where mentioned.
-- **iotfleetwise**, **iot-managed-integrations** — inconclusive: account not enabled / no endpoint.
-  Documented as a *pattern* NOT claimed verified. Revisit if the account is enabled.
+- **iotfleetwise** — inconclusive: account not enabled / no endpoint. Documented as a *pattern* NOT
+  claimed verified. Revisit if the account is enabled.
 
 ## No distinct primitive (verified-none — do not manufacture a page)
 
@@ -64,13 +64,16 @@ enabled, cost model changes, or a helper library becomes available).
   public technique nor a security-impact bug report yet. See
   `connect/auth-code-session-boundary-2026-09-26.md` and revisit after AWS documents the remaining
   prerequisite or fixes the new API.
-- **STS outbound identity federation / `GetWebIdentityToken`** — the API mints an AWS-signed JWT for
-  authenticating to an external OIDC-aware service, but the feature is disabled for the lab account.
-  `GetOutboundWebIdentityFederationInfo` returned `FeatureDisabled` and a regional token request
-  returned `OutboundWebIdentityFederationDisabledException`. Enabling it is a persistent account-level
-  configuration change and was not justified for an isolated credential boundary check. Revisit only
-  after the account owner enables the feature or provides an enabled disposable account. See
-  `sts/outbound-web-identity-2026-09-26.md`.
+- **STS `GetDelegatedAccessToken` as a standalone technique** — a real credential exchange, but only
+  for AWS Partner temporary delegation. IAM permission alone is insufficient: the caller must be an onboarded/registered partner
+  and hold a trade-in token delivered after a customer associates and approves a delegation request.
+  The resulting permissions are the intersection of the approved principal and a pre-registered
+  session-policy template. The lab has no delegation requests or delivery SNS topic; a synthetic token
+  returned `ValidationError: Invalid trade-in token` and created no state. This is not a general STS
+  privilege-escalation primitive and no disposable fixture exists without partner onboarding plus a
+  second-party approval workflow. The distinct customer-side risk of accepting a malicious delegation
+  request is already documented on the IAM privesc page. See
+  `sts/delegated-access-token-2026-09-26.md`.
 - **License Manager `CreateToken` / `GetAccessToken`** — a real long-lived external credential
   primitive for seller-issued licenses, but not a broadly useful AWS-account persistence technique.
   The refresh token can repeatedly obtain one-hour OIDC tokens and reach only a preconfigured role
@@ -93,8 +96,12 @@ enabled, cost model changes, or a helper library becomes available).
   credential-returning ops, but FinSpace is niche + not onboarded + cost-blocked (see finspace-kx).
 - **qapps `CreatePresignedUrl`** — needs a Q Business subscription (same gate as QApps generally).
 - **iot-managed-integrations** (`CreateProvisioningProfile.ClaimCertificatePrivateKey`,
-  `GetConnectorDestination.SecretsManager`) — preview / account-not-enabled / no endpoint (cont.41).
-  Real device-provisioning-key primitive if enabled; revisit when GA + onboardable.
+  `CreateDestination.RoleArn`, `GetConnectorDestination.SecretsManager`) — the service is GA and the
+  lab can reach it in `eu-west-1`, but every meaningful fixture requires the account to first call
+  `RegisterCustomEndpoint`. AWS exposes no deregister/delete operation, so that onboarding would leave
+  irreversible account-level state. The unonboarded lab safely confirmed the prerequisite error and
+  currently has no custom endpoint. Revisit in an already-onboarded account; do not register the lab
+  merely to test these candidates. See `iot-managed-integrations/checklist.md`.
 - **security-ir** — NOT deferred: documented from model (see security-ir/tested.md).
 
 ## cont.61 (2026-09-24) — zero-coverage sweep tail (133 services cross-referenced)

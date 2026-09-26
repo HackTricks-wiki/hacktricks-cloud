@@ -1,67 +1,119 @@
-# STS outbound web-identity token boundary — deferred 2026-09-26
+# STS outbound web-identity token boundary — live verified 2026-09-26
 
-## Candidate and security value
+## Result
 
-`sts:GetWebIdentityToken` returns an AWS-signed JWT representing the calling AWS identity. An external
-service that trusts the account-specific issuer can exchange or directly authorize that token, so the
-permission is a potential cross-cloud/SaaS credential-minting primitive. The caller chooses one to ten
-audiences, a 60-to-3600-second lifetime, the signing algorithm, and up to 50 custom tags. AWS documents
-separate `sts:TagGetWebIdentityToken` authorization for supplying tags.
+`sts:GetWebIdentityToken` is a real external/SaaS credential-minting primitive when account-level
+outbound identity federation is enabled and an external relying party already trusts the account's
+OIDC issuer. It is not native AWS privilege escalation: AWS rejects an outbound token passed to
+`AssumeRoleWithWebIdentity`.
 
-This is not automatically privilege escalation: impact depends on which external services trust the
-account issuer, their audience and subject validation, and how they map AWS identity/session/tag claims.
-A useful public technique requires an enabled account plus a controlled external relying party proving
-that a restricted AWS principal obtains additional external access.
+The authorized lab account `228478051196` was enabled briefly in `us-east-1`. An isolated role minted
+only 60-second synthetic-canary tokens. No JWT was printed, transmitted to a third party, or stored.
+The feature was disabled and the role was deleted after testing.
 
-## Live preflight result
+## Verified token and endpoint behavior
 
-The authorized account `228478051196` is not enabled. The following read-only calls were repeated in
-`us-east-1` under `ChackBotAdministratorRole`:
+- The operation worked only through a regional STS endpoint, not the global endpoint.
+- The representative response contained a 1,239-character JWT and a separate expiration field.
+- Local decoding, without recording the token, showed an `RS256` header and the expected issuer,
+  audience, IAM role subject, issued-at time, and expiration exactly 60 seconds later.
+- The `sub` claim was the underlying `arn:aws:iam::228478051196:role/...` role ARN, not the assumed-role
+  session ARN. Relying parties that authorize only on `sub` therefore collapse distinct sessions of
+  the same role and should inspect appropriate AWS-namespaced session/source-context claims too.
+- OIDC discovery returned the same issuer as the token, and exactly one published JWKS key matched the
+  JWT `kid`.
+- The API accepts one to ten audiences, a 60-to-3,600-second lifetime (300 seconds by default), and
+  `RS256` or `ES384`. Optional request tags become custom claims only with the additional dependent
+  authorization action.
 
-```text
-GetOutboundWebIdentityFederationInfo:
-FeatureDisabled: Outbound identity federation is disabled for account 228478051196
+## Exact tested minimum authorization
 
-GetWebIdentityToken(audience=https://example.invalid, duration=60, algorithm=ES384):
-OutboundWebIdentityFederationDisabledException: OutboundWebIdentityFederation is disabled.
+This policy succeeded for the isolated principal:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "sts:GetWebIdentityToken",
+    "Resource": "arn:aws:sts::228478051196:self",
+    "Condition": {
+      "ForAllValues:StringEquals": {
+        "sts:IdentityTokenAudience": "urn:hacktricks:test:228478051196"
+      },
+      "NumericLessThanEquals": {
+        "sts:DurationSeconds": "60"
+      },
+      "StringEquals": {
+        "sts:SigningAlgorithm": "RS256"
+      }
+    }
+  }]
+}
 ```
 
-AWS says the feature must first be enabled with the account-level
-`iam:EnableOutboundWebIdentityFederation` operation and that token generation is unavailable on the
-global STS endpoint. Enabling the feature would be a persistent account-security configuration change,
-not a disposable resource needed merely for a canary, so it was deliberately not performed.
+Despite examples using `"Resource": "*"`, the exact pseudo-resource
+`arn:aws:sts::<account-id>:self` worked and also appeared in authorization errors. Negative tests
+confirmed that a different audience and a 61-second lifetime were denied.
 
-## Future minimum-permission matrix
+A request containing a tag was denied until the caller also had `sts:TagGetWebIdentityToken` on the
+same `self` resource. This is a dependent permission for the `GetWebIdentityToken` request, not a
+separate API call. Production grants should additionally constrain `aws:TagKeys` and
+`aws:RequestTag/<key>`.
 
-When an explicitly enabled disposable account and controlled relying party are available:
+## CloudTrail
 
-| Case | Minimum caller authorization | Expected secure result |
-| --- | --- | --- |
-| Fixed audience and short lifetime | `sts:GetWebIdentityToken` on `*`, restricted by `sts:IdentityTokenAudience` and `sts:DurationSeconds` | JWT contains the authorized audience and expires at the policy-bound lifetime |
-| Caller-supplied tags | Previous permission plus `sts:TagGetWebIdentityToken` | Tags appear only when both authorizations permit them |
-| Unauthorized audience/lifetime | Same constrained policy | IAM denial before a token is minted |
-| Global endpoint request | Otherwise valid policy | Rejected; regional endpoint required |
-| AWS inbound replay | Valid outbound JWT | `AssumeRoleWithWebIdentity` must not accept it for federation back into AWS |
+Event History recorded successful issuance as:
 
-The relying party must validate issuer, audience, expiration, and subject; otherwise the bug belongs to
-that relying party's trust configuration rather than STS. Also test whether principal tags and request
-tags can be confused, whether multiple audiences widen trust unexpectedly, and whether role-session
-identity is consistently bound across fresh STS sessions.
+```text
+eventSource: sts.amazonaws.com
+eventName: GetWebIdentityToken
+eventType: AwsApiCall
+eventCategory: Management
+managementEvent: true
+readOnly: false
+```
 
-## Logging expectations
+The request recorded audience, duration, and signing algorithm. The successful response recorded only
+`webIdentityTokenId` (a UUID) and expiration, not the JWT. Denied policy tests were also management
+events. Tagged calls still generate `GetWebIdentityToken`; there is no separate
+`TagGetWebIdentityToken` CloudTrail event. Feature enablement was recorded as
+`iam.amazonaws.com` / `EnableOutboundWebIdentityFederation`, and disabling produces the corresponding
+IAM management event. Subsequent use of a JWT at the relying party is outside AWS CloudTrail.
 
-Do not publish telemetry claims until live validation is possible. The future test must check CloudTrail
-for `GetWebIdentityToken`, determine whether it is a default management event, and record whether the
-audience, duration, algorithm, and tag keys/values are logged. Never place the returned JWT in the
-research repository or a command transcript.
+## Security interpretation
 
-## Cleanup
+The external service must already trust the account-specific issuer and authorize the token's subject,
+audience, and claims. Depending on that mapping, the token may directly grant external access or may be
+exchanged for a service-specific credential. A relying party must validate signature/JWKS, exact
+issuer and audience, expiration, expected subject, and—where distinct sessions matter—the appropriate
+session/source-context claims. Caller-controlled request tags must not be trusted as authoritative
+tenant or privilege assertions.
 
-No AWS resources or persistent settings were created. The two preflight operations were read-only. No
-token was minted.
+Defenders should keep the account feature disabled if unused; restrict the action to the exact `self`
+ARN; allow-list audiences; cap lifetime; pin the signing algorithm; separately restrict or omit tag
+authorization; and alert on enable/disable plus unexpected issuance events.
+
+## Cleanup and residual public metadata
+
+- `GetOutboundWebIdentityFederationInfo` returned `FeatureDisabled` after cleanup.
+- A fresh token request returned `OutboundWebIdentityFederationDisabledException`.
+- The disposable IAM role returned `NoSuchEntity`, and a name-filtered inventory found no role,
+  inline policy, or other test fixture.
+- The last token expired at `2026-09-26T17:44:48Z`; cleanup verification occurred after
+  `2026-09-26T17:45:12Z`.
+- OIDC discovery and JWKS URLs continued to return HTTP 200 after disable. They expose public metadata
+  and verification keys, not credentials. AWS provides no separate metadata-delete operation, and
+  keeping keys available allows validation of tokens that were issued before disable.
+
+AWS documents that disabling prevents new token issuance but does not revoke already-issued tokens.
+Defenders must therefore wait for the maximum allowed token lifetime after disabling.
 
 ## Sources
 
+- <https://docs.aws.amazon.com/STS/latest/APIReference/API_GetWebIdentityToken.html>
 - <https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_outbound_getting_started.html>
-- <https://docs.aws.amazon.com/cli/latest/reference/sts/get-web-identity-token.html>
-- <https://docs.aws.amazon.com/service-authorization/latest/reference/list_awssecuritytokenservice.html>
+- <https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_outbound_token_claims.html>
+- <https://docs.aws.amazon.com/service-authorization/latest/reference/list_sts.html>
+- <https://aws.amazon.com/about-aws/whats-new/2025/11/aws-iam-identity-federation-external-services-jwts/>
+- <https://aws.amazon.com/blogs/aws/simplify-access-to-external-services-using-aws-iam-outbound-identity-federation/>
