@@ -26,10 +26,16 @@ Service: bedrock-agentcore (data plane) / bedrock-agentcore-control (control). I
 - UpdateAgentRuntime/UpdateGateway + iam:PassRole repoint (same gate, reuses existing resource).
 - CreateGateway (roleArn), CreateMemory (memoryExecutionRoleArn), etc.
 
-## Credential vend (data plane; documented from model, sensitive:true outputs)
+## Credential vend (live API-key chain; OAuth/payment siblings documented from model)
 - Chain: GetWorkloadAccessToken(workloadName) -> workloadIdentityToken -> GetResourceApiKey(token,provider) => plaintext apiKey (sensitive:true). Also GetResourceOauth2Token -> accessToken, GetResourcePaymentToken.
 - GetWorkloadAccessTokenForJWT/ForUserId mint tokens on behalf of a user (impersonation of a workload identity).
 - Control-plane Get*CredentialProvider returns only apiKeySecretArn/clientSecretArn (Secrets Manager ARN, NOT plaintext) -> confirms calibration; enum-to-secret pointer. Data plane returns plaintext.
+- Live 2026-09-26: isolated role retrieved the exact synthetic canary. Both directory/workload ARNs were
+  independently required for workload-token minting; vault/provider/directory/workload ARNs were each
+  independently required for the API-key vend. `secretsmanager:GetSecretValue` on the exact managed
+  secret was an additional mandatory permission because AgentCore reads it under the caller's identity.
+  Both AgentCore calls were default management events with `readOnly:false`; secrets were hidden. Full
+  evidence and cleanup are in `identity-credential-vend-2026-09-26.md`.
 
 ## Teardown
 - Original Runtime/CodeInterpreter probe: deleted ht-ac-attacker and ht-ac-target roles and the code interpreter; no ordinary agent runtime was created (both calls errored pre-create).
