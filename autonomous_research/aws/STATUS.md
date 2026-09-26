@@ -211,3 +211,17 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   permission the command still succeeded while CloudWatch export failed.
 - Teardown verified: harness, generated managed resources, both IAM users/keys/policies, execution
   role, and Runtime Identity service-linked role all absent; deletion task `SUCCEEDED`.
+
+## Saturation update (cont.82) — CloudWatch Logs scheduled queries
+- SHIPPED #57 (VERIFIED end to end, both role gates isolated): `logs:CreateScheduledQuery` plus
+  `iam:PassRole` on a query execution role and a separate S3 delivery role repeatedly queries log
+  groups the creator cannot read and exports selected rows to S3. No-PassRole denied on the delivery
+  role first; delivery-only PassRole then denied on the execution role; both exact roles with
+  `iam:PassedToService=logs.amazonaws.com` succeeded.
+- One synthetic marker was delivered as JSON at the next minute boundary. Added the detailed technique
+  to `aws-cloudwatch-enum.md` and a verified row to the analytics/data-access PassRole matrix.
+- CloudTrail verified `CreateScheduledQuery`, automatic `StartQuery`, and automatic `GetQueryResults`
+  as default management events. Creation logs the full query, groups, schedule, bucket URI/owner, and
+  both roles; executions are attributed to `assumed-role/<execution-role>/Logs` with
+  `invokedBy=logs.amazonaws.com`.
+- Teardown verified zero scheduled queries, bucket/object, log group, IAM users/keys/policies, or roles.
