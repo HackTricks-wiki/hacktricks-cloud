@@ -482,7 +482,7 @@
     - [AWS - Shield Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-shield-post-exploitation/README.md)
     - [AWS - SNS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/README.md)
       - [AWS - SNS Message Data Protection Bypass via Policy Downgrade](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/aws-sns-data-protection-bypass.md)
-      - [SNS FIFO Archive Replay Exfiltration via Attacker SQS FIFO Subscription](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/aws-sns-fifo-replay-exfil.md)
+      - [SNS FIFO Archive Replay Exfiltration via an Attacker SQS Subscription](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/aws-sns-fifo-replay-exfil.md)
       - [AWS - SNS to Kinesis Firehose Exfiltration (Fanout to S3)](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/aws-sns-firehose-exfil.md)
     - [AWS - SQS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/README.md)
       - [AWS – SQS DLQ Redrive Exfiltration via StartMessageMoveTask](pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation/aws-sqs-dlq-redrive-exfiltration.md)
