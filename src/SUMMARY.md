@@ -740,6 +740,7 @@
     - [AWS - Location Service Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-location-service-unauthenticated-enum/README.md)
     - [AWS - Managed Blockchain Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-managed-blockchain-unauthenticated-enum/README.md)
     - [AWS - Media Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-media-unauthenticated-enum/README.md)
+    - [AWS - MemoryDB Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-memorydb-unauthenticated-access/README.md)
     - [AWS - MQ Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-mq-unauthenticated-enum/README.md)
     - [AWS - MSK Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-msk-unauthenticated-enum/README.md)
     - [AWS - Neptune Unauthenticated Enum](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-neptune-unauthenticated-enum/README.md)
