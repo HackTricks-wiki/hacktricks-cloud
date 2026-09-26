@@ -581,6 +581,7 @@
     - [AWS - Account Management Enum](pentesting-cloud/aws-security/aws-services/aws-account-management-enum.md)
     - [AWS - Amazon Connect Enum](pentesting-cloud/aws-security/aws-services/aws-connect-enum.md)
     - [AWS - Amazon Connect Customer Profiles Enum](pentesting-cloud/aws-security/aws-services/aws-connect-customer-profiles-enum.md)
+    - [AWS - Amazon Connect Health Enum](pentesting-cloud/aws-security/aws-services/aws-connect-health-enum.md)
     - [AWS - Amazon Q in Connect Enum](pentesting-cloud/aws-security/aws-services/aws-q-in-connect-enum.md)
     - [AWS - API Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-api-gateway-enum.md)
     - [AWS - AppConfig Enum](pentesting-cloud/aws-security/aws-services/aws-appconfig-enum.md)
