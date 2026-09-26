@@ -350,6 +350,7 @@
     - [GCP - IAM, Principals & Org Policies Enum](pentesting-cloud/gcp-security/gcp-services/gcp-iam-and-org-policies-enum.md)
     - [GCP - IAP Enum](pentesting-cloud/gcp-security/gcp-services/gcp-iap-enum.md)
     - [GCP - Infra Manager Enum](pentesting-cloud/gcp-security/gcp-services/gcp-infra-manager-enum.md)
+    - [GCP - Integration Connectors Enum](pentesting-cloud/gcp-security/gcp-services/gcp-integration-connectors-enum.md)
     - [GCP - KMS Enum](pentesting-cloud/gcp-security/gcp-services/gcp-kms-enum.md)
     - [GCP - Live Stream Enum](pentesting-cloud/gcp-security/gcp-services/gcp-live-stream-enum.md)
     - [GCP - Logging Enum](pentesting-cloud/gcp-security/gcp-services/gcp-logging-enum.md)

@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Integration Connectors service enumeration
+- Added the missing Integration Connectors service-enumeration page and linked it from both existing
+  attack pages. It covers full connection configuration, resource IAM, runtime schemas, events,
+  endpoint attachments, managed zones, custom connectors and provider versions, plus exact
+  enumeration visibility.
+- The installed SDK has no stable `gcloud connectors` group and the authorized lab project's API is
+  disabled. Validated the REST paths against Google's current discovery documents and made only
+  read-only requests; no API was enabled, no billable connection was created and no teardown was
+  necessary. See `integration-connectors/tested.md` and `checklist.md`.
+
 ## Completion state per axis
 
 | Axis | State | Notes |
