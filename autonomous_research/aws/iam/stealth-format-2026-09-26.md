@@ -1,0 +1,3 @@
+# IAM privilege-escalation stealth audit, 2026-09-26
+
+A section-level scan found 23 IAM escalation techniques with impact and expandable CloudTrail tables but no explicit stealth rating. Added ratings to all 23. For most identity/credential/policy writes, the rating is low because AWS [logs IAM API calls in CloudTrail](https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html) and the changed configuration remains visible. `iam:PassRole` is rated medium: AWS [documents that it is a permission, not an API call](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_passrole.html), so detection uses the downstream service create/update event that includes the role. This was a documentation-only audit; no IAM principal or credential was created.
