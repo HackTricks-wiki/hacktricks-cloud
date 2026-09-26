@@ -712,6 +712,7 @@
     - [AWS - Step Functions Enum](pentesting-cloud/aws-security/aws-services/aws-stepfunctions-enum.md)
     - [AWS - Storage Gateway Enum](pentesting-cloud/aws-security/aws-services/aws-storage-gateway-enum.md)
     - [AWS - STS Enum](pentesting-cloud/aws-security/aws-services/aws-sts-enum.md)
+    - [AWS - Transfer Family Enum](pentesting-cloud/aws-security/aws-services/aws-transfer-family-enum.md)
     - [AWS - Tax Settings Enum](pentesting-cloud/aws-security/aws-services/aws-tax-settings-enum.md)
     - [AWS - Textract Enum](pentesting-cloud/aws-security/aws-services/aws-textract-enum.md)
     - [AWS - Transcribe Enum](pentesting-cloud/aws-security/aws-services/aws-transcribe-enum.md)
