@@ -15,3 +15,7 @@ novelty — NOT shipped to avoid duplicating the existing technique. Revisit onl
 - [x] S3 Express `CreateSession` bucket/mode/credential binding. Exact-bucket `ReadOnly` sessions
   could not write, cross to a sibling bucket, or gain rights by mixing/mutating tuple fields. Omitted
   mode fell back to the maximum allowed (`ReadOnly`). See `s3express-session-binding-2026-09-26.md`.
+- [x] SigV4 browser POST policy/parser differential and live IAM revocation. A 34-case raw multipart
+  matrix covering duplicate/conflicting key, filename, file, metadata, policy, signature, and STS
+  fields created zero outside-prefix objects; two old forms and a new form honored an explicit deny
+  within 15.1 seconds. See `presigned-post-parser-2026-09-26.md`.
