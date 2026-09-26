@@ -279,3 +279,7 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — Apigee enumeration and historical-vulnerability correction
 - Added the missing authenticated Apigee service-enumeration page across ingress, proxy/shared-flow deployment, backend routing, credentials/secrets, trace/debug and resource-IAM surfaces. The lab has no accessible Apigee organization, so only credential-wide organization listing was live-run; no resource was created.
 - Corrected the post-exploitation page: `GatewayToHeaven` is CVE-2025-13292, fixed for managed Apigee in `1-16-0-apigee-3` per GCP-2026-010. Consolidated five current-looking chain steps into one historical/unpatched-Hybrid technique with the official remediation floor, impact, stealth and logs. See `apigee/tested.md`.
+
+### 2026-09-26 — SUMMARY navigation audit
+- Added the two existing GCP technique pages omitted from the category navigation: Pub/Sub post-exploitation and Storage persistence. Both pages were already reachable from service content; this change makes them visible in their complete post-exploitation and persistence trees.
+- Documentation-only correction; no GCP API call or resource mutation was required.
