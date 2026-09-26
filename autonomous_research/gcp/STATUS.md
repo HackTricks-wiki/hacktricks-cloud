@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Certificate Manager post-exploitation quality audit
+- Reduced five claimed techniques to three defensible primitives. Corrected self-signed certificate
+  substitution from browser-trusted interception to TLS DoS unless a separately trusted cert is
+  available; removed redundant DNS-authorization and CA-pool chains that add no capability beyond
+  DNS/CA control; and corrected PRIMARY map-entry semantics.
+- Corrected Public CA persistence to the non-expiring bound ACME account (the EAB is one-use and
+  expires unused after seven days). Its creation is Data Access `DATA_WRITE`, **not logged by
+  default**, rather than always-on Admin Activity. All three retained techniques now have explicit
+  minimum permissions, stealth ratings and exact log tables.
+- Expanded enumeration across certificates, maps and entries, DNS authorizations, issuance configs,
+  trust configs, Public CA's create-only surface, permission boundaries and audit visibility.
+- Both lab APIs are disabled. Sent only read-only list requests, enabled nothing and created no
+  resources. See `certificate-manager/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Service Management / API Gateway rollout-boundary correction
 - Corrected the unsupported claim that API Gateway auto-pulls direct Service Management rollouts.
   Managed rollout applies to Cloud Endpoints ESP/ESPv2; API Gateway pins an immutable API config and
@@ -59,7 +73,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 48/403 privesc, 35/405 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 725 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 48/403 privesc, 37/403 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 721 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
