@@ -25,6 +25,11 @@ enabled, cost model changes, or a helper library becomes available).
 
 - **appsync CreateResolver/UpdateResolver**, **cloudfront CreateFunction/UpdateFunction** — run in a
   SANDBOXED engine (VTL/JS) with NO AWS role/credentials. Not a role-hijack primitive.
+- **WAFv2 `GetDecryptedAPIKey`** — misleading operation name, but the response schema returns only
+  `CreationTimestamp` and `TokenDomains`; it does not return a decrypted/plaintext key. The caller must
+  already supply the encrypted API key, which is intentionally embedded in browser JavaScript for the
+  CAPTCHA integration. No credential-disclosure technique. See
+  `waf/decrypted-api-key-name-false-positive-2026-09-26.md`.
 - **quicksight/connect/backup `*definition` / `*template`** members = DATA/report definitions, not
   executable code (regex `definition$` noise).
 - **glacier SetVaultAccessPolicy** — legacy; reinstated to the cross-account matrix with an explicit
