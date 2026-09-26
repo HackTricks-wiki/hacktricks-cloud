@@ -14,8 +14,9 @@
   EventBridge Connection's API key to a controlled endpoint when execution input supplies `ApiEndpoint`
   and the execution role does not constrain `states:HTTPEndpoint`. See
   `http-task-dynamic-endpoint-2026-09-26.md`.
-- [ ] `TestState` + `iam:PassRole` HTTP oracle without `states:RevealSecrets`: validate direct connection
-  credential capture and authenticated request/response behavior.
+- [x] `TestState` + exact-role `iam:PassRole` HTTP oracle without `states:RevealSecrets`: no-PassRole denied,
+  positive caller made a real request and disclosed the canary Connection API key to the collector. See
+  `teststate-http-connection-2026-09-26.md`.
 - [ ] HTTP Task endpoint-condition redirect: allow endpoint A only, make A redirect to B, and verify that
   connection credentials are not forwarded outside the IAM-approved endpoint.
 - [ ] OAuth `UpdateConnection` authorization-endpoint-only replacement: verify omitted stored client

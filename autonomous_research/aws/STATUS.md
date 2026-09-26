@@ -254,3 +254,15 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   logs, and the `states:HTTPEndpoint`/`states:HTTPMethod` mitigations.
 - Five disposable cycles fully torn down; final inventory showed no matching state machine, Connection or
   generated secret, Lambda/Function URL, log group, or IAM role.
+
+## cont.85 (2026-09-26) — TestState HTTP Connection oracle
+- SHIPPED #59 (VERIFIED two-sided): `states:TestState` plus exact-role `iam:PassRole` executed an arbitrary
+  HTTP Task and delivered an EventBridge Connection API key to the account-owned collector even with
+  `inspectionLevel=INFO` and `revealSecrets=false`.
+- `TestState` alone was denied specifically on PassRole. The positive caller had no `states:RevealSecrets`,
+  EventBridge, Secrets Manager, Lambda, logs, or state-machine CRUD permission. The passed role's endpoint
+  action was conditioned to the exact collector URL/method.
+- Added the Connection-specific path, minimum caller/passed-role permissions, impact, stealth, and expanded
+  logging table to the existing Step Functions TestState+PassRole privesc technique.
+- Combined fixture torn down and independently verified absent: state machine/execution, Connection/generated
+  secret, Lambda/Function URL, log group, all four roles, and policies.
