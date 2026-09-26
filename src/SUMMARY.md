@@ -687,6 +687,7 @@
     - [AWS - Redshift Enum](pentesting-cloud/aws-security/aws-services/aws-redshift-enum.md)
     - [AWS - Relational Database (RDS) Enum](pentesting-cloud/aws-security/aws-services/aws-relational-database-rds-enum.md)
     - [AWS - Resource Explorer Enum](pentesting-cloud/aws-security/aws-services/aws-resource-explorer-enum.md)
+    - [AWS - Resource Groups & Tagging API Enum](pentesting-cloud/aws-security/aws-services/aws-resource-groups-tagging-api-enum.md)
     - [AWS - Route53 Enum](pentesting-cloud/aws-security/aws-services/aws-route53-enum.md)
     - [AWS - Route 53 Global Resolver Enum](pentesting-cloud/aws-security/aws-services/aws-route53-global-resolver-enum.md)
     - [AWS - SageMaker Enum](pentesting-cloud/aws-security/aws-services/aws-sagemaker-enum/README.md)
