@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Cloud Workstations enumeration and logging correction
+- Added the missing Cloud Workstations service page covering clusters, configurations,
+  workstations, runtime identities, VPC/public exposure, boot code, persistent disks, resource IAM,
+  ordinary enumeration and the explicitly unlogged permission-filtered `listUsable` endpoints.
+- The authorized lab API is disabled. Sent only a read-only list request, did not enable it, and
+  created no infrastructure. Corrected the existing page's `GenerateAccessToken` audit claim and
+  added stealth ratings to all three techniques. See `cloud-workstations/tested.md` and
+  `checklist.md`.
+
 ### 2026-09-26 — Datastream enumeration and false BigQuery-source removal
 - Added the missing Datastream enumeration page for profiles, streams/objects, backfills, private
   connectivity/routes and audit visibility. Read-only lab enumeration found no resources; nothing
@@ -38,14 +47,14 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 43/403 privesc, 33/405 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 732 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 46/403 privesc, 33/405 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 729 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
 | `autonomous_research/gcp/` folder | 🟡 in progress | this scaffold; per-service `tested.md`/`checklist.md` being seeded from the audit history |
 
 Page counts (branch `gcp-techniques-audit-2026-09`): **75 privesc · 75 post-ex · 55 persistence ·
-25 unauth · 89 service-enum**.
+25 unauth · 90 service-enum**.
 
 ## Standing residue / teardown
 
