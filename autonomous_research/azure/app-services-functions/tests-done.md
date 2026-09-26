@@ -34,9 +34,9 @@ published, so SCM basic-auth tests aren't feasible there. Created a **Windows** 
 | 6 | Access-restriction removal | `sites/config/write` | DOC-ONLY |
 | 7 | Attacker-Relay hybrid connection | `sites/hybridConnectionNamespaces/relays/write` | DOC-ONLY |
 | 8 | **RCE via app-settings/env vars** (appCommandLine, Oryx PRE/POST_BUILD_COMMAND, DOTNET_STARTUP_HOOKS, NODE_OPTIONS=--require, JAVA_TOOL_OPTIONS -javaagent, PYTHONPATH+sitecustomize, LD_PRELOAD) | `Microsoft.Web/sites/config/write` | DOC-ONLY |
-| 9 | Functions `WEBSITE_RUN_FROM_PACKAGE` remote-URL = full deploy from one setting write | `sites/config/write` | DOC-ONLY |
-| 10 | Functions `hostruntime/*` ARM-proxy → `host/_master/read` master key regardless of backend | `hostruntime/*` | DOC-ONLY |
-| 11 | Container Apps default-public ingress + revision-suffix recon (unauth) | none | DOC-ONLY (folded into unauth page) |
+| 9 | Functions `WEBSITE_RUN_FROM_PACKAGE` remote-URL = full deploy from one setting write | `sites/config/write` | **WORKS — lab-verified 2026-09-24 on Windows Consumption**; Linux Consumption rejects the URL form |
+| 10 | Functions `hostruntime/*` ARM-proxy → master key | `hostruntime/*` | **REFUTED — lab-verified 2026-09-24**: key routes return 401; host/status recon works, while the separate `sites/host/listkeys/action` is the valid key path |
+| 11 | Container Apps external ingress is public by default | none | **REFUTED/CORRECTED 2026-09-26** — ingress is disabled unless configured and `external` defaults to `false`; only explicitly external apps are public |
 
 Env-var facts baked in: NODE_OPTIONS blocks --eval/-e (use --require <file>); PYTHONSTARTUP is
 interactive-only (use PYTHONPATH+sitecustomize); JAVA_OPTS is not a JVM var (use JAVA_TOOL_OPTIONS).

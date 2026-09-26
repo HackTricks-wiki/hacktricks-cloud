@@ -7,4 +7,6 @@ Cost note: base Cognitive account is free; token/inference usage bills per-call 
 - [ ] Confirm `raiPolicies/write` actually disables content filters on a deployment (min perms + log).
 - [ ] Test OpenAI `assistants` cross-principal thread/file disclosure (UNVERIFIED) if quota allows a
       cheap deployment.
-- [ ] Verify `agents/write` + UserIdentityImpersonation grants a usable impersonated identity (UNVERIFIED).
+- [ ] Verify the exact semantics and security boundary of
+      `AIServices/agents/endpoints/UserIdentityImpersonation/action`; the operation name alone is not
+      evidence that it grants a usable impersonated identity. Keep it out of the book until reproduced.
