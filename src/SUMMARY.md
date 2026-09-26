@@ -339,6 +339,7 @@
     - [GCP - Dataplex Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataplex-enum.md)
     - [GCP - Dataproc Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataproc-enum.md)
     - [GCP - Dataproc Metastore Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dataproc-metastore-enum.md)
+    - [GCP - Datastream Enum](pentesting-cloud/gcp-security/gcp-services/gcp-datastream-enum.md)
     - [GCP - DNS Enum](pentesting-cloud/gcp-security/gcp-services/gcp-dns-enum.md)
     - [GCP - Document AI Enum](pentesting-cloud/gcp-security/gcp-services/gcp-document-ai-enum.md)
     - [GCP - Eventarc Enum](pentesting-cloud/gcp-security/gcp-services/gcp-eventarc-enum.md)

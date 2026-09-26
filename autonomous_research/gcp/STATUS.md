@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Datastream enumeration and false BigQuery-source removal
+- Added the missing Datastream enumeration page for profiles, streams/objects, backfills, private
+  connectivity/routes and audit visibility. Read-only lab enumeration found no resources; nothing
+  was created.
+- Corrected a material false claim: BigQuery is a destination, not a Datastream source. The
+  credential-free native source technique now covers only Spanner, and conventional-source
+  credential/network prerequisites are explicit. Added stealth ratings to all four attack sections.
+  See `datastream/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Network Services enumeration and new-surface triage
 - Added the missing Network Services enumeration page for meshes/routes, endpoint policy, Service
   Extensions, Agent Gateways, extension bindings and allowlist-gated Cloud Multicast. Linked it from
