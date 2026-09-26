@@ -9,7 +9,7 @@
 
 ## Lab boundary and cleanup
 
-The available lab account is an organization **member** without an organization Identity Center instance/Account Access Manager application. It cannot satisfy the service's management-account onboarding prerequisite without privileges absent from this test role. The installed AWS CLI 2.34.45 also lacks the `account-access` command namespace; current AWS CLI documentation describes it. The finding is grounded in AWS's explicit assignment and trust-policy documentation, with no live assignment attempted. No AWS resources were created, so no teardown was required.
+The available lab account `228478051196` is an organization **member**; the management account is `418720621023`. A read-only sweep of enabled Regions found an **active organization Identity Center instance** in `eu-west-1`, owned by the management account. With current Boto3 installed into a temporary local directory, `account-access:ListApplications` in `eu-west-1` returned `[]`: no Account Access Manager application is enabled. The member role's `organizations:ListDelegatedAdministrators` call was denied, so delegated-administrator status was not established. The installed AWS CLI 2.34.45 lacks the `account-access` namespace, while current AWS CLI documentation includes it. The finding is grounded in AWS's explicit assignment and trust-policy documentation; no live entitlement was attempted. No AWS resources were created, so no AWS teardown was required.
 
 ## Distinct negative / limits
 
