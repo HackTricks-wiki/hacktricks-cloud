@@ -6,4 +6,3 @@
 - [ ] Validate cross-tenant re-fronting end-to-end against an origin restricted only to the
       `AzureFrontDoor.Backend` service tag, then confirm that adding the expected `X-Azure-FDID` filter
       blocks the attacker-owned profile.
-

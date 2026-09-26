@@ -9,4 +9,3 @@
 - [ ] Test Key Vault-backed Container Apps secret materialization after secret disable/delete, identity
       detach, and RBAC removal. Continued resolution beyond normal refresh/token lifetime is a private-
       report candidate; cached values within documented behavior are an incident-response nuance.
-
