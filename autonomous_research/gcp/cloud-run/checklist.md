@@ -9,3 +9,6 @@ The ordinary `run.instances.create` + `iam.serviceAccounts.actAs` path is the sa
 ## System-managed Agent Identity (Preview, announced 2026-09-01)
 - [x] Test whether a caller holding only `run.services.update` (no service-account `actAs`) can change code or environment on an existing Cloud Run agent using `--identity-type=agent-identity`. The v2 update was denied because the caller lacked `actAs` on the underlying Compute Engine default service account; see `tested.md`. This does not yield a one-permission run-as-agent-identity technique.
 - [x] If creation/registration is unavailable in the lab, record the exact blocking control. Creation worked after disabling the preview workload certificate; the first attempt failed at certificate mount and was cleaned up.
+
+## Delayed jobs (Preview, announced 2026-09-08)
+- [x] Reviewed the [delayed-execution feature](https://docs.cloud.google.com/run/docs/delayed-jobs): `--delay-execution` defers provisioning for up to 12 hours, but uses the existing job execution and override permissions and creates an ordinary execution resource. It does not establish a distinct escalation or durable persistence primitive beyond the documented `run.jobs.run` family. No delayed job was launched, so no long-lived execution or cleanup obligation was created.
