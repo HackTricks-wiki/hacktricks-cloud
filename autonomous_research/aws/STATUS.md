@@ -338,3 +338,21 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Three complete two-bucket cycles and two preliminary header-diagnostic cycles ran through `finally`.
   Every object, directory bucket, inline policy, and test role was deleted; independent inventory for
   the `ht-s3e-` prefix was empty.
+
+## cont.90 (2026-09-26) — Aurora DSQL authentication-token boundaries
+- SHIPPED #66 (format + verified semantics): filled explicit impact, stealth, and expandable logs
+  tables for all three existing Aurora DSQL techniques (`DbConnectAdmin`, `DbConnect`, and
+  `PutClusterPolicy`). Added the verified fact that token generation is local/invisible while every
+  new connection re-evaluates current IAM and IAM-to-database-role mapping state.
+- NEGATIVE / secure boundary across two live clusters: correct admin/custom tokens connected, while
+  action/user swaps, an unmapped principal, cluster-A token on B, exact-A IAM scope on B, wrong-Region
+  signing, action/host/signature/security-token mutations, and a duplicate Action parameter all failed.
+- Normal unchanged replay before expiry worked as documented. A 60-second token was rejected after
+  75 seconds. Revoking the database-role mapping immediately invalidated a still-live token, restoring
+  the mapping restored that same token, and deleting `DbConnect` IAM authorization invalidated it again.
+- Token generation produced no AWS call. Connection attempts require optional `AWS::DSQL::Cluster`
+  data events; SQL is not CloudTrail API activity. Default Event History contained both CreateCluster
+  and both DeleteCluster fixture events.
+- Both empty clusters reached not-found, all mappings/database roles were removed best-effort, all
+  three IAM roles/policies were deleted, and no Aurora DSQL service-linked role remained. Independent
+  cluster and IAM inventories were empty. No AWS vulnerability report.
