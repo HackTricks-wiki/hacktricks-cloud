@@ -289,3 +289,7 @@ delay for the API surface to actually change. Loop stays alive.
 - Added exact minimum permissions, categorical stealth ratings, and expandable audit-event tables to all seven Access Context Manager and four Organization Policy techniques.
 - Corrected two material scope/logging errors: folder/project IAM grants do not confer ACM policy access (authority must come from the organization or target access-policy IAM, and Organization Admin has no ACM permissions); legacy v1 Org Policy writes log under `cloudresourcemanager.googleapis.com`, while v2 uses `orgpolicy.googleapis.com`.
 - Verified current predefined-role contents with read-only `gcloud iam roles describe` calls and current official audit/access-control references. No GCP resource or configuration was changed.
+
+### 2026-09-26 — Access Approval metadata and audit-method review
+- Added minimum permissions and stealth ratings to both Access Approval post-exploitation techniques, and replaced inferred method names with Google's fully qualified audited methods.
+- Recorded the useful visibility boundary: settings/request mutations are always-on Admin Activity, while the corresponding get/list reconnaissance methods produce no audit log. No cloud resource or setting was changed; see `access-approval/tested.md`.
