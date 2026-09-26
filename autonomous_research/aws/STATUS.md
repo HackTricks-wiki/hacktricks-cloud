@@ -282,3 +282,22 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   events exposed destination identifiers under the replication role.
 - Four disposable cycles were cleaned; final inventory found no matching table bucket or IAM role. Cross-account
   policy setup is documented but was not live-tested without a second explicitly authorized account.
+
+## cont.87 (2026-09-26) — Transfer Family custom IdP takeover and password exposure
+- SHIPPED #61 (VERIFIED two independent end-to-end paths): exact-server `transfer:UpdateServer` alone
+  repointed a Lambda custom IdP, and exact-function `lambda:UpdateFunctionCode` alone poisoned the
+  already-wired IdP. Each accepted an attacker login and a real SFTP session read both protected marker
+  prefixes through the high S3 role returned at authentication. Neither restricted caller had PassRole,
+  Lambda Invoke, direct S3, or logs-read permission; the updater could not even DescribeServer.
+- SHIPPED #62 (VERIFIED exact synthetic canary): the Lambda IdP received the SFTP password in plaintext;
+  after the handler intentionally logged its event, `logs:FilterLogEvents` recovered the exact value.
+  Added a dedicated Transfer Family post-exploitation page and SUMMARY entry.
+- Filled all four existing Transfer privesc techniques' missing explicit stealth ratings and added the
+  omitted `UpdateAccess` role-choice variant.
+- The `PUBLIC_KEY_AND_PASSWORD` matrix enforced both factors and IAM intersection. AWS uses the password
+  response's role/policy/home when factor responses differ; malformed nonempty policies failed closed,
+  password-response PublicKeys were rejected, and empty/omitted Policy intentionally used the base role.
+  Because the trusted IdP already controls authorization, no independent security boundary was crossed;
+  the result stays in the research ledger and no AWS vulnerability report was created.
+- Five short endpoint cycles were deleted immediately, never merely stopped. Final independent inventory
+  was empty for matching Transfer servers, Lambdas, IAM roles, S3 buckets, and log groups.

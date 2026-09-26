@@ -490,6 +490,7 @@
     - [AWS - Step Functions Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md)
     - [AWS - Storage Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-storage-gateway-post-exploitation/README.md)
     - [AWS - STS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sts-post-exploitation/README.md)
+    - [AWS - Transfer Family Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md)
     - [AWS - Trusted Advisor Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-trusted-advisor-post-exploitation/README.md)
     - [AWS - VPN Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md)
     - [AWS - WAF Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md)
