@@ -151,7 +151,15 @@ enabled, cost model changes, or a helper library becomes available).
   plane** from the IAM account role — not cleanly reachable/testable via the lab account role. Niche.
 - **finspace-data** (`GetProgrammaticAccessCredentials.credentials`,
   `GetExternalDataViewAccessDetails.credentials`, `ResetUserPassword.temporaryPassword`) — real
-  credential-returning ops, but FinSpace is niche + not onboarded + cost-blocked (see finspace-kx).
+  credential-returning ops in the legacy Dataset Browser, but both credential operations are
+  deprecated and all FinSpace support ends 2026-10-07. The first action is an IAM-to-FinSpace bridge,
+  scoped in IAM only to the regional/account credential ARN: it vends the permissions of the
+  FinSpace user already bound to the caller's exact same-account role. The second is called with
+  those FinSpace credentials and returns 60-minute S3 credentials only after the mapped user's group
+  already has `Read Dataset Data` on the existing external data view's dataset; it has no separate
+  IAM action. This is useful legacy data-access portability, not an arbitrary-user/general-AWS
+  credential mint. The permitted lab Regions have no environment, so no credential was requested.
+  See `finspace-data/checklist.md`.
 - **qapps `CreatePresignedUrl`** — needs a Q Business subscription (same gate as QApps generally).
 - **iot-managed-integrations** (`CreateProvisioningProfile.ClaimCertificatePrivateKey`,
   `CreateDestination.RoleArn`, `GetConnectorDestination.SecretsManager`) — the service is GA and the
