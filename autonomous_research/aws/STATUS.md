@@ -225,3 +225,16 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   both roles; executions are attributed to `assumed-role/<execution-role>/Logs` with
   `invokedBy=logs.amazonaws.com`.
 - Teardown verified zero scheduled queries, bucket/object, log group, IAM users/keys/policies, or roles.
+
+## cont.83 (2026-09-26) — Step Functions callback-token boundary audit
+- NEGATIVE / secure boundary: two isolated Activity cycles verified that callback tokens stayed bound to
+  their original execution and Region; mutation, terminal replay, and expired-token use did not alter a
+  live or closed execution. Exact matrix: `step-functions/callback-token-binding-2026-09-26.md`.
+- Two non-security quirks retained for regression: immediate post-success heartbeat replay briefly returned
+  HTTP 200 before converging to `TaskTimedOut`; a one-character token mutation consistently returned
+  `InternalFailure` and generated SDK retries instead of the documented `InvalidToken`. Neither crossed a
+  boundary or changed state, so no AWS vulnerability report and no standalone public attack technique.
+- Minimum IAM clarification queued in the public callback technique: `SendTask*` has no resource type and
+  therefore needs `Resource: "*"`; only `GetActivityTask` can be scoped to the Activity ARN.
+- Both test cycles torn down. Independent checks found zero matching Activities and IAM roles; deleted state
+  machines entered the service's asynchronous `DELETING` state.
