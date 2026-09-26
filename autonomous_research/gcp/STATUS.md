@@ -9,7 +9,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 34/405 privesc, 23/404 post-exploitation, 157/157 persistence headings with Impact + Logs generated have a rating; 752 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 38/403 privesc, 23/404 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 746 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
@@ -207,3 +207,6 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — Cloud Run instance update boundary tested
 - On a disposable preview instance, a caller holding only `run.instances.update` could not alter the container environment while keeping the attached identity unchanged: HTTP 403 specifically denied `iam.serviceaccounts.actAs`. The failed `v2.Instances.UpdateInstance` was attributable in Admin Activity with `status.code=7`. This closes the unchanged-identity update lead; added the variant and its log shape to the existing Cloud Run update page, without a duplicate technique. The instance, test identities, binding, and custom role were removed and checked absent; see `cloud-run/tested.md`.
+
+### 2026-09-26 — IAP false-positive removal
+- Google's IAP guidance confirms an OAuth client secret does not grant IAP IAM authorization, and the IAP OAuth Admin API is retired. Removed the three book claims that treated `clientauthconfig.*` access as a standalone privesc/persistence backdoor, including the obsolete standalone page. Added four stealth ratings to the retained IAP privesc sections and changed unsupported "runtime never audited" claims to unverified because the published method table only omits them. No lab resource created; see `iap/tested.md`.
