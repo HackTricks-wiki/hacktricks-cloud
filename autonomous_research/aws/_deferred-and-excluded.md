@@ -23,6 +23,19 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## No distinct primitive (verified-none — do not manufacture a page)
 
+- **Application Auto Scaling `RegisterScalableTarget` for `custom-resource`** — not a generic
+  PassRole or arbitrary AWS API primitive. AWS documents a fixed SigV4 GET/PATCH protocol through API
+  Gateway and uses `AWSServiceRoleForApplicationAutoScaling_CustomResource`; its managed policy is
+  limited to `execute-api:Invoke` and CloudWatch alarm management. Application Auto Scaling supports
+  caller-managed service roles only for EMR, so the generic `RoleARN` input is a false lead for
+  arbitrary custom-resource role execution. In the authorized `us-east-1` lab, an owned disposable
+  endpoint was never invoked: the documented custom-resource tuple failed for a restricted caller,
+  the administrator, and the administrator with an explicit disposable role ARN with
+  `ValidationException: Unsupported service namespace, resource type or scalable dimension`. No
+  target or service-linked role was created, and all endpoint/IAM/logging fixture components were
+  deleted with zero prefix residue. Defer the narrower low-privilege signed GET/PATCH question until a
+  compatible account/Region exists; see
+  `application-autoscaling/custom-resource-register-2026-09-26.md`.
 - **appsync CreateResolver/UpdateResolver**, **cloudfront CreateFunction/UpdateFunction** — run in a
   SANDBOXED engine (VTL/JS) with NO AWS role/credentials. Not a role-hijack primitive.
 - **WAFv2 `GetDecryptedAPIKey`** — misleading operation name, but the response schema returns only
