@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — Policy Troubleshooter authorization and telemetry correction
+- Removed the nonexistent `policytroubleshooter.troubleshoot` permission and
+  `roles/policytroubleshooter.policyReviewer` role from all three relevant pages. Replaced them with
+  Google's actual policy/role-read prerequisites and documented `Unknown` behavior when the caller
+  cannot inspect every applicable policy, role or group membership.
+- Updated examples to the current gcloud/v3 API surfaces, added explicit impact/minimum-permission
+  caveats and a High stealth rating, and replaced the unsupported reasoned `DATA_READ`
+  `TroubleshootIamPolicy` claim with Google's documented internal IAM `GetEffectivePolicy`
+  `ADMIN_READ` signal and an explicit direct-logging unknown.
+- The lab API is disabled. Performed only read-only service/role checks, enabled nothing and created
+  no resources. See `policy-troubleshooter/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Cloud Scheduler post-exploitation audit correction
 - Corrected `GetJob`/`ListJobs` from `DATA_READ` to Data Access `ADMIN_READ` in both the post-
   exploitation and duplicate privilege-escalation coverage. Corrected the latter's unsupported
@@ -109,7 +121,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 49/403 privesc, 48/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 708 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 49/403 privesc, 49/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 707 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
