@@ -10,6 +10,8 @@ Current next checks: Sign-In network enforcement only in a disposable account; I
 
 Latest verified expected technique: EMR Serverless `GetSessionEndpoint` exact-session permission returns a portable Spark Connect bearer token to a principal other than `session.createdBy`; that client used the existing session's execution role to read a canary it could not access directly. Requires no `iam:PassRole`, `StartSession`, `GetSession`, or `ListSessions`. Public technique and detailed `emr/session-endpoint-2026-09-26.md` evidence added; all disposable test cycles fully cleaned.
 
+Latest negative boundary test: CodeArtifact authorization tokens stayed repository-scoped and both already-issued and newly minted tokens honored a new explicit `ReadFromRepository` deny within 7.6 seconds. Secure result recorded under `codeartifact/`; empty domain/repositories and IAM role fully deleted.
+
 ## 2026-09-24 sweep checkpoint (historical)
 
 | Axis | State | Notes |
