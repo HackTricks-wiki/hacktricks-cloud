@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-26
 
+### 2026-09-26 — NetApp Volumes post-exploitation boundary correction
+- Reduced five claimed techniques to four defensible primitives. Corrected export-policy abuse to
+  NFS rather than credentialless NFS/SMB, corrected recovery-point cloning permissions and removed
+  an unverified Active Directory password-disclosure candidate from the book.
+- Corrected deletion telemetry: volume, snapshot and backup deletion are Data Access `DATA_WRITE`,
+  while backup-vault deletion is Admin Activity. Narrowed the ONTAP technique to Google's filtered
+  administrator proxy and removed unsupported local-admin/full-cluster-control claims. All four
+  retained techniques now have explicit impact, minimum permissions, categorical stealth and log
+  tables.
+- The lab API is disabled. Sent only a read-only list request, enabled nothing and created no
+  infrastructure. See `netapp-volumes/tested.md` and `checklist.md`.
+
 ### 2026-09-26 — Cloud Run post-exploitation logging and permission correction
 - Completed minimum-permission and stealth metadata for all five Cloud Run post-exploitation
   techniques. Replaced the outdated claim that reads and `RunJob` can never be attributable with
@@ -84,7 +96,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 48/403 privesc, 41/403 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 717 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 48/403 privesc, 44/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 713 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
