@@ -80,6 +80,14 @@ enabled, cost model changes, or a helper library becomes available).
   attachment. A nonexistent-resource put failed at the gateway-version readiness check and created no
   state. A real fixture requires external VMware/vCenter plus a deployed gateway, and mappings have no
   dedicated delete API. Reasoned exclusion; see `backup-gateway/checklist.md`.
+- **re:Post Private `CreateSpace` / `UpdateSpace(roleArn)`** — a real but constrained delegation to
+  the built-in Support-case workflow, not arbitrary execution as the role. The documented role is
+  limited to creating, describing, communicating on, and resolving Support cases. Usable abuse also
+  needs an existing application identity with Support requester permission (or separate re:Post user/
+  role administration); changing the role alone grants neither. The service is closed to new customers
+  and shuts down June 30, 2027. The lab has no visible spaces, compatible role, managed-policy
+  attachment, or service-linked role. A bounded nonexistent-space update returned ResourceNotFound and
+  left zero residue. Reasoned exclusion; see `repostspace/role-binding-2026-09-26.md`.
 - **STS `GetDelegatedAccessToken` as a standalone technique** — a real credential exchange, but only
   for AWS Partner temporary delegation. IAM permission alone is insufficient: the caller must be an onboarded/registered partner
   and hold a trade-in token delivered after a customer associates and approves a delegation request.
