@@ -41,12 +41,22 @@ account (or a real engagement).
       config (encryptionType + kmsKeyArn). Swapping to an attacker-controlled KMS key = potential data
       access / defense evasion at account scope. Account-level change — test with extreme care (may not
       be cleanly reversible to prior state). Currently state=ENABLED default in lab.
-- [ ] **`GetConnectorDestination`** returns AuthConfig / SecretsManager / OAuthCompleteRedirectUrl for
-      C2C connectors. Check whether AuthConfig leaks OAuth client secrets/tokens in the response or only
-      SecretsManager references (given the confirmed AWS redaction pattern, likely references only).
-- [ ] **Credential lockers** (`CreateCredentialLocker`/`GetCredentialLocker`/`ListCredentialLockers`) —
-      store device credentials. GetCredentialLocker output = metadata only (Id/Arn/Name/Tags), no secret
-      => likely NOT a disclosure vector, but confirm.
+- [x] **`GetConnectorDestination` is a reference getter, not a credential vend (reconciled
+      2026-09-26).** `SecretsManager` and each general-authorization material contain only a secret
+      ARN and version ID. OAuth config contains endpoints, scope, authentication scheme, and redirect
+      URL, not a client secret/access token/refresh token. Minimum IAM is wildcard
+      `iotmanagedintegrations:GetConnectorDestination`; a separate Secrets Manager authorization
+      (`GetSecretValue`, plus `kms:Decrypt` for a customer-managed key) is always required to obtain
+      the referenced value.
+- [x] **Credential-locker getters are metadata only (reconciled 2026-09-26).**
+      `GetCredentialLocker` returns Id/Arn/Name/CreatedAt/Tags and is scopeable to the exact
+      `credential-locker/IDENTIFIER` ARN. `GetManagedThing` and list summaries can return a
+      `CredentialLockerId`, but the current API has no customer operation that reads locker contents;
+      more IoT read permissions do not turn the ID into plaintext. One distinct exception is
+      `GetManagedThing.DeviceSpecificKey`, a model-sensitive plaintext Z-Wave activation key. It is
+      not locker content or a cloud credential, and practical impact remains unverified without a
+      physical/onboarded Z-Wave fixture. Details and zero-residue preflight are in
+      `../_lens-sweeps/credential-reference-getters-2026-09-26.md`.
 - [ ] **Account associations** (`RegisterAccountAssociation`/`ListAccountAssociations`/`GetAccountAssociation`)
       link third-party (C2C) cloud accounts — recon of connected external device clouds; possible
       hijack of the association's OAuth linkage.
@@ -55,5 +65,9 @@ account (or a real engagement).
 
 - <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_Operations.html>
 - <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_RegisterCustomEndpoint.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_GetConnectorDestination.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_SecretsManager.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_GetCredentialLocker.html>
+- <https://docs.aws.amazon.com/iot-mi/latest/APIReference/API_GetManagedThing.html>
 - <https://docs.aws.amazon.com/iot-mi/latest/devguide/managedintegrations-notifications.html>
 - <https://docs.aws.amazon.com/service-authorization/latest/reference/list_iot-managed-integrations.html>

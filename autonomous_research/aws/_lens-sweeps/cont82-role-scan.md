@@ -41,7 +41,16 @@ Genuine signals (rest were pagination nextToken/ChangeToken/PaginationToken nois
 - [x] finspace-data:GetProgrammaticAccessCredentials + GetExternalDataViewAccessDetails -> plaintext `credentials`. Reconciled 2026-09-26: the former maps an exact same-account IAM role to one preconfigured FinSpace user and vends 1–60-minute FinSpace API credentials; the latter uses those credentials plus existing `Read Dataset Data` entitlement to vend 60-minute credentials for one external data view's managed S3 location. Both operations are deprecated, FinSpace ends 2026-10-07, the permitted lab Regions have no environment, and no state or credential was created. Reasoned exclusion in `finspace-data/checklist.md`.
 - [x] codecatalyst:CreateAccessToken -> `secret`. Reconciled 2026-09-26: a Builder ID/Identity Center bearer session can mint a cross-space PAT whose default lifetime is one year; the API accepts a custom expiry but AWS publishes no maximum. It extends Git/IDE/package access beyond the creating login session while remaining bounded by the user's existing CodeCatalyst roles. No IAM action authorizes it, it is not documented for general AWS or bearer-management API access, and behavior after user disable/removal is undocumented. CodeCatalyst is closed to new customers; the lab has no CodeCatalyst identity/profile and no token was created. Reasoned exclusion in `codecatalyst/access-token-persistence-2026-09-26.md`.
 - [x] license-manager:CreateToken -> `Token` (long-lived refresh) + GetAccessToken -> `AccessToken`. Genuine seller-license OIDC credential flow, but standard role is consumption-only and an overprivileged compatible trusting role is configuration-dependent. Reconciled in `license-manager/external-consumption-token-2026-09-26.md` and the deferred register.
-- license-manager-linux-subscriptions:GetRegisteredSubscriptionProvider -> SecretArn (REDACTED ARN, needs secretsmanager:GetSecretValue). iotmanagedintegrations Get* -> SecretsManager/CredentialLockerId (ARN/ID, redacted). Per calibration [[aws-technique-audit-progress]] control-plane returns ARN not plaintext -> NOT a direct vend.
+- [x] license-manager-linux-subscriptions:GetRegisteredSubscriptionProvider -> `SecretArn`, and
+  iotmanagedintegrations Get* -> `SecretsManager`/`CredentialLockerId`. Reconciled 2026-09-26: these
+  are ARN/version/ID references, not plaintext credential vends. Secrets Manager references always
+  require separate `GetSecretValue` authorization (and customer-key KMS authorization); the current
+  IoT API exposes no operation for reading credential-locker contents. `GetManagedThing` has a
+  separate plaintext `DeviceSpecificKey` field for Z-Wave activation, but it is not locker content or
+  a cloud credential and remains a niche, unverified physical-device lead. The lab has no Linux
+  subscription onboarding/provider and no IoT custom endpoint/resources; read-only preflight left
+  zero residue. See `_lens-sweeps/credential-reference-getters-2026-09-26.md` and
+  `iot-managed-integrations/checklist.md`.
 
 ## CONCLUSION
 The 130 true-gap services are now swept across all THREE high-value lenses (PassRole exec-role,

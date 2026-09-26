@@ -169,6 +169,14 @@ enabled, cost model changes, or a helper library becomes available).
   credential mint. The permitted lab Regions have no environment, so no credential was requested.
   See `finspace-data/checklist.md`.
 - **qapps `CreatePresignedUrl`** — needs a Q Business subscription (same gate as QApps generally).
+- **license-manager-linux-subscriptions `GetRegisteredSubscriptionProvider.SecretArn`** — reference
+  disclosure only, not a credential vend. The exact provider-scoped getter returns the ARN of the
+  Secrets Manager secret holding the Red Hat offline token; it never returns the value. A separate
+  `secretsmanager:GetSecretValue` authorization (and `kms:Decrypt` for a customer-managed key) is
+  required. The active service first requires Linux subscription discovery, RHSM registration, and
+  a Red Hat offline token. Discovery is disabled in both permitted lab Regions, so no active provider
+  was available to query and no onboarding or secret read was attempted. See
+  `_lens-sweeps/credential-reference-getters-2026-09-26.md`.
 - **iot-managed-integrations** (`CreateProvisioningProfile.ClaimCertificatePrivateKey`,
   `CreateDestination.RoleArn`, `GetConnectorDestination.SecretsManager`) — the service is GA and the
   lab can reach it in `eu-west-1`, but every meaningful fixture requires the account to first call
@@ -177,9 +185,15 @@ enabled, cost model changes, or a helper library becomes available).
   currently has no custom endpoint. The current `CreateDestination` contract is Kinesis-only and
   explicitly requires exact-role PassRole to `iotmanagedintegrations.amazonaws.com`; the role writes
   records, while a separate `CreateNotificationConfiguration` selects and activates event delivery.
-  This is conditional device-event exfiltration, not arbitrary role execution. Revisit in an
-  already-onboarded account; do not register the lab merely to test these candidates. See
-  `iot-managed-integrations/checklist.md`.
+  This is conditional device-event exfiltration, not arbitrary role execution.
+  `GetConnectorDestination` returns only Secrets Manager ARN/version references; plaintext requires
+  separate Secrets Manager/KMS authorization. `GetCredentialLocker` is metadata-only, and
+  `CredentialLockerId` has no customer-facing content-read API. `GetManagedThing` does separately
+  model a plaintext Z-Wave device-specific activation key, but that niche physical-device material
+  is not locker content or an AWS/cloud credential and remains unverified without an onboarded
+  device. Revisit in an already-onboarded account; do not register the lab merely to test these
+  candidates. See `iot-managed-integrations/checklist.md` and
+  `_lens-sweeps/credential-reference-getters-2026-09-26.md`.
 - **security-ir** — NOT deferred: documented from model (see security-ir/tested.md).
 
 ## cont.61 (2026-09-24) — zero-coverage sweep tail (133 services cross-referenced)
