@@ -14,6 +14,8 @@ Latest negative boundary test: CodeArtifact authorization tokens stayed reposito
 
 Latest S3 parser boundary test: a 34-case raw SigV4 presigned-POST multipart matrix produced zero objects outside the signed `allowed/` prefix. Duplicate auth/policy/key fields failed safely, traversal filenames stayed prefix-bound, size/SSE conditions held, and old/new forms honored an explicit IAM deny within 15.1 seconds. All 15 objects, bucket, and signer role deleted; zero multipart uploads and no versioning/Object Lock residue.
 
+Well-Architected invitation-recipient binding remains deferred: the safe two-local-user fixture is invalid because `CreateWorkloadShare` rejects a user from the sharer's own account. No invitation was created; workload, both keys/policies, and both users were deleted. Revisit only with an explicitly authorized second account.
+
 ## 2026-09-24 sweep checkpoint (historical)
 
 | Axis | State | Notes |
