@@ -146,9 +146,17 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## Scanner-tail deferrals (cont.58, 2026-09-24 — real secret-out/role-in but blocked)
 
-- **codecatalyst `CreateAccessToken.secret`** — mints a CodeCatalyst PAT (persistence). Blocked:
-  CodeCatalyst identity is AWS Builder ID / Identity Center space membership, a **separate identity
-  plane** from the IAM account role — not cleanly reachable/testable via the lab account role. Niche.
+- **codecatalyst `CreateAccessToken.secret`** — real developer-identity persistence, but not IAM
+  persistence. An active CodeCatalyst Builder ID or Identity Center bearer session can mint a
+  password-like PAT that defaults to one year, has a caller-selected expiry with no documented
+  maximum, and follows that user's existing roles across all of their CodeCatalyst spaces/projects.
+  It has no token-level scopes; documented use is Git/IDE/package access, not the bearer management
+  API or general AWS APIs. Only the creator can list metadata or delete it. This outlives the creating
+  session by design, but AWS does not document behavior after the underlying user is disabled or
+  removed, so stronger persistence claims are unsupported. CodeCatalyst closed to new customers on
+  2025-11-07 and new spaces are unavailable. The lab has no CodeCatalyst/SSO profile or Identity
+  Center instance, so no token was created. See
+  `codecatalyst/access-token-persistence-2026-09-26.md`.
 - **finspace-data** (`GetProgrammaticAccessCredentials.credentials`,
   `GetExternalDataViewAccessDetails.credentials`, `ResetUserPassword.temporaryPassword`) — real
   credential-returning ops in the legacy Dataset Browser, but both credential operations are
