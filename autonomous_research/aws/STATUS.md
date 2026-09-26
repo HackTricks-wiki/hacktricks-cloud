@@ -16,6 +16,8 @@ Latest S3 parser boundary test: a 34-case raw SigV4 presigned-POST multipart mat
 
 Well-Architected invitation-recipient binding remains deferred: the safe two-local-user fixture is invalid because `CreateWorkloadShare` rejects a user from the sharer's own account. No invitation was created; workload, both keys/policies, and both users were deleted. Revisit only with an explicitly authorized second account.
 
+Latest documented expected technique: Systems Manager JIT `StartAccessRequest` + `GetAccessToken` vends constrained temporary credentials for an approved Session Manager shell without standing `StartSession` or PassRole. Added with exact prerequisites/impact/stealth/logs. Live test deferred because account preflight found JIT, unified-console setup, approval policies, and managed nodes all absent; no account-wide setting was changed.
+
 ## 2026-09-24 sweep checkpoint (historical)
 
 | Axis | State | Notes |
