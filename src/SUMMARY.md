@@ -841,6 +841,7 @@
     - [Az - Attestation Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-attestation-privesc.md)
     - [Az - Automation Accounts Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md)
     - [Az - Arc-enabled Servers Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-arc-enabled-servers-privesc.md)
+    - [Az - Arc Resource Bridge Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md)
     - [Az - Batch Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md)
     - [Az - Bot Service Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md)
     - [Az - Communication Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md)
