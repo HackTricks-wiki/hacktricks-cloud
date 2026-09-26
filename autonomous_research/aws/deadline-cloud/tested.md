@@ -22,6 +22,11 @@
 - **Disposition:** NEW "## Privilege Escalation" section on aws-deadline-cloud-enum.md (refs [4][5][6]);
   also corrected the enum's "session policy Deadline applies" line (only -ForRead is narrowed).
   Impact + Logs block. Min-perms stated.
+- **Telemetry follow-up (2026-09-26):** CloudTrail Event History retained the successful
+  `AssumeQueueRoleForUser` calls as default management events with `readOnly:true`. Each event named
+  the exact `farmId` and `queueId`, returned `responseElements:null`, and did not expose the vended
+  credentials. The standalone enumeration technique now has its own minimum permissions, impact,
+  stealth, and expandable logs block instead of relying on the separate queue-repointing privesc block.
 
 ## Fleet-role privesc: CreateFleet/UpdateFleet + PassRole + CreateWorker -> AssumeFleetRoleForWorker — VERIFIED live
 
