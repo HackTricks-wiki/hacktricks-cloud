@@ -1,0 +1,6 @@
+# Cloud Run — tested
+
+## 2026-09-26 — instance update / service-identity boundary
+- Created a disposable Cloud Run instance in `us-west1` with a dedicated service account. The caller had a custom role containing **only** `run.instances.update` and no `iam.serviceAccounts.actAs` on the instance identity. Direct v2 `PATCH` with `updateMask=containers` attempted to add one inert environment variable without changing the service identity. Result: HTTP `403 PERMISSION_DENIED`, `Permission 'iam.serviceaccounts.actAs' denied on service account ...`. This rules out the unchanged-identity update bypass for the preview instance resource.
+- Confirmed Cloud Audit: `google.cloud.run.v2.Instances.UpdateInstance` in `cloudaudit.googleapis.com/activity`, caller set to the limited service account, `status.code=7`, status message naming the denied `actAs`. Owner creation emitted `google.cloud.run.v1.Instances.CreateInstance` in Admin Activity and `/Instances.CreateInstance` as an unattributed System Event.
+- Removed the instance and test IAM bindings/service accounts/custom role; the cleanup script verified the instance was absent. This is a negative boundary result, so no separate attack technique was added. The existing Cloud Run update technique now mentions the instance variant and the log shape.

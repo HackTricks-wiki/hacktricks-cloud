@@ -204,3 +204,6 @@ delay for the API surface to actually change. Loop stays alive.
 
 ### 2026-09-26 — Cloud Run visibility sweep
 - Added stealth ratings to all 13 Cloud Run privesc sections using the page's prior live audit captures: create/update/IAM changes are attributable Admin Activity, while `run.jobs.run` and overrides emit an unattributed System Event and template reads have no audit entry even with Data Access on. The allowlist-gated SSH path remains explicitly provisional. Reviewed the new Cloud Run instances preview: ordinary `instances.create` + `actAs` duplicates the known Run-as-SA family; investigate update/start boundaries before adding a technique. No new Run resource was created; see `cloud-run/checklist.md`.
+
+### 2026-09-26 — Cloud Run instance update boundary tested
+- On a disposable preview instance, a caller holding only `run.instances.update` could not alter the container environment while keeping the attached identity unchanged: HTTP 403 specifically denied `iam.serviceaccounts.actAs`. The failed `v2.Instances.UpdateInstance` was attributable in Admin Activity with `status.code=7`. This closes the unchanged-identity update lead; added the variant and its log shape to the existing Cloud Run update page, without a duplicate technique. The instance, test identities, binding, and custom role were removed and checked absent; see `cloud-run/tested.md`.
