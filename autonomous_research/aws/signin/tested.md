@@ -1,0 +1,20 @@
+# AWS Sign-In console access policy — research, 2026-09-26
+
+## Confirmed expected behavior
+
+- AWS [documents](https://docs.aws.amazon.com/signin/latest/userguide/console-access-control.html) account-level resource policies that deny console sign-in outside a selected source IP/VPC, including root unless exempted. IAM Identity Center portal users cannot use console access when network restrictions are enabled. SigV4 API access is unaffected.
+- Enforcement needs both `signin:PutResourcePermissionStatement` and `signin:PutConsoleAuthorizationConfiguration`. These are separate [IAM actions](https://docs.aws.amazon.com/service-authorization/latest/reference/list_signin.html). Writes target `us-east-1` and replicate globally.
+- This is a defender-console denial / activity-continuation technique, not privilege escalation. It has material value when an actor controls an allowed network and defenders rely on console sign-in.
+
+## Lab test and cleanup
+
+In account `228478051196`, the assumed admin role used current Boto3 1.43.103. Read-only `GetConsoleAuthorizationConfiguration`, `ListResourcePermissionStatements`, and `GetResourcePolicy` all returned `ResourceNotFoundException`: no preexisting account policy or enforcement configuration. `PutResourcePermissionStatement(sourceIp=192.0.2.7/32)` succeeded, returning a statement ID. `GetConsoleAuthorizationConfiguration` still returned `ResourceNotFoundException`, confirming the statement did not enable enforcement. `DeleteResourcePermissionStatement` succeeded, and `ListResourcePermissionStatements` then returned `ResourceNotFoundException`. No configuration or statement remains. A CloudTrail Event History query immediately afterward found neither write event yet; it may have been before ingestion. AWS explicitly documents logging of Sign-In policy evaluations and configuration changes; no claim of observed event payloads is made.
+
+`PutConsoleAuthorizationConfiguration` was not called in the shared lab because it would enforce a restrictive policy against real console users. The behavior and impact are documented by AWS rather than live lockout tested.
+
+## Limits and negative branches
+
+- `PutResourcePermissionStatement` alone does not enforce the restriction.
+- Existing programmatic credentials retain API access, including a possible recovery path via `DeleteConsoleAuthorizationConfiguration`.
+- Account-level policy is distinct from organization-wide Sign-In RCP control; a member account operator cannot assume organization-wide scope.
+- The restriction is visible in CloudTrail and may take minutes to replicate.
