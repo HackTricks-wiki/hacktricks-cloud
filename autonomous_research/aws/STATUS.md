@@ -196,3 +196,18 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   `s3/access-grants-canonicalization-2026-09-26.md`.
 - Two test cycles fully torn down; Access Grants instance, bucket, objects, IAM user/key/policy, and
   location role/policy all verified absent.
+
+## Saturation update (cont.81) — AgentCore Harness direct shell
+- SHIPPED #56 (VERIFIED end to end, two-sided): `CreateHarness` + exact-role `iam:PassRole` +
+  `InvokeAgentRuntimeCommand` produced UID 0 and the target execution-role STS ARN. The no-PassRole
+  principal was explicitly denied. Added enumeration, impact, working boto3 call, logs table, and
+  stealth rating to the AgentCore privesc page; also filled the missing stealth ratings on its four
+  existing techniques.
+- Composite-create dependency discovery recorded extra live gates (`CreateAgentRuntimeEndpoint`,
+  `CreateWorkloadIdentity`, `GetAgentRuntime`) and the first-use Runtime Identity service-linked role.
+  Full harness ARN is the working command target; generated runtime ARN and short harness ID are not.
+- CloudTrail Event History verified `CreateHarness` request/response logging and exact PassRole denial.
+  Runtime command telemetry attempted `logs:PutLogEvents` under the execution role; without that
+  permission the command still succeeded while CloudWatch export failed.
+- Teardown verified: harness, generated managed resources, both IAM users/keys/policies, execution
+  role, and Runtime Identity service-linked role all absent; deletion task `SUCCEEDED`.
