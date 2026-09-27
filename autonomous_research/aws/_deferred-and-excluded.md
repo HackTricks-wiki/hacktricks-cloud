@@ -198,12 +198,12 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## cont.61 (2026-09-24) — zero-coverage sweep tail (133 services cross-referenced)
 
-- **payment-cryptography / payment-cryptography-data** — real crypto primitives but excluded as
-  niche/covered-by-permission: `ExportKey` is HSM-wrapped (TR-31/TR-34/RSA, needs a KEK the service
-  trusts — NO plaintext key exfil, like KMS); `DecryptData`->PlainText, `GeneratePinData`/
-  `TranslatePinData`->PIN blocks are "the permission does what it says" on a PCI-PIN service used by
-  a tiny population. `payment-cryptography:PutResourcePolicy` (cross-account key share) is the only
-  structural vector — candidate matrix row if ever a customer uses the service. Not a page.
+- **payment-cryptography / payment-cryptography-data — RETIRED EXCLUSION (2026-09-27):** the earlier
+  “not a page” conclusion is obsolete. Current enumeration, post-exploitation, privilege-escalation,
+  and persistence pages now cover exact key-policy boundaries, asymmetric export, cryptographic
+  oracles, aliases, key disable/deletion, and cross-account policy persistence. The audit used
+  signed endpoint/IAM probes but deliberately created no payment key because deletion has a
+  mandatory minimum waiting period. See `payment-cryptography/audit-2026-09-27.md`.
 - **Remaining zero-coverage set** = runtime/data-plane variants (lex-runtime, personalize-runtime,
   *-data), deprecated (machinelearning, iotthingsgraph, mturk, swf, simpledbv2, importexport), legacy
   seller-only (`marketplacecommerceanalytics`; PSC export deprecated but `GenerateDataSet` remains),

@@ -1,6 +1,30 @@
 # AWS audit — status
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
+
+## Active 2026-09-27 checkpoint
+
+Research remains active on branch `research/aws-technique-audit` and PR #413. The current sweep
+added or substantially refreshed public enumeration and attack coverage for Customer Profiles,
+Invoicing and Billing, Resource Explorer 2, User Notifications, Payment Cryptography, Supply Chain,
+Verified Permissions, and Clean Rooms/Clean Rooms ML. Every published technique includes its
+minimum permissions and prerequisites, impact or persistence scope, stealth assessment, and a
+compact logs-generated table. Per-service ledgers record successful and negative live branches,
+authorization boundaries, telemetry, and final cleanup evidence.
+
+Unexpected security-impact findings are not published in this repository. Confirmed candidates from
+this sweep are documented only in the restricted local AWS report directory for separate disclosure.
+
+Cleanup exception currently being monitored: one HealthImaging image-set version remains in an
+AWS-controlled `LOCKED / UPDATING` transition after its accepted revert. Its datastore cannot be
+deleted until that transition completes. The automated delete trap is healthy and all supporting
+test buckets and roles are already absent. Do not mark this audit fully cleaned until both the exact
+image set and datastore are confirmed absent.
+
+Current next checks: continue the missing-service/action sweep, prioritizing services with
+cross-account resource policies, credential/data export, stored service roles, mutable execution
+configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities
+or SDK models have materially changed.
 
 ## Active 2026-09-26 checkpoint
 
@@ -48,7 +72,8 @@ clean net-new gap that clears the no-garbage bar." Remaining items are reasoned 
 - 2 customer KMS CMKs (`1bb73ce3…`, `acdd6d73…`) in PendingDeletion → self-delete 2026-09-29.
   **Reuse these for KMS tests** instead of creating new CMKs.
 
-Everything else removable has been removed (residue sweep cont.53, 2026-09-24).
+Everything else removable in that 2026-09-24 residue sweep was removed. See the current checkpoint
+above for later test state.
 
 ## Known content gaps still worth a page (tracked as per-service checklists)
 
