@@ -32,7 +32,11 @@ reference URL shape reached the current integration, but registration-only acces
 the documented caller-side validation for API Gateway GET/PATCH and CloudWatch permissions. All
 owned endpoint and service-linked-role fixtures were deleted.
 
-Current next check: close the retired CodeGuru Security surface, then continue the missing-service/action
+CodeGuru Security is closed as a reasoned exclusion: the live scan API now returns the service's
+post-retirement `FeatureNoLongerAvailableException`; only inert default configuration and zero
+metrics remain readable. No public page was added and no state was changed.
+
+Current next checks: Billing Conductor and Network Flow Monitor, then continue the missing-service/action
 sweep, prioritizing services with
 cross-account resource policies, credential/data export, stored service roles, mutable execution
 configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities

@@ -66,6 +66,14 @@ enabled, cost model changes, or a helper library becomes available).
   matching bucket/topic, or recent events, and an AMI-product catalog preflight was empty. No asynchronous
   request was started. No current primitive; see
   `marketplacecommerceanalytics/support-data-export-2026-09-26.md`.
+- **CodeGuru Security (`codeguru-security`)** — service support ended on 2025-11-20. A live
+  2026-09-27 check returned `FeatureNoLongerAvailableException: Amazon CodeGuru Security is no
+  longer supported` for `ListScans`; inert `GetAccountConfiguration` and `GetMetricsSummary` reads
+  still returned the default encryption configuration and zero metrics. The old presigned archive
+  upload, scan and finding APIs remain in current CLI/IAM models but no longer provide a usable
+  attack surface. Do not manufacture public scan/finding techniques from the stale model unless AWS
+  reactivates or replaces the service. No state was changed; see
+  `codeguru-security/eol-audit-2026-09-27.md`.
 - Governance/finance/collab tail (wellarchitected/resiliencehub/auditmanager/etc.) — no distinct
   privesc/postexploit/persistence primitive beyond what the resource-policy matrix already covers.
 
