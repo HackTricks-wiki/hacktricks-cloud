@@ -74,6 +74,12 @@ enabled, cost model changes, or a helper library becomes available).
   attack surface. Do not manufacture public scan/finding techniques from the stale model unless AWS
   reactivates or replaces the service. No state was changed; see
   `codeguru-security/eol-audit-2026-09-27.md`.
+- **AWS Application Cost Profiler (`application-cost-profiler`)** — AWS discontinued the service
+  on 2024-09-30. Although the current CLI still ships a stale six-operation model, a signed
+  2026-09-27 `ListReportDefinitions` call could not connect to the modeled `us-east-1` endpoint.
+  The historical report-destination redirection and S3 usage-import poisoning ideas therefore are
+  not usable current techniques and must not be manufactured into public pages. No state was
+  changed; see `application-cost-profiler/audit-2026-09-27.md`.
 - Governance/finance/collab tail (wellarchitected/resiliencehub/auditmanager/etc.) — no distinct
   privesc/postexploit/persistence primitive beyond what the resource-policy matrix already covers.
 
