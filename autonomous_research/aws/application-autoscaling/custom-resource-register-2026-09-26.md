@@ -7,12 +7,13 @@ Do not publish `application-autoscaling:RegisterScalableTarget` with
 documented integration is a fixed custom-scaling protocol over an Amazon API Gateway URL, and it uses
 the dedicated AWS-managed service-linked role rather than a caller-selected high-privilege role.
 
-There is a narrower candidate worth retaining for a future compatible lab: registration might cause
-the low-privilege service-linked role to make SigV4-signed GET/PATCH requests to a caller-controlled
-API Gateway route. That could matter only where a target API explicitly accepts that role. It was not
-live-verifiable in the authorized `us-east-1` account because the service rejected the documented
-custom-resource tuple before creating a target, role, or request. This is therefore a reasoned
-exclusion/defer, not a verified offensive primitive.
+The narrower signed-request candidate is also closed. A follow-up with the exact AWS reference path
+shape reached Application Auto Scaling's caller-permission validation. A principal with only
+`RegisterScalableTarget` and first-use service-linked-role creation could not invoke the route
+directly and registration was rejected because it lacked the target API and CloudWatch permissions.
+AWS documents this as an intentional preflight: the service validates that the API caller already has
+the permissions it will use against the target service and CloudWatch. Registration therefore does
+not bridge a caller into the broader permissions of the service-linked role.
 
 ## Official protocol and role boundary
 
@@ -60,9 +61,13 @@ role exists; that is not permission to substitute an arbitrary role for a custom
 The documented caller-side path is therefore:
 
 1. `application-autoscaling:RegisterScalableTarget` for the custom-resource tuple.
-2. On the first target in an account, `iam:CreateServiceLinkedRole` constrained to
+2. Caller-side permission for `execute-api:Invoke` on the required GET/PATCH route and
+   `cloudwatch:PutMetricAlarm`, `cloudwatch:DescribeAlarms`, and `cloudwatch:DeleteAlarms`.
+   Application Auto Scaling validates these target-service and CloudWatch permissions before
+   accepting the scaling configuration.
+3. On the first target in an account, `iam:CreateServiceLinkedRole` constrained to
    `custom-resource.application-autoscaling.amazonaws.com` and the exact service-linked-role ARN.
-3. No caller-supplied execution-role permissions. If a client explicitly supplies the applicable
+4. No caller-supplied execution-role permissions. If a client explicitly supplies the applicable
    service-linked-role ARN, the Service Authorization Reference lists `iam:PassRole` with
    `iam:PassedToService = application-autoscaling.amazonaws.com`; AWS's CLI example omits `RoleARN`
    and relies on automatic service-linked-role creation.
@@ -142,17 +147,56 @@ explicit-role attempt also preserved the supplied role ARN in `requestParameters
 subsequent STS assumption or endpoint request. The API, Lambda, IAM, and log-group fixture operations
 remained ordinary account management activity.
 
+## Exact-path follow-up — 2026-09-27
+
+The first fixture used `/prod/scale`, whereas the AWS reference implementation uses
+`/prod/scalableTargetDimensions/<identifier>`. A syntax differential with the latter shape and a
+nonexistent API hostname passed namespace/dimension validation and failed later with `URL host cannot
+be resolved`. This also caused first-use creation of
+`AWSServiceRoleForApplicationAutoScaling_CustomResource`; the role was immediately deleted after the
+zero-target check.
+
+A fresh disposable REST API then implemented the exact reference path with IAM-authorized GET and
+PATCH methods and a Lambda backend containing only synthetic scaling state. The restricted caller had
+exactly:
+
+```text
+application-autoscaling:RegisterScalableTarget
+iam:CreateServiceLinkedRole
+  iam:AWSServiceName = custom-resource.application-autoscaling.amazonaws.com
+```
+
+The caller's direct SigV4 GET returned HTTP 403. Its registration request reached the current custom
+resource integration but failed before target creation or endpoint invocation with:
+
+```text
+ValidationException: User is missing the following permissions:
+cloudwatch:PutMetricAlarm, execute-api:Invoke:PATCH, execute-api:Invoke:GET,
+cloudwatch:DeleteAlarms, cloudwatch:DescribeAlarms
+```
+
+This is the expected boundary described in AWS's permissions-validation documentation: Application
+Auto Scaling issues authorization probes for the target service and CloudWatch on behalf of the API
+caller and rejects registration if those permissions are absent. The caller must therefore already
+possess the API invocation rights that the candidate hoped to obtain through the service-linked role.
+
+Two preparatory fixture iterations were discarded before interpreting any AWS result: one temporary
+Lambda package used an invalid hidden module name, and one local preflight attempted to import an
+uninstalled Python `botocore` module. Their cleanup traps ran successfully. The final run used curl's
+native SigV4 implementation for the direct-access control.
+
 ## Cleanup and independent zero-residue verification
 
-The REST API (including its stage, deployment, resources, and methods), Lambda function, dedicated log
-group, three IAM roles, and their inline policies were deleted. No scalable target, scaling policy,
-scheduled action, alarm, or custom-resource service-linked role had been created.
+All REST APIs (including stages, deployments, resources, and methods), Lambda functions, dedicated log
+groups, S3 canary buckets/objects, IAM roles, and inline policies were deleted. No scalable target,
+scaling policy, scheduled action, or alarm was created. Service-linked roles created by the follow-up
+syntax and exact-route checks were deleted after confirming that no target referenced them.
 
 Independent post-cleanup inventories confirmed:
 
 - zero custom-resource scalable targets matching the fixture;
 - zero matching scheduled actions, scaling policies, and CloudWatch alarms;
-- the custom-resource service-linked role remained absent;
+- the custom-resource service-linked role was absent after deletion completed;
 - zero fixture-prefixed API Gateway APIs;
 - zero fixture-prefixed Lambda functions;
 - zero fixture-prefixed IAM roles;
@@ -161,26 +205,17 @@ Independent post-cleanup inventories confirmed:
 
 ## Revisit gate
 
-Revisit only in an account and explicitly authorized Region where the documented custom-resource tuple
-successfully registers. Use an owned API Gateway endpoint with synthetic state, omit `RoleARN` first,
-and test these boundaries independently:
-
-- caller with RegisterScalableTarget but without first-use CreateServiceLinkedRole;
-- caller with the exact service-linked-role creation permission;
-- explicit service-linked-role ARN with and without exact `iam:PassRole`;
-- explicit ordinary role ARN, expected from the IAM documentation to be rejected or unused;
-- actual GET/PATCH signer identity and exact body shape; and
-- one bounded scheduled action followed by deregistration and service-linked-role deletion.
-
-Do not probe third-party endpoints, internal addresses, or metadata services. Promote to the public book
-only if the service accepts a controlled route and demonstrates a privilege boundary materially broader
-than the fixed low-privilege protocol documented here.
+The candidate is closed under the current contract. Revisit only if AWS removes caller-side target
+permission validation, permits a non-API-Gateway destination or caller-selected role, or exposes a new
+custom-resource method/body that creates a materially different primitive. Do not probe third-party
+endpoints, internal addresses, or metadata services.
 
 ## Official sources
 
 - <https://docs.aws.amazon.com/autoscaling/application/userguide/services-that-can-integrate-custom.html>
 - <https://docs.aws.amazon.com/autoscaling/application/APIReference/API_RegisterScalableTarget.html>
 - <https://docs.aws.amazon.com/autoscaling/application/userguide/security_iam_service-with-iam.html>
+- <https://docs.aws.amazon.com/autoscaling/application/userguide/security_iam_permission_validation.html>
 - <https://docs.aws.amazon.com/autoscaling/application/userguide/application-auto-scaling-service-linked-roles.html>
 - <https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSApplicationAutoScalingCustomResourcePolicy.html>
 - <https://docs.aws.amazon.com/service-authorization/latest/reference/list_application-autoscaling.html>

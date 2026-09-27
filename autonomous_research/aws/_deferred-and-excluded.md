@@ -38,13 +38,12 @@ enabled, cost model changes, or a helper library becomes available).
   Gateway and uses `AWSServiceRoleForApplicationAutoScaling_CustomResource`; its managed policy is
   limited to `execute-api:Invoke` and CloudWatch alarm management. Application Auto Scaling supports
   caller-managed service roles only for EMR, so the generic `RoleARN` input is a false lead for
-  arbitrary custom-resource role execution. In the authorized `us-east-1` lab, an owned disposable
-  endpoint was never invoked: the documented custom-resource tuple failed for a restricted caller,
-  the administrator, and the administrator with an explicit disposable role ARN with
-  `ValidationException: Unsupported service namespace, resource type or scalable dimension`. No
-  target or service-linked role was created, and all endpoint/IAM/logging fixture components were
-  deleted with zero prefix residue. Defer the narrower low-privilege signed GET/PATCH question until a
-  compatible account/Region exists; see
+  arbitrary custom-resource role execution. A follow-up used the exact AWS reference URL shape: a
+  caller with only `RegisterScalableTarget` plus constrained first-use role creation was denied direct
+  API access and registration failed because it lacked GET/PATCH invocation and CloudWatch alarm
+  permissions. This matches AWS's documented caller-permission validation and closes the possible
+  signed-request deputy. All endpoint, Lambda, S3, IAM, target, and service-linked-role fixtures were
+  deleted with zero prefix residue; see
   `application-autoscaling/custom-resource-register-2026-09-26.md`.
 - **appsync CreateResolver/UpdateResolver**, **cloudfront CreateFunction/UpdateFunction** — run in a
   SANDBOXED engine (VTL/JS) with NO AWS role/credentials. Not a role-hijack primitive.
