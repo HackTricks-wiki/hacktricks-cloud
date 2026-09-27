@@ -10,8 +10,8 @@ Invoicing and Billing, Resource Explorer 2, User Notifications, Payment Cryptogr
 Verified Permissions, Clean Rooms/Clean Rooms ML, WorkSpaces Web, Billing Data Exports, Network
 Manager/Cloud WAN, End User Messaging Social, AppFabric, Mainframe Modernization, and Migration Hub
 Refactor Spaces, WorkSpaces Thin Client, Migration Hub Orchestrator, AppIntegrations, Application
-Discovery Service, and core Migration Hub. Every published technique includes its minimum
-permissions and prerequisites, impact or persistence scope, stealth
+Discovery Service, core Migration Hub, and Migration Hub Strategy Recommendations. Every published
+technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
 
