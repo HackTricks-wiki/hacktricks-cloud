@@ -11,8 +11,8 @@ Verified Permissions, Clean Rooms/Clean Rooms ML, WorkSpaces Web, Billing Data E
 Manager/Cloud WAN, End User Messaging Social, AppFabric, Mainframe Modernization, and Migration Hub
 Refactor Spaces, WorkSpaces Thin Client, Migration Hub Orchestrator, AppIntegrations, Application
 Discovery Service, core Migration Hub, Migration Hub Strategy Recommendations, MemoryDB, and
-Resilience Hub (including the September 2026 next-generation API), Glue, and Redshift/Redshift
-Serverless. Every published technique
+Resilience Hub (including the September 2026 next-generation API), Glue, Redshift/Redshift
+Serverless, S3 Tables, and S3 Vectors. Every published technique
 includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
@@ -31,8 +31,8 @@ reference URL shape reached the current integration, but registration-only acces
 the documented caller-side validation for API Gateway GET/PATCH and CloudWatch permissions. All
 owned endpoint and service-linked-role fixtures were deleted.
 
-Current next checks: S3 Tables and S3 Vectors, then continue the missing-service/action sweep,
-prioritizing services with
+Current next checks: Entity Resolution and Timestream, then continue the missing-service/action
+sweep, prioritizing services with
 cross-account resource policies, credential/data export, stored service roles, mutable execution
 configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities
 or SDK models have materially changed.
