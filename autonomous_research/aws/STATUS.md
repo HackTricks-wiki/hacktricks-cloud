@@ -8,10 +8,10 @@ Research remains active on branch `research/aws-technique-audit` and PR #413. Th
 added or substantially refreshed public enumeration and attack coverage for Customer Profiles,
 Invoicing and Billing, Resource Explorer 2, User Notifications, Payment Cryptography, Supply Chain,
 Verified Permissions, Clean Rooms/Clean Rooms ML, WorkSpaces Web, Billing Data Exports, Network
-Manager/Cloud WAN, End User Messaging Social, and AppFabric. Every published technique includes its
-minimum permissions and prerequisites, impact or persistence scope, stealth assessment, and a
-compact logs-generated table. Per-service ledgers record successful and negative live branches,
-authorization boundaries, telemetry, and final cleanup evidence.
+Manager/Cloud WAN, End User Messaging Social, AppFabric, and Mainframe Modernization. Every published
+technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
+assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
+live branches, authorization boundaries, telemetry, and final cleanup evidence.
 
 Unexpected security-impact findings are not published in this repository. Confirmed candidates from
 this sweep are documented only in the restricted local AWS report directory for separate disclosure.
