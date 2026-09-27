@@ -422,6 +422,7 @@
     - [AWS - SSM Perssitence](pentesting-cloud/aws-security/aws-persistence/aws-ssm-persistence/README.md)
     - [AWS - Step Functions Persistence](pentesting-cloud/aws-security/aws-persistence/aws-step-functions-persistence/README.md)
     - [AWS - STS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sts-persistence/README.md)
+    - [AWS - User Notifications Persistence](pentesting-cloud/aws-security/aws-persistence/aws-user-notifications-persistence/README.md)
     - [AWS - WAF Persistence](pentesting-cloud/aws-security/aws-persistence/aws-waf-persistence/README.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
