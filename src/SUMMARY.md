@@ -382,6 +382,7 @@
     - [AWS - Fraud Detector Persistence](pentesting-cloud/aws-security/aws-persistence/aws-fraud-detector-persistence/README.md)
     - [AWS - GameLift Streams Persistence](pentesting-cloud/aws-security/aws-persistence/aws-gamelift-streams-persistence/README.md)
     - [AWS - Global Accelerator Persistence](pentesting-cloud/aws-security/aws-persistence/aws-global-accelerator-persistence/README.md)
+    - [AWS - Glue Persistence](pentesting-cloud/aws-security/aws-persistence/aws-glue-persistence/README.md)
     - [AWS - GuardDuty Persistence](pentesting-cloud/aws-security/aws-persistence/aws-guardduty-persistence/README.md)
     - [AWS - HealthLake Persistence](pentesting-cloud/aws-security/aws-persistence/aws-healthlake-persistence/README.md)
     - [AWS - HealthOmics Persistence](pentesting-cloud/aws-security/aws-persistence/aws-healthomics-persistence/README.md)
