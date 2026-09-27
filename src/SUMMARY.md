@@ -434,6 +434,7 @@
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
     - [AWS - App Mesh Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-app-mesh-post-exploitation/README.md)
+    - [AWS - AppFabric Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appfabric-post-exploitation/README.md)
     - [AWS - AppFlow Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appflow-post-exploitation/README.md)
     - [AWS - AppSync Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appsync-post-exploitation/README.md)
     - [AWS - Athena Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-athena-post-exploitation/README.md)
