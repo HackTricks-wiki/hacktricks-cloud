@@ -428,6 +428,7 @@
     - [AWS - User Notifications Persistence](pentesting-cloud/aws-security/aws-persistence/aws-user-notifications-persistence/README.md)
     - [AWS - Verified Permissions Persistence](pentesting-cloud/aws-security/aws-persistence/aws-verified-permissions-persistence/README.md)
     - [AWS - WAF Persistence](pentesting-cloud/aws-security/aws-persistence/aws-waf-persistence/README.md)
+    - [AWS - WorkSpaces Web Persistence](pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
     - [AWS - API Gateway Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md)
     - [AWS - App Mesh Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-app-mesh-post-exploitation/README.md)
