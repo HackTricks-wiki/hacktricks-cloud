@@ -418,6 +418,7 @@
     - [AWS - Payment Cryptography Persistence](pentesting-cloud/aws-security/aws-persistence/aws-payment-cryptography-persistence/README.md)
     - [AWS - RAM Persistence](pentesting-cloud/aws-security/aws-persistence/aws-ram-persistence/README.md)
     - [AWS - RDS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence/README.md)
+    - [AWS - Redshift Persistence](pentesting-cloud/aws-security/aws-persistence/aws-redshift-persistence/README.md)
     - [AWS - S3 Persistence](pentesting-cloud/aws-security/aws-persistence/aws-s3-persistence/README.md)
     - [Aws Sagemaker Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md)
     - [AWS - SNS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sns-persistence/README.md)

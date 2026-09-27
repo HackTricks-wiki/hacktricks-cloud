@@ -11,7 +11,8 @@ Verified Permissions, Clean Rooms/Clean Rooms ML, WorkSpaces Web, Billing Data E
 Manager/Cloud WAN, End User Messaging Social, AppFabric, Mainframe Modernization, and Migration Hub
 Refactor Spaces, WorkSpaces Thin Client, Migration Hub Orchestrator, AppIntegrations, Application
 Discovery Service, core Migration Hub, Migration Hub Strategy Recommendations, MemoryDB, and
-Resilience Hub (including the September 2026 next-generation API). Every published technique
+Resilience Hub (including the September 2026 next-generation API), Glue, and Redshift/Redshift
+Serverless. Every published technique
 includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
@@ -25,7 +26,13 @@ deleted until that transition completes. The automated delete trap is healthy an
 test buckets and roles are already absent. Do not mark this audit fully cleaned until both the exact
 image set and datastore are confirmed absent.
 
-Current next checks: continue the missing-service/action sweep, prioritizing services with
+The Application Auto Scaling custom-resource signed-request candidate is now closed: the exact AWS
+reference URL shape reached the current integration, but registration-only access was rejected by
+the documented caller-side validation for API Gateway GET/PATCH and CloudWatch permissions. All
+owned endpoint and service-linked-role fixtures were deleted.
+
+Current next checks: S3 Tables and S3 Vectors, then continue the missing-service/action sweep,
+prioritizing services with
 cross-account resource policies, credential/data export, stored service roles, mutable execution
 configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities
 or SDK models have materially changed.
@@ -85,15 +92,18 @@ above for later test state.
   with enum + 2 post-ex techniques (ModifyUser password reset, CopySnapshot→S3 exfil) + persistence
   page. Only a distinct *privesc* framing might be marginally addable (low value).
 - MemoryDB — persistence only; no privesc/post.
-- Glue — no dedicated `aws-services/` enum page (organizational only; GetConnection creds already
-  documented in post-ex — verified 2026-09-24, see glue/).
+- ~~Glue — no dedicated enum/deep attack coverage.~~ **CLOSED 2026-09-27**: dedicated enum plus
+  connection/data reads, catalog poisoning, five execution pivots, catalog-policy persistence and
+  recurring-trigger persistence; current PassRole boundaries live-verified in `glue/`.
 - `aws-vpn-post-exploitation` — empty stub.
 - ~~SSO / Identity Center — persistence angle not yet a page.~~ **STALE/WRONG**: verified cont.66 —
   `aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md` comprehensively covers the
   persistence-relevant primitives (CreatePermissionSet + policy inject + CreateAccountAssignment,
   identitystore/sso-directory CreateUser, CreateGroupMembership, GetRoleCredentials cache theft, plus
   Detach/Delete defense-evasion variants). No separate persistence page needed.
-- Redshift — privesc+post exist; no persistence/enum-deepen.
+- ~~Redshift — privesc+post exist; no persistence/enum-deepen.~~ **CLOSED 2026-09-27**: provisioned
+  and Serverless enumeration, Data API/session/snapshot/datashare coverage, role repointing, admin
+  reset/network/endpoint persistence and deterministic unauthenticated endpoint recon in `redshift/`.
 
 ## Net-new since the all-433 sweep
 
