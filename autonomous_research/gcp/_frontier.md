@@ -7,6 +7,18 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 boundary-day frontier — Cluster Director
+- [x] Live-verified login-node startup-script execution with an isolated update-only caller. The API
+      securely rechecked `iam.serviceAccounts.actAs` on the retained VM identity; after that narrow
+      grant, the managed restart ran the hook as root and used the existing account while direct
+      token minting remained denied. Shipped expected privesc and service-level persistence, not a
+      vulnerability.
+- [ ] Test node-set startup scripts and Slurm prolog/epilog variants on a zero-count/dynamic
+      disposable node set, including guest UID, metadata access, idle-node timing and retained-actAs
+      enforcement. Recheck v1/v1beta authorization parity and the modify-guide/schema discrepancy
+      if a service-account field appears. Keep any actAs bypass private-first; see
+      `cluster-director/checklist.md` for cleanup gates.
+
 ## 2026-09-28 boundary-day frontier — Dataplex Data Products
 - [x] `CreateDataAsset` `validateOnly` securely enforced backing-resource access: a caller with
       DataAsset create but no BigQuery permissions was denied on `bigquery.datasets.get`; metadata

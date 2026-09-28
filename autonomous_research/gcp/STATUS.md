@@ -2,6 +2,29 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cluster Director retained startup execution and persistence live-verified
+- Added the missing Cluster Director enumeration, privilege-escalation and persistence pages. A
+  caller with `hypercomputecluster.clusters.update` plus `iam.serviceAccounts.actAs` on the existing
+  login VM account can store a startup script, force the managed login fleet to restart, execute as
+  root and consume that retained identity. Persistence is service-level: the hook stays in Cluster
+  state and reruns on affected node restart/recreation until overwritten.
+- Live-tested an exact update-only custom role against a one-login-node `n2-standard-2` fixture with
+  no worker nodes, accelerators or managed file storage. The raw v1 PATCH was denied specifically on
+  retained `actAs`; after an account-level Service Account User grant it succeeded. Direct bucket
+  access and `generateAccessToken` remained denied, while the restarted VM wrote a synthetic marker
+  as the attached Compute default service account.
+- Captured paired `UpdateCluster` Admin Activity records with the full unredacted script and update
+  mask, plus correlated Compute instance reconciliation. The restart makes the technique specially
+  noisy. Storage did not record the proof write under the project's default Data Access settings.
+  This is expected functionality, not a vulnerability.
+- Restored a benign hook before deleting the cluster. Independent API, Cloud Asset, Compute,
+  networking, DNS and Storage inventories found no residue. The proof bucket, caller/key/config,
+  custom role/bindings, service agent/binding and API enablement were also removed; Filestore kept
+  its pre-test enabled state.
+- Deterministic coverage is now 267/267 privilege-escalation headings, 290/290 post-exploitation
+  headings and 156/156 persistence headings with categorical Stealth; zero qualifying headings are
+  unrated.
+
 ### 2026-09-28/29 — App Lifecycle Manager actuation surface added
 - Added the missing App Lifecycle Manager service-enumeration page and a bounded privilege-escalation
   technique. A caller with Release create plus direct UnitOperation create, or Rollout create for
