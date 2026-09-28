@@ -29,3 +29,30 @@ Secret Manager. Covered (regional CMEK hijack, delayed-destroy TTL IR-defeat, re
 - Rechecked the existing live-test audit observations against Google's [Secret Manager audit logging](https://docs.cloud.google.com/secret-manager/docs/audit-logging) and [Data Access configuration](https://docs.cloud.google.com/logging/docs/audit/configure-data-access) references. `AccessSecretVersion` is `DATA_READ` and is not logged by default; `AddSecretVersion`, `DestroySecretVersion`, `DisableSecretVersion`, `DeleteSecret`, `UpdateSecret`, and `SetIamPolicy` are `ADMIN_WRITE` and always recorded. No lab resource was needed or created for this classification.
 - Added an explicit stealth rating to both privesc and post-exploitation Secret Manager techniques. Direct read is high stealth under the default audit configuration; destructive writes and IAM self-grants are low; generic metadata/alias updates are medium because the method is shared with ordinary changes but `updateMask` exposes the affected field. The regional CMEK technique and persistence techniques already had ratings.
 - No new attack primitive found in this pass. Next audit target: apply the same per-technique visibility review to another service page; do not infer stealth only from a generic method name when a request field or resource state exposes the change.
+
+## 2026-09-28 — managed Cloud SQL rotation delegated password reset VERIFIED / SHIPPED
+
+- Created one disposable `db-f1-micro` PostgreSQL 15 instance, a named database user, a regional
+  `CLOUD_SQL_DB_CREDENTIALS` secret, a caller service account and custom roles. The caller role held
+  exactly `secretmanager.secrets.enableManagedRotation`; it had no `cloudsql.*` permission and no
+  secret-version access.
+- The secret built-in identity was granted a bounded custom role. The documented
+  `cloudsql.users.list/update` pair had failed in prior controls. The final successful set contained
+  `cloudsql.instances.get`, `cloudsql.users.get`, `cloudsql.users.list` and `cloudsql.users.update`.
+  Because token-mint propagation blocked the three-permission attempt before it reached Secret
+  Manager, this run proves the four-permission set but does not prove every permission is necessary.
+- The caller supplied the instance, username and a chosen password to `EnableManagedRotation`. The
+  request returned HTTP 200, and the generated secret version JSON exactly matched both the supplied
+  username and password. This confirms the caller can obtain a known database credential without
+  Cloud SQL IAM or reading the secret.
+- The exact `EnableManagedRotation` Admin Activity entry was present with the low caller,
+  `secretmanager.secrets.enableManagedRotation` granted and status `0`. No `cloudsql.users.update`
+  event appeared under the default Data Access configuration. Classified **Low stealth** and shipped
+  as expected permission composition in `gcp-secretmanager-privesc.md`, not as a zero-day.
+- The installed gcloud regional-secret create path misparsed the regional parent, so the documented
+  regional REST endpoint was used. A later `gcloud sql connect` validation attempt rejected the
+  pass-through CLI flags before authentication; the successful managed-rotation response and exact
+  generated-version payload are the retained end-to-end control-plane proof.
+- Every SQL instance/user, secret/version, service account, custom role, secret-identity binding and
+  temporary Token Creator facilitator binding was removed. Independent instance, SA and project-IAM
+  queries verified no `ht-smrot-*` residue.

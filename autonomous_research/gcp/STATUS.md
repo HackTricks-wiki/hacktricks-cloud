@@ -1,6 +1,25 @@
 # GCP audit — status
 
-Last updated: 2026-09-26
+Last updated: 2026-09-28
+
+### 2026-09-28 — Secret Manager managed Cloud SQL rotation privesc verified
+- Live-verified a new expected permission-composition technique: a caller with exactly
+  `secretmanager.secrets.enableManagedRotation`, no Cloud SQL role and no secret-version access can
+  choose a Cloud SQL instance, database user and password; the regional secret's built-in identity
+  performs the reset. The generated secret version exactly matched the supplied username/password.
+- The first successful bounded built-in-identity role contained `cloudsql.instances.get`,
+  `cloudsql.users.get/list/update`; the documented `users.list/update` pair had failed earlier. A
+  three-versus-four-permission subtraction remains open because the test facilitator's token-mint
+  grant had not propagated before that attempt. The book does not mislabel the four-permission set
+  as minimal.
+- `EnableManagedRotation` produced exact caller-attributed Admin Activity with the single caller
+  permission granted; the downstream `cloudsql.users.update` remained absent under default Data
+  Access logging. Shipped with impact, minimum permission, Low stealth and a log table to the Secret
+  Manager privesc page; added managed-rotation context to service enumeration.
+- Three bounded attempts were made while correcting a gcloud regional-parent parsing failure and an
+  external quota-project token-mint issue. Every disposable SQL instance/user, regional secret,
+  service account, custom role, IAM binding and the temporary Token Creator facilitator binding was
+  deleted. Independent queries verified no `ht-smrot-*` instance, identity or project binding.
 
 ### 2026-09-26 — BigQuery Engine for Apache Flink resource-model correction
 - Corrected all Managed Flink pages to match the current API: jobs carry executable graphs/JARs/
@@ -134,7 +153,7 @@ Last updated: 2026-09-26
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | As of 2026-09-26: 49/403 privesc, 50/402 post-exploitation, 156/156 persistence headings with Impact + Logs generated have a rating; 706 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 82/409 privesc, 107/397 post-exploitation, 156/156 persistence sections with Impact + Logs generated have a rating; 617 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
@@ -401,3 +420,30 @@ delay for the API surface to actually change. Loop stays alive.
 ### 2026-09-26 — service-to-technique crosslink audit
 - Restored 37 missing links from 15 existing service-enumeration pages to their matching privesc, post-exploitation, and persistence pages: Config Controller, Bare Metal Solution, Looker, Managed Kafka, VMware Engine, VM Migration, BigLake, NetApp Volumes, Container Analysis, Cloud Deploy, Spanner, Eventarc, Contact Center Insights, Document AI, and Managed Flink.
 - Added only links whose target pages exist and verified every relative target locally. Navigation-only change; no cloud API call or resource mutation was needed.
+
+### 2026-09-28 — permission delta and API Keys MCP frontier
+- A fresh read-only project permission pull returned **13,701**, unchanged from the 2026-09-25
+  baseline. Official release notes after the baseline contain only Google SecOps SOAR maintenance;
+  no new IAM permission or directly shippable GCP attack primitive was found.
+- Reviewed the boundary-day API Keys remote MCP Preview. It adds the `mcp.tools.call` wrapper but no
+  new `apikeys.keys.*` capability. Recorded private candidates for underlying-permission parity,
+  MCP conditional/cross-project policy enforcement, the `apikeys_update_key` risk hint, and MCP audit
+  shape in `api-keys/checklist.md`/`tested.md`. No speculative book technique was added.
+- Documentation plus read-only discovery only: no API was enabled and no cloud resource, IAM policy,
+  key, or local credential was created or changed.
+
+### 2026-09-28 — Dataproc and Cloud Storage visibility/correctness batch
+- Added explicit categorical stealth ratings to all 11 Dataproc privilege-escalation techniques and
+  all 14 Cloud Storage post-exploitation techniques. A fresh scan, which also incorporates the many
+  intervening 2026-09-26 service batches and the new managed-rotation technique, finds 617 qualifying
+  privesc/post-exploitation sections still unrated.
+- Corrected substantive boundaries rather than only adding labels: narrowed cluster-level Dataproc
+  IAM self-grant to callers that already hold project-level job creation; replaced the unsupported
+  custom-container `ENTRYPOINT` claim with dependency/environment poisoning; corrected Serverless,
+  Component Gateway, OS Login and staging-object prerequisites; and accounted for driver/gateway/
+  guest/downstream telemetry.
+- Corrected Cloud Storage public-read and lifecycle audit exclusions, HMAC/IP-filter/restore method
+  boundaries, signed-URL duration, soft-delete/versioning recovery semantics, Batch Operations scope,
+  detailed-audit-mode caveats and reversible versus permanent CMEK denial.
+- Documentation and official-reference review only; no Dataproc or Storage resource was created.
+  Detailed results and remaining validation questions are in `dataproc/` and `storage/`.

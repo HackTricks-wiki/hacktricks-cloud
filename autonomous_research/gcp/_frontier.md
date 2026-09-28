@@ -23,11 +23,21 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       workforce identity pool + external IdP can be stood up (needs org access), live-verify the
       refresh-token capture end-to-end and quantify the phishing/consent step.
 
+## 2026-09-28 boundary-day frontier — API Keys remote MCP
+- [ ] Test the new API Keys MCP wrapper for two-layer authorization parity (`mcp.tools.call` plus the
+      exact `apikeys.keys.*` permission), conditional `tool.name`/`tool.isReadOnly` enforcement, and
+      cross-project policy binding. Keep results private unless a real boundary failure is confirmed.
+- [ ] Determine whether the incorrect-looking `destructiveHint:false` on `apikeys_update_key` has a
+      security consequence in a Google-controlled client. The hint alone is advisory and below the
+      reporting/book bar. Full matrix, constraints and official sources: `api-keys/checklist.md` and
+      `api-keys/tested.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
-      NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump: 13,701 perms
-      (batch 5; +3 vs 13,698, AI/analytics/preview noise, none attack-relevant).
+      NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump:
+      **13,701 permissions, reconfirmed unchanged 2026-09-28** (batch 5 was +3 vs 13,698;
+      AI/analytics/preview noise, none attack-relevant).
 - [ ] Watch newly-GA GCP features (release notes) for identity/traffic/exec/exfil surfaces; those are
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 
@@ -47,5 +57,5 @@ sub-resources within already-documented services** — a slow trickle, not a bac
   mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
 
 ## Documentation-quality backlog: per-technique stealth
-- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique. A 2026-09-26 heading scan (excluding README indexes) now has **732 unrated** sections that already have Impact + Logs generated: 360/403 privesc and 372/404 post-exploitation. Persistence is 156/156 rated. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud Run, IAP, and Cloud KMS were handled in this iteration.
+- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique. A fresh 2026-09-28 heading scan after the Dataproc, Cloud Storage, and managed-rotation additions finds **617 unrated** qualifying sections: 82/409 privesc and 107/397 post-exploitation sections with Impact + Logs generated are rated. Persistence is 156/156 rated. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud Run, IAP, Cloud KMS, Dataproc privesc, and Cloud Storage post-exploitation have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
