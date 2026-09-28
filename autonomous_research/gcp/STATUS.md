@@ -1,6 +1,30 @@
 # GCP audit — status
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
+
+### 2026-09-28/29 — App Lifecycle Manager actuation surface added
+- Added the missing App Lifecycle Manager service-enumeration page and a bounded privilege-escalation
+  technique. A caller with Release create plus direct UnitOperation create, or Rollout create for
+  fleet mode, can apply attacker-controlled Terraform to existing Units through their prepared
+  actuation service accounts. Impact is arbitrary supported infrastructure mutation within those
+  accounts' effective IAM, not direct token theft.
+- Verified current discovery revision `20260914`, CLI flags, immutable Release blueprint semantics,
+  Unit input precedence, predefined Admin/Viewer roles, service-agent role, exact audit methods and
+  platform logs. The dedicated Admin role contains all three actuation writes but no caller-side
+  service-account actAs or token-mint permission; this is expected service authority, not a 0-day.
+- A bounded Preview bootstrap created only synthetic identities and digest-pinned Terraform
+  artifacts. It did not reach a provisioned Unit: global UnitKind to regional Unit and regional
+  UnitKind to global SaaS reference paths both failed their internal project-read step after the
+  initiating write was authorized. Current setup documentation relies on App Design Center
+  composite templates, so retained-actuation remains queued for a valid prepared fixture rather
+  than being inferred from an empty low-level UnitKind.
+- The run exposed a teardown detail: SaaS creation generated a second system-named Artifact
+  Registry repository under the ALM service agent. All explicit and generated repositories,
+  management resources, identities/keys, IAM bindings, service agents, local configs/builders and
+  newly enabled APIs were removed. Authoritative inventory is empty; only deleted-key tombstones
+  remain temporarily in Cloud Asset.
+- Deterministic privilege-escalation coverage is now 266/266 headings with categorical Stealth;
+  post-exploitation remains 290/290 and persistence remains 155/155, with zero unrated headings.
 
 ### 2026-09-28 — Dataplex Data Product principal swap securely checks backing IAM
 - Live-tested an access-group service-account replacement against a packaged synthetic BigQuery

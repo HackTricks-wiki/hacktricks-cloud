@@ -17,6 +17,20 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       metadata temporarily showed the replacement principal; it had no observed privilege impact
       and was restored before full fixture deletion.
 
+## 2026-09-28 boundary-day frontier — App Lifecycle Manager
+- [x] Map the current Release/UnitOperation/Rollout actuation chain. Shipped the expected Admin
+      primitive: register attacker Terraform as a new Release and apply it to an existing Unit or
+      Rollout population using its prepared `actuation_sa`. Bounded the path by all actuation,
+      artifact, Infrastructure Manager, UnitKind, filter and target-service prerequisites.
+- [ ] In an already prepared disposable fixture, verify retained-actuation behavior under only
+      Release create plus UnitOperation create, then repeat fleet mode with Rollout create. Capture
+      downstream Infra Manager and target-service principals and delete the full dependency graph;
+      keep any arbitrary identity-attachment discrepancy private-first. A clean low-level bootstrap
+      was inconclusive: the Preview API rejected both tested global/regional reference topologies at
+      its internal project-read step, despite authorizing the initiating write. Use a current App
+      Design Center composite-template fixture and include the hidden ALM-created Artifact Registry
+      repository in teardown.
+
 ## 2026-09-28 boundary-day frontier — API Hub plugins
 - [ ] On an existing disposable API Hub instance, test `plugininstances.update` without
       `plugininstances.applyConfig` against authentication/additional-config fields, then measure
