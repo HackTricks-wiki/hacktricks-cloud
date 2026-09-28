@@ -192,6 +192,33 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       integration from project configuration. Restore the exact config policy and delete every
       variable, waiter and config. See `runtimeconfig/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Analytics Hub, CA Service, Data Fusion and Deployment Manager
+- [ ] Resolve Analytics Hub's official `SubscribeListing` audit contradiction with a disposable
+      listing and subscriber project: capture the method, service-agent access, linked dataset or
+      Pub/Sub subscription creation, and downstream BigQuery/Pub/Sub use. Test clean-room analysis
+      rules with synthetic rows only, remove every subscription/listing/exchange and restore IAM.
+      See `analytics-hub/checklist.md`.
+- [ ] With a disposable CA pool, validate raw-certificate issuance without helper-only reads,
+      template-constraint relaxation, template IAM audit placement and subordinate-CA signing with
+      a cross-project key. Use only synthetic identities, restore the exact pool/template policies
+      and constraints, and delete every certificate, CA, pool, key grant and temporary key. See
+      `certificate-authority-service/checklist.md`.
+- [ ] In a disposable Data Fusion instance, separate caller, design-time service account, pipeline
+      VM account and service agent under minimum custom roles. Capture pipeline, Preview and
+      namespace-IAM telemetry—especially the currently undocumented namespace policy class and
+      default—and remove every pipeline, namespace, account, binding and instance. See
+      `data-fusion/checklist.md`.
+- [x] Live-proved that deployment-level `roles/deploymentmanager.admin` authorizes an otherwise
+      unprivileged principal to read that exact existing deployment. The binding did not provide
+      project-level list/create; the direct policy was restored and every fixture plus API state was
+      removed/restored. See `deployment-manager/tested.md`.
+- [ ] Before Deployment Manager's June 30, 2027 shutdown, use a harmless synthetic deployment to
+      capture create/update deputy behavior under a minimum caller role and a deliberately bounded
+      Google APIs Service Agent. Separately test manifest redaction shapes and type-provider request
+      boundaries without targeting metadata or private services. Restore the service-agent policy,
+      delete every deployment/bucket/account and return the API to its original state. See
+      `deployment-manager/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -218,9 +245,9 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Cloud Scheduler, Spanner, Cloud Source
-      Repositories and Runtime Config batch finds **196 unrated** qualifying sections: 203/270
-      privesc and 221/350
+      A fresh reproducible 2026-09-28 scan after the Analytics Hub, Certificate Authority Service,
+      Data Fusion and Deployment Manager batch finds **180 unrated** qualifying sections: 214/265
+      privesc and 222/351
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -234,7 +261,9 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
       Cloud Functions privesc, Managed Kafka, Dataproc Metastore and Google SecOps post-exploitation,
       Bigtable, Dataplex, Apigee, Dataflow, Cloud Billing, Cloud Scheduler, Spanner, Cloud Source
-      Repositories and Runtime Config privesc, Document AI, Cloud Source Repositories and Runtime
-      Config post-exploitation, Database Migration Service and Service Usage zero-H3 audits, and API
-      Gateway unauthenticated techniques have been handled.
+      Repositories, Runtime Config, Analytics Hub, Certificate Authority Service, Data Fusion and
+      Deployment Manager privesc, Document AI, Cloud Source Repositories, Runtime Config and
+      Deployment Manager post-exploitation, Certificate Authority Service persistence, Database
+      Migration Service and Service Usage zero-H3 audits, and API Gateway unauthenticated
+      techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

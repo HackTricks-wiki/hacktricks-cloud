@@ -2,6 +2,32 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Analytics Hub, Certificate Authority Service, Data Fusion and Deployment Manager
+- Rebuilt Analytics Hub, Certificate Authority Service, Data Fusion and Deployment Manager privilege
+  escalation around 3, 3, 3 and 2 genuine primitives. Added one Deployment Manager
+  post-exploitation technique and one CA Service persistence technique. All 13 retained headings
+  have exact prerequisites, bounded impact, categorical Stealth and expandable telemetry; every
+  service received independent review.
+- Corrected Analytics Hub listing, clean-room and Pub/Sub subscription identity/cardinality bounds;
+  CA raw-certificate issuance, template/pool constraints, KMS signing and subordinate-CA trust
+  bounds; and Data Fusion design-time, pipeline-VM, service-agent, RBAC and namespace-IAM
+  boundaries. The official Analytics Hub audit reference remains internally inconsistent about
+  `SubscribeListing`, so the method-detail Data Access classification is explicitly bounded pending
+  a live capture. Data Fusion namespace-IAM audit class/default/method is likewise not asserted
+  without evidence.
+- Corrected Deployment Manager's current deprecation dates, Google APIs Service Agent deputy model,
+  raw REST versus helper permissions, cross-project service-account attachment and downstream
+  logging. A synthetic deployment proved that a deployment-level
+  `roles/deploymentmanager.admin` binding lets an otherwise unprivileged principal read that exact
+  deployment; it does not grant project-level create. The direct policy was restored, the
+  deployment, bucket and temporary service account were deleted, the initially disabled API was
+  disabled again, and residue checks found no matching assets.
+- No other service was accessed or mutated. Current official documentation, local CLI/source
+  inspection, independent review and 60 successful unique official-reference-link checks support
+  this batch. The reproducible scan now finds 214/265 privilege-escalation and 222/351
+  post-exploitation sections with explicit Stealth; persistence is 155/155. This leaves 180 qualifying
+  privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Cloud Scheduler, Spanner, Cloud Source Repositories and Runtime Config
 - Rebuilt Cloud Scheduler privilege escalation around 4 genuine primitives, Spanner around 3 and
   Cloud Source Repositories around 2. Replaced Runtime Config's four overbroad privilege-escalation
