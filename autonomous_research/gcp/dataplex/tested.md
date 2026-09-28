@@ -1,5 +1,28 @@
 # Dataplex privilege-escalation research ledger
 
+## 2026-09-28 — Data Product `CreateDataAsset` validation enforces backing-resource access
+
+- Live-tested `CreateDataAsset` with `validateOnly=true` against an empty synthetic BigQuery table.
+  The isolated caller held `roles/dataplex.dataProductsEditor`, including
+  `dataplex.dataAssets.create`, but its authoritative BigQuery `testIamPermissions` response was
+  empty. The request returned HTTP 403 on `bigquery.datasets.get`; it did not create a DataAsset or
+  change the table IAM policy.
+- As the positive control, project Metadata Viewer supplied dataset/table metadata access and a
+  table-level BigQuery Data Owner grant supplied the documented table IAM permissions. The otherwise
+  identical request returned HTTP 200 as an already-complete validation operation. DataAsset list
+  remained empty and the table's directly attached IAM policy stayed byte-for-byte equivalent.
+- The tested deputy hypothesis is therefore closed as secure at the first backing-resource boundary.
+  `dataplex.dataAssets.create` alone cannot use validation to package or grant access to a BigQuery
+  table that the caller cannot inspect. This is not a book technique or vulnerability report.
+- Admin Activity method `google.cloud.dataplex.v1.DataProductService.CreateDataAsset` recorded the
+  full resource, access-group role and `validate_only=true`. Both evaluated calls showed
+  `dataplex.dataAssets.create` granted; the negative status named `bigquery.datasets.get`, while the
+  positive status was empty.
+- Three bounded harness iterations were cleaned. Independent inventory found zero test service
+  accounts, IAM references, datasets, tables, Data Products, DataAssets, cached configurations or
+  Dataplex service agent. Dataplex and BigQuery APIs were enabled at baseline and preserved. Cloud
+  Asset Search temporarily retains three deleted-key index records after authoritative IAM deletion.
+
 ## Historical authorized validation
 
 The `dataplex.tasks.update` confused-deputy hypothesis was tested in the authorized lab and rejected.

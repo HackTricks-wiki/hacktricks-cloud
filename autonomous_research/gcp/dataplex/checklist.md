@@ -2,6 +2,10 @@
 
 ## Completed documentation and local checks — 2026-09-28
 
+- [x] Live-test Data Product `CreateDataAsset` with `validateOnly=true`: a caller with
+      `dataplex.dataAssets.create` and zero BigQuery permissions was denied on
+      `bigquery.datasets.get`; the metadata plus table-IAM positive control succeeded without
+      creating an asset or changing table IAM.
 - [x] Classify every original heading as privilege escalation, post-exploitation, reconnaissance,
   destructive defense evasion, duplicate, or unsupported.
 - [x] Verify task create request semantics, ON_DEMAND behavior, execution-project selection, service
@@ -21,6 +25,11 @@
 
 ## Safe future validation leads
 
+- [ ] On a synthetic Data Product and packaged BigQuery table, give an isolated caller only the
+      minimum Data Product get/update permissions. Test whether changing an existing access group's
+      service-account principal reauthorizes underlying dataset/table IAM without caller BigQuery
+      get/setIamPolicy. Expected powerful-editor behavior belongs in the book if confirmed; an
+      undocumented managed-deputy grant contrary to the permission contract is private-first.
 - [ ] In an authorized disposable environment, create one ON_DEMAND task whose lake and execution
   projects differ; capture both projects' CreateTask, Dataproc batch, and service-agent audit entries,
   then delete the task and payload immediately.

@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Dataplex DataAsset validation securely checks backing BigQuery access
+- Live-tested `CreateDataAsset(..., validateOnly=true)` with an isolated Data Products Editor whose
+  BigQuery permission set on an empty synthetic table was empty. Dataplex authorized
+  `dataplex.dataAssets.create` but returned HTTP 403 on `bigquery.datasets.get`; no DataAsset or IAM
+  change appeared.
+- With project Metadata Viewer plus table-level BigQuery Data Owner, the identical validation
+  returned HTTP 200 as an already-complete operation. Asset inventory remained empty and the direct
+  table policy was unchanged. Admin Activity retained the full resource, requested IAM role and
+  `validate_only=true`, making the negative/positive distinction directly observable.
+- Cleanup removed all three bounded attempts' products, datasets/tables, identities, keys, bindings
+  and configurations. No Dataplex service agent was created; baseline Dataplex/BigQuery APIs remain
+  enabled. Live inventory is empty while Cloud Asset temporarily retains deleted-key index records.
+
 ### 2026-09-28 — API Hub plugin boundary mapped; fixture intentionally not provisioned
 - Mapped API Hub's current plugin identity chain: the hosting-service account, not the plugin-instance
   creator, is expected to receive Secret Accessor and Token Creator on referenced secrets/accounts.

@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-28 boundary-day frontier — Dataplex Data Products
+- [x] `CreateDataAsset` `validateOnly` securely enforced backing-resource access: a caller with
+      DataAsset create but no BigQuery permissions was denied on `bigquery.datasets.get`; metadata
+      plus table-IAM positive control succeeded without asset or policy mutation.
+- [ ] Test Data Product access-group principal replacement under only product get/update. Determine
+      whether an existing asset grant moves to the replacement service account and whether caller
+      BigQuery get/setIamPolicy is rechecked. Use only a synthetic table and restore the legitimate
+      principal before deleting every fixture; keep an unexpected deputy grant private-first.
+
 ## 2026-09-28 boundary-day frontier — API Hub plugins
 - [ ] On an existing disposable API Hub instance, test `plugininstances.update` without
       `plugininstances.applyConfig` against authentication/additional-config fields, then measure
