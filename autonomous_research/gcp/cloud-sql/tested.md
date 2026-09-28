@@ -3,6 +3,78 @@
 Cloud SQL. Covered (clone/replica copy, flag anti-forensics, SSL downgrade;
 persistence: sslCerts.create, contained-DB user, pg_cron / event_scheduler scheduled-task).
 
+## Independent post-exploitation cross-review (2026-09-28)
+
+- Split Data API prerequisites by authentication mode. `cloudsql.instances.executeSql` is common;
+  IAM database authentication additionally needs `cloudsql.instances.login` and an IAM database
+  mapping, while built-in-password mode instead needs `secretmanager.versions.access` on a
+  same-region regional secret and a database user with grants. Added the conditional, off-by-default
+  `AccessSecretVersion` Data Access record.
+- Corrected clone scope: the simple command is same-project, but the current Admin API and newer
+  gcloud releases support cross-project clones with both destination project and destination network.
+  No source-only cross-project claim was made because destination resource/network/policy
+  prerequisites still apply.
+- Tightened restore semantics: databases, users, and settings are copied, but an existing target
+  retains its database flags and backup settings return to defaults; restore-over-target disconnects
+  clients, restarts, and overwrites data. Cross-project restore requires target-project
+  `cloudsql.instances.create` even when the target instance already exists.
+- Bounded the TLS downgrade to direct clients. Auth Proxy and Language Connectors remain encrypted
+  and verify identities regardless of `sslMode`.
+- Fixed a broken destructive command: `gcloud sql instances delete` has opt-in
+  `--enable-final-backup`, not `--no-enable-final-backup`. Disable an enabled instance setting with
+  `instances patch --no-final-backup`, then omit the opt-in deletion flag. Organization policy can
+  still require a final backup. Documented the current four-day Customer Care recovery window.
+- Replaced the nonexistent `gcloud sql instances stop-replica` command with the current
+  `instances patch --no-enable-database-replication` form, while retaining the documented narrower
+  raw `instances.stopReplica` API path and its distinct minimum permission/audit event.
+- Revalidated all nine retained H3s and their Cloud SQL, Cloud Storage, Secret Manager, IAM
+  Credentials, database, and observability telemetry against current official documentation. No
+  cloud resources were used.
+
+## Post-exploitation page rewrite (2026-09-28)
+
+- Re-audited every former technique against the current official Cloud SQL PostgreSQL audit,
+  permissions, Data API, backup/restore, clone, replica, import/export, flags, TLS, Auth Proxy, and
+  lifecycle documentation. No cloud resources were used.
+- Consolidated the former 17 H3 sections into nine end-to-end primitives with explicit minimum
+  permissions, prerequisites, bounded impact, categorical stealth, and per-operation telemetry.
+- **Moved out persistence duplicates:** authorized-network/public-IP exposure and database-user
+  creation/password rotation are already covered by the Cloud SQL persistence page. User listing
+  alone was dropped as low-value recon rather than retained as a standalone post-exploitation
+  technique.
+- **Bounded copy claims:** clone, replica, and restore operations copy data but do not grant a
+  database session. End-to-end access still needs a usable database identity/grants and connection
+  path. The simple clone form is same-project, while current API/newer CLI surfaces also support
+  cross-project cloning with destination-side prerequisites; restore-over-target is disruptive.
+- **Bounded import/export claims:** export uses the instance service account to write a supported
+  export to Cloud Storage. Import is not a generic object-read oracle; the source must be a
+  supported, parseable dump or data file. The export CLI needs `instances.get` plus `export`.
+  Import itself needs `instances.import`; `instances.get` is conditional for the documented custom
+  role/discovery workflow. Both require the corresponding bucket permission on the instance service
+  account.
+- **Corrected anti-forensics:** database flags can suppress PostgreSQL/pgAudit evidence but cannot
+  disable Cloud Audit Logs and do not necessarily disable Query Insights. `--database-flags`
+  replaces the complete flag set, so omitted flags reset to defaults; some changes restart the
+  instance.
+- **Corrected TLS claim:** `ALLOW_UNENCRYPTED_AND_ENCRYPTED` permits plaintext but does not force a
+  downgrade. Interception needs a plaintext-capable client and an on-path attacker. Resetting SSL
+  config deletes client certificates and rotates the server certificate, making it principally a
+  disruption primitive.
+- **Corrected proxy minimum:** the Auth Proxy path needs `cloudsql.instances.get` and
+  `cloudsql.instances.connect`; automatic IAM DB auth also needs `cloudsql.instances.login`, an IAM
+  DB mapping, and database grants. Authorized networks are unnecessary only for the public-IP
+  connector path; private IP still requires network reachability.
+- **Corrected destructive commands and recovery scope:** removed the nonexistent
+  `gcloud sql instances delete --no-final-backup` form. Deletion protection and retained-backup
+  behavior are patched first, and any enabled final-backup instance setting is disabled with
+  `instances patch --no-final-backup`; deletion then omits the opt-in `--enable-final-backup` flag.
+  Backup deletion affects only the selected Cloud SQL backup and does not imply removal of enhanced
+  Backup and DR, PITR, external, or provider-held recovery paths.
+- Rejected unsupported/low-value page material: direct GCS use of `backupRuns.export`, theoretical
+  instance/database `setIamPolicy`, generic arbitrary-file import, generic CMEK repointing, and a
+  broad "no SQL Server RCE" non-technique. These remain research notes or open questions rather
+  than book claims.
+
 ## Audit/reference correction (2026-09-26)
 - Compared the post-exploitation and persistence pages with the [official PostgreSQL audit method
   table](https://docs.cloud.google.com/sql/docs/postgres/audit-logging). `users.create/update` and

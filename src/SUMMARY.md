@@ -106,6 +106,7 @@
     - [GCP - BeyondCorp Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-beyondcorp-post-exploitation.md)
     - [GCP - BigLake Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-biglake-post-exploitation.md)
     - [GCP - BigQuery Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md)
+    - [GCP - Gemini Enterprise / Discovery Engine Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-discovery-engine-post-exploitation.md)
     - [GCP - Bigtable Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigtable-post-exploitation.md)
     - [GCP - Binary Authorization Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-binary-authorization-post-exploitation.md)
     - [GCP - Certificate Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-certificate-manager-post-exploitation.md)

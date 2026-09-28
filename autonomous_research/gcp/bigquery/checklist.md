@@ -32,3 +32,21 @@
 - [ ] Recheck whether current capacity-commitment CLI syntax or available editions add a billing
   confirmation/control that materially changes the financial-DoS technique. Never purchase a real
   paid commitment merely to validate syntax.
+
+## Data agents and Gemini Enterprise publication
+
+- [x] Triage the September 2026 BigQuery data-agent publication workflow. Default Google-managed
+  credentials are managed OAuth client credentials, not a privileged runtime identity: the end user
+  completes a one-time BigQuery OAuth sign-in, and Google documents that the agent acts with that
+  user's permissions. Do not present this feature alone as a confused-deputy escalation.
+- [ ] With two synthetic users and non-sensitive tables, test same-project Agent Registry and
+  cross-project A2A-card publication for identity/token mix-ups. Confirm that the low-privilege user
+  cannot inherit the publisher's or Gemini Enterprise administrator's BigQuery access.
+- [ ] Test whether an agent editor can change instructions or knowledge sources so a later privileged
+  user's conversation discloses query results to other agent users, shared conversation history, or
+  an attacker-controlled sink. Keep all data synthetic and remove the agent, registry entry, gateway
+  binding and app configuration after each run.
+- [ ] Check A2A card and Agent Registry import authorization for endpoint/card substitution across
+  projects, regions and deleted/recreated agent identifiers. Treat an attacker-controlled endpoint
+  accepted by an authorized administrator as expected social/configuration risk unless a trust or
+  ownership check is bypassed.

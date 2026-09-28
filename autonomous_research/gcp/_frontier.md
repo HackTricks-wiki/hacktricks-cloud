@@ -47,6 +47,25 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       globally named destinations. Use `cross-project-history/checklist.md`, keep a confirmed
       platform boundary failure private, and clean every fixture.
 
+## 2026-09-28 boundary-day frontier — API Gateway MCP and data agents
+- [x] Live-verified API Gateway's new OpenAPI 3.x MCP default: lifecycle methods and `tools/list`
+      accepted no credential, and discovery returned exact tool names, descriptions and input
+      schemas. `tools/call` inherited the deliberately unauthenticated synthetic REST operation; no
+      protected-route bypass was observed. Automatic platform logs included the derived
+      `McpDiscoveryService.ListMcpTools` entry. The complete no-residue fixture is recorded in
+      `api-gateway/tested.md`.
+- [ ] Test MCP-to-REST authorization and parser boundaries only with harmless echo/protected routes:
+      duplicate tool names/arguments, type and path coercion, case-variant headers, Agent Registry
+      publication/removal and attacker-written tool descriptions. Use `api-gateway/checklist.md` and
+      keep an actual boundary failure private.
+- [x] Rejected BigQuery data-agent default Google-managed credentials as a standalone escalation:
+      Google documents one-time end-user OAuth and execution with that user's permissions. Retained
+      Agent Registry/A2A identity-mix-up and editor-to-user disclosure variants as controlled test
+      candidates in `bigquery/checklist.md`.
+- [x] Added the distinct documented Gemini Enterprise periodic-BigQuery exposure: source BigQuery
+      IAM is not propagated to the indexed copy, so an authorized app user can search fields in that
+      copy without direct table permission. This is expected post-exploitation, not a bypass.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -73,13 +92,14 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Firebase, Monitoring, Cloud DNS and Integration
-      Connectors batch finds **448 unrated** qualifying sections: 132/362 privesc and 162/380
+      A fresh reproducible 2026-09-28 scan after the IAM, Cloud Build, Cloud SQL, Discovery Engine
+      and API Gateway MCP batch finds **406 unrated** qualifying sections: 163/372 privesc and 180/377
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 153/153 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
       Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
-      Cloud DNS post-exploitation, and Integration Connectors current techniques have been handled.
+      Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
+      Discovery Engine post-exploitation, and API Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

@@ -2,6 +2,33 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — IAM, Cloud Build, Cloud SQL, Discovery Engine and API Gateway MCP
+- Rebuilt IAM privilege escalation around 7 genuine primitives, Cloud Build privilege escalation
+  around 3 and Cloud SQL post-exploitation around 9. Every retained H3 has exact prerequisites,
+  bounded impact, categorical Stealth and an expandable telemetry table. Reciprocal cross-review
+  corrected IAM Credentials logging, current `sign-blob`, role/key/policy semantics, Cloud Build
+  runtime identities and trigger/token logging, and Cloud SQL Data API, clone/restore, proxy TLS,
+  replica-stop and final-backup behavior.
+- Added a dedicated Discovery Engine post-exploitation technique for periodic BigQuery ingestion.
+  Google documents that periodic connectors do not enforce imported source ACLs, so an authorized
+  Gemini Enterprise app user can search the indexed copy without direct BigQuery data permission.
+  The page bounds this to indexed/retrievable fields and the last successful one-, three- or
+  five-day sync; it is not arbitrary live-table access or a BigQuery IAM bypass. The separate new
+  BigQuery data-agent publication path was rejected as privilege escalation because each user must
+  complete OAuth and the agent acts with that user's own permissions.
+- Live-verified API Gateway's new OpenAPI 3.x MCP surface with a harmless public GET backend.
+  Anonymous `initialize` and default-unprotected `tools/list` returned the exact tool name,
+  description and input schema; `tools/call` correctly inherited the route's deliberately anonymous
+  policy. Platform logs captured the outer `/mcp` request and
+  `google.api.discovery.v1.McpDiscoveryService.ListMcpTools`. Added the useful recon technique and
+  completed impact/stealth/log metadata for all three API Gateway unauthenticated H3s.
+- Deleted the gateway, config and API; restored API Gateway, Service Management and Service Control
+  to disabled; removed local captures; and verified Cloud Asset Inventory and project IAM contained
+  no `ht-mcp-*` residue.
+- The reproducible qualifying-H3 scan now finds 163/372 privilege-escalation and 180/377
+  post-exploitation sections with explicit Stealth; persistence remains 153/153. This leaves 406
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Firebase, Monitoring, Cloud DNS and 2026 bulletin reconciliation
 - Rebuilt Firebase privilege escalation around 5 genuine paths, Cloud Monitoring post-exploitation
   around 8 and Cloud DNS post-exploitation around 7. Every retained technique has exact minimum
@@ -257,7 +284,7 @@ Last updated: 2026-09-28
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 82/409 privesc, 107/397 post-exploitation, 156/156 persistence sections with Impact + Logs generated have a rating; 617 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 163/372 privesc, 180/377 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 406 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |

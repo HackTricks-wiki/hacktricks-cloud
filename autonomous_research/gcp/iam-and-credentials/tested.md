@@ -3,10 +3,16 @@
 IAM, Service Accounts, IAM Credentials, Deny policies, WIF/Workforce federation. Fully covered in
 the book; recorded here for the LIVE-FIRE facts that correct common assumptions.
 
-## Self-impersonation token renewal is NOT stealthy — VERIFIED LIVE
-- `iamcredentials.GenerateAccessToken` / `SignJwt` (self-impersonation) **are logged by default** in
-  the `data_access` stream **even with Data Access logging OFF** — this impersonation stream is on by
-  default and effectively cannot be disabled. Corrects the common "token self-renewal is silent" claim.
+## Self-impersonation token visibility — PRIOR BASELINE CLAIM RETRACTED (2026-09-28)
+- A prior live observation found `GenerateAccessToken` / `SignJwt` in `data_access` and incorrectly
+  generalized that they are logged by default even with Data Access logging off. Current official
+  IAM documentation explicitly says short-lived-credential audit entries require IAM Data Access
+  logging; `iamcredentials.googleapis.com` cannot be configured independently and follows the
+  `iam.googleapis.com` or `allServices` Data Access configuration. The old test did not establish the
+  effective ancestor/`allServices` audit configuration, so it cannot prove a platform exception.
+- Book baseline: current Credentials API `GenerateAccessToken`, `GenerateIdToken`, `SignBlob`, and
+  `SignJwt` are Data Access and off by default. Legacy IAM API `SignBlob`/`SignJwt` produce no audit
+  log. A future live retest must capture the complete effective audit configuration before and after.
 
 ## IAM Deny policies — VERIFIED LIVE (4 claims)
 1. `roles/owner` does NOT include `denypolicies.create`.
@@ -61,3 +67,54 @@ rules anywhere in `src/`.
 - Added `gcp-identity-federation-enum.md` under GCP services. It inventories classic Workload Identity Federation, organization-scoped Workforce Identity Federation, project-scoped workforce OAuth clients/credentials, and managed workload identities/attestation rules in one place.
 - Enumeration includes soft-deleted pools/providers/clients, provider trust and claim mappings, pool policies, Cloud Asset searches for external-principal bindings, service-account policies, workforce bindings, OAuth client secrets, and attestation-rule membership that is invisible to `getIamPolicy`.
 - Live read-only validation against the lab confirmed classic pool/provider listing and pool IAM, soft-deleted OAuth-client listing, Cloud Asset IAM search syntax, and namespace enumeration. A deleted trust-domain pool cannot be traversed as an active parent, as expected. No resource or policy was changed.
+
+## 2026-09-28 — IAM privilege-escalation page audit
+
+- Rebuilt `gcp-iam-privesc.md` from current official IAM, Service Account Credentials, OAuth, and
+  audit-logging documentation. No cloud resources or policies were accessed or changed.
+- Retained seven genuine primitives: custom-role mutation, direct access-token minting, service-account
+  key create/upload, implicit delegation, `signBlob`/`signJwt`, service-account-policy self-grant, and
+  OIDC ID-token minting.
+- Corrected the custom-role boundary: `iam.roles.update` can add any permission supported and applicable
+  to that custom-role level; the caller does not need to already hold the permission. An existing binding
+  to the attacker or a controlled principal is the actual escalation prerequisite.
+- Corrected all Service Account Credentials telemetry. `GenerateAccessToken`, `GenerateIdToken`,
+  `SignBlob`, and `SignJwt` are Data Access and are not written by default; enable IAM Data Access logging
+  because the credentials service cannot be configured independently. Legacy IAM `SignBlob`/`SignJwt`
+  explicitly produce no audit log.
+- Corrected the signed OAuth assertion example: ordinary service-account JWT bearer assertions omit
+  `sub`; that claim is reserved for separately authorized Google Workspace domain-wide delegation and
+  identifies the user to impersonate.
+- Preserved the key-upload variant under the same exact `iam.serviceAccountKeys.create` permission and
+  distinguished `UploadServiceAccountKey` from `CreateServiceAccountKey`, `USER_PROVIDED` from
+  `GOOGLE_PROVIDED`, and the separate key-creation/key-upload organization policy constraints.
+- Replaced the destructive service-account policy overwrite with a version-3, `etag`-preserving merge
+  that never reuses a conditional Token Creator binding.
+- Removed `iam.roles.create` plus a bind permission as a standalone technique: role creation grants no
+  access, `iam.serviceAccounts.setIamPolicy` can directly bind Token Creator without a custom role, and
+  hierarchy policy setters can directly bind an existing privileged role.
+- Folded `iam.serviceAccounts.actAs` into the existing miscellaneous/service-specific coverage because it
+  is a prerequisite for a resource run-as chain, not a standalone identity-escalation action.
+- Removed duplicated tag-condition material from the IAM page and linked the dedicated Resource Manager
+  page. The deleted text also used the obsolete/nonexistent `resourcemanager.tagValues.use` model; current
+  tag attachment requires `resourcemanager.tagValueBindings.create` on the tag value plus the target
+  resource's type-specific `createTagBinding` permission.
+
+## 2026-09-28 — Independent cross-review corrections
+
+- Added the active-role-at-use and satisfied-binding-condition requirements to custom-role
+  escalation (the same update permission can reactivate a disabled role) and corrected direct
+  `roles.patch`: an `etag` is concurrency protection, not an authorization prerequisite, and a
+  caller can overwrite `includedPermissions` without first reading the role.
+- Distinguished the 12-hour general `signJwt` payload limit from the one-hour OAuth JWT-bearer
+  assertion limit, and recorded the one-hour, non-revocable service-account ID-token lifetime.
+- Made the service-account policy merge force policy version 3 while retaining the returned `etag`,
+  conditions, unrelated bindings, and members; it only creates or reuses an unconditional Token
+  Creator binding.
+- Corrected OIDC audience guidance: Cloud Run normally expects its generated `run.app` service URL or
+  an explicitly configured custom audience, whereas IAP OIDC uses the IAP OAuth client ID rather than
+  the protected request URL.
+- Added exact final-permission audit types for direct and delegated Credentials API requests and
+  retained the official off-default Data Access baseline. Corrected the signing command boundary:
+  current `gcloud iam service-accounts sign-blob` uses `iamcredentials.googleapis.com` and produces
+  off-default Data Access; only callers of the deprecated IAM v1 methods receive no audit log.

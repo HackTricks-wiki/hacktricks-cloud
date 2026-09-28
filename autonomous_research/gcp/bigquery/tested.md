@@ -1,5 +1,18 @@
 # BigQuery — tested
 
+## 2026-09-28 — BigQuery data-agent publication release triage
+
+- Reviewed the new Agent Registry and cross-project A2A publication paths against current official
+  BigQuery documentation. The “Default Google-managed credentials” option manages OAuth client
+  credentials; it does not make the BigQuery data agent run as a privileged service identity.
+- Google requires each end user to complete a one-time OAuth sign-in and states that data agents act
+  on the user's behalf, can use only that user's permissions, and can access only resources that user
+  may access. This lead therefore does not qualify as an expected privilege-escalation technique
+  without a separate identity mix-up or data-flow flaw.
+- Recorded scoped live-test candidates for cross-project A2A/Agent Registry identity separation,
+  editor-to-user indirect disclosure, and card/endpoint substitution. No cloud resource was created
+  during this documentation-only triage.
+
 ## 2026-09-28 — post-exploitation stealth, permissions and telemetry audit
 
 - Reviewed all 11 retained BigQuery post-exploitation techniques against current official BigQuery,

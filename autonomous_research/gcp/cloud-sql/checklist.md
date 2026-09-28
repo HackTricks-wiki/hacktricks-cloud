@@ -4,12 +4,41 @@ Open ideas — Cloud SQL.
 
 The next questions concern permissions whose callable surface is not established.
 
+## Resolved in independent post-exploitation cross-review (2026-09-28)
+
+- [x] Separate Data API IAM and built-in-password minimum permissions and downstream Secret Manager
+  logging.
+- [x] Reconcile current cross-project clone support without claiming that source-only permission is
+  sufficient for destination-side prerequisites.
+- [x] Correct final-backup deletion syntax and distinguish request opt-in, instance configuration,
+  and organization-policy enforcement.
+- [x] Bound SSL downgrade impact to direct connections; Auth Proxy and Language Connectors remain
+  encrypted regardless of `sslMode`.
+- [x] Replace the nonexistent `gcloud sql instances stop-replica` command and preserve the narrower
+  documented raw API alternative.
+
 ## New questions from 2026-09-26 audit
 - [x] Check Cloud SQL `instances.setIamPolicy` / `databases.setIamPolicy` API exposure:
   the v1 and v1beta4 SQL Admin discovery documents have no such instance/database methods.
   No self-grant claim was published from permission names alone.
 - [ ] Determine whether `backupRuns.export` can be used beyond the documented Cloud SQL-to-AlloyDB
   migration path. Direct GCS exfil was removed from the book because no such endpoint was found.
+
+## Follow-ups from 2026-09-28 post-exploitation rewrite
+
+- [ ] Determine whether any callable, supported API exposes `cloudsql.instances.setIamPolicy` or
+  `cloudsql.databases.setIamPolicy`; current SQL Admin v1/v1beta4 discovery still does not establish
+  such a method, so permission names alone must not become a self-grant technique.
+- [ ] Test whether a supported import format can produce a useful cross-boundary disclosure beyond
+  the documented import behavior. Arbitrary-object reads are rejected as a technique unless a
+  parseable-file path and recoverable data flow are demonstrated.
+- [ ] Compare standard Cloud SQL backup deletion with enhanced Backup and DR recovery-point
+  retention in a disposable project. Do not claim complete recovery destruction without proving
+  which separately managed recovery objects survive.
+- [ ] Verify current audit payloads for Data API, import/export, and long-running start/completion
+  records in a disposable instance if a future live-test budget permits. The book currently uses
+  the official method classifications and explicitly marks engine/observability telemetry as
+  conditional.
 
 ## Resolved (moved to tested.md)
 - [x] **Live-confirm pg_cron / event_scheduler persistence** — DONE 2026-09-25. pg_cron CONFIRMED
