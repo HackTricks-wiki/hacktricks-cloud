@@ -7,6 +7,17 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 boundary-day frontier — Observability API
+- [x] Mapped the new stable v1 storage/scope surface and shipped sensitive trace reads plus the
+      expected `observability.links.create` -> linked BigQuery permission-plane crossing. Link
+      creation alone is insufficient; BigQuery Data Viewer and query-job authority are separate
+      prerequisites, and trace scopes do not bypass source-view IAM.
+- [ ] In a project with an existing synthetic `_Trace/Spans` dataset, run the exact negative/positive
+      link matrix, capture Analytics-versus-BigQuery query telemetry, then delete the link and verify
+      dataset removal. Do not create a trace bucket solely for this test until public immediate
+      deletion exists. Review Telemetry API consumer IAM/spoofing next; see
+      `observability/checklist.md`.
+
 ## 2026-09-29 boundary-day frontier — Cluster Director
 - [x] Live-verified login-node startup-script execution with an isolated update-only caller. The API
       securely rechecked `iam.serviceAccounts.actAs` on the retained VM identity; after that narrow

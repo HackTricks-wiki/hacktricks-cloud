@@ -2,6 +2,27 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — new Google Cloud Observability v1 surface added
+- Added the missing Observability service-enumeration page and two bounded post-exploitation paths:
+  direct sensitive trace-span reads through legacy Trace or `observability.views.access`, and
+  `observability.links.create` as a bridge from `_Trace/Spans` into a linked BigQuery dataset. The
+  latter needs separate BigQuery data-read and query-job authority but does not need View Accessor.
+- Mapped stable discovery revision `20260917`, all `roles/observability.*` roles, storage/scope
+  semantics, the same-project Link boundary, service-agent authority and exact audit classes.
+  Trace/log scopes recheck source IAM and are not cross-project grants. Permission names for
+  bucket/dataset/view deletion are ahead of the public callable API and were not treated as attacks.
+- A bounded eligibility probe enabled the API and enumerated all 46 locations with deleted resources
+  included. No bucket/dataset/view/link existed. `_Trace` creation was intentionally skipped because
+  current public API/docs offer no clean bucket deletion path. The generated service-agent
+  binding/account and API enablement were removed, local discovery files were deleted, and final
+  inventory is empty.
+- Link create/delete are always-on Admin Activity LROs and linked queries generate default BigQuery
+  audit logs. Legacy Trace and Observability inventory reads are Data Access, off by default; the
+  Analytics query runtime is explicitly left unverified rather than called permanently silent.
+- Deterministic coverage is now 267/267 privilege-escalation headings, 292/292 post-exploitation
+  headings and 156/156 persistence headings with categorical Stealth; zero qualifying headings are
+  unrated.
+
 ### 2026-09-29 — Cluster Director retained startup execution and persistence live-verified
 - Added the missing Cluster Director enumeration, privilege-escalation and persistence pages. A
   caller with `hypercomputecluster.clusters.update` plus `iam.serviceAccounts.actAs` on the existing
