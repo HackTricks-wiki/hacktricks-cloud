@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Agent Registry bound-target redirect live-verified
+- Added the missing Agent Registry service-enumeration page and a focused privilege-escalation
+  technique. A caller with Agent Registry Editor plus Service Usage Consumer changed an existing
+  bound MCP Service's interface URL without Binding-write or Agent Identity provider-update
+  authority.
+- The projected MCP resource kept the same resource name and stable `mcpServerId`; the Binding kept
+  the same source, target and synthetic auth provider. The current ADK then constructed a toolset
+  containing both the replacement URL and that pre-existing provider scheme. This gives a delayed
+  credential-capture path when an authorized victim runtime later invokes the target. No credential
+  was transmitted during the test.
+- The projected MCP object exposed the changed URL but retained its old `updateTime`. The actual
+  `UpdateService` LRO produced two attributable, always-on Admin Activity entries; registry reads
+  and later Agent Identity credential retrieval are Data Access and off by default.
+- Current ADK code resolves auth-provider Bindings by target URN without accepting a source-agent
+  identifier. Cross-source provider confusion is queued for an immediate private-first two-binding
+  test and is not included in the public expected-functionality claim.
+- Cleanup deleted all four regional/global Services, Binding, synthetic provider, test identity,
+  key, IAM grants, local ADK environment and API changes. Agent Registry, Agent Identity, Agent
+  Identity Credentials and the auto-enabled App Hub API are back to their disabled baseline.
+  Technique totals are now 268/268 privilege escalation, 292/292 post-exploitation and 156/156
+  persistence.
+
 ### 2026-09-29 — Telemetry OTLP ingestion and log-forgery path live-verified
 - Added the missing Telemetry API enumeration and extended the existing log-forgery technique with
   its OTLP route instead of duplicating the same underlying attack. An isolated caller holding only

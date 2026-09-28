@@ -495,6 +495,19 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       `getSecret` statement against the current audit catalog's narrower authorization row. Use only
       a synthetic secret, then delete it and every temporary grant. See `data-fusion/checklist.md`.
 
+## 2026-09-29 Agent Registry private-first frontier
+
+- [ ] Create two source Agents and two synthetic API-key providers bound to one MCP target, then
+      run the current ADK under provider-scoped identities. Its resolver currently receives no
+      source-agent identifier and selects the first Binding whose target URN matches. If one source
+      receives or sends the other source's marker credential, keep the finding private and write a
+      full report under `~/cloud_bb/gcp/` before any public disclosure.
+- [ ] Reverse Binding creation order and force pagination to distinguish deterministic first-match
+      behavior from unstable credential selection. Use an in-process receiver, never a public token
+      collector, and delete all Services, Bindings, providers, principals, keys and API changes.
+- [ ] Compare the same collision across MCP, remote A2A-agent and generic Endpoint helper paths.
+      Do not generalize the published MCP redirect primitive to consumers that were not verified.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
