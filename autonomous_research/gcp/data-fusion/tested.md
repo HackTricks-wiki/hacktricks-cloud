@@ -50,3 +50,32 @@ The post-exploitation and persistence pages contain valuable hypotheses but pred
 - Added the documented OAuth-scope caveat for service-account tokens against version 6.5 RBAC instances: `userinfo.email` plus `cloud-platform` or `servicecontrol`.
 - Tightened namespace IAM telemetry. The official audit catalog documents `GetIamPolicy`/`SetIamPolicy` only against instance permissions. The namespace REST surface and permission types are official, but they do not prove an emitted method or default log class, so those fields remain an explicit live-capture gap.
 - Revalidated caller/runtime separation: pipeline create/start is authorized to the caller through RBAC; the Data Fusion service agent holds `iam.serviceAccounts.actAs` on the selected pipeline VM service account; `roles/datafusion.runner` belongs to that runtime service account. Preview instead uses the design-time service agent or supported per-namespace design-time service account.
+
+## 2026-09-28 — post-exploitation page audit
+
+- Retained only direct namespace secure-key value retrieval. Its documented permission set is
+  effective `datafusion.instances.get` plus `datafusion.namespaces.get` and
+  `datafusion.secureKeys.getSecret`; `.list` is needed only for key-name discovery.
+- Corrected the old CDAP logging claim: the current official catalog explicitly classifies
+  `SecureStoreHandler.get`/`.list` and `DataFusion.GetInstance` as off-by-default `ADMIN_READ` Data
+  Access methods.
+- Demoted `pipelineConnections.get` credential theft. Connections store useful configuration and
+  may contain credentials, but the current public contract does not establish cleartext sensitive-
+  field responses for every plugin; an exact plugin/response test remains required.
+- Removed pipeline exfiltration from post-exploitation because a pipeline running under a stronger
+  configured identity is already the retained Data Fusion run-as privilege escalation. Removed the
+  duplicate tampering and destructive instance delete/restart headings under the no-garbage rule.
+- No Data Fusion instance, endpoint, pipeline, secure key, connection, IAM policy or logging setting
+  was accessed or changed during this documentation-only pass.
+
+## 2026-09-28 — reciprocal review of post-exploitation
+
+- Corrected the secure-store prerequisite to include effective `datafusion.instances.get` even when
+  the `apiEndpoint` is already known. Current setup/role-matrix pages require the Accessor boundary;
+  the RBAC overview separately says another RBAC assignment implicitly supplies it, so the page now
+  states the invariant permission instead of assuming how it was granted.
+- Added the documented version 6.5 service-account token scopes: `userinfo.email` plus
+  `cloud-platform` or `servicecontrol`. Reconfirmed `datafusion.namespaces.get` and
+  `datafusion.secureKeys.getSecret` for a known value, with `.list` only for discovery.
+- Rechecked `SecureStoreHandler.get`/`.list` and `DataFusion.GetInstance` as non-LRO,
+  off-by-default `ADMIN_READ` Data Access methods. No instance or secure key was accessed.

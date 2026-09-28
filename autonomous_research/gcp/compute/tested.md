@@ -97,3 +97,48 @@ catalog does not classify their log type/default availability, so only `SignSshP
 published Data Access classification. The regional-disk IAM example now uses REST because the
 gcloud helper accepts only `--zone`; IAM helper read permissions, a full VM-create example, and
 metadata-value redaction wording were also fixed.
+
+## 2026-09-28 - dedicated SSH-metadata page rebuild
+
+Scope: every technique-like H3 in
+`gcp-privilege-escalation/gcp-compute-privesc/gcp-add-custom-ssh-metadata.md`. This pass used current
+official Compute Engine SSH-key, guest-agent, metadata, SSH-hardening, and audit documentation plus
+local Google Cloud CLI 586.0.0 help/source. No VM, metadata, IAM policy, SSH key in GCP, or other
+cloud resource was created, changed, or deleted. No cleanup was necessary. One read-only
+`roles/file.editor` description was issued for the parallel Filestore audit; it did not affect this
+Compute result.
+
+Retained results:
+
+- One per-instance primitive: `compute.instances.setMetadata`, bounded to the selected eligible VM.
+  The shown `gcloud ... instances add-metadata` merge also performs `instances.get`; the raw API
+  command then calls `zoneOperations.wait`. Its helpers therefore require
+  `compute.instances.get` and `compute.zoneOperations.get`; the raw API permission remains only the
+  documented write permission when the fingerprint and full value are already known and the caller
+  does not poll.
+- One project primitive: `compute.projects.setCommonInstanceMetadata` plus the documented
+  project-scoped `iam.serviceAccounts.actAs`. The shown `gcloud ... project-info add-metadata` merge
+  performs `projects.get` and `globalOperations.wait`, adding `compute.projects.get` and
+  `compute.globalOperations.get`.
+- Both require metadata-based SSH, compatible guest-agent account management, a private key, and a
+  reachable SSH path. OS Login, `block-project-ssh-keys`, custom guest behavior, and network controls
+  bound the result.
+- Both are Low stealth: the writes are default-on Admin Activity `ADMIN_WRITE`; helper reads are
+  Data Access `ADMIN_READ` and off by default, including the operation waits; metadata values are
+  redacted; direct SSH is guest and optional network telemetry rather than a Compute API event.
+
+Pruned results:
+
+- The overview H3 was explanatory text, not a technique.
+- "existing privileged user" and "create a new privileged user" were duplicate uses of the same
+  instance metadata write. Their useful username/key examples were merged into the retained H3.
+- Unbounded claims of automatic project takeover were replaced with the eligible-VM and attached-SA
+  IAM/access-scope boundary.
+
+## 2026-09-28 reciprocal review of SSH metadata
+
+Independently rechecked both retained headings against the current REST IAM sections, SSH-key and
+guest-agent documentation, Compute audit catalog, Google Cloud CLI 586.0.0 help, and local CLI
+source. The raw/CLI permission split, fingerprints, project-level `actAs`, eligible-VM bounds,
+commands, and telemetry remain accurate; no page correction was necessary. No cloud API or VM was
+accessed or changed.

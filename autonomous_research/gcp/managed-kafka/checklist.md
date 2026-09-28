@@ -15,6 +15,8 @@
 - [x] Remove standalone cluster deletion and false schema-version poisoning claims.
 - [x] Validate current gcloud commands and generated v1 Schema Registry paths against SDK 586.0.0.
 - [x] Verify exact broker/topic/Connect metric descriptor names and correct Schema Registry `ListSchemaVersions` audit method.
+- [x] Remove the unproven generic Connect-secret read oracle and the misclassified stolen-token/topic
+      credential heading from privilege escalation.
 
 ## Safe future tests
 
@@ -25,3 +27,7 @@
 - [ ] Test a cross-project Pub/Sub sink owned by the tester, grant only `pubsub.topics.publish` to the Connect-project service agent, confirm connector logs/metrics and absence of Pub/Sub Publish audit records, then delete the connector and destination topic.
 - [ ] In a disposable Preview Schema Registry, verify soft versus permanent deletion, read-only/reference failures, client cache behavior, and exact `permanent` query handling; delete the registry afterward.
 - [ ] Resolve the current official-documentation conflict for version hard delete: stable v1 discovery/REST/local SDK use `/v1` plus `permanent=true`, while the 2026-09-24 product guide shows `/v1main` plus `hardDelete=true`. Use only a disposable soft-deleted version and record both non-mutating error behavior and the successful contract before cleanup.
+- [ ] With synthetic secrets and each currently curated connector plugin, test whether any documented
+      configuration can cause an arbitrary mounted secret value—not merely its file path or intended
+      authentication use—to be returned or published to an attacker-readable destination. Delete the
+      Connect cluster, connector, secret/version, topics, destination and every temporary grant.

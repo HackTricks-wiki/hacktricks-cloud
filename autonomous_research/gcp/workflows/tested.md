@@ -61,3 +61,32 @@ enable services, create workflows, start executions, or change cloud state.
 - Reconfirmed that callbacks need a live endpoint and accepted method, and that Workflows permissions
   are granted at project scope rather than through a per-workflow allow policy. No cloud APIs or
   resources were touched.
+
+## 2026-09-28 — post-exploitation page audit
+
+- Reduced four headings to two read-only disclosure primitives: workflow source/runtime-identity
+  recovery and retained execution/step-variable recovery.
+- Removed `executions.create` from post-exploitation because invoking a privileged attached identity
+  is already the bounded Workflows privilege-escalation primitive. Removed workflow delete as
+  destructive-only availability impact and source update as duplicate privilege escalation.
+- Corrected exact minimums: a known source needs only `workflows.workflows.get`; execution and step
+  records separately require `workflows.executions.get`/`.list` and
+  `workflows.stepEntries.get`/`.list`. Detailed variable data exists only when Detailed execution
+  history was retained.
+- Replaced older observed-silence wording with the current official contracts. Workflow get/list are
+  `ADMIN_READ` Data Access under `workflows.googleapis.com`; execution and step-entry reads are
+  `DATA_READ` Data Access under `workflowexecutions.googleapis.com`; all are off by default.
+- This was an official-documentation and local syntax pass only. No workflow, execution, audit
+  policy, service or other cloud state was read or changed, so there is no cleanup debt.
+
+## 2026-09-28 — reciprocal review of post-exploitation
+
+- Rechecked source retrieval, execution `FULL` views and step-entry history against the current v1
+  REST schemas and SDK 586.0.0 command help. A known execution GET defaults to `FULL`; execution
+  listing needs the explicit `view=FULL`; detailed in-scope variables exist only when Detailed
+  history was configured and retained, and Detailed history remains a Preview feature.
+- Reconfirmed the exact permissions and audit methods: workflow source uses
+  `workflows.workflows.get` / `Workflows.GetWorkflow` (`ADMIN_READ`), while executions and step
+  entries use their separate `.get`/`.list` permissions and `Executions`/`ExecutionHistory`
+  `DATA_READ` methods. All are off-by-default Data Access.
+- No page correction was required. No workflow or execution was read, run, updated or deleted.

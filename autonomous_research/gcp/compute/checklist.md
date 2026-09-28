@@ -23,6 +23,11 @@
 - [x] Preserve condition/version/etag state in the instance-IAM self-grant example.
 - [x] Apply reciprocal review corrections for project-versus-instance metadata `actAs`, unclassified
   OS Login monitoring signals, regional-disk IAM REST, helper reads, and complete command examples.
+- [x] Rebuild the dedicated custom-SSH-metadata page into one instance and one project primitive,
+  with exact CLI helper reads/operation waits, prerequisites, bounded impact, categorical stealth,
+  and current audit defaults; no cloud mutation was performed.
+- [x] Independently reciprocal-review the dedicated SSH-metadata page against current REST IAM
+  requirements and Google Cloud CLI 586.0.0 source; no further page fix was required.
 
 ## Follow-up validation ideas
 
@@ -44,7 +49,8 @@
   whether the service-triggered execution emits `ExecutePatchJob`, another service-principal audit
   record, or only patch-job/agent state.
 - [ ] Validate whether `gcloud compute project-info add-metadata` and instance `add-metadata` perform
-  extra helper reads under minimum custom roles, separating raw REST minima from CLI minima.
+  any additional authorization beyond the locally confirmed resource-get and operation-wait helper
+  calls under minimum custom roles, separating raw REST minima from CLI minima.
 - [ ] Validate image-family resolution and exact `images.insert` request/audit fields with a stopped
   disposable source disk; delete the image and disk immediately after the test.
 - [ ] Capture zonal and regional MIG template changes to confirm the exact regional method-name

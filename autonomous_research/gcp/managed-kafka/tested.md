@@ -44,3 +44,30 @@ No cloud resources were created or mutated. The page was audited against current
 - Stable `gcloud managed-kafka connectors create`, topics update/delete, consumer-groups update/delete, and clusters describe syntax checked with SDK 586.0.0 help.
 - Generated v1 Schema Registry client uses `/v1/.../versions` and the `permanent` query parameter; the local client confirms a soft delete must precede permanent deletion.
 - Metric descriptor names were checked against the Cloud Monitoring catalog, including Connect sink record/byte/task metrics and topic offset/size/request/error metrics.
+
+## 2026-09-28 — privilege-escalation deduplication
+
+- Removed both prior privilege-escalation H3s. Managed Kafka resources expose no resource
+  `setIamPolicy`, caller-selectable runtime service account or credential-minting method.
+- Demoted the Connect-secret proposal to a controlled test lead. The service agent must already be
+  authorized for each exact secret version; the worker mounts it read-only; and the caller receives
+  only a path/config-provider expression. The old page did not establish a supported curated plugin
+  that reliably emits an arbitrary substituted secret, so it overstated a general read oracle.
+- Reclassified stolen broker-token and topic-borne credential material. Token theft is a prior
+  identity compromise; broker use remains bounded by network and Kafka ACLs; topic reads are already
+  documented post-exploitation rather than as cloud privilege escalation.
+- This pass used current official access-control, RPC, Connect-secret and authentication references
+  only. It did not call a cloud API, read a cluster, mount a secret or change any resource.
+
+## 2026-09-28 — reciprocal review
+
+- Independently rechecked the no-primitive conclusion against the current Managed Kafka v1 RPC
+  surface, access-control contract, Connect secret-mount model, curated connector boundary and local
+  SDK 586.0.0 generated clients. No resource-level IAM policy method, caller-selected service
+  account or credential-minting method was found, so no additional privilege-escalation H3 was
+  restored.
+- Reconfirmed that a mounted Secret Manager version is exposed to a worker as a read-only file and
+  referenced through the config provider; that alone does not prove a supported connector can emit
+  an arbitrary value. The synthetic-plugin matrix remains the correct bounded test lead.
+- No cloud API was called and no cluster, Connect resource, secret, ACL or IAM policy was accessed
+  or changed during this review.

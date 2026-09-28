@@ -354,6 +354,31 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       restored resources, network paths and grants, and return any initially disabled API to
       disabled. See `alloydb/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — final unrated sweep
+- [ ] Test the Dialogflow CX configured-service-account webhook path with two minimum custom roles:
+      first determine whether a URI-only field-mask update rechecks `iam.serviceAccounts.actAs`, then
+      capture the exact IAM Credentials principal, scopes and audit location for the delegated access
+      token. Restore the URI immediately and remove the controlled endpoint and temporary grants. See
+      `dialogflow/checklist.md`.
+- [ ] In a disposable Firebase App Hosting backend, verify whether image-source Build plus Rollout
+      alone executes under the existing backend identity without caller `actAs`; capture App Hosting,
+      Cloud Build and Cloud Run principals and delete the rollout/build/image afterwards. See
+      `firebase-app-hosting/checklist.md`.
+- [ ] In an isolated fleet, publish one namespaced Config Delivery manifest and capture the exact
+      Config Delivery, Config Sync and Kubernetes principals/methods, then remove the fleet package,
+      release and bundle and verify propagated objects are gone. See `config-delivery/checklist.md`.
+- [ ] In disposable Filestore and Backup for GKE fixtures, validate minimum custom roles, LRO helper
+      permissions and protocol/PV restore behavior. Unmount clients and delete every clone, backup,
+      restore, cluster, firewall rule and temporary grant after verification. See
+      `filestore/checklist.md` and `backup-dr/checklist.md`.
+- [ ] Capture exact producer audit method names for a benign Service Catalog version patch and the
+      exact source-IAM/finding methods for SCC v2 with Data Access logging enabled. Restore the
+      original version/policy and remove every temporary binding. See `private-catalog/checklist.md`
+      and `security-command-center/checklist.md`.
+- [ ] Retest Data Fusion secure-store access with a least-privilege token to resolve the RBAC guide's
+      `getSecret` statement against the current audit catalog's narrower authorization row. Use only
+      a synthetic secret, then delete it and every temporary grant. See `data-fusion/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any

@@ -2,6 +2,14 @@
 
 Security Command Center (SCC). Covered (config-tamper post-ex, Security Posture tamper persistence).
 
+## 2026-09-28 privilege-escalation-page audit
+
+- Retained only source-policy self-grant as an SCC-specific authorization transition and bounded it to findings emitted by that one organization source.
+- Removed generic organization/folder IAM self-grant and detector disablement headings: the former duplicates IAM privesc and the latter is defense evasion, not privilege escalation.
+- Corrected the old claim that a Sources Admin bypasses organization authorization; the role's lowest grantable scope is the organization.
+- Reused the safe version-3 policy read/merge/write that preserves conditional bindings and `etag`, and recorded exact v2 audit methods/classes/defaults.
+- Documentation and local role inspection only; no SCC source or IAM policy was accessed or changed.
+
 ## CRITICAL correction applied (do NOT regress)
 - `SetMute`, `SetFindingState`, `UpdateFinding`, `BulkMuteFindings`, `Create/Update/DeleteNotificationConfig`
   are **DATA_WRITE (off by default), NOT ADMIN_WRITE** — inverted the stealth story (muting + severing

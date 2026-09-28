@@ -213,6 +213,7 @@
     - [GCP - Dataplex Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataplex-privesc.md)
     - [GCP - Deployment Manager Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md)
     - [GCP - Developer Connect Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-developer-connect-privesc.md)
+    - [GCP - Dialogflow CX Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dialogflow-privesc.md)
     - [GCP - Eventarc Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-eventarc-privesc.md)
     - [GCP - Cloud Healthcare Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md)
     - [GCP - IAM Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md)

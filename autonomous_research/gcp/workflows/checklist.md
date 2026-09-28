@@ -16,7 +16,9 @@
   operation-polling telemetry, automatic start/end platform logs, call-log precedence, and
   permission-gated per-call logging.
 - [x] Removed/folded post-exploitation reads, connector examples, token mechanics, egress notes and
-  duplicate CLI headings from the privilege-escalation page.
+      duplicate CLI headings from the privilege-escalation page.
+- [x] Rebuilt post-exploitation around source/identity and retained execution-data reads; removed
+      duplicate execution/update and destructive delete headings and reconciled both audit catalogs.
 
 ## Open bounded validation
 
@@ -27,8 +29,11 @@
   whether `sourceContents`, update masks and retained `serviceAccount` are consistently present or
   subject to truncation/redaction.
 - [ ] Capture `CreateExecution`, `SendHttpCallback`, `ListCallbacks`, automatic `executions_system`
-  records and optional `engine_call` records in one disposable fixture with Data Access toggled only
-  for the test window.
+      records and optional `engine_call` records in one disposable fixture with Data Access toggled only
+      for the test window.
+- [ ] With non-secret synthetic arguments/results, capture workflow get, execution FULL list/get and
+      Detailed step-entry reads with Data Access disabled/enabled; restore the exact audit policy and
+      delete the workflow and execution history immediately.
 - [ ] Test callback discovery end-to-end with only `executions.list`, `callbacks.list` and
   `callbacks.send`, including derivation of the send endpoint from the returned Callback resource
   name and accepted HTTP method.

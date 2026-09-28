@@ -8,6 +8,8 @@ Open ideas — Security Command Center.
 
 ## Open verification leads (2026-09-28)
 
+- [x] Reduce the privilege-escalation page to the one SCC-specific source-policy transition and remove generic IAM/defense-evasion duplicates.
+
 - In a disposable SCC Premium test hierarchy, verify the least-privilege custom roles and actual audit
   entries for project/folder service overrides and module-only service updates. Documentation currently
   provides the exact permissions and classes; no live mutation was authorized for this audit.

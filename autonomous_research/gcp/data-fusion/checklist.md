@@ -24,7 +24,13 @@
 
 ## Related coverage still to audit
 
-- [ ] Rewrite Data Fusion post-exploitation telemetry against the current handler catalog, especially Secure Store and connection reads.
+- [x] Rewrite Data Fusion post-exploitation telemetry against the current handler catalog and retain
+      only the documented Secure Store value-read boundary.
+- [x] Require effective `datafusion.instances.get` as the instance-access boundary for Secure Store
+      reads even when the endpoint URL is known, and record the version 6.5 token-scope caveat.
+- [ ] On an already-existing disposable instance, capture `pipelineConnections.get` responses for
+      synthetic JDBC/SaaS connections and determine which sensitive properties are returned,
+      masked or replaced by secure-key references. Delete the connections immediately.
 - [ ] Rewrite Data Fusion persistence telemetry for schedules, artifacts, connections, and secure-key changes; current Admin Activity handlers invalidate the blanket “not audited” claims.
 - [ ] Re-evaluate the scheduled pipeline and malicious artifact techniques after recording exact artifact-deploy and schedule API schemas on an existing disposable instance.
 

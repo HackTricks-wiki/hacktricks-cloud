@@ -2,6 +2,33 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Final unrated sweep: delivery, SSH, backup, identity and data access
+- Completed the deterministic metadata backlog across fifteen pages and retained 10 privilege-
+  escalation plus 10 post-exploitation techniques. Every qualifying privesc, post-exploitation and
+  persistence H3 now has categorical Stealth, with exact prerequisites, bounded impact and an
+  expandable telemetry table. Each primary workstream received an independent reciprocal review.
+- Compute SSH metadata now separates one-VM and inherited project-wide access and distinguishes raw
+  API minima from CLI helper reads and operation waits. Filestore retains reachable-share access,
+  export-rule widening and non-destructive backup cloning, with protocol-specific ports/mount syntax,
+  correct zone/region flags and synchronous backup/clone sequencing. Backup and DR retains vaulted
+  Compute restore and GKE Secret/PV recovery; Managed Microsoft AD is bounded to the delegated
+  administrator rather than Domain or Enterprise Admin.
+- Config Delivery, Firebase App Hosting, Infrastructure Manager, Service Catalog and Security
+  Command Center each retain one service-specific execution or authorization boundary. Generic,
+  duplicate, destructive and unsupported variants were removed. Managed Kafka retains no standalone
+  privilege-escalation primitive; the generic permissions page is reduced to real resource
+  `setIamPolicy` and `actAs` plus code-execution patterns.
+- Dialogflow now separates external webhook-secret recovery from configured-service-account OAuth
+  token capture, conservatively retaining the documented `actAs` boundary. Data Fusion retains only
+  namespace secure-store value recovery, and Workflows retains workflow-source/identity plus
+  execution-data disclosure. Current audit contracts corrected older claims for Dialogflow, Data
+  Fusion, Managed AD and Workflows.
+- Work used current official documentation, public schemas, installed SDK/source, CLI help and
+  predefined-role inspection. No cloud resource, IAM binding, service configuration or audit policy
+  was mutated, so no cleanup debt exists. All targeted official links resolved. The deterministic
+  scan now reports 266/266 privilege-escalation, 289/289 post-exploitation and 155/155 persistence
+  headings with categorical Stealth: **zero qualifying headings remain unrated**.
+
 ### 2026-09-28 — Functions, Cloud Shell, transfer/media, VMware and network defenses
 - Rebuilt ten service surfaces around 2 VMware Engine privilege-escalation and 18 post-exploitation
   techniques. Cloud Functions, Cloud Shell, Web Security Scanner, VMware Engine, Storage Transfer,
