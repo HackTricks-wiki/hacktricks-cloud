@@ -8,10 +8,11 @@ on:
       - '.gitignore'
       - Dockerfile
       - '.github/**'
+      - 'autonomous_research/**'
   workflow_dispatch:
     inputs:
       files:
-        description: 'Comma-separated .md paths to translate (blank = files changed in the last master commit)'
+        description: 'Comma-separated src/*.md paths to translate (blank = book files changed in the last master commit)'
         required: false
         default: ''
 
@@ -160,16 +161,24 @@ jobs:
             printf '%s' "$INPUT_FILES" | tr ',' '\n' | while read -r file; do
               file=$(echo "$file" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
               [ -z "$file" ] && continue
-              echo "$file" | grep -qE '\.md$' || { echo "Skipping non-md: $file"; continue; }
-              echo "$file" | grep -q 'SUMMARY\.md$' && { echo "Skipping SUMMARY.md"; continue; }
+              case "$file" in
+                src/*.md) ;;
+                *) echo "Skipping non-book Markdown path: $file"; continue ;;
+              esac
+              case "$file" in
+                */SUMMARY.md) echo "Skipping SUMMARY.md"; continue ;;
+              esac
               [ -f "$file" ] || { echo "Skipping missing file: $file"; continue; }
               printf ',%s' "$file" >> /tmp/file_paths.txt
             done
           else
-            git diff --name-only HEAD~1 | grep -v "SUMMARY.md" | while read -r file; do
-              if echo "$file" | grep -qE '\.md$'; then
-                echo -n ",$file" >> /tmp/file_paths.txt
-              fi
+            git diff --name-only --diff-filter=ACMR HEAD~1 -- src/ | while IFS= read -r file; do
+              case "$file" in
+                src/*.md)
+                  case "$file" in */SUMMARY.md) continue ;; esac
+                  [ -f "$file" ] && printf ',%s' "$file" >> /tmp/file_paths.txt
+                  ;;
+              esac
             done
           fi
 
