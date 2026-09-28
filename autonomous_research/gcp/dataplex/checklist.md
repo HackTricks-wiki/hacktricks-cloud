@@ -25,11 +25,14 @@
 
 ## Safe future validation leads
 
-- [ ] On a synthetic Data Product and packaged BigQuery table, give an isolated caller only the
-      minimum Data Product get/update permissions. Test whether changing an existing access group's
-      service-account principal reauthorizes underlying dataset/table IAM without caller BigQuery
-      get/setIamPolicy. Expected powerful-editor behavior belongs in the book if confirmed; an
-      undocumented managed-deputy grant contrary to the permission contract is private-first.
+- [x] On a synthetic Data Product and packaged BigQuery table, an isolated Data Products Editor
+      with an empty BigQuery permission set could start a principal-only update, but LRO completion
+      failed on `bigquery.tables.getIamPolicy`; the backing grant did not move. The failed LRO left
+      replacement-principal metadata visible until an owner restored it, but conferred no access.
+- [ ] If an already-available predefined role can supply only BigQuery `getIamPolicy` without
+      `setIamPolicy`, repeat the principal swap to identify the next enforcement point without
+      creating a soft-deleted custom role. Do not weaken the tested caller boundary merely to force
+      a success.
 - [ ] In an authorized disposable environment, create one ON_DEMAND task whose lake and execution
   projects differ; capture both projects' CreateTask, Dataproc batch, and service-agent audit entries,
   then delete the task and payload immediately.

@@ -2,6 +2,21 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Dataplex Data Product principal swap securely checks backing IAM
+- Live-tested an access-group service-account replacement against a packaged synthetic BigQuery
+  table. The isolated Data Products Editor had an empty BigQuery permission set and direct table
+  access returned 403. Its PATCH was accepted as an LRO, but completion failed specifically on
+  `bigquery.tables.getIamPolicy`; the legitimate producer retained the table grant and the attacker
+  identity never obtained data access.
+- The failed LRO left replacement-principal metadata visible even though backing IAM did not move.
+  This was restored immediately and has no demonstrated security impact, so it is recorded as an
+  operational consistency lead rather than a HackTricks technique or private vulnerability report.
+- Admin Activity captured the update start and denied completion. BigQuery SetIamPolicy for asset
+  creation/removal was attributed to the DataAsset creator/deleter, while the legitimate producer's
+  marker read appeared as BigQuery Data Access. Final authoritative inventory is empty: no test
+  identities, IAM references, datasets/tables, products/assets, service agent, local keys/configs,
+  or harness process remains.
+
 ### 2026-09-28 — Dataplex DataAsset validation securely checks backing BigQuery access
 - Live-tested `CreateDataAsset(..., validateOnly=true)` with an isolated Data Products Editor whose
   BigQuery permission set on an empty synthetic table was empty. Dataplex authorized

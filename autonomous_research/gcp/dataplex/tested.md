@@ -1,5 +1,33 @@
 # Dataplex privilege-escalation research ledger
 
+## 2026-09-28 — Data Product principal replacement revalidates backing-resource IAM
+
+- Live-tested an existing Data Product whose `readers` access group mapped a producer service
+  account to `roles/bigquery.dataViewer` on a synthetic table. Before the update, the legitimate
+  producer could list the harmless marker row (HTTP 200), the attacker-controlled producer could
+  not (HTTP 403), and the table policy contained only the legitimate producer binding.
+- The isolated updater held project `roles/dataplex.dataProductsEditor` and Service Usage Consumer.
+  Its BigQuery `testIamPermissions` response for `tables.get`, `tables.getData`,
+  `tables.getIamPolicy`, and `tables.setIamPolicy` was empty, and direct table metadata access
+  returned HTTP 403. Its principal-only `PATCH` with `updateMask=accessGroups` was initially accepted
+  as an LRO (HTTP 200), but LRO completion failed with code 7 because the caller lacked
+  `bigquery.tables.getIamPolicy`. No attacker table binding or data access resulted.
+- The Admin Activity start record showed `dataplex.dataProducts.update` granted to the isolated
+  caller. The completion record carried the exact backing-table `getIamPolicy` denial. The initial
+  asset grant and later revocation produced BigQuery `google.iam.v1.IAMPolicy.SetIamPolicy` records
+  attributed to the DataAsset creator/deleter, not the Dataplex service agent. A successful marker
+  read appeared as BigQuery `TableDataService.List` Data Access under the legitimate producer.
+- Operational nuance: after the failed LRO, `GetDataProduct` still displayed the replacement
+  service-account principal even though backing IAM remained on the legitimate producer. This
+  partial metadata commit did not grant backing access and is not a useful offensive technique or
+  security vulnerability on the tested path. An owner restored the legitimate principal before
+  deletion. Retest only if a future access-request flow can turn failed-operation metadata into a
+  privilege-bearing grant.
+- Three bounded credential/setup attempts were cleaned. Final authoritative inventory found zero
+  test service accounts, project IAM references, datasets, tables, Data Products, DataAssets,
+  Dataplex service agent, local keys, isolated configurations, or harness processes. Baseline
+  Dataplex and BigQuery API state was preserved.
+
 ## 2026-09-28 — Data Product `CreateDataAsset` validation enforces backing-resource access
 
 - Live-tested `CreateDataAsset` with `validateOnly=true` against an empty synthetic BigQuery table.

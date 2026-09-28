@@ -11,10 +11,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [x] `CreateDataAsset` `validateOnly` securely enforced backing-resource access: a caller with
       DataAsset create but no BigQuery permissions was denied on `bigquery.datasets.get`; metadata
       plus table-IAM positive control succeeded without asset or policy mutation.
-- [ ] Test Data Product access-group principal replacement under only product get/update. Determine
-      whether an existing asset grant moves to the replacement service account and whether caller
-      BigQuery get/setIamPolicy is rechecked. Use only a synthetic table and restore the legitimate
-      principal before deleting every fixture; keep an unexpected deputy grant private-first.
+- [x] Data Product access-group principal replacement rechecked caller backing-resource authority.
+      A Data Products Editor with zero BigQuery permissions received an accepted LRO, but completion
+      failed on `bigquery.tables.getIamPolicy` and the table grant did not move. Failed-operation
+      metadata temporarily showed the replacement principal; it had no observed privilege impact
+      and was restored before full fixture deletion.
 
 ## 2026-09-28 boundary-day frontier — API Hub plugins
 - [ ] On an existing disposable API Hub instance, test `plugininstances.update` without
