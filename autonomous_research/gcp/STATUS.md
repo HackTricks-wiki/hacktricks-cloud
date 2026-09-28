@@ -2,6 +2,32 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — BeyondCorp, BigLake, Container Analysis and VM Migration
+- Rebuilt BeyondCorp, BigLake/Lakehouse, Container Analysis and VM Migration around 6 genuine
+  privilege-escalation, 9 post-exploitation and 4 service-level persistence primitives. All 19
+  retained headings have exact prerequisites, bounded impact, categorical Stealth and expandable
+  telemetry; every service received independent reciprocal review. VM Migration intentionally
+  retains no persistence heading because its old candidates were one-shot mutations, not durable
+  attacker access.
+- Corrected BeyondCorp's browser/web-only gateway scope, caller/delegating-service-account/end-user
+  identity split, policy-version-safe IAM reads, helper preflight/poll permissions and existing-VPC
+  route bound. Cross-VPC upstream replacement remains an unverified test lead rather than a claim.
+  Corrected BigLake by separating BigQuery connection-backed tables, stable Lakehouse/Iceberg
+  catalogs and classic regional metastore tables; fixed condition-safe resource IAM, the stable v1
+  `LoadIcebergTableCredentials` RPC, SQL-DDL versus direct table-creation telemetry and credential/
+  snapshot/location impact bounds.
+- Corrected Container Analysis's dual occurrence/note authorization, immutable versus output-only
+  fields, concurrency-safe policy restoration and multi-project Binary Authorization attestor/note
+  trust edges. A stored invalid signature is not an authorization bypass. Corrected VM Migration's
+  current v1/global resource paths, stale Preview-guide command examples, caller versus host P4SA
+  `actAs` checks, opt-in target runtime identity and conditional downstream Compute evidence.
+- This batch used current official documentation, local CLI/source and predefined-role inspection,
+  reciprocal review, and 65 successful unique official-reference-link checks. It accessed or
+  mutated no cloud resource, IAM policy or service configuration and left no cleanup debt. The
+  reproducible scan now finds 220/267 privilege-escalation and 231/345 post-exploitation sections
+  with explicit Stealth; persistence is 148/148. This leaves 161 qualifying privesc/post-
+  exploitation sections to audit.
+
 ### 2026-09-28 — Analytics Hub, Certificate Authority Service, Data Fusion and Deployment Manager
 - Rebuilt Analytics Hub, Certificate Authority Service, Data Fusion and Deployment Manager privilege
   escalation around 3, 3, 3 and 2 genuine primitives. Added one Deployment Manager

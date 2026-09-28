@@ -219,6 +219,27 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       delete every deployment/bucket/account and return the API to its original state. See
       `deployment-manager/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — BeyondCorp, BigLake, Container Analysis and VM Migration
+- [ ] With an existing disposable licensed Security Gateway, capture current gateway/application
+      IAM method names and defaults, then test same-VPC endpoint repointing and the undocumented
+      server-side handling of an `upstreams` update. Restore the exact etag-protected policy and
+      route; do not claim cross-VPC routing until it succeeds. See `beyondcorp/checklist.md`.
+- [ ] In a disposable Lakehouse catalog, call stable v1 `/credentials` under isolated
+      `getData`/`updateData` custom roles, capture whether the omitted stable
+      `LoadIcebergTableCredentials` method emits a log, and correlate scoped Storage use with the
+      final Iceberg commit. Never retain the returned token and delete every catalog, object,
+      binding and managed identity that can be removed. See `biglake/checklist.md`.
+- [ ] In synthetic Container Analysis projects, split occurrence creation from note attachment,
+      validate bad and correctly signed attestations, and remove each cross-project attestor/note
+      service-agent grant in turn. Resolve the current `UpdatePolicy` permission/catalog mismatch,
+      restore complete policies with etag protection and delete every occurrence, note, attestor and
+      key. See `container-analysis/checklist.md`.
+- [ ] In disposable VM Migration host/target projects, separate the raw migrating-VM update,
+      caller-console `actAs`, host P4SA `actAs`, explicitly selected runtime account and clone.
+      Capture LRO and downstream Compute/Storage/AWS evidence for synthetic metadata, image import
+      and Preview disk migration, then delete every clone, image, disk, snapshot and binding. See
+      `vm-migration/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -245,11 +266,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Analytics Hub, Certificate Authority Service,
-      Data Fusion and Deployment Manager batch finds **180 unrated** qualifying sections: 214/265
-      privesc and 222/351
+      A fresh reproducible 2026-09-28 scan after the BeyondCorp, BigLake, Container Analysis and VM
+      Migration batch finds **161 unrated** qualifying sections: 220/267 privesc and 231/345
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
-      have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
+      have an explicit Stealth rating. Persistence is 148/148 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
@@ -264,6 +284,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Repositories, Runtime Config, Analytics Hub, Certificate Authority Service, Data Fusion and
       Deployment Manager privesc, Document AI, Cloud Source Repositories, Runtime Config and
       Deployment Manager post-exploitation, Certificate Authority Service persistence, Database
-      Migration Service and Service Usage zero-H3 audits, and API Gateway unauthenticated
-      techniques have been handled.
+      Migration Service and Service Usage zero-H3 audits, BeyondCorp, BigLake/Lakehouse, Container
+      Analysis and VM Migration privesc/post-exploitation, BeyondCorp, BigLake/Lakehouse and
+      Container Analysis persistence, VM Migration zero-H3 persistence, and API Gateway
+      unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
