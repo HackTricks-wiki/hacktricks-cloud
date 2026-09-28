@@ -266,6 +266,28 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       roles. Snapshot full store configuration/IAM first; remove every stream, notification, grant,
       sink and synthetic resource and verify no LRO or delivery remains. See `healthcare/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Federation, OS Config, Contact Center Insights and AlloyDB
+- [ ] In disposable federation fixtures, capture OIDC static-JWKS workload takeover and workforce
+      programmatic exchange while proving the workforce Console-sign-in limitation. Separately
+      validate managed-identity X.509 issuance against a controlled mTLS relying workload. Account
+      for 30-day tombstones and remove every binding, workload and revivable trust object. See
+      `workload-identity-federation/checklist.md`.
+- [ ] On disposable Linux and Windows VMs, validate patch object-read/scope boundaries, GA and
+      legacy inline policy execution, assignment-update-only authority and standard versus custom
+      agent identities. Use a preconfigured disposable hierarchy for orchestrator tests; restore
+      policies, service-agent grants, feature settings and audit settings, then delete all guests
+      and artifacts. See `osconfig/checklist.md`.
+- [ ] In a synthetic Contact Center Insights project, capture signed-audio, supported-format GCS
+      import and cross-project BigQuery export with isolated caller/P4SA permissions. Resolve the
+      `conversations.list` versus unused-looking `.export` permission boundary and delete every
+      conversation, object, table, dataset and temporary grant. See
+      `contact-center-insights/checklist.md`.
+- [ ] In a disposable AlloyDB cluster, isolate Viewer-level export, built-in versus IAM user roles,
+      Data API/Studio/MCP database authorization, and cross-project backup restore source checks.
+      A missing source authorization is private-report material. Delete all users, objects, exports,
+      restored resources, network paths and grants, and return any initially disabled API to
+      disabled. See `alloydb/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -292,10 +314,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      The maintained 2026-09-28 scan after the Cloud Identity, Developer Connect, Advisory
-      Notifications and Healthcare batch finds **154 unrated** qualifying sections: 223/266 privesc
-      and 244/355 post-exploitation H3 blocks that already contain Potential Impact and
-      `Logs generated` also have an explicit Stealth rating. Persistence is 150/150 under the same
+      The maintained 2026-09-28 scan after the Workload Identity Federation, OS Config, Contact
+      Center Insights and AlloyDB batch finds **135 unrated** qualifying sections: 232/268 privesc
+      and 253/352 post-exploitation H3 blocks that already contain Potential Impact and
+      `Logs generated` also have an explicit Stealth rating. Persistence is 151/151 under the same
       scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
@@ -316,5 +338,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Container Analysis persistence, VM Migration zero-H3 persistence, Cloud Identity,
       Developer Connect, Advisory Notifications and Healthcare privesc/post-exploitation,
       Cloud Identity and Healthcare persistence, Google Groups and Healthcare unauthenticated
-      access, and API Gateway unauthenticated techniques have been handled.
+      access, API Gateway unauthenticated techniques, Workload/Workforce Identity Federation,
+      OS Config, Contact Center Insights and AlloyDB have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

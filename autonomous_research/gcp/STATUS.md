@@ -2,6 +2,32 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Workload Identity Federation, OS Config, Contact Center Insights and AlloyDB
+- Rebuilt Workload/Workforce Identity Federation and OS Config around 9 genuine privilege-
+  escalation and 2 persistence primitives, and rebuilt Contact Center Insights and AlloyDB around
+  9 post-exploitation and 4 AlloyDB persistence primitives. All 24 retained headings have exact
+  prerequisites, bounded impact, categorical Stealth and expandable telemetry; each service
+  received an independent review.
+- Corrected federation provider/restoration authority, SAML key-overlap and uploaded-JWKS bounds,
+  removed the false general-purpose SCIM group-injection path, and bounded managed workload
+  identities to X.509/SPIFFE. Added org-scoped workforce trust while separating pool administration
+  from target-resource IAM; rejected OAuth-client creation as a standalone foothold because the
+  supported application-integration path additionally depends on an IAP application.
+- Corrected OS Config patch artifact/VM-SA dependencies, zonal versus project policy scope,
+  legacy-recipe rerun behavior, standard versus custom agent identity, and policy-orchestrator
+  quota/service-agent prerequisites. The predefined `patchDeployments.execute` permission is not
+  presented as usable because no current public REST or CLI method exposes it.
+- Corrected Contact Center Insights signed-audio, supported-format service-agent import and
+  cross-project BigQuery export boundaries. Corrected AlloyDB Viewer-level export, managed
+  `alloydbsuperuser`, IAM database-role enrollment, Data API/MCP authorization, restore-source
+  authorization and durable native-database/network residue.
+- This batch used current official documentation, local CLI/source and predefined-role inspection,
+  independent review, one read-only disabled-API state check, and 80 successful unique reference-
+  link checks. It created or changed no cloud resource, IAM policy or service configuration and
+  left no cleanup debt. The maintained qualifying scan now finds 232/268 privilege-escalation and
+  253/352 post-exploitation sections with explicit Stealth; persistence is 151/151. This leaves 135
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Cloud Identity, Developer Connect, Advisory Notifications and Healthcare
 - Rebuilt Cloud Identity, Developer Connect, Advisory Notifications and Cloud Healthcare around 3
   genuine privilege-escalation, 13 post-exploitation, 3 service-level persistence and 3
