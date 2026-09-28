@@ -2,6 +2,24 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud SQL login-hash export and identity-surface closure
+- Live-verified Cloud SQL for SQL Server's documented `sp_help_revlogin` migration feature. After a
+  no-restart flag enable, the default `sqlserver` account exported a synthetic eligible login's
+  password hash and SID; the default administrator remained excluded. Disabling the flag removed
+  the procedure. Added the bounded offline-cracking technique to Cloud SQL post-exploitation.
+- Captured always-on `cloudsql.instances.update` start/completion records for flag transitions; the
+  observed entries had null request bodies, while the direct procedure invocation produced no Cloud
+  Audit Log. The page now recommends inventorying effective flags as well as alerting on updates.
+- Cleanup deleted both bounded SQL Server Express fixtures, retained/final backups were absent, the
+  pulled client image was removed, and the pre-existing SQL Admin API remained enabled. Authoritative
+  inventory is empty; Cloud Asset Search temporarily retains one stale deleted-instance entry.
+- Closed the Workbench/Colab retained-identity schedule lead: notebook execution payloads are
+  unsupported for update, named-user/service-account identity gates are documented, and user ADC is
+  VM-local rather than schedule state. Cloud SQL's equal-subject Workforce Identity collision is
+  explicitly documented; only different-subject normalization variants remain private-first leads.
+- Deterministic coverage is now 265/265 privilege-escalation, 290/290 post-exploitation and 155/155
+  persistence headings with categorical Stealth; zero qualifying headings are unrated.
+
 ### 2026-09-28 — Cloud Scheduler retained-identity authorization live correction
 - Live-tested a raw authenticated-job PATCH whose body contained only the job name and replacement
   URI and whose update mask was exactly `httpTarget.uri`. A separate unauthenticated canary first

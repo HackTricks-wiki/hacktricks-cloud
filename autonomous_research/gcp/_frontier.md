@@ -364,13 +364,15 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       `actAs`-style permission. Use a wildcard-free synthetic attestation rule and controlled mTLS
       server; private-report any cross-identity use, then delete the backend, trust resources, certs,
       network and grants.
-- [ ] Test whether Workbench schedule update can replace notebook content or a custom container while
-      preserving another user's stored execution authorization/ADC. Use synthetic user data and a
-      zero-role destination, and remove the schedule, execution job, image and grants immediately.
-- [ ] Document Cloud SQL Workforce Identity subject collision only after a two-provider synthetic
-      test proves the database-role crossover described by Google. Separately test SQL Server
-      `sp_help_revlogin` hash export under the smallest control-plane/database permission split;
-      delete the instance and every exported hash immediately.
+- [x] Closed Workbench/Colab schedule retained-identity update as unsupported and documented gated.
+      Legacy schedules have no PATCH; current clients treat the notebook execution request as
+      immutable, and Google requires the named user or service-account actAs for schedule changes.
+      VM-local user ADC is not a Schedule field. See `workbench/tested.md`.
+- [x] Live-verified SQL Server `sp_help_revlogin` password-hash/SID export, published the bounded
+      expected post-exploitation technique, disabled the flag, and deleted both test fixtures and
+      local clients. Exact same-subject Workforce Identity crossover is a documented limitation;
+      keep only case/domain/length/Unicode/delimiter normalization variants open for a private-first
+      two-principal test. See `cloud-sql/tested.md` and `cloud-sql/checklist.md`.
 - [ ] Test Backup and DR Preview auto-protection with same-organization disposable projects to bound
       policy/binding authorization versus later restore authority. Remove policies, bindings,
       backups, vault, operator grants and synthetic workloads after all LROs settle.

@@ -26,9 +26,16 @@ The next questions concern permissions whose callable surface is not established
 
 ## Follow-ups from 2026-09-28 post-exploitation rewrite
 
-- [ ] Determine whether any callable, supported API exposes `cloudsql.instances.setIamPolicy` or
-  `cloudsql.databases.setIamPolicy`; current SQL Admin v1/v1beta4 discovery still does not establish
-  such a method, so permission names alone must not become a self-grant technique.
+- [x] Live-verify SQL Server `sp_help_revlogin`: enabling the flag installed the procedure without a
+      restart, and the default `sqlserver` login exported a synthetic login's password hash and SID.
+      Disabling the flag removed the procedure; both instances and all local client artifacts were
+      deleted. Added the bounded hash-recovery technique to the post-exploitation page.
+- [ ] With two disposable Workforce Identity principals, test only undocumented normalization
+      boundaries: case variants, MySQL same-local-part/different-domain subjects, paired 32/63-byte
+      prefixes, Unicode NFC/NFD and encoded delimiters. Exact same-subject cross-pool/provider
+      crossover is already an explicitly documented limitation, not a zero-day. Stop and report
+      privately only if two genuinely different mapped subjects converge on one database role.
+
 - [ ] Test whether a supported import format can produce a useful cross-boundary disclosure beyond
   the documented import behavior. Arbitrary-object reads are rejected as a technique unless a
   parseable-file path and recoverable data flow are demonstrated.

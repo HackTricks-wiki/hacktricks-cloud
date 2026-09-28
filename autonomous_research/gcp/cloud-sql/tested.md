@@ -3,6 +3,41 @@
 Cloud SQL. Covered (clone/replica copy, flag anti-forensics, SSL downgrade;
 persistence: sslCerts.create, contained-DB user, pg_cron / event_scheduler scheduled-task).
 
+## SQL Server `sp_help_revlogin` hash export live verification (2026-09-28)
+
+- Created two sequential bounded zonal `SQLSERVER_2022_EXPRESS` fixtures with two vCPUs, 3.75 GiB
+  memory, 10 GiB storage, one-runner `/32` public allowlists, and backups, retained/final backups, HA
+  and deletion protection disabled. The first isolated a harness error; it was deleted before the
+  corrected verification fixture was launched. SQL Admin was already enabled and remained enabled.
+- Patched `cloud sql enable sp_help_revlogin=on`; the flag transition required no restart. Connected
+  as the default `sqlserver` login and created one synthetic login with no restricted server role.
+- `EXEC msdb.dbo.sp_help_revlogin @login_name='<synthetic>'` returned a `CREATE LOGIN` statement
+  containing that login's password hash and SID. A full-output exclusion check did not expose the
+  default `sqlserver` administrator. No raw password, hash or SID was retained in test output.
+- Disabled the flag and confirmed the procedure was immediately absent. The first harness attempt
+  had failed before export because it unnecessarily tried to create a database user in `master`; its
+  cleanup completed before the corrected minimal `CREATE LOGIN` fixture was launched.
+- Live audit capture showed start/completion `cloudsql.instances.update` Admin Activity entries with
+  `cloudsql.instances.update` granted for the flag transitions, but `protoPayload.request` was null.
+  The direct SQL procedure call produced no Cloud Audit Log; SQL Server Audit/trace is conditional.
+- Cleanup deleted both bounded instances and the pulled SQL client image. Independent inventory
+  found zero matching active instances, retained/final backups, containers or images, and preserved
+  the pre-existing API state. Cloud Asset Search temporarily retained a stale `RUNNABLE` index entry
+  for the deleted second instance; the authoritative SQL Admin inventory was empty.
+
+## Workforce Identity database-user namespace research (2026-09-28)
+
+- Current MySQL and PostgreSQL Workforce Identity documentation explicitly warns that Cloud SQL
+  cannot distinguish equal mapped `google.subject`/user IDs from different pools or providers. This
+  is an expected identity-namespace footgun, not a zero-day: the second pool-qualified principal
+  must still have `cloudsql.instances.login`, reach the instance, and match an existing database
+  user whose database grants bound the impact.
+- Same-subject crossover is documented, while case folding, MySQL domain stripping, native
+  32/63-byte truncation, Unicode normalization and delimiter decoding are not. Preserve those as
+  private-first two-principal tests; a reportable boundary failure requires two genuinely different
+  mapped subjects and a lower-privileged token receiving the first user's database grants.
+- SQL Server is excluded because it does not support IAM authentication for database operations.
+
 ## Independent post-exploitation cross-review (2026-09-28)
 
 - Split Data API prerequisites by authentication mode. `cloudsql.instances.executeSql` is common;
