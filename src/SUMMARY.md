@@ -136,6 +136,7 @@
     - [GCP - Firebase Data Connect Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-firebase-data-connect-post-exploitation.md)
     - [GCP - Cloud Healthcare Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-healthcare-post-exploitation.md)
     - [GCP - IAM Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-iam-post-exploitation.md)
+    - [GCP - Integration Connectors Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-integration-connectors-post-exploitation.md)
     - [GCP - Cloud IDS Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-ids-post-exploitation.md)
     - [GCP - KMS Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-kms-post-exploitation.md)
     - [GCP - Live Stream Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-live-stream-post-exploitation.md)

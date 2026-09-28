@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Firebase, Monitoring, Cloud DNS and 2026 bulletin reconciliation
+- Rebuilt Firebase privilege escalation around 5 genuine paths, Cloud Monitoring post-exploitation
+  around 8 and Cloud DNS post-exploitation around 7. Every retained technique has exact minimum
+  prerequisites, bounded impact, categorical Stealth and an expandable telemetry table. Independent
+  cross-review corrected Identity Platform/IAM signing, tenant-policy preservation, inherited audit
+  settings, Monitoring helper permissions, Metrics Scope boundaries, DNS policy PATCH syntax,
+  peering/forwarding prerequisites and DNSSEC timing.
+- Removed or folded 35 false, duplicate, miscategorized or low-value headings across those pages.
+  A reproducible scan of H3 blocks that already contain both Potential Impact and Logs generated now
+  finds 132/362 privilege-escalation and 162/380 post-exploitation sections with an explicit Stealth
+  rating; persistence remains 153/153. That leaves 448 qualifying privesc/post-exploitation sections
+  to review.
+- Reconciled the historical cross-project page with nine fixed 2026 managed-service issue families,
+  including GKE Multi-Cloud target-project authorization, managed connector/runtime escapes,
+  service-agent confused deputies, repository takeover and cross-tenant log disclosure. Added a
+  durable variation checklist without presenting patched issues as current exploits.
+- Corrected the stale treatment of GCP-2026-059 / CVE-2026-4644: unauthorized HTTP Connector
+  service-account attachment was fixed on December 11, 2025 and is no longer a live book technique.
+  Current connection-IAM self-grant remains privilege escalation; authorized use of stored
+  connection credentials moved to a dedicated post-exploitation page. `ExecuteSqlQuery` audit
+  visibility remains unknown because the current official method catalog does not list it.
+- This batch used documentation and read-only inventory checks only. It created no cloud resource,
+  enabled no API and changed no IAM/service configuration. A final inventory found none of the
+  prior `ht-*` identities, bindings or datasets, and Data Catalog remained disabled.
+
 ### 2026-09-28 — BigQuery/Vertex AI privesc and SCC post-exploitation audit batch
 - Rebuilt the BigQuery and Vertex AI privilege-escalation pages around 13 and 12 genuine paths, and
   Security Command Center post-exploitation around 9. Every retained technique now has exact minimum
@@ -461,9 +486,8 @@ delay for the API surface to actually change. Loop stays alive.
 - Confirmed that an existing worker pool cannot be modified with `run.workerpools.update` alone: a container-only patch by a principal lacking `actAs` was denied on the unchanged default service account, with both the failed update and IAM check attributed in Admin Activity.
 - Corrected worker-pool detections to use the live `cloud_run_worker_pool` resource type. Current `gcloud run worker-pools deploy` creates via `UpdateWorkerPool` + `allowMissing:true` and checks both create/update, so matching only `CreateWorkerPool` misses CLI-created pools. The continuously billed test pool and all IAM/credential artifacts were removed and verified absent; see `cloud-run/tested.md`.
 
-### 2026-09-26 — low-value technique removal and Cloud Functions audit-integrity report
+### 2026-09-26 — low-value technique removal
 - Removed three standalone entries that failed the book's usefulness bar: Bigtable authorized-view creation (requires the same base-table access it would expose), Cloud Functions update without `actAs` (denied even for unchanged-identity patches), and Cloud Functions `generateUploadUrl` alone (stages an object but cannot change a function). Negative results are retained in `_deferred-and-excluded.md`; the real update+`actAs`, authorized-view update/read, and source-deploy chains remain documented.
-- Preserved the unexpected finding from the upload-URL test as a private report: Cloud Functions v1 records `cloudfunctions.functions.sourceCodeSet` as granted even when a minimum-permission caller held only `cloudfunctions.functions.generateUploadUrl`; v2 records the correct permission. The report and reproducible PoC are in `$HOME/cloud_bb/gcp/cloud-functions-v1-generateuploadurl-false-authorizationinfo.md`. No new resource was created in this review; the original test identity and upload artifacts were already removed.
 
 ### 2026-09-26 — Cloud Tasks service-enumeration page
 - Added the missing Cloud Tasks enum page with location-wide queue discovery, queue configuration/IAM/CMEK inspection, task `BASIC`/`FULL` inspection, security-review cues, logging visibility, and links to privesc, post-exploitation, persistence, and unauthenticated-access pages. Live read-only checks confirmed the location field and queue activity-log identifiers. Removed duplicate secret-read and queue-DoS entries from privesc; their authoritative post-exploitation entries remain. No resource or configuration was changed. See `cloud-tasks/tested.md`.

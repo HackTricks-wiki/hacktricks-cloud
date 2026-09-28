@@ -11,3 +11,7 @@
 - [ ] Test whether connector-specific generic URL, SQL, filter or action parameters can escape the
   administrator's configured destination or authorization boundary. Use only owned receivers and
   report a cross-tenant or credential-exfiltration bypass privately before public documentation.
+- [ ] With an existing disposable no-cost connection, verify the exact post-fix caller-side
+  authorization required when `serviceAccount` is set or changed. Treat any current attachment
+  without the required caller authorization as a private regression of CVE-2026-4644; do not infer
+  it from the historical bulletin.

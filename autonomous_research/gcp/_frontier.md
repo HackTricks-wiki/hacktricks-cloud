@@ -37,6 +37,16 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       reporting/book bar. Full matrix, constraints and official sources: `api-keys/checklist.md` and
       `api-keys/tested.md`.
 
+## 2026-09-28 boundary-day frontier — fixed managed-service authorization patterns
+- [x] Reconciled the historical cross-project page with the current 2026 bulletins and removed the
+      stale public treatment of patched CVE-2026-4644 as a live Connector `actAs` bypass.
+- [ ] Re-test **variations**, not the patched exact bugs: target-project authorization on every
+      create/import/attach path; caller + P4SA double authorization for caller-selected secrets;
+      connector/JDBC parser disagreement; internal-header stripping; cross-tenant identifiers in
+      private console aggregation APIs; sandbox link-local reachability; and owner binding for
+      globally named destinations. Use `cross-project-history/checklist.md`, keep a confirmed
+      platform boundary failure private, and clean every fixture.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -63,12 +73,13 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh strict 2026-09-28 heading scan after the BigQuery/Vertex AI privesc and SCC
-      post-exploitation batch finds **468 unrated** qualifying sections: 146/393 privesc and 170/391
-      post-exploitation sections with an explicit Impact field and `Logs generated` block are rated.
-      Persistence is 153/153 rated under
-      the same scan. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
+      A fresh reproducible 2026-09-28 scan after the Firebase, Monitoring, Cloud DNS and Integration
+      Connectors batch finds **448 unrated** qualifying sections: 132/362 privesc and 162/380
+      post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
+      have an explicit Stealth rating. Persistence is 153/153 under the same scan. Secret Manager,
+      Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
-      Logging post-exploitation, and Cloud Storage post-exploitation have been handled.
+      Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
+      Cloud DNS post-exploitation, and Integration Connectors current techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
