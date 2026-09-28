@@ -75,3 +75,23 @@
 - All three controlled attempts deleted their datasets/tables, explicit job metadata, service
   accounts, keys, custom roles, project bindings and isolated configurations. The first attempt that
   stopped during key activation was also cleaned and independently verified absent.
+
+## 2026-09-28 — column-policy `selectedFields` matrix
+
+- Attached a disposable Data Catalog policy tag to a synthetic `secret` column. The isolated reader
+  held only `bigquery.tables.getData` on the target project plus quota-project use, with no BigQuery
+  metadata permission or query-job permission.
+- Without Fine-Grained Reader on the tag, `tabledata.list?selectedFields=id` returned HTTP 200 and
+  both untagged values. Selecting only `secret`, or omitting `selectedFields` and thereby requesting
+  all columns, returned HTTP 403 and no rows. Granting
+  `roles/datacatalog.categoryFineGrainedReader` directly on the tag restored an HTTP 200 all-column
+  response with both synthetic rows. No masking substitution or partial all-column response occurred.
+- The audit capture contained the canonical and legacy BigQuery Data Access entries for each of the
+  two successful pages. Neither of the two policy-denied requests appeared in that observation
+  window; as with the row-policy case, this remains an observation rather than a guaranteed no-log
+  contract.
+- The first taxonomy cleanup call used an invalid parent-force assumption; the independent verifier
+  caught the residue. The child policy tag was then deleted before its taxonomy, both resources were
+  verified 404 while the API was live, and Data Catalog was returned to its original disabled state.
+  The dataset/table, service account, key, role, binding and local configuration were also verified
+  absent.

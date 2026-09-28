@@ -15,13 +15,14 @@
 
 ## Least privilege and downstream evidence
 
-- [ ] Raw REST `tabledata.list` with only `bigquery.tables.getData` is complete for ordinary tables,
-  row policies and an observed fine-grained-DML discrepancy: ordinary and `TRUE`-filter access
-  succeeded, a partial row filter returned 403, and in a same-age two-table control an enabled table
-  remained readable until it was mutated while the unmutated control remained readable. The official
-  contract says any enabled table is incompatible, so monitor/retest rather than treating mutation as
-  a supported lifecycle rule. Still test a column-policy table. Never use real sensitive data, and
-  delete all disposable tables and policies after each matrix.
+- [x] Raw REST `tabledata.list` with only `bigquery.tables.getData` is complete for ordinary tables,
+  row policies, column policy tags, and an observed fine-grained-DML discrepancy. Ordinary and
+  `TRUE`-filter access succeeded; a partial row filter returned 403. An untagged-column projection
+  succeeded while tagged/all-column reads returned 403 until Fine-Grained Reader was granted. In a
+  same-age two-table control, an enabled table remained readable until mutation while its unmutated
+  control remained readable. The official contract says any enabled table is incompatible, so
+  monitor/retest rather than treating mutation as a supported lifecycle rule. All disposable tables,
+  policies, IAM material, and temporarily enabled API state were deleted and verified absent.
 - [ ] Compare DML audit `deletedRowsCount`/`insertedRowsCount`/`truncated` with job `dmlStats` for
   `UPDATE`, `DELETE`, `MERGE` and `TRUNCATE`; document whether updates are represented as paired
   delete/insert counts or only in job statistics.

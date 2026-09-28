@@ -115,6 +115,22 @@ underlying service permission.
 The conditional binding, custom API-read role, service account, key, IAM bindings and isolated
 configuration were deleted, and cleanup independently verified no residue.
 
+## 2026-09-28 — `tool.isReadOnly` deny-policy constraint
+
+- Official MCP IAM guidance distinguishes the attributes: `resource.service` and `tool.name` are
+  supported in allow bindings, while `tool.isReadOnly` is enforced through IAM deny policies. The
+  earlier checklist wording that grouped all three under one conditional allow binding was wrong.
+- A disposable principal holding MCP tool use plus exactly `apikeys.keys.list` and
+  `apikeys.keys.update` reached the expected baseline after endpoint propagation: list succeeded and
+  an update request against a deliberately nonexistent key passed both authorization layers before
+  returning not found. No API Key resource was created or changed.
+- Creating the narrowly scoped deny policy for that service-account unique ID was then rejected:
+  the configured project Owner lacks `iam.googleapis.com/denypolicies.create`. No deny policy came
+  into existence, so live `tool.isReadOnly` enforcement remains unverified in this lab rather than a
+  failed boundary.
+- The service account, key, API custom role, three project bindings and isolated configuration were
+  deleted and independently verified absent. A final deny-policy listing found no matching policy.
+
 ### Official sources
 
 - https://docs.cloud.google.com/release-notes#September_25_2026

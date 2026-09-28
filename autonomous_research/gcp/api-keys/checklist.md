@@ -17,11 +17,13 @@ technique unless testing proves a distinct security boundary failure.
       two minutes for endpoint-specific IAM propagation before interpreting a denial.
 - [ ] **Conditional-IAM binding and project selection.** Exact `tool.name` enforcement and the
       duplicate-JSON-field desync case are complete: the allowed list tool succeeded, get was denied,
-      and both duplicate-field orders consistently authorized the last parsed tool name. Still test
-      `tool.isReadOnly`, case/Unicode variants, conflicting MCP metadata, and cross-project resource
-      names. If a second controlled project is available, ensure its MCP policy cannot be bypassed by
-      selecting a caller/quota project where `mcp.tools.call` is allowed. Allow at least two minutes
-      for MCP-specific IAM propagation before interpreting a denial.
+      and both duplicate-field orders consistently authorized the last parsed tool name. Unlike
+      `tool.name`, `tool.isReadOnly` is a deny-policy attribute; its narrowly scoped live test is
+      blocked because the lab Owner lacks `iam.googleapis.com/denypolicies.create`. Retest only with
+      explicit deny-policy administration. Still test case/Unicode variants, conflicting MCP
+      metadata, and cross-project resource names. If a second controlled project is available, ensure
+      its MCP policy cannot be bypassed by selecting a caller/quota project where `mcp.tools.call` is
+      allowed. Allow at least two minutes for MCP-specific IAM propagation before interpreting a denial.
 - [ ] **Risk-hint accuracy in a Google-controlled client.** The live `tools/list` result marks
       `apikeys_update_key` as `readOnlyHint:false` but `destructiveHint:false`, even though it can
       remove restrictions and make a scoped key unrestricted. This is only reportable if a

@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — BigQuery/Vertex AI privesc and SCC post-exploitation audit batch
+- Rebuilt the BigQuery and Vertex AI privilege-escalation pages around 13 and 12 genuine paths, and
+  Security Command Center post-exploitation around 9. Every retained technique now has exact minimum
+  prerequisites, bounded impact, categorical Stealth, and an expandable telemetry table.
+- Corrected BigQuery fine-grained dataset ACL modes, the unaudited v1beta1 connection-IAM path,
+  authorized object boundaries, scheduled-query identities and Spark/remote execution; Vertex custom
+  code, Agent Engine, endpoint/batch and Workbench identities/access modes; and SCC mute/export,
+  detector timing, conditional-IAM, deletion and runtime-shape evasion semantics.
+- Removed or folded 19 false, redundant, or miscategorized headings across the three pages. A strict
+  heading scan now finds 146/393 qualifying privilege-escalation and 170/391 post-exploitation
+  sections rated, leaving 468; persistence remains 153/153.
+- This service-page batch used documentation and read-only command/reference checks only. It created
+  no cloud resource and made no configuration change.
+
 ### 2026-09-28 — API Keys remote MCP list parity verified
 - Live-tested `apikeys_list_keys` with disposable minimum-permission service accounts. The supported
   `roles/mcp.toolUser` + `apikeys.keys.list` pair succeeded; the same MCP role without the
@@ -16,6 +30,10 @@ Last updated: 2026-09-28
   though the principal held both underlying API permissions. Duplicate `params.name` fields in both
   orders showed consistent last-wins authorization/dispatch behavior, so no parser desync was found.
   The conditional binding and every disposable asset were removed and verified absent.
+- A `tool.isReadOnly` follow-up corrected the control model: that attribute is deny-policy-only, not
+  available for allow bindings. The baseline list/update calls reached the expected service paths,
+  but the scoped deny policy could not be created because the lab Owner lacks deny-policy creation.
+  No policy or API key was created; all disposable IAM and credential material was removed.
 
 ### 2026-09-28 — GKE, Compute post-exploitation, and Cloud Logging audit batch
 - Normalized 24 GKE privilege-escalation, 26 Compute post-exploitation, and 17 Cloud Logging
@@ -26,8 +44,9 @@ Last updated: 2026-09-28
   alias-IP and telemetry boundaries; and Logging audit classes, retention/CMEK behavior, linked
   datasets, retroactive copy, and future-only default settings.
 - Removed three false standalone GKE escalation headings and the obsolete Logging cross-project
-  sink bucket-name hijack. A strict heading scan now finds 121/404 qualifying privilege-escalation
-  and 161/399 post-exploitation sections rated, leaving 521; persistence remains 153/153.
+  sink bucket-name hijack. At that batch boundary, a strict heading scan found 121/404 qualifying
+  privilege-escalation and 161/399 post-exploitation sections rated; the newer batch above supersedes
+  those counts. Persistence remained 153/153.
 - This batch was a documentation and official-reference audit. It made no cloud mutation and created
   no test resource.
 
@@ -56,6 +75,11 @@ Last updated: 2026-09-28
   returned HTTP 400 while the untouched control remained readable. This contradicts the categorical
   documented limitation but did not bypass row/column authorization. All three attempts and every
   disposable asset were cleaned and verified.
+- The remaining `tabledata.list` column-policy matrix also enforced the boundary: an untagged-column
+  projection succeeded, while tagged and all-column requests returned 403 until the caller received
+  Fine-Grained Reader on the policy tag. Successful pages produced both observed BigQuery audit
+  formats; denied calls did not appear in that capture. The child tag and taxonomy were explicitly
+  deleted and verified 404, and the temporarily enabled Data Catalog API was restored to disabled.
 
 ### 2026-09-28 — Secret Manager managed Cloud SQL rotation privesc verified
 - Live-verified a new expected permission-composition technique: a caller with exactly
