@@ -2,6 +2,27 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Dialogflow live correction and new-surface refresh
+- Live-tested the provisional Dialogflow configured-service-account webhook claim under an isolated
+  zero-role fixture. Arbitrary external and controlled Cloud Run URLs were rejected because this
+  authentication mode supports only Google APIs. A Google-API URI-only PATCH without
+  `iam.serviceAccounts.actAs` was denied; the identical PATCH succeeded after granting Service
+  Account User. The provisional token-capture privesc page and SUMMARY entry were therefore removed.
+- Cleanup deleted the CX agent, Cloud Run control, receiver, test and service-agent identities,
+  temporary key/config and every IAM binding, then returned Dialogflow to disabled. Verification
+  found no active test asset, binding, local credential/config or API-state residue.
+- Re-ran the complete testable-permission catalog read-only: 13,701 unique permissions and 317
+  service prefixes, unchanged from the recorded baseline (8,996 GA, 4,570 Beta, 135 Deprecated;
+  sorted-name SHA-256 `7c7ba6cf2827f94ac6199fd2c18125f589e655ccc7eba38e1e867a9a6d0ce9ab`).
+  The latest official change-log families produced no distinct book technique.
+- Fresh release/API research queued managed workload identities on load-balancer backends, Cloud SQL
+  workforce-identity collisions and SQL Server login-hash export, Workbench scheduled user-ADC
+  execution, Backup and DR auto-protection, and several partial-update authorization checks. These
+  remain research leads until a bounded authorization or data boundary is demonstrated.
+- Deterministic coverage after the correction is 265/265 privilege-escalation, 289/289 post-
+  exploitation and 155/155 persistence headings with categorical Stealth: zero qualifying headings
+  are unrated.
+
 ### 2026-09-28 — Final unrated sweep: delivery, SSH, backup, identity and data access
 - Completed the deterministic metadata backlog across fifteen pages and retained 10 privilege-
   escalation plus 10 post-exploitation techniques. Every qualifying privesc, post-exploitation and
@@ -18,11 +39,11 @@ Last updated: 2026-09-28
   duplicate, destructive and unsupported variants were removed. Managed Kafka retains no standalone
   privilege-escalation primitive; the generic permissions page is reduced to real resource
   `setIamPolicy` and `actAs` plus code-execution patterns.
-- Dialogflow now separates external webhook-secret recovery from configured-service-account OAuth
-  token capture, conservatively retaining the documented `actAs` boundary. Data Fusion retains only
-  namespace secure-store value recovery, and Workflows retains workflow-source/identity plus
-  execution-data disclosure. Current audit contracts corrected older claims for Dialogflow, Data
-  Fusion, Managed AD and Workflows.
+- Dialogflow initially separated external webhook-secret recovery from a provisional configured-
+  service-account token-capture claim; the subsequent live test above rejected the capture path and
+  removed it. Data Fusion retains only namespace secure-store value recovery, and Workflows retains
+  workflow-source/identity plus execution-data disclosure. Current audit contracts corrected older
+  claims for Dialogflow, Data Fusion, Managed AD and Workflows.
 - Work used current official documentation, public schemas, installed SDK/source, CLI help and
   predefined-role inspection. No cloud resource, IAM binding, service configuration or audit policy
   was mutated, so no cleanup debt exists. All targeted official links resolved. The deterministic

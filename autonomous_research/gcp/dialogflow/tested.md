@@ -33,3 +33,28 @@
 - Reconfirmed `UpdateWebhook` and `DetectIntent` as off-by-default `DATA_WRITE` Dialogflow Data
   Access operations, and `GenerateAccessToken` as off-by-default `ADMIN_READ` IAM Credentials Data
   Access when that backend mint emits the documented method. No cloud state or receiver was used.
+
+## 2026-09-28 — configured-service-account live authorization test
+
+- Enabled Dialogflow only for the duration of an isolated fixture, created a disposable CX agent,
+  zero-role target service account, test caller and service-agent Token Creator grant, and used an
+  ephemeral receiver plus one zero-role Cloud Run control service. No real secret was created or
+  accessed.
+- Creating a webhook with `serviceAccountAuthConfig` and either the external receiver or the
+  controlled `run.app` URL returned `400 INVALID_ARGUMENT`: service-account authentication is only
+  supported for Google APIs. The external receiver never received a Google credential.
+- A flexible GET webhook targeting `https://storage.googleapis.com/storage/v1/b` was accepted. A
+  principal holding `roles/dialogflow.admin` and Service Usage Consumer, but no access on the
+  configured target account, then attempted a field-masked URI-only update to a nonexistent Secret
+  Manager access URL. The request returned `400 INVALID_ARGUMENT` and explicitly said the caller
+  lacked permission to act as the retained service account.
+- After granting that same principal `roles/iam.serviceAccountUser` on the target account, the
+  identical URI-only PATCH returned HTTP 200. This proves the current backend rechecks
+  `iam.serviceAccounts.actAs` even when `serviceAccountAuthConfig` is omitted from the update body.
+- The provisional token-capture privilege-escalation page and SUMMARY entry were removed. The valid
+  external-header/Basic/OAuth secret redirect remains post-exploitation because those authentication
+  modes do allow non-Google HTTPS receivers and do not attach a Google service account.
+- Cleanup deleted the agent, Cloud Run service, receiver, all test/service-agent identities, the
+  temporary service-account key and local gcloud configuration, removed every temporary IAM binding,
+  and restored Dialogflow to disabled. Verification found zero active test service accounts, project
+  IAM references, Cloud Run services, local key/config files, or enabled Dialogflow API state.

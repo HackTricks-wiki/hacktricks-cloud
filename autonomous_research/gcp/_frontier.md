@@ -354,12 +354,29 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       restored resources, network paths and grants, and return any initially disabled API to
       disabled. See `alloydb/checklist.md`.
 
-## 2026-09-28 boundary-day frontier — final unrated sweep
-- [ ] Test the Dialogflow CX configured-service-account webhook path with two minimum custom roles:
-      first determine whether a URI-only field-mask update rechecks `iam.serviceAccounts.actAs`, then
-      capture the exact IAM Credentials principal, scopes and audit location for the delegated access
-      token. Restore the URI immediately and remove the controlled endpoint and temporary grants. See
-      `dialogflow/checklist.md`.
+## 2026-09-28 boundary-day frontier — live correction and newly launched surfaces
+- [x] Dialogflow CX configured-service-account webhook authorization: external and Cloud Run
+      receivers were rejected, a Google-API URI-only update without `actAs` failed, and the authorized
+      control succeeded. The provisional token-capture page was removed and cleanup verified. See
+      `dialogflow/tested.md`.
+- [ ] Test Preview managed workload identity on global/regional load-balancer backend services. A
+      backend creator can select immutable `tlsSettings.identity`, while current docs expose no
+      `actAs`-style permission. Use a wildcard-free synthetic attestation rule and controlled mTLS
+      server; private-report any cross-identity use, then delete the backend, trust resources, certs,
+      network and grants.
+- [ ] Test whether Workbench schedule update can replace notebook content or a custom container while
+      preserving another user's stored execution authorization/ADC. Use synthetic user data and a
+      zero-role destination, and remove the schedule, execution job, image and grants immediately.
+- [ ] Document Cloud SQL Workforce Identity subject collision only after a two-provider synthetic
+      test proves the database-role crossover described by Google. Separately test SQL Server
+      `sp_help_revlogin` hash export under the smallest control-plane/database permission split;
+      delete the instance and every exported hash immediately.
+- [ ] Test Backup and DR Preview auto-protection with same-organization disposable projects to bound
+      policy/binding authorization versus later restore authority. Remove policies, bindings,
+      backups, vault, operator grants and synthetic workloads after all LROs settle.
+- [ ] Continue private-first partial-update checks for Eventarc pipelines and Cloud Scheduler: change
+      only a destination URI while omitting `actAs`, then use an authorized control. Never publish a
+      missing recheck before coordinated disclosure, and delete every route, token, receiver and SA.
 - [ ] In a disposable Firebase App Hosting backend, verify whether image-source Build plus Rollout
       alone executes under the existing backend identity without caller `actAs`; capture App Hosting,
       Cloud Build and Cloud Run principals and delete the rollout/build/image afterwards. See
