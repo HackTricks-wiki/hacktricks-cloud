@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — App Engine, API Keys, Batch, PAM, Binary Authorization, Config Controller, Cloud Domains and Service Directory
+- Rebuilt eight service surfaces around 5 privilege-escalation, 13 post-exploitation, 2 enumeration
+  and 2 resource-level persistence techniques. Every retained attack heading has explicit minimum
+  prerequisites, bounded impact, categorical Stealth and an expandable telemetry table; the batch
+  received reciprocal review across independent service groups.
+- App Engine removed deletion and duplicate deployment headings, corrected Memcache Console versus
+  in-app audit behavior, version-read audit classes, Logging permissions and source-retention bounds.
+  `exportAppImage` remains a ledger-only candidate because destination authorization, writer identity
+  and victim/destination telemetry are not yet established.
+- API Keys retains only service-account-bound authorization-key escalation; ordinary key creation,
+  secret reads and restriction changes are not IAM escalation. Batch retains run-as-service-account
+  execution with exact reporter/logging prerequisites, and PAM retains entitlement activation while
+  rejecting public requester and self-approval claims.
+- Binary Authorization now requires an actual GKE/Cloud Run deployment foothold after policy,
+  attestor or breakglass abuse. Config Controller is bounded to the configured KCC identity, correct
+  Kubernetes audit classes and real Secret material. Cloud Domains and Service Directory split reads
+  into enumeration and resource IAM into persistence, while retaining only consequential DNS,
+  transfer/contact and endpoint-redirection behaviors.
+- Work used current official documentation, local CLI/source/role inspection and a read-only existing
+  App Engine inventory query. No cloud resource, IAM binding or service configuration was created or
+  changed; the Binary Authorization source-inspection clone was removed and no cleanup debt remains.
+  The deterministic scan now reports 251/284 privilege-escalation, 258/334 post-exploitation and
+  155/155 persistence headings with categorical Stealth, leaving 109 qualifying headings to audit.
+
 ### 2026-09-28 — BigQuery, Compute Engine, Vertex AI and IAM end-to-end audit
 - Rebuilt and independently cross-reviewed four major surfaces. Retained 12 BigQuery privilege-
   escalation, 6 post-exploitation, 4 persistence and 1 authenticated external-access techniques;

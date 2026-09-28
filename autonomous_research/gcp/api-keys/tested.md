@@ -142,3 +142,35 @@ configuration were deleted, and cleanup independently verified no residue.
 - https://docs.cloud.google.com/api-keys/docs/reference/mcp/tools_list/apikeys_update_key
 - https://docs.cloud.google.com/service-usage/docs/deprecations
 - https://docs.cloud.google.com/iam/docs/permissions-change-log#2026-09-22
+
+## 2026-09-28 — privilege-escalation taxonomy and authorization-key review
+
+Documentation, local role-description, local gcloud-help, and installed gcloud-source review only.
+No key, IAM binding, API state, or organization policy was changed.
+
+- Retained one genuine privilege transition: creating an **authorization key** bound to a
+  more-privileged service account. Unlike a standard key, Google processes it as the bound service
+  account, but only for APIs supporting authorization keys and within its restrictions.
+- Removed standard-key creation, `getKeyString`, and restriction broadening as privesc H3s. They are
+  useful credential-access/persistence or billing/API abuse, but a standard key does not authenticate
+  an IAM principal.
+- The enforced authorization-key boundaries are `apikeys.keys.create` on the key project plus
+  `iam.serviceAccounts.actAs` and `iam.serviceAccountApiKeyBindings.create` on the target service
+  account. The synchronous CLI flow also needs `serviceusage.operations.get` to poll the create LRO
+  and recover its completed response. Google additionally documents API Keys Admin + Service Usage
+  Viewer as the role-based key creation prerequisite; the local CLI sends `serviceAccountEmail` in
+  the same `CreateKey` request.
+- The default managed constraint blocks service-account API-key bindings except allowed services;
+  projects without an organization are unsupported. Gemini is allowed by the default constraint.
+- Corrected telemetry: `CreateKey` is an Admin Activity LRO; `GetKeyString` is `ADMIN_READ` Data
+  Access (off by default), not `DATA_READ`; `ListKeys` is explicitly in the no-audit-method list.
+  Current public API Keys and IAM audit catalogs do not expose a second binding-specific method.
+- Authorization-key use is not recorded in service-account usage metrics and obscures the end user's
+  identity. Downstream audit coverage is entirely the target API's contract.
+
+Official sources:
+
+- https://docs.cloud.google.com/docs/authentication/api-keys
+- https://docs.cloud.google.com/docs/authentication/api-keys-best-practices
+- https://docs.cloud.google.com/api-keys/docs/access-control
+- https://docs.cloud.google.com/api-keys/docs/audit-logging

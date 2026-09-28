@@ -23,6 +23,22 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       workforce identity pool + external IdP can be stood up (needs org access), live-verify the
       refresh-token capture end-to-end and quantify the phishing/consent step.
 
+## 2026-09-28 boundary-day frontier — App/runtime delegation and service registries
+- [ ] Validate App Engine `exportAppImage` only with a disposable Artifact Registry repository:
+      determine the actual writer identity, exact destination permissions, cross-project behavior,
+      returned image contents and both projects' telemetry, then delete the exported package and
+      repository. Keep it out of the book until those material boundaries are established.
+- [ ] In an organization-owned disposable project whose managed constraint already permits a test
+      API, validate service-account authorization-key creation with the smallest custom roles and
+      capture LRO/binding telemetry. Do not loosen organization policy or use a project where the
+      key's 30-day recovery window violates cleanup requirements.
+- [ ] Revalidate Binary Authorization named platform policies, attestor delegation and breakglass
+      telemetry only against disposable GKE/Cloud Run workloads; restore the exact original policy,
+      delete every occurrence/revision/Pod and remove only the injected public key.
+- [ ] Use disposable domains and isolated Service Directory clients to capture DNSSEC/registrar
+      propagation, endpoint-selection behavior and downstream DNS/network evidence. Never transfer a
+      production registration, flush shared caches or repoint a namespace used by real workloads.
+
 ## 2026-09-28 boundary-day frontier — API Keys remote MCP
 - [ ] The `apikeys_list_keys` two-layer authorization case is **resolved as correctly enforced**:
       `roles/mcp.toolUser` + `apikeys.keys.list` succeeded, while removing either usable layer was

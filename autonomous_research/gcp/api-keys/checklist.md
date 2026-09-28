@@ -43,3 +43,21 @@ technique unless testing proves a distinct security boundary failure.
 - Do not re-test `serviceusage.mcppolicy.get/update` or `serviceusage.effectivemcppolicy.get` as an
   enablement control: MCP policy management was shut down on 2026-07-30 and these permissions are
   deprecated catalog residue.
+
+## Authorization-key follow-ups
+
+- [ ] In an organization-owned disposable project whose managed constraint already permits a test
+      API, verify the minimum custom-permission matrix for authorization-key creation. Do not loosen
+      organization policy merely for this test.
+- [ ] Capture one authorization-key `CreateKey` LRO and confirm whether any non-public,
+      binding-specific audit entry accompanies the catalogued API Keys entry. Treat absence from the
+      public catalog as a documented detection boundary, not proof that no internal or future entry
+      can appear.
+- [ ] Maintain a current allow-list of APIs that actually support authorization keys. Do not infer
+      that an authorization key is a universal service-account credential from the service account's
+      broader IAM grants.
+- [ ] Verify whether a key project can bind a service account from a different project before
+      documenting any cross-project boundary. Current public creation examples use a service-account
+      email but do not state a supported cross-project contract.
+- [ ] Avoid new-key probes in environments requiring immediate hard cleanup: API keys remain
+      recoverable for 30 days after deletion.
