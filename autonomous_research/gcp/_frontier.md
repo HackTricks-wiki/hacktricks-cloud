@@ -7,6 +7,14 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-28 boundary-day frontier — API Hub plugins
+- [ ] On an existing disposable API Hub instance, test `plugininstances.update` without
+      `plugininstances.applyConfig` against authentication/additional-config fields, then measure
+      Cloud Audit Logs for every current plugin/instance create, update, execute and delete method.
+- [ ] Resolve callback identity, redirect credential forwarding and hosting-account delegation using
+      only synthetic secrets and zero-role identities. Provisioning this lab is not clean because
+      deprovision leaves a seven-day Apigee organization cooldown; use `api-hub/checklist.md`.
+
 ## 2026-09-28 boundary-day frontier — Storage Batch Operations dry run
 - [x] Corrected the existing absolute caller-identity statement: real transforms re-check caller
       permissions, but bucket-list/manifest runtime also depends on the job-project service agent;

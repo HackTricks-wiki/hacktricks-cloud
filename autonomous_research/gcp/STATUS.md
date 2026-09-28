@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — API Hub plugin boundary mapped; fixture intentionally not provisioned
+- Mapped API Hub's current plugin identity chain: the hosting-service account, not the plugin-instance
+  creator, is expected to receive Secret Accessor and Token Creator on referenced secrets/accounts.
+  Missing caller actAs alone is therefore not a reportable boundary failure.
+- Retained two sharper tests: IAM exposes `plugininstances.applyConfig` although current discovery and
+  protobuf omit the corresponding RPC while update tooling accepts credential fields; and the
+  2026-09-24 audit matrix omits most current plugin/instance lifecycle and execute methods. Callback
+  authentication, redirect handling and cross-project target authorization are also queued.
+- No API Hub instance was provisioned. The lab has both API Hub and Apigee disabled, and teardown of
+  a newly provisioned API Hub leaves a seven-day soft-deleted Apigee organization/cooldown. Durable
+  binary tests and cleanup gates are recorded without creating cloud residue or a public claim.
+
 ### 2026-09-28 — Storage Batch Operations execution-identity correction
 - Reconciled current documentation with the existing live transform result. Real prefix transforms
   re-check caller object permissions, but bucket-list/manifest runtime failures also use the

@@ -16,9 +16,11 @@
 
 ## Other newly surfaced managed-deputy candidates
 
-- [ ] API Hub user-defined plugin: determine whether a plugin-instance creator can select a
-      caller-controlled hosting service plus a pre-authorized token service account without the
-      caller having actAs. Bound the plugin protocol first and use a zero-role account.
+- [x] API Hub design review: accepting a target account without caller actAs is expected delegation
+      through the plugin hosting account, which must hold Token Creator. The sharper update/applyConfig,
+      callback-authentication and missing-audit hypotheses are now in `api-hub/checklist.md`.
+- [ ] Run those API Hub controls only in an already-provisioned disposable project; provisioning the
+      current lab would leave an Apigee organization in seven-day soft-delete/cooldown state.
 - [ ] Storage Batch Operations: submit a cross-project `dryRun` with a service-agent-readable source
       bucket but a caller lacking bucket/object read. A nonzero hidden-object count/byte total would
       establish a deputy disclosure; a caller-permission denial is the expected secure result.
