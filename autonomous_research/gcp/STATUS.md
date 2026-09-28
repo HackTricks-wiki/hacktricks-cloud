@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — App Engine, Composer, Resource Manager and Artifact Registry
+- Rebuilt App Engine privilege escalation around 2 genuine primitives, Composer privilege
+  escalation around 4, Resource Manager privilege escalation around 5 and Artifact Registry
+  post-exploitation around 6. Every retained section has exact prerequisites, bounded impact,
+  categorical Stealth and an expandable telemetry table; all four rewrites received independent
+  cross-review.
+- Added a missing IAM v3 expected escalation path: a caller with the project-side PolicyBinding
+  permission and organization-side PAB bind/unbind permission can delete a project-principal-set
+  binding or conditionally exclude a controlled principal. This restores eligibility only; an
+  existing allow grant remains necessary, deny still applies and other PABs remain effective.
+- Live-validated project-scoped tag telemetry with a no-condition fixture. TagValue IAM emitted
+  `google.cloud.resourcemanager.v3.TagValues.SetIamPolicy` rather than the summary catalog label and
+  omitted the granted member/role. TagBinding create/delete emitted paired Admin Activity entries
+  for value-side and project-side authorization. The binding, value and key were deleted and direct
+  tag plus Cloud Asset/IAM searches confirmed no residue.
+- Corrected App Engine deployment/debug identities and log classes; Composer create/PyPI/Airflow/
+  DAG-injection bounds; Resource Manager IAM/tag/move commands and authorization; and Artifact
+  Registry downloads, export, public exposure, scanning/platform logging and attachment semantics.
+- The reproducible qualifying-H3 scan now finds 175/341 privilege-escalation and 188/366
+  post-exploitation sections with explicit Stealth; persistence remains 153/153. This leaves 344
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Storage, Artifact Registry, Bigtable and model-router boundary
 - Rebuilt Cloud Storage privilege escalation around 4 genuine primitives, Artifact Registry
   privilege escalation around 3 and Bigtable post-exploitation around 5. Reciprocal cross-review
@@ -304,7 +326,7 @@ Last updated: 2026-09-28
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 165/356 privesc, 182/367 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 376 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 175/341 privesc, 188/366 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 344 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |

@@ -78,3 +78,86 @@ operation and no longer claims an always-on `activity` event. Its broader claim 
 pulls produce no audit event even after Data Read is enabled still conflicts with the current official
 audit contract and should be presented only as a dated environment observation, not the product
 baseline.
+
+## 2026-09-28 — post-exploitation page audit
+
+The page now retains six bounded post-compromise primitives:
+
+1. Pull a known artifact with `artifactregistry.repositories.downloadArtifacts` and inspect it
+   locally for sensitive content.
+2. Start a server-side Cloud Storage export with
+   `artifactregistry.repositories.exportArtifacts`.
+3. Expose one repository by granting `roles/artifactregistry.reader` to `allUsers` with
+   `artifactregistry.repositories.setIamPolicy`.
+4. Disable automatic container vulnerability scanning with
+   `artifactregistry.repositories.update`.
+5. Disable Artifact Registry platform logs at repository or project/location scope with
+   `artifactregistry.repositories.update` or `artifactregistry.projectconfigs.update`.
+6. Add attacker-controlled attachment metadata using `artifactregistry.attachments.create` and,
+   for the local-file gcloud workflow, `artifactregistry.files.upload`.
+
+Material corrections and bounds:
+
+- Replaced the old authenticated-pull claim with the current audit contract: Docker manifest/blob
+  reads and package downloads are Data Access `DATA_READ`, disabled by default but emitted when the
+  applicable class is enabled. Independently configured platform logs use log ID
+  `artifactregistry.googleapis.com/requests` and can also record pulls.
+- Kept `ExportArtifact` as an off-default Data Read LRO, but removed claims that it necessarily
+  accepts any cross-project attacker bucket or bypasses egress/VPC-SC. The REST contract names only
+  `exportArtifacts` on the source; destination writability and perimeter behavior remain validation
+  prerequisites.
+- Distinguished the reliable always-on `SetIamPolicy` event from subsequent accesses to a public
+  repository. The audit contract says public resources with `allUsers` or `allAuthenticatedUsers`
+  do not generate Data Access audit logs for resource access, while enabled platform logs are a
+  separate signal.
+- Bounded vulnerability-scanning evasion to automatic scanning of affected Docker-repository
+  images. It does not remove existing findings or disable On-Demand/third-party scanning.
+- Corrected platform-log scope and inheritance: project configuration is location-scoped and affects
+  repositories that inherit it; an explicit repository configuration overrides it. Disabling
+  platform logs neither deletes old logs nor disables Cloud Audit Logs.
+- Bounded attachment creation to misleading consumers that trust attacker-controlled metadata
+  without validating publisher/signature. It does not forge a signature, replace Artifact Analysis
+  findings, or automatically satisfy Binary Authorization. The exact gcloud workflow needs both
+  `attachments.create` and `files.upload`; `CreateAttachment` is always-on Admin Activity.
+
+Removed or folded from the post-exploitation page:
+
+- Repository/rule/version/package deletion and DENY-download rules: destructive availability or
+  rollback damage rather than a focused information-gathering or defense-evasion primitive.
+- Attachment deletion: destructive evidence removal and lower value than the retained metadata-
+  integrity case; its `DeleteAttachment` Data Write behavior remains documented by the official
+  audit catalog and can be revisited if live testing shows a distinct high-value chain.
+- The VPC-SC allowance aside: a high-privilege enabler for the separate remote-repository persistence
+  technique, not a standalone Artifact Registry post-exploitation technique.
+
+This audit used current official Google Cloud documentation and local gcloud help only. No live
+Artifact Registry, Cloud Storage, IAM, logging, or scanning configuration was read or changed.
+
+## 2026-09-28 — independent post-exploitation cross-review
+
+No cloud resources were read or changed. All six retained techniques were rechecked against the
+current Artifact Registry REST, IAM, audit-logging, platform-logging, attachment, scanning, Cloud
+Storage audit, and local gcloud contracts.
+
+- Clarified the platform-log hierarchy and unset-state caveat. An explicit repository setting
+  overrides its location-scoped project setting, while clearing the repository setting restores
+  project inheritance. The current product guide says clearing the project leaves only explicitly
+  enabled repositories logging; current gcloud help instead labels it a fallback to organization
+  settings or Artifact Registry defaults. The page now recommends inspecting effective state and
+  uses explicit disable as the reliable evasion action. Severity thresholds remain independently
+  relevant.
+- Narrowed the public-resource audit exception to its documented boundary: Data Access reads of a
+  public `allUsers`/`allAuthenticatedUsers` resource are omitted. The authenticated Admin Activity
+  `SetIamPolicy` operation remains always-on; separately enabled platform logs can still record
+  public requests.
+- Removed an implied guarantee of destination-side Cloud Storage audit telemetry for
+  `ExportArtifact`. The official method guarantees an Artifact Registry Data Read LRO and documents
+  overwrite semantics, but does not publish the backend writer identity, destination IAM/VPC-SC
+  contract, or promise a separate Storage event. Any `storage.objects.create` entry is now labelled
+  conditional and unverified.
+- Split attachment permissions by operation. Direct create against pre-existing File resources
+  documents only `artifactregistry.attachments.create`; the shown local-file gcloud workflow first
+  needs `artifactregistry.files.upload`. Also corrected the REST target bound to Version, Package, or
+  Repository while noting that the shown gcloud flow expects a fully qualified version.
+- Revalidated download method names, role membership for `downloadArtifacts`/`exportArtifacts`,
+  scanning and platform-log commands, all six impact bounds, and all retained stealth categories.

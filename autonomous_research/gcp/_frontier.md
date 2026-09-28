@@ -70,6 +70,18 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       IAM is not propagated to the indexed copy, so an authorized app user can search fields in that
       copy without direct table permission. This is expected post-exploitation, not a bypass.
 
+## 2026-09-28 boundary-day frontier — Resource Manager IAM v3 and tags
+- [x] Added the missing PAB PolicyBinding restriction-escape chain: delete the last applicable
+      project-principal-set binding or conditionally exclude a controlled principal. Exact project
+      and organization permissions are required; impact is eligibility restoration only, not a new
+      allow grant or deny bypass. See `resource-manager/tested.md`.
+- [x] Live-captured project tag IAM and binding telemetry. Runtime TagValue IAM uses
+      `TagValues.SetIamPolicy`, omits the member/role, and TagBinding create/delete emits paired
+      value-side and target-side Admin Activity records. The no-condition fixture was fully removed.
+- [ ] In an authorized organization-scoped fixture, capture PAB PolicyBinding update/delete LRO
+      placement and project/folder moves. The current lab project has no organization authority;
+      keep the official dual-resource permission bounds until such a fixture is available.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -96,8 +108,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Cloud Storage, Artifact Registry and Bigtable
-      batch finds **376 unrated** qualifying sections: 165/356 privesc and 182/367
+      A fresh reproducible 2026-09-28 scan after the App Engine, Composer, Resource Manager and
+      Artifact Registry batch finds **344 unrated** qualifying sections: 175/341 privesc and 188/366
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 153/153 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -105,6 +117,7 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
       Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
       Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
-      Discovery Engine and Bigtable post-exploitation, Cloud Storage and Artifact Registry privesc,
-      and API Gateway unauthenticated techniques have been handled.
+      Discovery Engine, Bigtable and Artifact Registry post-exploitation, Cloud Storage, Artifact
+      Registry, App Engine, Composer and Resource Manager privesc, and API Gateway unauthenticated
+      techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
