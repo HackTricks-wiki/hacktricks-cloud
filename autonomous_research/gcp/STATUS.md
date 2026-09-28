@@ -23,6 +23,12 @@ Last updated: 2026-09-29
   under Monitoring retention, so future audit controls must reuse an existing disposable series.
   Technique totals remain 267/267 privilege escalation, 292/292 post-exploitation and 156/156
   persistence.
+- Follow-up mapped the hidden gRPC-only consumer IAM name as
+  `projects/{project}/services/{service}/consumers/{consumer}`. Reads and resource-local permission
+  tests worked, but etag-protected policy mutation was denied for both exact Consumer Admin and the
+  project Owner despite `.setIamPolicy=true`. No binding was created; both follow-up identities and
+  all grants/keys/configs were removed. The inconsistency is retained as an onboarding-gated
+  contract check, not a persistence technique or vulnerability.
 
 ### 2026-09-29 — new Google Cloud Observability v1 surface added
 - Added the missing Observability service-enumeration page and two bounded post-exploitation paths:

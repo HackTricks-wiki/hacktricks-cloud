@@ -21,10 +21,14 @@
 - [ ] In a project with an existing disposable `_Trace` bucket, test `telemetry.traces.write` and
       compare stored resource/identity fields and audit behavior without creating new permanent
       storage.
-- [ ] Find the callable consumer-resource IAM surface for `telemetry.consumers.getIamPolicy` and
-      `.setIamPolicy`; test only synthetic same-project principals. Determine whether bindings
-      survive ordinary project-role removal and whether arbitrary principals can use integrated
-      `write*` roles.
+- [x] Locate the consumer-resource IAM surface. It is gRPC-callable at
+      `projects/{project}/services/{service}/consumers/{consumer}` and returns independent empty
+      policies for syntactically valid names. Both Consumer Admin and Owner were denied on an
+      etag-protected set despite resource-local `.setIamPolicy=true`; no binding was created.
+- [ ] Recheck consumer-policy mutation only with an authorized onboarded-service fixture or public
+      documentation for service/consumer IDs. If set succeeds, prove the hidden `write*` permission
+      on a second principal, restore the exact empty policy, and keep any cross-project deputy
+      behavior private-first.
 - [ ] Negative-test a payload whose `gcp.project_id` names another authorized test project while
       the quota header and writer grant name the first project. Any cross-project destination not
       enforced by target IAM is private-first.

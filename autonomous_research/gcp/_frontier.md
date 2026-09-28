@@ -17,6 +17,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       cross-project destination enforcement with synthetic principals, and regional/VPC-SC parity.
       Reuse an existing disposable `_Trace` bucket for trace tests; never create non-deletable
       storage merely to exercise ingestion. See `telemetry/checklist.md`.
+- [x] Located the gRPC consumer-policy resource grammar and negative-tested one synthetic binding.
+      Resource-local IAM reported `.setIamPolicy=true`, but Consumer Admin and Owner were both
+      denied by an additional backend/onboarding gate; the policy stayed empty. Do not promote this
+      to persistence without an onboarded-service fixture.
 
 ## 2026-09-29 boundary-day frontier — Observability API
 - [x] Mapped the new stable v1 storage/scope surface and shipped sensitive trace reads plus the

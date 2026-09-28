@@ -35,3 +35,35 @@
   HackTricks, not a vulnerability report.
 - A protected audit-log-name bypass, cross-project destination bypass, or consumer-IAM confused
   deputy would be private-first. None was claimed or tested in this batch.
+
+## 2026-09-29 — hidden consumer-IAM interface boundary
+
+- The Service Usage configuration exposes `google.iam.v1.IAMPolicy` on
+  `telemetry.googleapis.com`, even though authenticated REST discovery remained unavailable and all
+  guessed REST-transcoded IAM paths returned route-level 404s. Direct authenticated gRPC disclosed
+  the exact resource grammar through validation errors:
+  `projects/{project}/services/{service}/consumers/{consumer}`.
+- `GetIamPolicy` accepts syntactically valid project-ID/number, service-ID and consumer-ID variants
+  and returns an independent empty policy with etag `002001`; it does not require a pre-existing
+  discoverable consumer resource. Resource-local `TestIamPermissions` returned both
+  `telemetry.consumers.getIamPolicy` and `.setIamPolicy` to the isolated Consumer Admin.
+- An etag-protected attempt to grant a second synthetic identity
+  `roles/telemetry.serviceLogsWriter` was denied by an additional backend gate. The exact Consumer
+  Admin and the project Owner both received `PERMISSION_DENIED: The caller does not have
+  permission`, despite resource-local `TestIamPermissions` returning `.setIamPolicy=true`. A final
+  read confirmed zero bindings; no hidden permission or OTLP write test followed.
+- No Telemetry audit record appeared for get/test or either denied set attempt under the default
+  project audit policy. This does not establish permanent silence, and no successful write existed
+  to classify.
+- Cleanup deleted both probe identities, both user-managed keys/configs, Service Usage Consumer and
+  Consumer Admin bindings, and local response/key files. The hidden policy remained empty, project
+  audit configuration remained null, and the pre-existing enabled Telemetry API was preserved.
+
+### Interpretation
+
+- The policy plane is real and gRPC-callable, but mutation appears restricted to onboarded/internal
+  service context beyond IAM permission evaluation. Do not publish consumer-IAM persistence from
+  the permission names or the readable empty policy.
+- The mismatch between `TestIamPermissions=true` and a denied method is a product/role-contract
+  inconsistency, not a security vulnerability. Recheck only with an authorized onboarded-service
+  fixture or new public documentation.
