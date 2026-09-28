@@ -1,5 +1,9 @@
 # API Gateway — open leads
 
+- [x] Test whether Preview model routing accepts an arbitrary HTTPS backend and forwards a reusable
+  OAuth access token. The arbitrary backend was accepted, but it received a Google-signed,
+  one-hour identity JWT whose audience was exactly the configured backend URL—not a reusable OAuth
+  token. Keep domain-trust guidance, but do not report token exfiltration as a vulnerability.
 - [ ] Live-test MCP `tools/call` against JWT- and API-key-protected synthetic operations and verify
   there is no disagreement between REST-route and JSON-RPC authorization, including duplicate
   `params.name`, duplicate arguments, type coercion, encoded path values and conflicting header/body

@@ -2,6 +2,26 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Storage, Artifact Registry, Bigtable and model-router boundary
+- Rebuilt Cloud Storage privilege escalation around 4 genuine primitives, Artifact Registry
+  privilege escalation around 3 and Bigtable post-exploitation around 5. Reciprocal cross-review
+  corrected raw versus condition-safe IAM writes, HMAC constraints and metrics, Composer/Cloud
+  Build telemetry, Docker probe permissions, tag and `setIamPolicy` semantics, Bigtable
+  read-modify-write permissions, `DropRowRange` detection and change-stream recovery limits.
+- Removed or folded low-value reads/writes, destructive-only actions, obsolete GCR coverage,
+  unsupported staging races and duplicate techniques. Also corrected Artifact Registry
+  `ExportArtifact` to off-default Data Access `DATA_READ`, with start/completion LRO entries when
+  enabled.
+- Live-tested API Gateway Preview model routing against a disposable arbitrary HTTPS backend.
+  Validation accepted the backend, but the router forwarded a one-hour Google-signed identity JWT
+  whose audience was exactly that backend URL—not a reusable OAuth access token. The token-leak
+  hypothesis is closed; arbitrary-backend trust remains an expected high-trust configuration
+  concern. The gateway and every fixture asset were deleted, the three initially disabled APIs
+  were restored to disabled, and Cloud Asset/IAM searches found no residue.
+- The reproducible qualifying-H3 scan now finds 165/356 privilege-escalation and 182/367
+  post-exploitation sections with explicit Stealth; persistence remains 153/153. This leaves 376
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — IAM, Cloud Build, Cloud SQL, Discovery Engine and API Gateway MCP
 - Rebuilt IAM privilege escalation around 7 genuine primitives, Cloud Build privilege escalation
   around 3 and Cloud SQL post-exploitation around 9. Every retained H3 has exact prerequisites,
@@ -284,7 +304,7 @@ Last updated: 2026-09-28
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 163/372 privesc, 180/377 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 406 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 165/356 privesc, 182/367 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 376 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |

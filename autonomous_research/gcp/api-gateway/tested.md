@@ -2,6 +2,31 @@
 
 Last checked: 2026-09-28
 
+## 2026-09-28 — model-router arbitrary-backend credential boundary
+
+- Deployed a bounded OpenAPI 3.x model router whose default model targeted a disposable public
+  Cloud Run capture service rather than a Google model endpoint. API-config validation accepted the
+  arbitrary HTTPS backend, consistent with the Preview documentation's warning that backend-domain
+  allowlisting is not enforced.
+- The capture service returned only credential shape and selected decoded claims; it never returned
+  or logged the token. Two anonymous requests reached the selected backend with `Authorization:
+  Bearer` and HTTP 200.
+- The forwarded credential was a three-segment Google-signed JWT, not an opaque OAuth access token:
+  issuer `https://accounts.google.com`, audience exactly equal to the configured backend URL, the
+  configured backend service-account email, and a 3,600-second lifetime. This closes the reusable
+  OAuth-token exfiltration hypothesis. A malicious configured backend can receive its own
+  audience-bound identity token, which is expected backend-auth behavior and still reinforces that
+  model-router configuration is a high-trust control plane.
+- API Gateway wrote the ordinary platform request entry under
+  `apigateway.googleapis.com/requests`; `jsonPayload.apiMethod` resolved to the generated
+  `BoundedModelRoute` operation and anonymous `jsonPayload.consumerNumber` was `0`. The backend
+  request appeared separately in `run.googleapis.com/requests`.
+- Deleted the gateway, successful API config and API, Cloud Run service, source-build Artifact
+  Registry repository, bucket and dedicated service account; the earlier rejected config never
+  created a resource. Restored API Gateway,
+  Service Management and Service Control to their initially disabled state, removed the temporary
+  sources/responses, and confirmed Cloud Asset and IAM searches contained no `ht-mr` residue.
+
 ## 2026-09-28 — MCP anonymous tool-discovery default live validation
 
 - Enabled API Gateway, Service Management and Service Control from their initially disabled state

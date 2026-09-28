@@ -58,6 +58,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       duplicate tool names/arguments, type and path coercion, case-variant headers, Agent Registry
       publication/removal and attacker-written tool descriptions. Use `api-gateway/checklist.md` and
       keep an actual boundary failure private.
+- [x] Tested Preview model routing with a disposable arbitrary HTTPS backend. Config validation
+      accepted the backend, but runtime authentication was a Google-signed, one-hour identity JWT
+      audience-bound to that exact URL—not a reusable OAuth access token. The complete no-residue
+      fixture is recorded in `api-gateway/tested.md`; do not report OAuth-token exfiltration.
 - [x] Rejected BigQuery data-agent default Google-managed credentials as a standalone escalation:
       Google documents one-time end-user OAuth and execution with that user's permissions. Retained
       Agent Registry/A2A identity-mix-up and editor-to-user disclosure variants as controlled test
@@ -92,8 +96,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the IAM, Cloud Build, Cloud SQL, Discovery Engine
-      and API Gateway MCP batch finds **406 unrated** qualifying sections: 163/372 privesc and 180/377
+      A fresh reproducible 2026-09-28 scan after the Cloud Storage, Artifact Registry and Bigtable
+      batch finds **376 unrated** qualifying sections: 165/356 privesc and 182/367
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 153/153 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -101,5 +105,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
       Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
       Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
-      Discovery Engine post-exploitation, and API Gateway unauthenticated techniques have been handled.
+      Discovery Engine and Bigtable post-exploitation, Cloud Storage and Artifact Registry privesc,
+      and API Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
