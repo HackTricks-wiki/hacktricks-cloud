@@ -8,11 +8,13 @@ technique unless testing proves a distinct security boundary failure.
 
 ## Possible vulnerabilities — keep internal until verified
 
-- [ ] **MCP authorization parity.** With minimum-permission test principals, verify that every tool
-      requires both `mcp.tools.call` and its underlying permission: `apikeys.keys.list`, `.get`,
-      `.getKeyString`, `.create`, `.update`, `.delete`, `.undelete`, or `.lookup`. Test each half
-      independently as well as the valid pair. A tool succeeding with only one half is reportable;
-      normal two-layer enforcement is not a book technique.
+- [ ] **MCP authorization parity.** The read-only `apikeys_list_keys` case is complete: a principal
+      with `roles/mcp.toolUser` plus `apikeys.keys.list` succeeded, while removing the underlying
+      permission produced an explicit denial and an underlying-only case failed at the MCP gate.
+      Repeat the pair/half matrix for `.get`, `.getKeyString`, `.create`, `.update`, `.delete`,
+      `.undelete`, and `.lookup` only when a no-residue fixture exists. A tool succeeding with only
+      one half is reportable; normal two-layer enforcement is not a book technique. Allow at least
+      two minutes for endpoint-specific IAM propagation before interpreting a denial.
 - [ ] **Conditional-IAM binding and project selection.** Bind `roles/mcp.toolUser` to one exact
       `tool.name`, deny non-read-only tools with `tool.isReadOnly`, and try other tool names, duplicate
       JSON fields, case/Unicode variants, conflicting MCP metadata, and cross-project resource names.
@@ -23,9 +25,10 @@ technique unless testing proves a distinct security boundary failure.
       remove restrictions and make a scoped key unrestricted. This is only reportable if a
       Google-controlled client treats the hint as a meaningful confirmation/safety boundary and
       performs restriction removal without the expected warning.
-- [ ] **Audit parity.** For one allowed read and one reversible update, determine whether MCP emits
-      only `SERVICE_NAME/mcp`, both MCP and underlying API entries, or another shape. Confirm that
-      `DATA_READ` is absent with default logging and that the update is attributable Admin Activity.
+- [ ] **Audit parity.** The allowed and denied `apikeys_list_keys` calls produced no MCP audit entry
+      under default logging, as expected for Data Access. For one reversible update, determine
+      whether MCP emits only `SERVICE_NAME/mcp`, both MCP and underlying API entries, or another
+      shape, and confirm that the update is attributable Admin Activity.
 
 ## Test constraints
 

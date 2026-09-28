@@ -65,6 +65,33 @@ permission catalog and existing wiki. Treat this as a parity test case, not evid
 - API Keys MCP does not justify a standalone book technique unless a parity, conditional-IAM, or
   project-binding failure is live-confirmed.
 
+## 2026-09-28 — live MCP authorization-parity probe
+
+The `apikeys_list_keys` wrapper enforced both authorization layers in a minimum-permission live
+matrix. The API Keys API was already enabled; the test created no API key and read no key string.
+
+- A disposable service account with `roles/mcp.toolUser`,
+  `roles/serviceusage.serviceUsageConsumer`, and a custom role containing only
+  `apikeys.keys.list` reached the wrapper and returned HTTP 200 successfully.
+- An otherwise identical service account without `apikeys.keys.list` reached the wrapper but
+  returned a tool error naming the missing `apikeys.keys.list` permission.
+- A separate underlying-only case without a usable MCP grant was denied at the
+  `mcp.googleapis.com/tools.call` gate. Project `testIamPermissions` reports the allow-policy name
+  as `mcp.tools.call`, while the denial message uses its deny-policy/full-service spelling
+  `mcp.googleapis.com/tools.call`; these are two forms of the same documented gate, not two
+  independently grantable permissions.
+- MCP's authorization cache lagged the Resource Manager `testIamPermissions` result: both grants
+  were already visible through IAM before the MCP endpoint accepted them. The valid principal
+  succeeded after roughly 30 seconds; the negative principal did not reach the underlying API Keys
+  check until roughly 90 seconds. Short, immediate probes can therefore produce false conclusions.
+- The successful read and denied read produced zero
+  `protoPayload.serviceName="apikeys.googleapis.com/mcp"` entries under the project's default audit
+  configuration, consistent with MCP Data Access logging being disabled by default.
+
+Result: **no authorization bypass** for `apikeys_list_keys`. All disposable custom roles, service
+accounts, keys, IAM bindings and isolated local configurations were deleted; a final independent
+inventory check found no `ht-mcp-*` identity, binding, live custom role or temp directory.
+
 ### Official sources
 
 - https://docs.cloud.google.com/release-notes#September_25_2026

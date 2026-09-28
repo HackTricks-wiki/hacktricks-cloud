@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — API Keys remote MCP list parity verified
+- Live-tested `apikeys_list_keys` with disposable minimum-permission service accounts. The supported
+  `roles/mcp.toolUser` + `apikeys.keys.list` pair succeeded; the same MCP role without the
+  underlying permission reached the wrapper and was denied `apikeys.keys.list`; an underlying-only
+  case was denied at the MCP gate. No authorization bypass was found.
+- Resource Manager showed the grants before the MCP endpoint accepted them: endpoint-specific IAM
+  propagation took roughly 30–90 seconds. Default audit configuration produced no MCP Data Access
+  entry for the successful or denied list call. No API key was created or exposed.
+- All disposable identities, keys, custom roles, bindings and local configurations from every probe
+  attempt were deleted. A final independent inventory check found no `ht-mcp-*` residue.
+
+### 2026-09-28 — Compute privesc and BigQuery post-exploitation audit batch
+- Normalized all 15 genuine Compute privilege-escalation sections and all 11 BigQuery
+  post-exploitation sections with explicit impact, current least-privilege caveats, categorical
+  stealth and per-technique telemetry. Removed Compute's non-technique access-scope placeholder and
+  folded its useful context into real metadata/service-account paths.
+- Corrected material semantics across project metadata, OS Login, VM Manager, MIGs, disk/image copy,
+  BigQuery job metadata, table reads/exports, recovery, DML, transfers, reservations and CMEK.
+  These were documentation audits against current official references; they created no cloud asset.
+- A fresh strict heading scan now finds 97/407 qualifying privesc and 118/401 post-exploitation
+  sections rated; 593 remain. Persistence remains fully rated at 153/153 under the same scan.
+
 ### 2026-09-28 — Secret Manager managed Cloud SQL rotation privesc verified
 - Live-verified a new expected permission-composition technique: a caller with exactly
   `secretmanager.secrets.enableManagedRotation`, no Cloud SQL role and no secret-version access can
