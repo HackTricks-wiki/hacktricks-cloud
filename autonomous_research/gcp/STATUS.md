@@ -2,6 +2,31 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Scheduler, Spanner, Cloud Source Repositories and Runtime Config
+- Rebuilt Cloud Scheduler privilege escalation around 4 genuine primitives, Spanner around 3 and
+  Cloud Source Repositories around 2. Replaced Runtime Config's four overbroad privilege-escalation
+  claims with one config-IAM self-grant, and added dedicated post-exploitation coverage for Runtime
+  Config variable recovery and private Cloud Source Repositories clone/history recovery. All 12
+  retained headings have exact prerequisites, bounded impact, categorical Stealth and expandable
+  telemetry; every service received independent review.
+- Corrected Scheduler's OAuth/OIDC, forced-run, App Engine and Pub/Sub identity boundaries;
+  Spanner's policy-helper, cross-project backup/restore, encryption, IAM/FGAC and LRO boundaries;
+  and Source Repositories' trigger-pinned identity, unsupported custom-role permission, conditional
+  IAM preservation and disabled-by-default Git audit methods. Removed destructive-only, duplicate
+  and nonexistent export claims.
+- Corrected Runtime Config's stale `getIamPolicy` failure claim and separated Deployment Manager's
+  documented June 30, 2027 shutdown from the independently callable Runtime Config API. A synthetic
+  config, direct config IAM binding, plaintext variable and short waiter verified the policy and
+  read paths. The policy was restored, the config was deleted, list/describe confirmed absence and
+  the previously enabled API was left unchanged. No matching Runtime Config audit entry was
+  observed; the page bounds that result by the disabled project Data Access setting and Google's
+  current omission of Runtime Config from the supported-services audit catalog.
+- No other service was accessed or mutated. Official documentation, local CLI/source inspection,
+  independent review and 50 successful unique official-link checks support this batch. The
+  reproducible scan now finds 203/270 privilege-escalation and 221/350 post-exploitation sections
+  with explicit Stealth; persistence is 155/155. This leaves 196 qualifying
+  privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Dataflow, Database Migration Service, Cloud Billing and Service Usage
 - Rebuilt Dataflow privilege escalation around 2 genuine primitives and Cloud Billing around 1.
   Both pages now state exact minimum permissions, bounded impact, categorical Stealth and expandable

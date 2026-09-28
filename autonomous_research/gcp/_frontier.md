@@ -172,6 +172,26 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       and content-security discovery resources, but do not claim Model Armor bypass while authorized
       reads return `SU_MCP_DEPRECATED`. See `service-usage/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Scheduler, Spanner, Source Repositories and Runtime Config
+- [ ] Revalidate Scheduler's HTTP identity attachment with separate OAuth- and OIDC-compatible
+      synthetic receivers, then capture job mutation, forced-run and delivery logs. Exercise the
+      App Engine and Pub/Sub paths only against inert same-project handlers/topics, and delete every
+      job immediately. See `cloud-scheduler/checklist.md`.
+- [ ] In a disposable Spanner environment, split caller permissions across source and destination
+      principals to validate copy/restore authorization, CMEK service-agent checks and exact LRO log
+      placement. Separately test FGAC role expansion with a minimal custom IAM role. Remove every
+      backup, restored database, binding and temporary key grant. See `spanner/checklist.md`.
+- [ ] For an eligible existing Cloud Source Repositories organization, validate a synthetic
+      unapproved trigger branch and private clone under minimal custom roles. Capture `ReceivePack`,
+      `LsRemote`, `UploadPack`, build and policy telemetry, then restore refs and IAM and delete all
+      fixtures. Do not provision a new dependency on this closed-to-new-customers service. See
+      `source-repositories/checklist.md`.
+- [ ] Continue monitoring the standalone Runtime Config API after Deployment Manager support and
+      shutdown milestones. If a disposable already-enabled project remains available, repeat the
+      read and policy fixture with Data Access explicitly enabled to distinguish unsupported audit
+      integration from project configuration. Restore the exact config policy and delete every
+      variable, waiter and config. See `runtimeconfig/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -198,8 +218,9 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Dataflow, Database Migration Service, Cloud
-      Billing and Service Usage batch finds **213 unrated** qualifying sections: 194/278 privesc and 219/348
+      A fresh reproducible 2026-09-28 scan after the Cloud Scheduler, Spanner, Cloud Source
+      Repositories and Runtime Config batch finds **196 unrated** qualifying sections: 203/270
+      privesc and 221/350
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -212,7 +233,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
       privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
       Cloud Functions privesc, Managed Kafka, Dataproc Metastore and Google SecOps post-exploitation,
-      Bigtable, Dataplex, Apigee, Dataflow and Cloud Billing privesc, Document AI post-exploitation,
-      Database Migration Service and Service Usage zero-H3 audits, and API Gateway
-      unauthenticated techniques have been handled.
+      Bigtable, Dataplex, Apigee, Dataflow, Cloud Billing, Cloud Scheduler, Spanner, Cloud Source
+      Repositories and Runtime Config privesc, Document AI, Cloud Source Repositories and Runtime
+      Config post-exploitation, Database Migration Service and Service Usage zero-H3 audits, and API
+      Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

@@ -151,6 +151,8 @@
     - [GCP - NetApp Volumes Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-netapp-volumes-post-exploitation.md)
     - [GCP - Oracle Database@GCP Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-oracle-database-post-exploitation.md)
     - [GCP - reCAPTCHA Enterprise Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-recaptcha-enterprise-post-exploitation.md)
+    - [GCP - Runtime Configurator Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-runtimeconfig-post-exploitation.md)
+    - [GCP - Source Repositories Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-source-repositories-post-exploitation.md)
     - [GCP - Spanner Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-spanner-post-exploitation.md)
     - [GCP - Parameter Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-parameter-manager-post-exploitation.md)
     - [GCP - Pub/Sub Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md)
