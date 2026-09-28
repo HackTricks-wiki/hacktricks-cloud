@@ -2,6 +2,27 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Dataform, Network Security, reCAPTCHA Enterprise and Eventarc
+- Rebuilt Dataform privilege escalation around 2 genuine primitives, Network Security around 6,
+  reCAPTCHA Enterprise post-exploitation around 6, and Eventarc around 1 privilege-escalation, 4
+  post-exploitation and 1 persistence primitive. All 20 retained headings have exact prerequisites,
+  bounded impact, categorical Stealth and expandable telemetry; all four service audits received
+  independent cross-review.
+- Corrected Dataform strict-act-as behavior and rejected the stale internal scheduled-commit chain:
+  `repositories.commit` is internal-repository-only, while strict mode prevents cron-scheduled
+  releases for those repositories. Corrected Network Security AuthzPolicy targeting/evaluation,
+  TLS `allowOpen`, address-group, intercept-deployment and resource-IAM boundaries.
+- Bounded reCAPTCHA policy/IP/firewall/legacy-secret/model-feedback/related-account behavior by
+  key type, tier, caller-side enforcement and current telemetry. Corrected Eventarc delivery versus
+  destination-runtime identities, Advanced topology/token prerequisites, exact publishing logs and
+  the one genuine recurring OAuth-token persistence chain.
+- This batch used current official documentation, local CLI/source checks and read-only API-enabled
+  state/predefined-role inspection only. It created no cloud resource, changed no IAM or service
+  configuration and left no cleanup debt.
+- The reproducible qualifying-H3 scan now finds 177/306 privilege-escalation and 201/357
+  post-exploitation sections with explicit Stealth; persistence is 155/155. This leaves 285
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Cloud Deploy, Pub/Sub, Workflows and Sensitive Data Protection
 - Rebuilt Cloud Deploy privilege escalation around 3 genuine primitives, Pub/Sub around 3,
   Workflows around 4 and Sensitive Data Protection post-exploitation around 5. Moved the recurring

@@ -98,6 +98,23 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       current official contracts describe dangerous expected delegation, not a zero-day. See
       `dlp/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Dataform, Network Security, reCAPTCHA and Eventarc
+- [ ] Revalidate Dataform creator-role configuration and strict-act-as platform logs with a
+      disposable repository. Do not restore internal commit poisoning unless product contracts
+      expose an automatic compilation path without reintroducing caller `actAs`. See
+      `dataform/checklist.md`.
+- [ ] Validate Network Security's attached-policy, address-group and trusted intercept-deployment
+      effects with minimum custom roles only when a no-residue data plane is available. Preserve
+      every consuming rule/policy and remove the malicious child or membership immediately. See
+      `networksecurity/checklist.md`.
+- [ ] Capture reCAPTCHA propagation and platform telemetry with synthetic keys and assessments;
+      separate legacy-secret possession from the Classic/no-billing quota fail-open contract. The
+      Related Accounts API remains Pre-GA. See `recaptcha-enterprise/checklist.md`.
+- [ ] Test whether a destination-only Eventarc pipeline update that retains its authentication
+      account requires a fresh `actAs` check, and capture exact Advanced token-mint/publish audit
+      placement. Keep a real attachment failure private and delete every route, token capture and
+      service-agent grant. See `eventarc/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -124,10 +141,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Cloud Deploy, Pub/Sub, Workflows and Sensitive
-      Data Protection batch finds **312 unrated** qualifying sections: 170/311 privesc and 193/364
+      A fresh reproducible 2026-09-28 scan after the Dataform, Network Security, reCAPTCHA Enterprise
+      and Eventarc batch finds **285 unrated** qualifying sections: 177/306 privesc and 201/357
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
-      have an explicit Stealth rating. Persistence is 154/154 under the same scan. Secret Manager,
+      have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
@@ -135,6 +152,7 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
       Discovery Engine, Bigtable and Artifact Registry post-exploitation, Cloud Storage, Artifact
       Registry, App Engine, Composer, Resource Manager, Cloud Deploy, Pub/Sub and Workflows privesc,
-      Sensitive Data Protection post-exploitation and persistence, and API Gateway unauthenticated
-      techniques have been handled.
+      Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
+      privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
+      and API Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
