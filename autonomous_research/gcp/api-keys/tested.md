@@ -92,6 +92,29 @@ Result: **no authorization bypass** for `apikeys_list_keys`. All disposable cust
 accounts, keys, IAM bindings and isolated local configurations were deleted; a final independent
 inventory check found no `ht-mcp-*` identity, binding, live custom role or temp directory.
 
+## 2026-09-28 — conditional `tool.name` and duplicate-field desync probe
+
+A second live matrix bound `roles/mcp.toolUser` only when both
+`resource.service == 'apikeys.googleapis.com'` and the MCP `tool.name` attribute equalled
+`apikeys_list_keys`. The test principal separately held both `apikeys.keys.list` and
+`apikeys.keys.get`, so an attempted `apikeys_get_key` could not be confused with a missing
+underlying service permission.
+
+- The allowed list call succeeded after approximately 90 seconds of endpoint-specific IAM
+  propagation.
+- A normal `apikeys_get_key` call was denied at `mcp.googleapis.com/tools.call`, proving the
+  condition—not the underlying API Keys permission—blocked it.
+- A raw request with duplicate `params.name` fields ordered as allowed-list then denied-get was
+  denied at the MCP gate. Reversing the fields executed the final list value successfully. The
+  authorization and dispatcher therefore used the same last-wins interpretation; no duplicate-key
+  parser desynchronization was found.
+- Both the successful and denied calls again produced no MCP audit entry under the default Data
+  Access configuration. The probe used a deliberately nonexistent key name, returned no key
+  metadata or key string, and created no API Key resource.
+
+The conditional binding, custom API-read role, service account, key, IAM bindings and isolated
+configuration were deleted, and cleanup independently verified no residue.
+
 ### Official sources
 
 - https://docs.cloud.google.com/release-notes#September_25_2026

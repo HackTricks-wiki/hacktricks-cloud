@@ -26,9 +26,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 ## 2026-09-28 boundary-day frontier — API Keys remote MCP
 - [ ] The `apikeys_list_keys` two-layer authorization case is **resolved as correctly enforced**:
       `roles/mcp.toolUser` + `apikeys.keys.list` succeeded, while removing either usable layer was
-      denied after endpoint-specific IAM propagation. Continue with the remaining tools only when a
-      no-residue fixture is available, and test conditional `tool.name`/`tool.isReadOnly` enforcement
-      plus cross-project policy binding. Keep results private unless a real boundary failure is found.
+      denied after endpoint-specific IAM propagation. Exact `tool.name` allow conditions and
+      duplicate JSON `name` fields were also enforced consistently with no parser desync. Continue
+      with the remaining tools only when a no-residue fixture is available, and test
+      `tool.isReadOnly` plus cross-project policy binding. Keep results private unless a real
+      boundary failure is found.
 - [ ] Determine whether the incorrect-looking `destructiveHint:false` on `apikeys_update_key` has a
       security consequence in a Google-controlled client. The hint alone is advisory and below the
       reporting/book bar. Full matrix, constraints and official sources: `api-keys/checklist.md` and
@@ -60,10 +62,12 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh strict 2026-09-28 heading scan after the Compute and BigQuery batch finds **593
-      unrated** qualifying sections: 97/407 privesc and 118/401 post-exploitation sections with an
+      A fresh strict 2026-09-28 heading scan after the GKE, Compute post-exploitation, and Logging
+      batch finds **521 unrated** qualifying sections: 121/404 privesc and 161/399 post-exploitation
+      sections with an
       explicit Impact field and `Logs generated` block are rated. Persistence is 153/153 rated under
       the same scan. Secret Manager, Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
-      Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc, BigQuery post-exploitation, and Cloud
-      Storage post-exploitation have been handled.
+      Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
+      BigQuery and Cloud Logging post-exploitation, and Cloud Storage post-exploitation have been
+      handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

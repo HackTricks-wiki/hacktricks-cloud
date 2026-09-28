@@ -12,6 +12,24 @@ Last updated: 2026-09-28
   entry for the successful or denied list call. No API key was created or exposed.
 - All disposable identities, keys, custom roles, bindings and local configurations from every probe
   attempt were deleted. A final independent inventory check found no `ht-mcp-*` residue.
+- A follow-up `tool.name` condition allowed `apikeys_list_keys` and denied `apikeys_get_key` even
+  though the principal held both underlying API permissions. Duplicate `params.name` fields in both
+  orders showed consistent last-wins authorization/dispatch behavior, so no parser desync was found.
+  The conditional binding and every disposable asset were removed and verified absent.
+
+### 2026-09-28 — GKE, Compute post-exploitation, and Cloud Logging audit batch
+- Normalized 24 GKE privilege-escalation, 26 Compute post-exploitation, and 17 Cloud Logging
+  post-exploitation techniques with explicit minimum prerequisites, Potential Impact, categorical
+  Stealth, and expandable per-technique telemetry tables.
+- Corrected GKE node-pool authorization, streaming-subresource audit behavior, Workload Identity and
+  Connect Gateway constraints; Compute disk/image, serial-console, packet-mirroring, route, NAT/BGP,
+  alias-IP and telemetry boundaries; and Logging audit classes, retention/CMEK behavior, linked
+  datasets, retroactive copy, and future-only default settings.
+- Removed three false standalone GKE escalation headings and the obsolete Logging cross-project
+  sink bucket-name hijack. A strict heading scan now finds 121/404 qualifying privilege-escalation
+  and 161/399 post-exploitation sections rated, leaving 521; persistence remains 153/153.
+- This batch was a documentation and official-reference audit. It made no cloud mutation and created
+  no test resource.
 
 ### 2026-09-28 — Compute privesc and BigQuery post-exploitation audit batch
 - Normalized all 15 genuine Compute privilege-escalation sections and all 11 BigQuery
@@ -21,8 +39,23 @@ Last updated: 2026-09-28
 - Corrected material semantics across project metadata, OS Login, VM Manager, MIGs, disk/image copy,
   BigQuery job metadata, table reads/exports, recovery, DML, transfers, reservations and CMEK.
   These were documentation audits against current official references; they created no cloud asset.
-- A fresh strict heading scan now finds 97/407 qualifying privesc and 118/401 post-exploitation
-  sections rated; 593 remain. Persistence remains fully rated at 153/153 under the same scan.
+- At that batch boundary, a strict heading scan found 97/407 qualifying privesc and 118/401
+  post-exploitation sections rated; the newer GKE/Compute/Logging batch above supersedes these
+  counts. Persistence was fully rated at 153/153 under the same scan.
+- A live minimum-permission follow-up confirmed that `jobs.listAll/list/get` exposes another
+  principal's named query-parameter values through both full-projection list and get, although the
+  same values are redacted from audit logs. The synthetic zero-data job metadata was deleted (GET
+  then returned 404), and every disposable identity, key, role and binding was verified absent.
+- A second live matrix confirmed raw `tabledata.list` works with exactly
+  `bigquery.tables.getData`, fails with a partial row policy, and succeeds with a `TRUE` filter.
+  Successful pages emitted both canonical and legacy Data Access events; the policy-denied 403 did
+  not. The synthetic dataset/table, DDL job metadata and all test IAM/key material were deleted and
+  independently verified absent.
+- Fine-grained-DML controls found an undocumented discrepancy: two same-age tables both reported the
+  feature flag as `YES` and initially allowed `tabledata.list`; after mutating only one, that table
+  returned HTTP 400 while the untouched control remained readable. This contradicts the categorical
+  documented limitation but did not bypass row/column authorization. All three attempts and every
+  disposable asset were cleaned and verified.
 
 ### 2026-09-28 — Secret Manager managed Cloud SQL rotation privesc verified
 - Live-verified a new expected permission-composition technique: a caller with exactly

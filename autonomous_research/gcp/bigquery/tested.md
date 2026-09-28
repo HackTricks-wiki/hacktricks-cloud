@@ -25,3 +25,53 @@
   not grant plaintext. The technique is availability/ransom and possible data loss. Dataset changes
   are Admin Activity; project defaults set with `ALTER PROJECT` are logged query jobs and also remain
   in `PROJECT_OPTIONS_CHANGES`.
+
+## 2026-09-28 — cross-principal query-parameter exposure
+
+- Live-tested with a zero-data synthetic `SELECT @marker` job created by a principal holding exactly
+  `bigquery.jobs.create` (plus quota-project use), and a separate reader holding exactly
+  `bigquery.jobs.listAll`, `bigquery.jobs.list` and `bigquery.jobs.get` (plus quota-project use).
+- `jobs.list?allUsers=true&projection=full` found the other principal's job and returned the named
+  parameter value. `jobs.get` returned the same value. The synthetic marker was absent from the
+  BigQuery audit entry, confirming that parameterization redacts values from logs but not from job
+  metadata visible to project-wide job readers.
+- This is expected authorization under the documented full job projection, not a boundary bypass.
+  It materially expands the established silent job-history technique: parameter values can contain
+  secrets even when the SQL text contains only placeholders.
+- The completed job metadata was deleted with `jobs.delete` (HTTP 200 and subsequent GET 404). Both
+  service accounts, keys, custom roles, bindings and isolated configurations were deleted and
+  independently verified absent.
+
+## 2026-09-28 — exact `tabledata.list` and row-policy matrix
+
+- A disposable principal holding exactly `bigquery.tables.getData` plus quota-project use—and no
+  table/dataset metadata permission or `bigquery.jobs.create`—read both rows of a known synthetic
+  table through raw `tabledata.list`.
+- Adding a row access policy that granted the principal only `id = 1` changed the call to HTTP 403;
+  it did not return the allowed subset. Dropping that policy and granting a `TRUE` filter restored
+  HTTP 200 and both rows. This live-confirms the documented TRUE-filter requirement.
+- In the live capture, each successful read page emitted two BigQuery Data Access entries: legacy
+  `tabledataservice.list` and canonical `google.cloud.bigquery.v2.TableDataService.List` with
+  `TABLEDATA_LIST_REQUEST`. Google documents legacy/current formats but does not guarantee a pair per
+  request. The partial-policy denial emitted neither within the same observation window; this is not
+  enough to claim a guaranteed audit blind spot for denied calls.
+- The dataset/table and all row-policy DDL job metadata were deleted. The service account, key,
+  custom role, binding and isolated configuration were also deleted and independently verified
+  absent.
+
+## 2026-09-28 — fine-grained DML live discrepancy and controlled follow-up
+
+- Created a synthetic table with `enable_fine_grained_mutations = TRUE` in the `CREATE TABLE`
+  statement and confirmed `INFORMATION_SCHEMA.TABLES.is_fine_grained_mutations_enabled = YES`.
+- Before any mutating DML, the isolated caller holding exactly `bigquery.tables.getData` plus
+  quota-project use still received HTTP 200 and both rows through `tabledata.list`. After a successful
+  `UPDATE` changed one row, the same caller received HTTP 400 `INVALID_ARGUMENT` and no rows.
+- A second run eliminated elapsed propagation as the explanation: two same-age tables both reported
+  the flag as `YES` and returned rows; after mutating only one, the mutated table returned 400 while
+  the untouched control continued to return 200. This contradicts the official categorical statement
+  that any enabled table cannot use `tabledata.list`. It remains an undocumented live discrepancy,
+  not a settled lifecycle contract. No row/column authorization was bypassed, so the observed behavior
+  alone does not meet the security-vulnerability report bar.
+- All three controlled attempts deleted their datasets/tables, explicit job metadata, service
+  accounts, keys, custom roles, project bindings and isolated configurations. The first attempt that
+  stopped during key activation was also cleaned and independently verified absent.
