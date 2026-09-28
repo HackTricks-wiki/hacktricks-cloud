@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Storage Batch Operations execution-identity correction
+- Reconciled current documentation with the existing live transform result. Real prefix transforms
+  re-check caller object permissions, but bucket-list/manifest runtime failures also use the
+  job-project Storage Batch Operations service agent; only project-source/CEL is explicitly described
+  as processing with caller credentials. The book no longer says the service agent is uninvolved.
+- Preserved the supported destructive technique and added the unverified dry-run boundary: dry runs
+  return aggregate object counts and prefix-selected bytes without transforming data, but it remains
+  unknown whether a caller lacking direct list/read can obtain them through service-agent access.
+- No job was launched because the lab has effective Storage Intelligence edition `NONE`; activating
+  its one-time 30-day trial would leave persistent entitlement/billing state contrary to mandatory
+  cleanup. The exact same- and cross-project binary tests are queued for an already-enrolled fixture.
+
 ### 2026-09-28 — Audit Manager caller-write boundary securely enforced
 - Live-tested project-scope `EnrollResource` with `validateOnly=true` under an isolated caller. The
   Audit Manager service agent had bucket object-create while the caller's authoritative Storage

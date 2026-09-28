@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-28 boundary-day frontier — Storage Batch Operations dry run
+- [x] Corrected the existing absolute caller-identity statement: real transforms re-check caller
+      permissions, but bucket-list/manifest runtime also depends on the job-project service agent;
+      project-source/CEL explicitly uses caller credentials.
+- [ ] In an already-enrolled Storage Intelligence fixture, test whether `dryRun=true` exposes
+      aggregate prefix count/bytes to a caller with job create/get but no Storage access while the
+      service agent can read/transform the synthetic bucket. Delete the job/LRO and every fixture;
+      do not consume a one-time trial solely for this test.
+
 ## 2026-09-28 boundary-day frontier — Audit Manager validation
 - [x] Project-scope `EnrollResource` `validateOnly` correctly enforced caller destination authority:
       a caller with no Storage permission was denied on `storage.buckets.getIamPolicy` even while the
