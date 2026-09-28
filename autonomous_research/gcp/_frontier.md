@@ -115,6 +115,26 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       placement. Keep a real attachment failure private and delete every route, token capture and
       service-agent grant. See `eventarc/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Functions, Kafka, Metastore and SecOps
+- [ ] Revalidate Cloud Functions source deployments with separate disposable runtime and build
+      identities, subtracting helper permissions and capturing attachment/build telemetry. Test the
+      environment-only startup-loader path only with a benign pre-existing hook. Never retain a
+      bearer token, and remove functions, revisions, images, source objects, accounts and bindings.
+      See `cloud-functions/checklist.md`.
+- [ ] In an empty disposable Managed Kafka cluster, compare connection-authentication logging with
+      Data Access off/on; test overlapping ACLs, protocol-versus-control-plane topic mutations,
+      direct offset operations and the stable-versus-guide Schema Registry hard-delete contract.
+      Delete the cluster, Connect resources, sink and every ACL/binding. See
+      `managed-kafka/checklist.md`.
+- [ ] In a disposable Dataproc Metastore service, resolve operation polling and artifact reads under
+      minimum custom roles, then capture caller/service-agent Storage entries and start/completion
+      LRO records for the retained primitives. Use synthetic metadata and restore URIs before full
+      cleanup. See `dataproc-metastore/checklist.md`.
+- [ ] In an authorized migrated Google SecOps test tenant, capture the public-versus-`v1main` method
+      names and query-text audit behavior, then measure reversible reference-data, feed and synthetic
+      case changes. Do not touch production telemetry or investigations. See
+      `google-secops/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -141,8 +161,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Dataform, Network Security, reCAPTCHA Enterprise
-      and Eventarc batch finds **285 unrated** qualifying sections: 177/306 privesc and 201/357
+      A fresh reproducible 2026-09-28 scan after the Cloud Functions, Managed Kafka, Dataproc
+      Metastore and Google SecOps batch finds **257 unrated** qualifying sections: 180/302 privesc and 217/352
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -154,5 +174,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Registry, App Engine, Composer, Resource Manager, Cloud Deploy, Pub/Sub and Workflows privesc,
       Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
       privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
+      Cloud Functions privesc, Managed Kafka, Dataproc Metastore and Google SecOps post-exploitation,
       and API Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Functions, Managed Kafka, Dataproc Metastore and Google SecOps
+- Rebuilt Cloud Functions privilege escalation around 4 genuine primitives, and Managed Kafka,
+  Dataproc Metastore and Google SecOps post-exploitation around 6, 4 and 6 respectively. All 20
+  retained headings now have exact prerequisites, bounded impact, categorical Stealth and an
+  expandable telemetry table; every service received independent cross-review.
+- Corrected generation-specific Cloud Functions source-upload permissions, runtime/build identity
+  boundaries, preservation-safe environment updates and v1 upload telemetry. The isolated generated
+  v1 method-detail label conflicts with the official permission classification and a prior live
+  capture: `GenerateUploadUrl` is retained as always-on Admin Activity.
+- Corrected Managed Kafka's SASL-versus-mTLS and Kafka ACL boundaries, Connect service-agent and
+  cross-project dependencies, broker-protocol telemetry, offset mutation prerequisites and Schema
+  Registry deletion contract. Corrected Dataproc Metastore caller-versus-service-agent Storage
+  authorization, query artifacts, named-backup topology and LRO logging.
+- Corrected Google SecOps search versions and logging, rule/deployment mutation semantics, lookup-data
+  poisoning, feed archival and the migrated SOAR bulk-close request/evidence contract. Unsupported
+  retention and playbook claims were not retained.
+- This batch used current official documentation, local CLI/source checks and independent review
+  only. It created no cloud resource, changed no IAM or service configuration and left no cleanup
+  debt. The reproducible qualifying-H3 scan now finds 180/302 privilege-escalation and 217/352
+  post-exploitation sections with explicit Stealth; persistence is 155/155. This leaves 257
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Dataform, Network Security, reCAPTCHA Enterprise and Eventarc
 - Rebuilt Dataform privilege escalation around 2 genuine primitives, Network Security around 6,
   reCAPTCHA Enterprise post-exploitation around 6, and Eventarc around 1 privilege-escalation, 4
