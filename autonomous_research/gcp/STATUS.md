@@ -2,6 +2,25 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Bigtable, Dataplex, Apigee and Document AI
+- Rebuilt Bigtable, Dataplex and Apigee privilege escalation around 5, 3 and 3 genuine primitives,
+  and Document AI post-exploitation around 2. All 13 retained headings now have exact
+  prerequisites, bounded impact, categorical Stealth and an expandable telemetry table; every
+  service received an independent review.
+- Corrected Bigtable resource-IAM scope, cross-project restore/CMEK prerequisites, helper-side LRO
+  polling and authorized-view update behavior. Direct logical-view IAM remains an unproven live
+  lead rather than a book claim. Corrected Dataplex task identity, backing-asset role propagation,
+  policy-tag bounds and control-plane versus downstream logging.
+- Corrected Apigee's author/deploy permission split, optional service-account attachment, Space and
+  Archive boundaries, managed-versus-Hybrid runtime logging and condition-safe environment IAM.
+  Corrected Document AI dataset extraction to the public v1beta3 surface and bounded cross-project
+  processor-version imports by destination P4SA trust, schema/state/region and VPC Service Controls.
+- This batch used current official documentation, local CLI/source checks and read-only predefined-
+  role inspection only. It created no cloud resource, changed no IAM or service configuration and
+  left no cleanup debt. The reproducible qualifying-H3 scan now finds 191/295 privilege-escalation
+  and 219/348 post-exploitation sections with explicit Stealth; persistence is 155/155. This leaves
+  233 qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Cloud Functions, Managed Kafka, Dataproc Metastore and Google SecOps
 - Rebuilt Cloud Functions privilege escalation around 4 genuine primitives, and Managed Kafka,
   Dataproc Metastore and Google SecOps post-exploitation around 6, 4 and 6 respectively. All 20

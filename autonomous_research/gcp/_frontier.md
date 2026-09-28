@@ -135,6 +135,24 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       case changes. Do not touch production telemetry or investigations. See
       `google-secops/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Bigtable, Dataplex, Apigee and Document AI
+- [ ] With a disposable Bigtable logical view, live-confirm whether a direct resource-level IAM
+      grant is honored for downstream reads. Also capture source/destination restore audit placement,
+      CMEK behavior and helper-versus-raw IAM permission differences. Remove every view, table,
+      backup, binding and temporary key grant. See `bigtable/checklist.md`.
+- [ ] In a disposable Dataplex lake, separate task creation from execution-account behavior and
+      capture backing Storage/BigQuery access. Validate managed data-role propagation and policy-tag
+      enforcement only with synthetic data, then remove the task, assets and bindings. See
+      `dataplex/checklist.md`.
+- [ ] Revalidate Apigee proxy/shared-flow dual-permission checks, service-account attachment and
+      resource-level policy behavior only if an existing disposable organization is available; do
+      not provision a paid organization for the test. Audit Archive deployment separately and keep
+      KVM/debug/developer-key reads in post-exploitation. See `apigee/checklist.md`.
+- [ ] With disposable processors and synthetic documents, capture Document AI dataset-read and
+      processor-version-import logs under minimum custom roles. Test same-region and VPC-SC
+      prerequisites without copying customer documents, then remove processors, versions and P4SA
+      grants. See `document-ai/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -161,8 +179,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the Cloud Functions, Managed Kafka, Dataproc
-      Metastore and Google SecOps batch finds **257 unrated** qualifying sections: 180/302 privesc and 217/352
+      A fresh reproducible 2026-09-28 scan after the Bigtable, Dataplex, Apigee and Document AI
+      batch finds **233 unrated** qualifying sections: 191/295 privesc and 219/348
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
       have an explicit Stealth rating. Persistence is 155/155 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
@@ -175,5 +193,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
       privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
       Cloud Functions privesc, Managed Kafka, Dataproc Metastore and Google SecOps post-exploitation,
-      and API Gateway unauthenticated techniques have been handled.
+      Bigtable, Dataplex and Apigee privesc, Document AI post-exploitation, and API Gateway
+      unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
