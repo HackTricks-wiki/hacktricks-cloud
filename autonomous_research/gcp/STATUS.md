@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Dataflow, Database Migration Service, Cloud Billing and Service Usage
+- Rebuilt Dataflow privilege escalation around 2 genuine primitives and Cloud Billing around 1.
+  Both pages now state exact minimum permissions, bounded impact, categorical Stealth and expandable
+  telemetry. Database Migration Service and Service Usage retain zero H3 techniques because the
+  reviewed operations do not yet demonstrate a distinct privilege boundary crossing.
+- Corrected Dataflow artifact replacement permissions and generation semantics, inline Beam YAML
+  worker execution, Flex Template launch permissions, worker/service-agent identity bounds and
+  exact job telemetry. Corrected Cloud Billing's account-versus-project IAM boundary, safe versus
+  raw policy replacement, two-resource project-linking authorization, payment-profile exception and
+  billing-scope audit queries.
+- Reclassified Service Usage enable/use/disable, legacy and Cloud Quotas writes, hierarchical
+  consumer policy, deprecated MCP policy, and authorization-key behavior. Read-only live requests
+  confirmed that the old MCP and content-security policies return `SU_MCP_DEPRECATED`, while the
+  current consumer policy remains readable; no configuration was changed.
+- DMS Cloud SQL destination-profile creation remains an unresolved authorization boundary: the
+  generic REST method lists only the DMS create permission, while current workflow guidance requires
+  Cloud SQL Admin. The lab has DMS disabled and no DMS service agent, so enabling it could leave a
+  managed identity behind. The exact least-privilege test and output-only Cloud SQL ID cleanup plan
+  are queued only for an already-enabled disposable project whose deletion is acceptable.
+- This batch retained 3 techniques total, used official documentation, local CLI/source inspection,
+  independent review and read-only API checks, and made no cloud mutation. The reproducible scan now
+  finds 194/278 privilege-escalation and 219/348 post-exploitation sections with explicit Stealth;
+  persistence is 155/155. This leaves 213 qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — Bigtable, Dataplex, Apigee and Document AI
 - Rebuilt Bigtable, Dataplex and Apigee privilege escalation around 5, 3 and 3 genuine primitives,
   and Document AI post-exploitation around 2. All 13 retained headings now have exact
