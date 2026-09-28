@@ -7,6 +7,17 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 boundary-day frontier — Telemetry API
+- [x] Live-verified the minimum-permission OTLP log path and shipped it as an extension of the
+      existing log-forgery technique. The endpoint enforces `logging.logEntries.create` but accepts
+      attacker-selected application-log and monitored-resource fields. Default ingestion produced
+      no caller audit record; permanent silence remains unclaimed because the global-audit positive
+      control was inconclusive.
+- [ ] Test protected audit-log names only in a disposable project, consumer-resource IAM and
+      cross-project destination enforcement with synthetic principals, and regional/VPC-SC parity.
+      Reuse an existing disposable `_Trace` bucket for trace tests; never create non-deletable
+      storage merely to exercise ingestion. See `telemetry/checklist.md`.
+
 ## 2026-09-29 boundary-day frontier — Observability API
 - [x] Mapped the new stable v1 storage/scope surface and shipped sensitive trace reads plus the
       expected `observability.links.create` -> linked BigQuery permission-plane crossing. Link

@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Telemetry OTLP ingestion and log-forgery path live-verified
+- Added the missing Telemetry API enumeration and extended the existing log-forgery technique with
+  its OTLP route instead of duplicating the same underlying attack. An isolated caller holding only
+  Telemetry Logs Writer and Service Usage Consumer successfully chose the application log name,
+  severity, body, labels, OpenTelemetry scope and monitored-resource identity.
+- The endpoint enforced `logging.logEntries.create`; a synthetic nonexistent instance ID was still
+  accepted as a `gce_instance` resource, so resource labels are not emitter attestation. No caller
+  audit record appeared under the default policy. Service-specific Telemetry Data Access
+  configuration is unsupported; a short global-audit experiment lacked a positive control and is
+  explicitly recorded as inconclusive, not permanent silence.
+- Separated ordinary collector roles from beta `telemetry.consumers.*` integrated-service roles.
+  Trace ingestion was skipped because it can provision a currently non-deletable `_Trace` bucket.
+  Consumer IAM, protected audit-log names and cross-project destination handling remain
+  private-first test leads rather than public claims.
+- Cleanup removed both disposable logs, the temporary metric descriptor, account/key/config and
+  bindings, response files and global audit setting. The Telemetry API remains enabled because it
+  was enabled at baseline; descriptor/log/IAM/local checks show zero active test resources. Two
+  benign metric points behind the deleted descriptor cannot be independently deleted and age out
+  under Monitoring retention, so future audit controls must reuse an existing disposable series.
+  Technique totals remain 267/267 privilege escalation, 292/292 post-exploitation and 156/156
+  persistence.
+
 ### 2026-09-29 — new Google Cloud Observability v1 surface added
 - Added the missing Observability service-enumeration page and two bounded post-exploitation paths:
   direct sensitive trace-span reads through legacy Trace or `observability.views.access`, and

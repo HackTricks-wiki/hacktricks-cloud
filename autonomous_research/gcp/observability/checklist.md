@@ -29,8 +29,10 @@
       metadata.
 - [ ] Recheck the callable API when bucket/dataset/view delete/undelete methods reach public v1.
       Do not create storage merely to test permission names before immediate teardown is supported.
-- [ ] Review the adjacent Telemetry API (`telemetry.consumers.*`, `telemetry.*.write`) for
-      cross-project ingestion, consumer-IAM and spoofing boundaries using only synthetic spans.
+- [x] Review the adjacent Telemetry API's normal OTLP writer roles and live-test log-resource
+      spoofing with a reversible synthetic log. Consumer IAM, cross-project destination enforcement
+      and trace ingestion remain queued in `../telemetry/checklist.md` because they need a more
+      disposable fixture.
 
 ## Do not publish without stronger evidence
 
