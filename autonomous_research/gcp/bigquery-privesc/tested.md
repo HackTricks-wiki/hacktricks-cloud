@@ -1,6 +1,38 @@
-# BigQuery privilege-escalation audit
+# BigQuery privilege escalation — tested and reviewed
 
-## 2026-09-28 — documentation-only permissions and telemetry review
+## 2026-09-28 — end-to-end documentation audit
+
+- Documentation-only review against the current BigQuery, BigQuery Connection API, BigQuery Data
+  Transfer Service, Data Policy, Data Catalog, IAM, and audit-log references. No cloud resource was
+  created or changed.
+- Retained 12 distinct privilege-boundary techniques: dataset/table/connection IAM self-grants;
+  policy-tag and masking-policy weakening; complete column-enforcement disablement; Spark-procedure
+  and remote-function execution; authorized routines and authorized views/datasets; row-policy
+  widening; and scheduled queries bound to a service account.
+- Moved `bigquery.connections.use` with Cloud SQL `EXTERNAL_QUERY` to post-exploitation. It consumes
+  an already-authorized stored database credential and does not grant new GCP permissions.
+- Confirmed that BigQuery Data Access logging is always on only for `bigquery.googleapis.com`.
+  Connection API, Data Transfer Service, Data Catalog, Cloud Run, and destination-service audit
+  defaults must be evaluated independently.
+- Kept current/legacy BigQuery audit method names as alternatives. Documentation does not promise a
+  duplicate pair of entries for every request.
+- Kept authorized-view/dataset and authorized-routine paths bounded: source-data access is required
+  when creating/changing the object. The current view-management guide says a view update preserves
+  its authorization; authorized-routine updates instead require reauthorization. Neither is a
+  source-IAM bypass after the editor's source access is revoked.
+
+## Rejected or recategorized hypotheses
+
+- `bigquery.connections.create` alone is not durable escalation or persistence. A newly created
+  Cloud Resource connection identity starts without target-resource privileges, and deleting the
+  connection deletes its credential; a recreated identity is distinct and must not be described as
+  inheriting stale grants.
+- The documented BigQuery dataset ACL broad member is `allAuthenticatedUsers`; current dataset ACL
+  docs do not document a tokenless `allUsers` read path, and the API requires authentication.
+- Transfer-config `iam.serviceAccounts.actAs` is an authorization check on configuration creation or
+  update; it must not be presented as a guaranteed separate IAM Credentials audit method.
+
+## Earlier detailed permissions and telemetry review (preserved)
 
 - Rebuilt the privilege-escalation page from current Google Cloud primary documentation. No cloud
   resources were read or changed.
@@ -30,7 +62,8 @@
   chain becomes distinct only if an IAM condition, deny rule, or member-type restriction permits a
   binding to the connection-managed identity while preventing a direct attacker binding.
 - Corrected Cloud SQL connection use: `bigquery.connections.get` is reconnaissance, not required
-  for `EXTERNAL_QUERY`; impact is limited by the stored database user's privileges.
+  for `EXTERNAL_QUERY`; impact is limited by the stored database user's privileges. The current
+  review preserves this finding on the post-exploitation page rather than as escalation.
 - Corrected a high-value logging edge case: Connection API `SetIamPolicy` is documented as a Data
   Access `ADMIN_READ` method in v1, not Admin Activity, and is therefore not logged by default
   unless BigQuery Connection API Admin Read logging is enabled. The v1beta1 `SetIamPolicy` method
@@ -61,18 +94,21 @@
   `datasetservice.*`, `tableservice.*`, and `jobservice.*` names remain relevant alongside current
   `BigQueryAuditMetadata` method names.
 
-## Techniques retained
+## Current retained privilege-escalation inventory
 
 1. Dataset ACL/IAM self-grant.
-2. Table IAM self-grant.
-3. Row access policy widening/removal.
-4. Authorized view/dataset indirect access.
-5. Scheduled SQL as an `actAs`-authorized service account.
-6. Cloud SQL stored-credential use through `EXTERNAL_QUERY`.
-7. Connection resource IAM self-grant.
-8. Data Catalog Fine-Grained Reader self-grant.
-9. Data Policy v2 raw grantee or masking-rule update.
-10. Data-policy deletion plus taxonomy enforcement disablement.
-11. Spark procedure execution through a privileged connection.
-12. Remote-function invocation through a privileged connection.
-13. Authorized routine indirect access.
+2. Connection resource IAM self-grant.
+3. Data Catalog Fine-Grained Reader self-grant.
+4. Data Policy v2 raw grantee or masking-rule update.
+5. Data-policy deletion plus taxonomy enforcement disablement.
+6. Spark procedure execution through a privileged connection.
+7. Remote-function invocation through a privileged connection.
+8. Authorized routine indirect access.
+9. Table IAM self-grant.
+10. Row access policy widening/removal.
+11. Authorized view/dataset indirect access.
+12. Scheduled SQL as an `actAs`-authorized service account.
+
+The earlier inventory counted Cloud SQL stored-credential use as a thirteenth technique. The
+end-to-end audit above recategorizes that operation as post-exploitation while preserving the
+original permission and telemetry research.

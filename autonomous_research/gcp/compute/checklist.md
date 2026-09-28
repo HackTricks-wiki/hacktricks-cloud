@@ -12,6 +12,17 @@
 - [x] Correct OS Login and OS Config audit categories and default-log availability.
 - [x] Correct machine-image, snapshot, and disk IAM semantics and required follow-on operations.
 - [x] Record this pass without touching GCP resources.
+- [x] Audit Compute enum, privilege-escalation, post-exploitation and persistence coverage as one
+  caller/service-agent/guest identity model.
+- [x] Add explicit minimum permissions/prerequisites to all 15 retained Compute privesc H3s.
+- [x] Rebuild Compute persistence around four recurring/self-healing mechanisms and remove the
+  duplicate plain-VM run-as-SA claim.
+- [x] Apply the no-garbage bar to Compute post-exploitation by removing three destructive-only or
+  availability-only headings while preserving their negative results in `tested.md`.
+- [x] Correct enum disk location, image-type/export duplication and Data Access visibility.
+- [x] Preserve condition/version/etag state in the instance-IAM self-grant example.
+- [x] Apply reciprocal review corrections for project-versus-instance metadata `actAs`, unclassified
+  OS Login monitoring signals, regional-disk IAM REST, helper reads, and complete command examples.
 
 ## Follow-up validation ideas
 
@@ -29,6 +40,15 @@
   control-plane failure signals.
 - [ ] Verify OS Config agent log destinations on current Google-provided images with and without Ops
   Agent installed.
+- [ ] Capture one recurring patch deployment run with VM Manager Data Access enabled and determine
+  whether the service-triggered execution emits `ExecutePatchJob`, another service-principal audit
+  record, or only patch-job/agent state.
+- [ ] Validate whether `gcloud compute project-info add-metadata` and instance `add-metadata` perform
+  extra helper reads under minimum custom roles, separating raw REST minima from CLI minima.
+- [ ] Validate image-family resolution and exact `images.insert` request/audit fields with a stopped
+  disposable source disk; delete the image and disk immediately after the test.
+- [ ] Capture zonal and regional MIG template changes to confirm the exact regional method-name
+  variants and service-agent attribution for scale-out versus explicit recreation.
 
 All future live tests must use minimum permissions, stay within the cost limit, record cleanup, and
 delete every created asset immediately after the test.

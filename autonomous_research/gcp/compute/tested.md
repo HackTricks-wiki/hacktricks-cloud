@@ -41,3 +41,59 @@ Results:
   reachable management path) and moved the Linux OS Login-disable path to general metadata abuse.
 - Corrected the global “reads are not logged” statement to “not logged by default”; Compute reads
   are Data Access methods.
+
+## 2026-09-28 — end-to-end Compute enum/privesc/post-exploitation/persistence audit
+
+Scope: the Compute enum page and the dedicated privilege-escalation, post-exploitation and
+persistence pages. This was an official-documentation, local CLI-help and predefined-role review;
+no GCP resources were created, modified or deleted.
+
+Retained high-value coverage:
+
+- 15 privilege-escalation H3s. Added explicit minimum-permission/prerequisite blocks to every H3,
+  including helper-read/fingerprint permissions, external-user OS Login, condition/etag-safe
+  instance IAM merge, caller-versus-Google-APIs-Service-Agent MIG checks, and target-VM-SA access
+  to private OS Config scripts.
+- 23 post-exploitation H3s after applying the no-garbage bar. Existing read/write audit categories,
+  bounded network/storage effects and downstream signals were rechecked against the current
+  Compute audit catalog and current CLI surface.
+- 4 persistence H3s: instance/project startup metadata, custom-image-family poisoning, existing-MIG
+  template replacement, and recurring VM Manager patch deployment. These are recurring execution
+  or self-healing paths rather than merely long-lived resources.
+- Enum corrections separate machine images from custom images, remove the unrelated container-image
+  command and duplicate export workflow, make disk IAM location explicit, and state the current
+  Compute/OS Config Data Access defaults.
+
+Rejected or folded hypotheses:
+
+- **Create a VM with a privileged attached SA as persistence** — retained only in privesc. VM
+  creation is a run-as-SA boundary crossing, but a plain long-lived VM is not a distinct recurring
+  persistence mechanism without a startup, image, group, or scheduled execution path.
+- **Backdoor a snapshot lineage** — replaced by the bounded image-family technique. A snapshot is a
+  point-in-time source; it does not propagate a modified filesystem to future consumers unless an
+  attacker performs and wins a separate disk/image/template workflow.
+- **`compute.urlMaps.invalidateCache` as post-exploitation** — rejected as availability/cost-only.
+  The useful research result remains: `v1.compute.urlMaps.invalidateCache` is always-on Admin
+  Activity and records host/path, but it yields no foothold, secret or boundary crossing.
+- **Standalone VM reset/stop/simulated-maintenance/delete-access-config heading** — rejected as a
+  destructive/availability grab bag. Each method is default-on Compute Admin Activity; simulated
+  maintenance impact is configuration-dependent rather than guaranteed.
+- **Snapshot schedule/snapshot/image deletion anti-recovery heading** — rejected as destructive-only
+  for this page. `removeResourcePolicies`, schedule deletion and GA snapshot/image deletions are
+  default-on Admin Activity; the Preview recoverable-snapshot purge remained unverified and is not
+  promoted as a book technique.
+
+Telemetry correction retained for future tests: `CreatePatchDeployment` and direct
+`ExecutePatchJob` are VM Manager Data Access `DATA_WRITE`, disabled by default, and neither is an
+LRO. A recurring deployment creates patch-job/service state, but official audit documentation does
+not promise that a service-triggered scheduled run emits the same caller-attributed
+`ExecutePatchJob` record. Do not claim that row without tenant evidence.
+
+Reciprocal review corrected six additional precision edges. Project common metadata unconditionally
+requires project-scoped `iam.serviceAccounts.actAs`, while raw `instances.setMetadata` lists only
+the instance write permission; connection/password helpers can impose separate checks. OS Login's
+SSH-auditing guide names `CheckPolicy`, `StartSession`, and `ContinueSession`, but the current audit
+catalog does not classify their log type/default availability, so only `SignSshPublicKey` retains a
+published Data Access classification. The regional-disk IAM example now uses REST because the
+gcloud helper accepts only `--zone`; IAM helper read permissions, a full VM-create example, and
+metadata-value redaction wording were also fixed.

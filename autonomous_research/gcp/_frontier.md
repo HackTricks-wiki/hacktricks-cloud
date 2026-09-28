@@ -314,16 +314,16 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      The maintained 2026-09-28 scan after the Workload Identity Federation, OS Config, Contact
-      Center Insights and AlloyDB batch finds **135 unrated** qualifying sections: 232/268 privesc
-      and 253/352 post-exploitation H3 blocks that already contain Potential Impact and
-      `Logs generated` also have an explicit Stealth rating. Persistence is 151/151 under the same
-      scan. Secret Manager,
+      The deterministic `scripts/check_gcp_technique_metadata.mjs` scan after the BigQuery, Compute,
+      Vertex AI and IAM batch finds **140 unrated** qualifying sections: 246/287 privesc and 245/344
+      post-exploitation H3 blocks that already contain exact `Potential Impact` and `Logs generated`
+      markers also have an exact `Stealth` marker. Persistence is 153/153. These figures supersede
+      the former manual baseline, which could not be reproduced against its own published commit.
+      Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
-      Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
-      BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
+      Run, IAP, Cloud KMS, Dataproc privesc, GKE privesc, Security Command Center and Cloud
       Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
-      Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
+      Cloud DNS post-exploitation, Integration Connectors, Cloud Build privesc, Cloud SQL and
       Discovery Engine, Bigtable and Artifact Registry post-exploitation, Cloud Storage, Artifact
       Registry, App Engine, Composer, Resource Manager, Cloud Deploy, Pub/Sub and Workflows privesc,
       Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
@@ -339,5 +339,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Developer Connect, Advisory Notifications and Healthcare privesc/post-exploitation,
       Cloud Identity and Healthcare persistence, Google Groups and Healthcare unauthenticated
       access, API Gateway unauthenticated techniques, Workload/Workforce Identity Federation,
-      OS Config, Contact Center Insights and AlloyDB have been handled.
+      OS Config, Contact Center Insights, AlloyDB, BigQuery, Compute Engine, Vertex AI and IAM have
+      been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

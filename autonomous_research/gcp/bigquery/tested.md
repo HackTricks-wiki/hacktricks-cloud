@@ -1,5 +1,29 @@
 # BigQuery — tested
 
+## 2026-09-28 — end-to-end attack-surface and categorization audit
+
+- Reviewed enumeration, privilege escalation, post-exploitation, persistence, and external-access
+  coverage against current official documentation. No cloud state was read or mutated during this
+  pass.
+- Rebuilt persistence around four durable, non-duplicate primitives: direct dataset ACL grants,
+  authorized views/datasets, scheduled queries bound to a service account, and continuous queries
+  bound to a service account.
+- Removed the generic duplicate access-grant heading, the duplicate delayed-expiration destruction
+  heading, and the managed-connection identity heading. The latter required an independent target
+  IAM grant and incorrectly implied a deleted connection identity could be recreated and reuse stale
+  bindings.
+- Corrected continuous-query duration from indefinite to two days for a user account or 150 days for
+  a service account, and added the Enterprise/Enterprise Plus reservation plus `CONTINUOUS`
+  assignment prerequisite.
+- Corrected broad sharing: dataset ACL docs list `allAuthenticatedUsers` and do not document a
+  tokenless `allUsers` data-read path; the API requires an authenticated caller. This is a
+  cross-account exposure, not tokenless access.
+- Reclassified Cloud SQL `EXTERNAL_QUERY` from privilege escalation to post-exploitation because it
+  consumes the stored database user's existing read authority without expanding GCP IAM.
+- Replaced historical third-party SQL-injection payload citations with current GoogleSQL syntax,
+  parameterization, permission-boundary, impact, and audit guidance from official sources, and
+  moved the attack primitive from enumeration to post-exploitation during reciprocal review.
+
 ## 2026-09-28 — BigQuery data-agent publication release triage
 
 - Reviewed the new Agent Registry and cross-project A2A publication paths against current official
@@ -15,10 +39,15 @@
 
 ## 2026-09-28 — post-exploitation stealth, permissions and telemetry audit
 
-- Reviewed all 11 retained BigQuery post-exploitation techniques against current official BigQuery,
+- Reviewed all 6 retained BigQuery post-exploitation techniques against current official BigQuery,
   Data Transfer Service, Reservation API and Cloud KMS documentation. Added categorical stealth
   ratings that include durable state, downstream jobs and application failures rather than only the
   initiating API method. This pass was documentation-only; no cloud resource was touched.
+- Removed seven destructive, availability, anti-recovery, cost-abuse and ransom-only headings from
+  the book during reciprocal review because they do not meet the post-exploitation taxonomy's
+  sensitive-information threshold. They remain assessed here rather than presented as retained
+  techniques: delayed expiration, direct deletion, time-travel reduction, DML corruption,
+  transfer interruption, capacity-commitment abuse and default-CMEK lockout.
 - Confirmed the unusual metadata blind spot: `JobService.ListJobs` and `GetJob` are documented
   no-log methods even though project-wide job history can contain SQL and is retained for six months.
   `roles/bigquery.resourceViewer` is broader than the three sensitive job permissions.

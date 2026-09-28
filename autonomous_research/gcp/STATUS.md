@@ -2,6 +2,37 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — BigQuery, Compute Engine, Vertex AI and IAM end-to-end audit
+- Rebuilt and independently cross-reviewed four major surfaces. Retained 12 BigQuery privilege-
+  escalation, 6 post-exploitation, 4 persistence and 1 authenticated external-access techniques;
+  15 Compute privilege-escalation, 23 post-exploitation and 4 persistence techniques; 12 Vertex AI
+  privilege-escalation and 4 post-exploitation techniques; and 2 IAM persistence techniques. Every
+  retained attack heading has bounded impact, categorical Stealth and an expandable telemetry table.
+- BigQuery reciprocal review removed seven destruction, availability, anti-recovery, cost-abuse and
+  ransom-only headings that did not meet the post-exploitation sensitive-information taxonomy. It
+  also moved SQL injection out of enumeration, corrected authenticated broad-dataset sharing,
+  bounded continuous-query regions/security features and documented the authorized-view contract
+  conflict rather than choosing one contradictory official source.
+- Compute reciprocal review separated unconditional project-common metadata `actAs` from raw
+  per-instance metadata authorization, downgraded unclassified OS Login monitoring signals from
+  “logged by default” to “verify,” fixed regional-disk IAM REST syntax, and made helper-read
+  permissions explicit. Destructive-only CDN, lifecycle and anti-recovery headings remain excluded.
+- Vertex AI reciprocal review split Bigtable feature fetch from deprecated Optimized embedding
+  search, added reliable RAG-import LRO polling and exact cleanup, bounded dataset export to image
+  datasets, corrected Agent Engine identity selection and default-service-agent Storage exposure,
+  and marked audit-catalog omissions as unknown rather than proof of silence.
+- IAM removed invalid self-renewal claims: current official behavior rejects self-impersonation and
+  prevents self-signing output from being used against IAM, IAM Credentials or OAuth. A dedicated
+  persistence page now covers hierarchy allow-policy grants and bounded service-account undelete.
+  One contained undelete test was inconclusive; cleanup verified zero matching accounts, bindings,
+  local keys or temporary cleanup grants.
+- This batch otherwise used current official documentation, local CLI/source and predefined-role
+  inspection. No test asset remains. The previous manually reported metadata-scan totals could not
+  be reproduced even against their published pre-batch commit, so
+  `scripts/check_gcp_technique_metadata.mjs` is now the canonical deterministic scan. It reports
+  246/287 privilege-escalation, 245/344 post-exploitation and 153/153 persistence sections rated,
+  leaving 140 qualifying privesc/post-exploitation sections to audit under this explicit definition.
+
 ### 2026-09-28 — Workload Identity Federation, OS Config, Contact Center Insights and AlloyDB
 - Rebuilt Workload/Workforce Identity Federation and OS Config around 9 genuine privilege-
   escalation and 2 persistence primitives, and rebuilt Contact Center Insights and AlloyDB around

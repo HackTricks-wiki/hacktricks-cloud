@@ -29,6 +29,11 @@ Generate-more triggers (only if a new IAM surface ships):
 - [ ] Re-test generated versus uploaded service-account keys under the independent
       `disableServiceAccountKeyCreation`, `disableServiceAccountKeyUpload`, and key-expiry constraints;
       immediately delete every temporary key and local private-key file.
+- [ ] In a disposable project where service-account lifecycle permissions are already effective,
+      validate whether a user-managed key that was not separately deleted becomes usable again after
+      deleting and undeleting the original service-account UID. Do not publish either outcome until
+      the key is deleted, the restored account is deleted, all bindings are removed, and zero active
+      test resources are independently confirmed.
 
 ## Resolved — Managed Workload Identity attestation-rule persistence — SHIPPED (2026-09-25)
 - [x] **`workloadIdentityPoolManagedIdentities.setAttestationRules`** (correct string; the guessed

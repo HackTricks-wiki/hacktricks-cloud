@@ -19,6 +19,10 @@
       behavior, SQL routine DDL and direct API writes, and Spark downstream telemetry.
 - [x] Reject generic connection-identity plus unrestricted target-IAM write as redundant.
 - [x] Use official Google Cloud primary documentation only; no cloud resources touched.
+- [x] Reclassify Cloud SQL `EXTERNAL_QUERY` as post-exploitation and remove its stale escalation
+      count without discarding the earlier permission research.
+- [x] Reconcile persistence and cross-account sharing with the current 150-day continuous-query
+      limit and the dataset ACL's authenticated-only broad member.
 
 ## Open leads / future safe validation
 
@@ -29,6 +33,8 @@
       `GetIamPolicy` when BigQuery Admin Read logging is explicitly enabled.
 - [ ] Capture the exact current BigQueryAuditMetadata fields for authorized-dataset and
       authorized-routine access entries and for their downstream query lineage.
+- [ ] Reconcile the current view-management guide's authorization-preservation statement with the
+      DatasetAccessEntry REST field's reauthorization statement in a disposable authorized view.
 - [ ] In a disposable Cloud SQL database, capture the exact connection-use authorization entries,
       foreign SQL retained in BigQuery job metadata, and database-side principal attribution; keep
       the test read-only and destroy the database and connection afterward.
@@ -45,3 +51,8 @@
       account while preventing the same caller from granting equivalent access to itself. Keep
       `CLOUD_RESOURCE` connection bridging out of the book unless this restricted-binding premise
       is demonstrated; delete the connection and all test bindings after validation.
+- [ ] Recheck Connection API v1 and v1beta1 audit catalogs after API deprecation changes.
+- [ ] Validate direct Routines API versus SQL DDL audit differences without invoking external
+      workloads.
+- [ ] Validate scheduled-query service-account attribution in same-project and cross-project
+      configurations using synthetic data and complete cleanup.

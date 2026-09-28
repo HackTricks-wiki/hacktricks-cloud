@@ -118,3 +118,39 @@ rules anywhere in `src/`.
   retained the official off-default Data Access baseline. Corrected the signing command boundary:
   current `gcloud iam service-accounts sign-blob` uses `iamcredentials.googleapis.com` and produces
   off-default Data Access; only callers of the deprecated IAM v1 methods receive no audit log.
+
+## 2026-09-28 — IAM post-exploitation and persistence reclassification
+
+- Removed the two short-lived-token self-renewal claims from the book. Current official IAM
+  credential guidance explicitly prohibits self-impersonation: self-`generateAccessToken` returns
+  `FAILED_PRECONDITION`, and output of self-`signBlob`/`signJwt` through the IAM APIs cannot be used
+  against IAM, IAM Credentials, or OAuth 2.0 APIs. The old examples and their default-on telemetry
+  claims were both invalid.
+- Replaced the IAM post-exploitation page with a quality-bar boundary. Destructive delete/disable
+  actions are noisy denial of service, not high-value credential discovery, persistence, or cloud
+  privilege escalation, and are no longer promoted as techniques.
+- Added a dedicated IAM persistence page with two retained primitives: durable allow-policy bindings
+  at project/folder/organization scope, and service-account undelete restoring the original immutable
+  identity and its residual roles. Both are low-stealth, always-on Admin Activity operations. The
+  undelete entry explicitly requires a separate retained path to use the restored identity and does
+  not claim that undelete reveals a private key or mints a credential.
+- Official contract: a deleted service account can normally be restored for 30 days if no replacement
+  uses the same name; the original identity retains its roles. A same-email recreation gets a new UID
+  and does not inherit the original bindings.
+- A contained retained-key validation was attempted, but project policy propagation prevented the
+  add-binding stage, so no retained-key conclusion was drawn. Cleanup was verified: zero matching
+  `ht-undel-*` accounts, no project role binding for the test identity, the local private-key file
+  removed, and the temporary cleanup-only Service Account Admin grant removed.
+- Added missing technique-level telemetry and stealth ratings across IAM service enumeration and
+  unauthenticated principal/domain reconnaissance. Current official audit catalogs establish three
+  materially different baselines: IAM and Cloud Asset reads are generally off-by-default Data Access;
+  Recommender recommendation/insight list/get methods explicitly produce no audit logs; feed creation,
+  API enablement, and allow-policy writes are always-on Admin Activity. Policy Analyzer activity reads
+  are off-by-default Data Access, while Policy Troubleshooter's documented internal
+  `GetEffectivePolicy` read is visible only when IAM `ADMIN_READ` logging is enabled.
+- Independent review corrected four precision edges: the wrong-principal-type helper needs both
+  project policy read/write permissions; its validation-failed `SetIamPolicy` emission is undocumented
+  and must not be presented as guaranteed; `QueryGrantableRoles` is an `OTHER` catalog entry governed
+  by Resource Manager `ADMIN_READ` logging; and API enablement is the exact, always-on
+  `google.api.serviceusage.v1.ServiceUsage.EnableService` LRO, whose polling can add
+  `google.longrunning.Operations.GetOperation` Admin Activity entries.

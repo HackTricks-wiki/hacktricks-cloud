@@ -1,5 +1,21 @@
 # BigQuery — open leads
 
+## Persistence and public-access boundaries
+
+- [ ] With an empty disposable dataset, validate whether `allAuthenticatedUsers` can call
+  `tabledata.list` and query through an unrelated billing project with only its documented dataset
+  role; confirm victim-data-project versus execution-project log routing. Remove the ACL, table,
+  dataset, test identities, bindings, and job metadata immediately.
+- [ ] Capture a short synthetic continuous query under a service account and verify initial job,
+  cancellation/completion, and destination publish telemetry. Do not infer periodic or per-row
+  BigQuery audit entries when the service does not promise them.
+- [ ] Reconcile the current view-management guide (updates preserve authorized-view status) with the
+  DatasetAccessEntry REST field description (which still says an updated view must be reauthorized).
+  Validate with non-sensitive rows, including the exact source-data check after the editor loses
+  source access and authorized-dataset future-view behavior.
+- [ ] Recheck BigQuery's dataset ACL schema for any future addition of tokenless `allUsers`; current
+  documentation lists only `allAuthenticatedUsers` among public-like special groups.
+
 ## Job metadata and audit boundaries
 
 - [x] With a non-secret marker query parameter, confirmed that full-projection `jobs.list` and
