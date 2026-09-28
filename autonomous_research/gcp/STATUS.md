@@ -2,6 +2,23 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Scheduler retained-identity authorization live correction
+- Live-tested a raw authenticated-job PATCH whose body contained only the job name and replacement
+  URI and whose update mask was exactly `httpTarget.uri`. A separate unauthenticated canary first
+  proved that `cloudscheduler.jobs.update` had propagated to the isolated caller.
+- The URI-only PATCH was denied on `iam.serviceAccounts.actAs` for the retained OIDC account. After
+  granting Service Account User on that account, the identical request returned HTTP 200 and
+  preserved the original identity and audience. Scheduler therefore reauthorizes the retained
+  account; no partial-update bypass or zero-day exists.
+- Corrected the Scheduler privilege-escalation, post-exploitation and persistence pages so every
+  authenticated HTTP-job update requires actAs on the configured account. `RunJob` remains a
+  separate known-name primitive that does not recheck actAs.
+- Deleted both jobs, both test identities, the generated key, all bindings and the isolated gcloud
+  configuration. Independent verification found no active test resource, IAM reference, key,
+  config or cached Scheduler credential; stale gcloud credential entries from the earlier bounded
+  attempts were revoked too. The pre-existing Scheduler API and service-agent binding were preserved. Cloud Asset
+  Search may retain the normal soft-deleted service-account index entry during its retention window.
+
 ### 2026-09-28 — Dialogflow live correction and new-surface refresh
 - Live-tested the provisional Dialogflow configured-service-account webhook claim under an isolated
   zero-role fixture. Arbitrary external and controlled Cloud Run URLs were rejected because this

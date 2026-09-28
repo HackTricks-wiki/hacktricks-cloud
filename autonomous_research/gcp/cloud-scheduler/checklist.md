@@ -8,16 +8,20 @@
       target behavior, downstream authority and telemetry.
 
 ## Authenticated-job update boundary
-- [ ] Pre-create a limited caller and grant `cloudscheduler.jobs.update` long enough for IAM to
+- [x] Pre-create a limited caller and grant `cloudscheduler.jobs.update` long enough for IAM to
       propagate before creating the disposable test job. Then PATCH only `http_target.uri` while
       omitting the existing OAuth/OIDC fields. Determine whether Scheduler preserves the attached
       identity without reevaluating `iam.serviceAccounts.actAs` or rejects the update on `actAs`.
+      **Resolved 2026-09-28:** after the unauthenticated canary proved update permission propagation,
+      URI-only PATCH was denied on retained-account actAs; the identical authorized control
+      succeeded and preserved the OIDC identity and audience. See `tested.md`.
 - [ ] Repeat with `http_target.body`, headers and method in separate update masks, and capture
       `authorizationInfo` for successful and denied requests. Keep the job paused with a far-future
       schedule and delete every resource immediately after the test.
-- [ ] If URI-only update preserves OIDC without `actAs`, test an endpoint that records the token
+- [x] If URI-only update preserves OIDC without `actAs`, test an endpoint that records the token
       without trusting its audience. Separately test the OAuth path against a harmless read-only
-      Google API. Never point a test job at a mutating production target.
+      Google API. Never point a test job at a mutating production target. **Not applicable:** the
+      prerequisite failed securely, so no token receiver or dispatch was created.
 
 ## Full-view response boundary
 - [ ] With a disposable job containing non-secret marker values, compare get/list responses for

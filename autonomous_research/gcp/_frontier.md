@@ -374,9 +374,12 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [ ] Test Backup and DR Preview auto-protection with same-organization disposable projects to bound
       policy/binding authorization versus later restore authority. Remove policies, bindings,
       backups, vault, operator grants and synthetic workloads after all LROs settle.
-- [ ] Continue private-first partial-update checks for Eventarc pipelines and Cloud Scheduler: change
-      only a destination URI while omitting `actAs`, then use an authorized control. Never publish a
-      missing recheck before coordinated disclosure, and delete every route, token, receiver and SA.
+- [x] Cloud Scheduler's partial-update arm is securely resolved: after an unauthenticated canary
+      proved `jobs.update` propagation, a raw URI-only authenticated-job PATCH was denied on retained
+      service-account `actAs`; the identical authorized control succeeded and preserved identity and
+      audience. Cleanup restored the baseline. Continue the separate private-first Eventarc pipeline
+      check; never publish a missing recheck before coordinated disclosure, and delete every route,
+      token, receiver and SA.
 - [ ] In a disposable Firebase App Hosting backend, verify whether image-source Build plus Rollout
       alone executes under the existing backend identity without caller `actAs`; capture App Hosting,
       Cloud Build and Cloud Run principals and delete the rollout/build/image afterwards. See

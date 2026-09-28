@@ -1,5 +1,32 @@
 # Cloud Scheduler — tested
 
+## 2026-09-28 — authenticated-job URI-only update boundary live test
+- Created a far-future OIDC HTTP job and a separate unauthenticated canary. The test caller held
+  `roles/cloudscheduler.admin` plus Service Usage Consumer but had no permission on the job's
+  target service account. The canary established that `cloudscheduler.jobs.update` had propagated
+  after seven bounded attempts, avoiding the false-negative condition from the 2026-09-26 test.
+- A raw `PATCH` whose body contained only the job name and replacement URI and whose update mask was
+  exactly `httpTarget.uri` returned HTTP 403: the caller lacked `iam.serviceAccounts.actAs` on the
+  **retained** OIDC service account. Admin Activity recorded `UpdateJob`, the URI-only update mask,
+  granted `cloudscheduler.jobs.update`, and the actAs denial in the status message.
+- Granted the caller `roles/iam.serviceAccountUser` on that service account and repeated the
+  identical PATCH. It returned HTTP 200 on the first attempt; the returned job preserved both the
+  original OIDC identity and audience. Current Scheduler therefore reauthorizes a retained
+  OAuth/OIDC identity on an authenticated-job update. There is no partial-update bypass.
+- Corrected the privilege-escalation, post-exploitation and persistence pages: any update to an
+  authenticated HTTP job requires `iam.serviceAccounts.actAs` on its configured account, even when
+  the field mask does not mention authentication. The known-name `RunJob` behavior remains distinct
+  and does not recheck actAs.
+- Cleanup deleted both jobs, both user-managed service accounts, their key, every test binding and
+  the isolated gcloud configuration, and restored the pre-test Scheduler state. Independent checks
+  found zero active matching accounts, jobs, IAM references, local keys or configurations. A
+  follow-up check found the deleted caller still listed in gcloud's shared credential store; that
+  entry and the stale cached credentials from the earlier bounded Scheduler attempts were revoked,
+  leaving zero `ht-sched-*` cached accounts. Cloud
+  Asset Search temporarily retained the normal deleted-service-account index entry; the account is
+  absent from active IAM inventory. The pre-existing Scheduler API and dangling service-agent role
+  binding remain unchanged, while the temporarily recreated service identity was deleted.
+
 ## 2026-09-26 — post-exploitation permissions and logging review
 - Corrected `GetJob` and `ListJobs` from Data Access `DATA_READ` to the current documented
   `ADMIN_READ` classification. They remain disabled by default. Full stored-request harvesting
@@ -12,10 +39,9 @@
 - Corrected the disruption log table so it no longer includes unrelated `UpdateJob`, and corrected
   the update technique's downstream logging: the target operation can be Admin Activity, Data
   Access or a platform log depending on the method, not unconditionally Data Access/off by default.
-- Clarified the update boundary. A narrow URI/body/header patch preserves the existing
-  authentication configuration. Supplying or replacing an OAuth/OIDC service account explicitly
-  requires `iam.serviceAccounts.actAs`; for OIDC, a redirected endpoint must also accept the stored
-  audience.
+- Clarified the then-documented update boundary. The later 2026-09-28 live test above supersedes
+  the inference that a narrow URI/body/header patch avoids actAs: Scheduler rechecks
+  `iam.serviceAccounts.actAs` on the retained OAuth/OIDC service account.
 
 ## 2026-09-26 — narrow authenticated-job update boundary attempt
 - The lab Scheduler API was already enabled and contained no jobs. Created a paused annual HTTP job
