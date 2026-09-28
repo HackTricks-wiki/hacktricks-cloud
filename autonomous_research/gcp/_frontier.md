@@ -373,6 +373,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       local clients. Exact same-subject Workforce Identity crossover is a documented limitation;
       keep only case/domain/length/Unicode/delimiter normalization variants open for a private-first
       two-principal test. See `cloud-sql/tested.md` and `cloud-sql/checklist.md`.
+- [ ] Re-run the CES OpenAPI-tool retained-service-account partial-update test only in a project with
+      explicit CES write access. The current Owner control had `ces.apps.create` granted but the
+      product separately denied project write access, so no app/tool or boundary result exists.
+      Keep missing actAs private-first and use Google `userinfo` instead of an external token
+      receiver. See `ces/tested.md` and `ces/checklist.md`.
 - [ ] Test Backup and DR Preview auto-protection with same-organization disposable projects to bound
       policy/binding authorization versus later restore authority. Remove policies, bindings,
       backups, vault, operator grants and synthetic workloads after all LROs settle.

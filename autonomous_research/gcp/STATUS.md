@@ -2,6 +2,21 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — CES retained-identity probe isolated to product eligibility
+- Current CES discovery exposes an OpenAPI-tool partial-update hypothesis: a tool editor may be able
+  to change only the schema/server while retaining service-account OAuth authentication. The test
+  was designed to verify the synthetic target identity through Google `userinfo`, avoiding any
+  external token receiver or raw bearer-token retention.
+- The lab Owner control could not create the prerequisite application. `CreateApp` returned
+  `PERMISSION_DENIED: Write access to project ... was denied`, while its Admin Activity entry showed
+  `ces.apps.create` granted. This is a separate CES product-entitlement blocker, so the actAs
+  boundary remains untested and no book or vulnerability claim was made.
+- Cleanup removed both bounded attempts' test identities, service agent, bindings and API enablement.
+  Independent IAM, Service Usage, credential and Cloud Asset checks found zero residue; no app, tool,
+  receiver, token capture or billable execution existed.
+- Added durable CES follow-ups plus ranked API Hub plugin, Storage Batch Operations dry-run and Audit
+  Manager validate-only deputy candidates for later no-residue tests.
+
 ### 2026-09-28 — Cloud SQL login-hash export and identity-surface closure
 - Live-verified Cloud SQL for SQL Server's documented `sp_help_revlogin` migration feature. After a
   no-restart flag enable, the default `sqlserver` account exported a synthetic eligible login's
