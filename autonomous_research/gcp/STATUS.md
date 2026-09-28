@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Audit Manager caller-write boundary securely enforced
+- Live-tested project-scope `EnrollResource` with `validateOnly=true` under an isolated caller. The
+  Audit Manager service agent had bucket object-create while the caller's authoritative Storage
+  `testIamPermissions` result was empty. After Audit Manager IAM propagated, the request returned
+  HTTP 403 naming missing caller permission `storage.buckets.getIamPolicy`.
+- Granting that caller documented bucket-level Storage Admin made the identical validation return
+  HTTP 200 `{}`. This rejects the same-project confused-deputy hypothesis; it is expected secure
+  behavior and does not merit a HackTricks technique or vulnerability report. The strict
+  folder/organization cross-project variant remains queued for a prepared hierarchical fixture.
+- Admin Activity logged `AuditManager.EnrollResource` and the authorization decision, but the
+  observed request body omitted both destination and `validateOnly`. All buckets, identities, keys,
+  configurations, bindings, API enablement and the newly created service agent were removed.
+  Authoritative live inventory is empty; Cloud Asset temporarily retains deleted-key index records.
+
 ### 2026-09-28 — CES retained-identity probe isolated to product eligibility
 - Current CES discovery exposes an OpenAPI-tool partial-update hypothesis: a tool editor may be able
   to change only the schema/server while retaining service-account OAuth authentication. The test

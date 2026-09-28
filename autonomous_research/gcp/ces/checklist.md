@@ -22,7 +22,9 @@
 - [ ] Storage Batch Operations: submit a cross-project `dryRun` with a service-agent-readable source
       bucket but a caller lacking bucket/object read. A nonzero hidden-object count/byte total would
       establish a deputy disclosure; a caller-permission denial is the expected secure result.
-- [ ] Audit Manager: call `EnrollResource` with `validateOnly=true` and a cross-project destination
-      writable by the service agent but not the caller. Do not create a real enrollment unless the
-      validation unexpectedly omits the documented caller-write check.
-
+- [x] Audit Manager project-scope control: `EnrollResource` with `validateOnly=true` rejected a
+      caller lacking bucket access on `storage.buckets.getIamPolicy` even though the service agent
+      had object-create; the identical request succeeded with caller Storage Admin. This is secure.
+- [ ] Audit Manager strict cross-project case: repeat only at a prepared folder/organization scope,
+      because cross-project destinations are not the documented project-scope contract. Keep a 2xx
+      without caller bucket access private-first and do not create a real enrollment.

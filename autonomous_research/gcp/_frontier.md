@@ -7,6 +7,16 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-28 boundary-day frontier — Audit Manager validation
+- [x] Project-scope `EnrollResource` `validateOnly` correctly enforced caller destination authority:
+      a caller with no Storage permission was denied on `storage.buckets.getIamPolicy` even while the
+      service agent had object-create; caller Storage Admin was the successful control. Full evidence
+      and cleanup are in `audit-manager/tested.md`.
+- [ ] Repeat the deputy matrix only in an already-prepared folder/organization scope with a
+      cross-project empty bucket. Do not bootstrap a real enrollment because v1 has no unenroll or
+      delete-enrollment RPC. Also test multi-destination short-circuiting and request-field redaction
+      using only owned synthetic buckets; keep any authorization discrepancy private-first.
+
 ## 2026-09-28 boundary-day frontier — source, scanners, media and network inspection
 - [ ] In disposable Cloud Functions v1/v2 fixtures with Data Access enabled, capture
       `GenerateDownloadUrl` plus the signed Storage GET, distinguish caller versus signing-service
