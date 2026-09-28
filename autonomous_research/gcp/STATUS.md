@@ -2,6 +2,33 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Identity, Developer Connect, Advisory Notifications and Healthcare
+- Rebuilt Cloud Identity, Developer Connect, Advisory Notifications and Cloud Healthcare around 3
+  genuine privilege-escalation, 13 post-exploitation, 3 service-level persistence and 3
+  unauthenticated/external-access primitives. All 22 retained headings have exact prerequisites,
+  bounded impact, categorical Stealth and expandable telemetry; every service received independent
+  reciprocal review.
+- Corrected Cloud Identity group-role versus customized-settings authority, security/locked-group
+  restrictions, anonymous archive versus authenticated membership visibility and Workspace/DWD
+  audit attribution. Corrected Developer Connect's GA Admin versus Beta token-accessor boundary,
+  named-link token scope, self-selected account-connector token, provider protections and
+  conditional downstream CI/CD escalation.
+- Corrected Advisory Notifications by separating optional organization-level Sensitive Actions
+  delivery from mandatory notices, Essential Contacts and SCC findings. A bounded lab probe reached
+  only repeated API initialization failures; no settings document was returned and no PATCH was
+  sent. Both temporary API enablements were successfully disabled, final state was verified, and
+  no residue remained.
+- Corrected Healthcare caller-versus-P4SA authorization, FHIR/DICOM/HL7v2 read and ingest surfaces,
+  import/export semantics, de-identification value bounds, consent-config restoration and future
+  BigQuery/Pub/Sub delivery. The external-access page now limits `allAuthenticatedUsers` to an
+  unrelated authenticated Google principal rather than tokenless `allUsers` access.
+- Apart from the Advisory Notifications initialization probe, this batch made no cloud mutation.
+  Current documentation, local CLI/source and predefined-role inspection, reciprocal review, and
+  125 successful unique reference-link checks support the result. The maintained qualifying scan
+  now finds 223/266 privilege-escalation and 244/355 post-exploitation sections with explicit
+  Stealth; persistence is 150/150. This leaves 154 qualifying privesc/post-exploitation sections to
+  audit.
+
 ### 2026-09-28 — BeyondCorp, BigLake, Container Analysis and VM Migration
 - Rebuilt BeyondCorp, BigLake/Lakehouse, Container Analysis and VM Migration around 6 genuine
   privilege-escalation, 9 post-exploitation and 4 service-level persistence primitives. All 19

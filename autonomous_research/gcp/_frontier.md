@@ -240,6 +240,32 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       and Preview disk migration, then delete every clone, image, disk, snapshot and binding. See
       `vm-migration/checklist.md`.
 
+## 2026-09-28 boundary-day frontier — Cloud Identity, Developer Connect, Advisory Notifications and Healthcare
+- [ ] In a disposable licensed Workspace tenant, capture regular, security, dynamic and locked-group
+      membership authorization under default and customized `whoCanModerateMembers`, then correlate
+      Groups/Enterprise Groups events with optional Cloud Logging sharing. Exercise only synthetic
+      IAM bindings and remove every membership, setting and binding. See `cloud-identity/checklist.md`.
+- [ ] With two disposable Workspace/GCP tenants, test the bounded DWD cross-organization client-ID
+      inference and Access Evaluation attribution using a narrow read-only scope. Revoke the DWD
+      grant, key/signing authority and every test account immediately. See `cloud-identity/checklist.md`.
+- [ ] In a disposable provider repository, compare raw read/read-write token roles, the system Git
+      proxy and self-scoped account-connector token under minimum roles. Capture exact provider and
+      GCP telemetry, respect protected refs and remove links, connections, grants and test commits.
+      See `developer-connect/checklist.md`.
+- [ ] Derive the Preview generic HTTP proxy request contract only against a controlled endpoint,
+      then verify caller-plus-P4SA authorization for cross-project secrets and header/path bounds.
+      Keep any real authorization failure private and delete every secret, connection and grant. See
+      `developer-connect/checklist.md`.
+- [ ] Retry Advisory Notifications only in an already-operational disposable organization with
+      synthetic state. Compare BASIC/FULL reads, capture the stable-v1 update method, preserve the
+      complete settings map and current etag, and restore only the controlled optional setting. Do
+      not alter mandatory notices, real Essential Contacts or production SOC delivery. See
+      `advisory-notifications/checklist.md`.
+- [ ] In isolated no-PHI Healthcare stores, capture stable-v1 start/end LRO logs, caller/P4SA Storage
+      and BigQuery access, continuous-streaming telemetry and consent behavior under minimum custom
+      roles. Snapshot full store configuration/IAM first; remove every stream, notification, grant,
+      sink and synthetic resource and verify no LRO or delivery remains. See `healthcare/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -266,10 +292,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the BeyondCorp, BigLake, Container Analysis and VM
-      Migration batch finds **161 unrated** qualifying sections: 220/267 privesc and 231/345
-      post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
-      have an explicit Stealth rating. Persistence is 148/148 under the same scan. Secret Manager,
+      The maintained 2026-09-28 scan after the Cloud Identity, Developer Connect, Advisory
+      Notifications and Healthcare batch finds **154 unrated** qualifying sections: 223/266 privesc
+      and 244/355 post-exploitation H3 blocks that already contain Potential Impact and
+      `Logs generated` also have an explicit Stealth rating. Persistence is 150/150 under the same
+      scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
@@ -286,6 +313,8 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       Deployment Manager post-exploitation, Certificate Authority Service persistence, Database
       Migration Service and Service Usage zero-H3 audits, BeyondCorp, BigLake/Lakehouse, Container
       Analysis and VM Migration privesc/post-exploitation, BeyondCorp, BigLake/Lakehouse and
-      Container Analysis persistence, VM Migration zero-H3 persistence, and API Gateway
-      unauthenticated techniques have been handled.
+      Container Analysis persistence, VM Migration zero-H3 persistence, Cloud Identity,
+      Developer Connect, Advisory Notifications and Healthcare privesc/post-exploitation,
+      Cloud Identity and Healthcare persistence, Google Groups and Healthcare unauthenticated
+      access, and API Gateway unauthenticated techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
