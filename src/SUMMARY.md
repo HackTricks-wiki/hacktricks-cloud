@@ -274,6 +274,7 @@
     - [GCP - Data Fusion Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-data-fusion-persistence.md)
     - [GCP - Dataflow Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-dataflow-persistence.md)
     - [GCP - Datastream Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-datastream-persistence.md)
+    - [GCP - Sensitive Data Protection (DLP) Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-dlp-persistence.md)
     - [GCP - Essential Contacts Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-essential-contacts-persistence.md)
     - [GCP - Eventarc Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-eventarc-persistence.md)
     - [GCP - Document AI Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-document-ai-persistence.md)

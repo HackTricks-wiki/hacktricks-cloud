@@ -82,6 +82,22 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       placement and project/folder moves. The current lab project has no organization authority;
       keep the official dual-resource permission bounds until such a fixture is available.
 
+## 2026-09-28 boundary-day frontier — Deploy, messaging, workflows and DLP
+- [ ] Revalidate Cloud Deploy's separate render/deploy `actAs` failures with different execution
+      accounts, and correlate release/rollout, Cloud Build and runtime audit principals. See
+      `cloud-deploy/checklist.md`; remove every pipeline, target, release and staged object.
+- [ ] Resolve whether Pub/Sub custom BigQuery/Cloud Storage export identities can be cross-project,
+      and capture the exact destination writer/audit methods. The public push-token receiver is
+      normally unavailable inside VPC-SC and must not be presented as a perimeter bypass. See
+      `pubsub/checklist.md`.
+- [ ] Revalidate the Workflows default-account `actAs` check, source-only identity retention,
+      callback discovery and `LOG_NONE` precedence with a disposable fixture. Current docs do not
+      support the old omitted-identity bypass claim. See `workflows/checklist.md`.
+- [ ] Capture DLP `CreateDlpJob` request fields, scheduled-trigger runtime telemetry, cross-project
+      findings writes and unwrapped/KMS-wrapped re-identification under minimum custom roles. The
+      current official contracts describe dangerous expected delegation, not a zero-day. See
+      `dlp/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -108,16 +124,17 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## Documentation-quality backlog: per-technique stealth
 - [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      A fresh reproducible 2026-09-28 scan after the App Engine, Composer, Resource Manager and
-      Artifact Registry batch finds **344 unrated** qualifying sections: 175/341 privesc and 188/366
+      A fresh reproducible 2026-09-28 scan after the Cloud Deploy, Pub/Sub, Workflows and Sensitive
+      Data Protection batch finds **312 unrated** qualifying sections: 170/311 privesc and 193/364
       post-exploitation H3 blocks that already contain Potential Impact and `Logs generated` also
-      have an explicit Stealth rating. Persistence is 153/153 under the same scan. Secret Manager,
+      have an explicit Stealth rating. Persistence is 154/154 under the same scan. Secret Manager,
       Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
       Run, IAP, Cloud KMS, Dataproc privesc, Compute privesc and post-exploitation, GKE privesc,
       BigQuery privesc and post-exploitation, Vertex AI privesc, Security Command Center and Cloud
       Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
       Cloud DNS post-exploitation, Integration Connectors, IAM and Cloud Build privesc, Cloud SQL and
       Discovery Engine, Bigtable and Artifact Registry post-exploitation, Cloud Storage, Artifact
-      Registry, App Engine, Composer and Resource Manager privesc, and API Gateway unauthenticated
+      Registry, App Engine, Composer, Resource Manager, Cloud Deploy, Pub/Sub and Workflows privesc,
+      Sensitive Data Protection post-exploitation and persistence, and API Gateway unauthenticated
       techniques have been handled.
 - [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.

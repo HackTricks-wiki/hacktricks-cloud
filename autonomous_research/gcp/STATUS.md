@@ -2,6 +2,27 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Deploy, Pub/Sub, Workflows and Sensitive Data Protection
+- Rebuilt Cloud Deploy privilege escalation around 3 genuine primitives, Pub/Sub around 3,
+  Workflows around 4 and Sensitive Data Protection post-exploitation around 5. Moved the recurring
+  DLP scan into a new service-level persistence page. All 16 retained headings have exact
+  prerequisites, bounded impact, categorical Stealth and expandable telemetry, and all four service
+  audits received independent cross-review.
+- Corrected Cloud Deploy's release/rollout and default-account `actAs` checks, current task schema,
+  allow-missing PATCH authorization and caller-versus-execution-account boundaries; Pub/Sub push
+  OIDC, VPC-SC, export-identity and downstream logging boundaries; and Workflows default identity,
+  raw REST versus CLI permissions, call logging, callback scope and current audit methods.
+- Corrected DLP's most consequential telemetry error: `CreateDlpJob`, `CreateJobTrigger` and both
+  template updates are always-on Admin Activity, not silent Data Access. Bounded all scans and
+  cross-project exports by service-agent IAM, removed the caller-supplied `content:inspect` non-
+  technique, and split raw unwrapped-key disclosure from server-side KMS-wrapped re-identification.
+- This batch used official documentation, local CLI/source checks and read-only predefined-role
+  inspection only. It created no cloud resource, changed no IAM or service configuration and left
+  no cleanup debt.
+- The reproducible qualifying-H3 scan now finds 170/311 privilege-escalation and 193/364
+  post-exploitation sections with explicit Stealth; persistence is 154/154. This leaves 312
+  qualifying privesc/post-exploitation sections to audit.
+
 ### 2026-09-28 — App Engine, Composer, Resource Manager and Artifact Registry
 - Rebuilt App Engine privilege escalation around 2 genuine primitives, Composer privilege
   escalation around 4, Resource Manager privilege escalation around 5 and Artifact Registry
@@ -326,7 +347,7 @@ Last updated: 2026-09-28
 | Privesc (existing services) | ✅ complete | Minimum permissions + Potential Impact + "Logs generated" expandable on all 75 privesc pages |
 | Post-exploitation (existing) | ✅ complete | Impact + Logs generated on all real post-ex pages (README index exempt) |
 | Persistence (existing) | ✅ complete | Logs generated on all real persistence pages (README index exempt) |
-| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 175/341 privesc, 188/366 post-exploitation, 153/153 persistence sections with Impact + Logs generated have a rating; 344 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
+| Per-technique stealth ratings | 🟡 in progress | Fresh 2026-09-28 heading scan: 170/311 privesc, 193/364 post-exploitation, 154/154 persistence sections with Impact + Logs generated have a rating; 312 remain in privesc/post-exploitation. Audit service by service against actual log methods and downstream traces. |
 | Privesc/post/persistence (net-new services) | ✅ saturated | Multi-phase ground-truth diff of the GCP API surface vs wiki; genuine gaps shipped (Cloud Build staging-bucket poisoning, NetApp ONTAP, Public CA EAB, Discovery Engine ACL, Config Delivery, Integration Connectors, App Engine exportAppImage, SSM sshkeys.createAny, + 6 permission-level) |
 | Unauth / recon (all services) | ✅ complete | 13 new per-service pages (baseline 11 → 24); every non-qualifying service verified-excluded via the qualifying rule (`_deferred-and-excluded.md`) |
 | Env-var → RCE | ✅ complete | 10 qualifying execution services documented in `environment-variable-injection.md`; all others excluded with reasons |
