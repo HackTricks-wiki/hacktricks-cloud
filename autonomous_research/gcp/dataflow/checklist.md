@@ -12,6 +12,8 @@
 - [x] Consolidate inline YAML execution into the job-create run-as primitive.
 - [x] Independently re-open the official Flex Template, worker/service-agent, cross-project,
       poisoning, and audit contracts after the first-pass rewrite.
+- [x] Remove the duplicate post-exploitation export H3 and centralize the job-create plus `actAs`
+      boundary in the privilege-escalation page.
 
 ## Safe future authorized tests
 

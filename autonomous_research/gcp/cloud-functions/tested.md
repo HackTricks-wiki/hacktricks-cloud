@@ -41,6 +41,33 @@
 This audit made no cloud mutation, created no resource, changed no IAM or API state, and produced no
 cleanup debt.
 
+## 2026-09-28 — post-exploitation page audit
+
+- Reduced four mixed headings to two source-recovery techniques: raw
+  `cloudfunctions.functions.sourceCodeGet`/`GenerateDownloadUrl` and direct reads from managed
+  source-bucket objects.
+- Removed function deletion because its supported outcome is destructive availability/evidence
+  loss, not sensitive-information recovery. Removed request interception through source replacement
+  because the same update is already the privilege-escalation primitive, and removed the in-memory
+  Flask swap because it presupposes an independent application code-execution vulnerability.
+- Corrected the raw authorization minimum: the v1/v2 REST methods require only
+  `cloudfunctions.functions.sourceCodeGet` when the full resource name is known. `.get`/`.list` are
+  discovery/helper permissions, not method prerequisites.
+- Current read-only role inspection shows `sourceCodeGet` in Project Viewer and Cloud Functions
+  Editor, Developer, and Admin. Cloud Functions Viewer omits the permission; broad Project Viewer
+  remains the surprising read-only source-disclosure grant.
+- Most importantly, removed the absolute “permanently unauditable” claim. Google's current audit
+  catalog explicitly classifies v1/v2 `GenerateDownloadUrl` as `ADMIN_READ` Data Access, disabled by
+  default. Earlier contained tests that observed no entry even after enabling Data Access are kept
+  as historical behavior, not allowed to override the current published contract.
+- Direct Storage get/list remains disabled-by-default `DATA_READ`. Signed-URL object reads can lose
+  original-caller attribution because the URL carries the signing identity's authorization; the
+  page does not promise absence or a specific principal without a fresh capture.
+
+This pass used official current REST, IAM, build/source-storage and audit references plus read-only
+predefined-role inspection. It created or changed no cloud resource, IAM policy, API state, audit
+configuration, source object or local credential.
+
 ## 2026-09-28 — independent cross-review
 
 - Reconciled the current audit catalog's internally inconsistent v1 upload entry with the
@@ -61,3 +88,15 @@ cleanup debt.
 - Distinguished original-caller Cloud Functions Admin Activity from managed downstream Cloud Build
   activity, which can be attributed to a Google-managed service agent. Build stdout/stderr
   availability remains dependent on the build's logging configuration.
+
+## 2026-09-28 — reciprocal post-exploitation review
+
+- Rechecked both download methods against the v1/v2 REST and current audit catalogs: the exact
+  minimum remains `cloudfunctions.functions.sourceCodeGet`, and both methods are non-LRO Data
+  Access `ADMIN_READ`, disabled by default.
+- Corrected the predefined-role statement after independent live role-metadata inspection. Project
+  Viewer and Cloud Functions Editor/Developer/Admin contain `sourceCodeGet`; Cloud Functions Viewer
+  does not.
+- Reconfirmed the documented managed-bucket naming, first-generation two-version retention note,
+  conditional CMEK suffix, direct Storage get/list permissions, and downstream Storage Data Access
+  boundary. No cloud state was changed.

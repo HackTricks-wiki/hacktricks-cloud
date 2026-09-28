@@ -2,6 +2,35 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Functions, Cloud Shell, transfer/media, VMware and network defenses
+- Rebuilt ten service surfaces around 2 VMware Engine privilege-escalation and 18 post-exploitation
+  techniques. Cloud Functions, Cloud Shell, Web Security Scanner, VMware Engine, Storage Transfer,
+  Live Stream, Transcoder and Cloud IDS/Network Security retain consequential techniques; Dataflow
+  and VPC Service Controls intentionally retain no separate post-exploitation heading after their
+  duplicate or misclassified material was routed to the correct pages. Every retained heading has
+  bounded prerequisites and impact, categorical Stealth and an expandable telemetry table, and all
+  four workstreams received an independent reciprocal review.
+- Cloud Functions now reflects the current auditable `GenerateDownloadUrl` contract and the fact
+  that Cloud Functions Viewer omits `sourceCodeGet`; Cloud Shell is bounded to an already-authorized
+  user session; and Web Security Scanner explicitly selects its platform and warns that active scans
+  can mutate target application data. Dataflow exports remain an impact of the existing run-as-
+  service-account escalation rather than a second primitive.
+- VMware Engine now separates Google Cloud IAM from vCenter/NSX authority, corrects CloudOwner to
+  the restricted `Cloud-Owner-Role`, and retains credential-plane crossing, resource IAM self-grant,
+  VM cloning and NSX interception. Storage Transfer, Live Stream and Transcoder retain only managed-
+  identity data-movement or credential/input disclosure chains with current helper, LRO and Storage
+  prerequisites; destructive and duplicate variants were removed.
+- Cloud IDS/Network Security retains selective IDS/NGFW/DNS suppression plus NSI in-band and out-of-
+  band inspection. Exact Compute and Network Security method names, operation polling and `.use`
+  boundaries were corrected. VPC-SC reads are enumeration, boundary changes are privilege
+  escalation, durable rules are persistence, and underlying data reads belong to the protected
+  service; dry-run violations remain Policy Denied signals even though sink routing can exclude them.
+- Work used current official documentation, installed SDK/source and predefined-role inspection.
+  No cloud resource, IAM binding, audit policy or service configuration was read or changed, and no
+  cleanup debt exists. All targeted official links resolved. The deterministic scan now finds
+  256/273 privilege-escalation, 279/304 post-exploitation and 155/155 persistence headings with
+  categorical Stealth, leaving 42 qualifying headings to audit.
+
 ### 2026-09-28 — Cloud Build, Bare Metal Solution, Looker, Managed Lustre and Parallelstore
 - Rebuilt five service surfaces around 3 privilege-escalation and 5 post-exploitation techniques.
   Every retained attack heading now has exact prerequisites, bounded impact, categorical Stealth

@@ -18,6 +18,10 @@
       `cloudfunctions.functions.get` to the raw `.update` boundary.
 - [x] Removed non-escalation invocation/public-exposure material, an unsupported source-bucket race,
       and the digest-pinned Artifact Registry negative result from the privilege-escalation page.
+- [x] Rebuild post-exploitation around signed source download and direct managed-bucket reads;
+      remove deletion, duplicate source replacement and generic in-process code injection.
+- [x] Correct `GenerateDownloadUrl` to the current documented `ADMIN_READ` Data Access event and
+      refresh predefined-role inclusion for `sourceCodeGet`.
 
 ## Safe live validation frontier
 
@@ -37,6 +41,10 @@
 - [ ] Determine whether any managed source-upload generation can be replaced by a Storage-only
       principal before consumption. Keep this out of the book unless a reliable generation/path
       discovery and integrity failure is demonstrated; keep a real platform boundary failure private.
+- [ ] With Data Access enabled only on a disposable project, capture current v1 and v2
+      `GenerateDownloadUrl` entries and the subsequent signed object GET. Verify the Storage
+      principal/resource fields without placing a secret in source, then restore the exact audit
+      policy and remove the function, source archive, build outputs and every temporary binding.
 
 ## Cleanup contract for every fixture
 

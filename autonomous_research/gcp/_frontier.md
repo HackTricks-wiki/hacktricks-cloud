@@ -7,6 +7,35 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-28 boundary-day frontier — source, scanners, media and network inspection
+- [ ] In disposable Cloud Functions v1/v2 fixtures with Data Access enabled, capture
+      `GenerateDownloadUrl` plus the signed Storage GET, distinguish caller versus signing-service
+      attribution, then restore the audit policy and delete source, builds, images and functions.
+- [ ] In an explicitly disposable Cloud Shell session, compare authorized, never-authorized and
+      restarted-session token behavior without retaining a bearer token or bypassing consent. Record
+      only non-secret identity/scope/lifetime evidence and remove temporary access immediately.
+- [ ] With synthetic Dataflow and Storage Transfer fixtures, subtract helper reads and re-test the
+      exact `actAs` boundary for replacement jobs and user-managed transfer identities. Cancel jobs,
+      remove staged marker objects and grants, and do not revive the old no-`actAs` claim without a
+      current reproducible result.
+- [ ] Run Web Security Scanner only against a disposable same-project application at low QPS; capture
+      scan/result telemetry and request-field redaction, then delete the configuration and every
+      scanner-created application record. Treat any cross-target or link-local acceptance as private
+      report material and never probe an unowned host.
+- [ ] In synthetic Live Stream/Transcoder fixtures, measure RTMP/SRT admission, channel-activity
+      logging, stream-key list/get parity and minimum service-agent object permissions. Stop billed
+      channels immediately and delete inputs, assets, events, jobs, objects, buckets and grants.
+- [ ] In a disposable VMware private cloud, capture credential-show/reset, private-cloud IAM,
+      vCenter clone and NSX policy evidence under minimum roles. Never inspect production workloads;
+      restore passwords/policies and delete clones, snapshots, rules and temporary identities.
+- [ ] Capture Cloud IDS exception and DNS Threat Detector update telemetry with reversible values;
+      the current audit catalog omits DNS Threat Detector, so keep its logging class unverified until
+      observed. Separately validate NSI producer/consumer `.use` grant placement only with disposable
+      packet-processing infrastructure and remove every endpoint, association, profile and rule.
+- [ ] Recheck VPC-SC dry-run update/enforce/drop and `metadata.dryRun` with a harmless disposable
+      access policy. Keep VPC-SC post-exploitation empty unless a future method itself discloses data
+      or creates execution without first weakening the perimeter.
+
 ## Open, genuinely-uncovered leads deferred for lack of testable infra (verify when feasible)
 - [x] **Managed Workload Identity attestation-rule persistence — RESOLVED/SHIPPED (batch 6, 2026-09-25).**
       Live-verified control plane: `workloadIdentityPoolManagedIdentities.setAttestationRules` (or

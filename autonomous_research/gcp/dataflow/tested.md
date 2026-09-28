@@ -87,3 +87,31 @@ poisoning guidance, and Dataflow audit reference. It independently confirmed the
 launch permissions, both service-agent roles in the worker-account project, the organization-policy
 constraint, the object replacement boundary, and the documented non-LRO `dataflow.jobs.create`
 method. No additional book correction was required.
+
+## 2026-09-28 — post-exploitation deduplication
+
+Removed the standalone “Dataflow export from other services” H3. Its supposed minimum—job creation
+plus `actAs` on a worker with stronger source access—is the exact retained run-as-service-account
+privilege escalation, while a worker with no stronger access cannot create a confused-deputy read.
+Selecting a BigQuery, Bigtable, Pub/Sub or Storage export template is an impact/payload of that
+chain. When the caller already holds both source read and destination write, the template performs
+ordinary authorized transfer and adds no distinct boundary.
+
+The old section also omitted regional Flex Template helper, staging, worker/service-agent,
+cross-project, network, policy and perimeter prerequisites and used a reasoned rather than current
+documented audit method. Those exact boundaries remain centralized in the privilege-escalation page
+and ledger. This was documentation-only; no job, bucket, object, account, binding or API state was
+created or changed.
+
+## 2026-09-28 — reciprocal post-exploitation review
+
+- Reopened the current regional Flex Template reference and confirmed its explicit launch
+  permissions: `dataflow.jobs.create`, `resourcemanager.projects.get`,
+  `iam.serviceAccounts.actAs`, `storage.buckets.get`, and conditional `storage.buckets.create`.
+- Confirmed the no-garbage taxonomy decision. A worker with stronger source access is the existing
+  run-as-service-account privilege escalation; a caller already holding source read and sink write
+  merely performs authorized transfer. Neither case justifies a duplicate Dataflow post-exploitation
+  H3.
+- Reconfirmed that worker/service-agent, staging, network, organization-policy, quota and perimeter
+  dependencies remain centralized on the privilege-escalation page. No book correction or cloud
+  mutation was needed.
