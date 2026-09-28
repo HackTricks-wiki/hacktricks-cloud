@@ -2,6 +2,29 @@
 
 Last updated: 2026-09-28
 
+### 2026-09-28 — Cloud Build, Bare Metal Solution, Looker, Managed Lustre and Parallelstore
+- Rebuilt five service surfaces around 3 privilege-escalation and 5 post-exploitation techniques.
+  Every retained attack heading now has exact prerequisites, bounded impact, categorical Stealth
+  and an expandable telemetry table; each primary audit received an independent reciprocal review.
+- Cloud Build now retains stored-output recovery through Cloud Logging, customer-owned Storage or
+  the Google-owned default log bucket, with the helper's preliminary `GetBuild` and the customer's
+  inability to inspect Google's bucket-side audit trail made explicit. Trigger mutation remains in
+  privilege escalation; standalone approval, cancellation and destructive actions were rejected.
+- Bare Metal Solution now separates the standard `loginInfo`/Secret Manager initial-password path
+  from the optional Preview `LoadInstanceAuthInfo`/CMEK path and keeps only consequential NFS
+  allowlist expansion in post-exploitation. SSH-key registration, serial-console enablement, root-
+  squash flags and snapshot restore are not presented as automatic access or privilege escalation.
+- Looker now distinguishes Cloud IAM from application authorization, removes the false OAuth-client
+  and allowed-email-domain takeover claims, and retains one-time instance export, modeled query/
+  saved-content access and SQL Runner. Managed Lustre and Parallelstore each retain only the bounded
+  Storage confused-deputy chain formed by import under a stronger transfer identity followed by
+  export to an attacker-controlled bucket; cleanup requires mount-based removal of staged files.
+- Work used current official documentation, public discovery schemas, local CLI/source and role
+  inspection. No cloud resource, IAM binding, API state or service configuration was changed, and
+  no cleanup debt exists. All 49 unique book references resolved. The deterministic scan now finds
+  254/274 privilege-escalation, 263/326 post-exploitation and 155/155 persistence headings with
+  categorical Stealth, leaving 83 qualifying headings to audit.
+
 ### 2026-09-28 — App Engine, API Keys, Batch, PAM, Binary Authorization, Config Controller, Cloud Domains and Service Directory
 - Rebuilt eight service surfaces around 5 privilege-escalation, 13 post-exploitation, 2 enumeration
   and 2 resource-level persistence techniques. Every retained attack heading has explicit minimum

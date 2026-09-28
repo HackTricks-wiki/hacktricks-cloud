@@ -23,6 +23,27 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       workforce identity pool + external IdP can be stood up (needs org access), live-verify the
       refresh-token capture end-to-end and quantify the phishing/consent step.
 
+## 2026-09-28 boundary-day frontier — Build, BMS, Looker and managed file transfers
+- [ ] In a purpose-built BMS environment, test standard initial-password retrieval with separate
+      principals for direct Secret Manager access and customer credential-service-account
+      impersonation. Separately test Preview `LoadInstanceAuthInfo` custom-role grantability and
+      CMEK decrypt, `root` versus `customeradmin` local-login policy, rotation behavior and BMS/IAM
+      Credentials/Secret Manager/KMS/host telemetry. Remove every local credential artifact.
+- [ ] With a harmless synthetic Cloud Build, compare Cloud Logging, customer-owned bucket and
+      Google-owned default-bucket reads under minimum custom roles. Capture the helper's
+      `GetBuild`, confirm the customer's visibility boundary for Google's bucket, and evaluate
+      approval only as part of a real source-poisoning/accepted-input chain—not as standalone
+      escalation. Delete the build outputs, bucket and grants.
+- [ ] In a disposable Looker (Google Cloud core) instance, capture whether `ExportInstance` emits a
+      control-plane audit record, then correlate the service agent's Storage/KMS calls for non-CMEK
+      and CMEK instances. Test application-query and SQL Runner permissions only with synthetic
+      models and data; delete exports, credentials, grants and test content.
+- [ ] On disposable Managed Lustre and Parallelstore instances, reduce the documented bucket roles
+      to exact object permissions, test the caller-selected transfer-service-account attachment
+      check, and capture transfer LRO plus cross-project Storage logs. Use an isolated pre-created
+      directory, mount it after transfer, delete every staged file and verify no imported content,
+      bucket object, binding or operation remains.
+
 ## 2026-09-28 boundary-day frontier — App/runtime delegation and service registries
 - [ ] Validate App Engine `exportAppImage` only with a disposable Artifact Registry repository:
       determine the actual writer identity, exact destination permissions, cross-project behavior,
