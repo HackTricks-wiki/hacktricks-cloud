@@ -2,6 +2,10 @@
 
 ## Completed — 2026-09-29
 
+- [x] Map Cloud Trace's `list_traces` and `get_trace` remote MCP tools, their direct/MCP permission
+      layers, `_Trace` prerequisite, anonymous boundary and default audit behavior.
+- [x] Validate the Cloud Trace MCP gate with a disposable minimum reader and preserve the API's
+      enabled baseline while removing every IAM, credential, configuration and local artifact.
 - [x] Map the Error Reporting remote MCP schema, underlying permission, representative-event data,
       direct-versus-MCP authorization layers, anonymous boundary and default audit visibility.
 - [x] Validate the Error Reporting MCP path with an isolated minimum-permission caller and restore

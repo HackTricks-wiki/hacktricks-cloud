@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Trace remote MCP transport
+- Added Cloud Trace's `list_traces` and `get_trace` read-only MCP tools to the existing trace
+  credential-harvesting technique and service enumeration, including exact direct/MCP permission
+  layers, time/view controls, `_Trace` prerequisite and wrapper-versus-underlying telemetry.
+- A minimum Trace reader succeeded directly but was denied by MCP until a separate MCP Tool User
+  grant propagated; the authorized tool returned the same empty 30-day result and anonymous
+  invocation returned HTTP 401. A nonexistent-ID get reached the backend without creating data.
+- Deleted the identity, key, both grants, custom role, configuration and local responses. Cloud
+  Trace remained enabled at baseline and no active residue remained. Technique totals are unchanged.
+
 ### 2026-09-29 — Error Reporting stack-trace harvesting and remote MCP boundary
 - Added a dedicated post-exploitation technique for mining Error Reporting groups and sampled
   events for stack traces, request/user context, internal topology and accidentally embedded

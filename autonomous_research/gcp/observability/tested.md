@@ -1,5 +1,24 @@
 # Google Cloud Observability security research ledger
 
+## 2026-09-29 — Cloud Trace remote MCP transport
+
+- Mapped the new global `https://cloudtrace.googleapis.com/mcp` endpoint. It exposes two read-only
+  tools: `list_traces` (`cloudtrace.traces.list`) with filters, bounded time ranges and all REST view
+  modes, and `get_trace` (`cloudtrace.traces.get`) for every span in a known trace.
+- A disposable caller with only both Trace read permissions, project read and quota use succeeded
+  through direct REST after IAM propagation but remained denied by MCP on
+  `mcp.googleapis.com/tools.call`. After the separate unconditional MCP Tool User grant propagated,
+  `list_traces` returned the same empty 30-day result. Anonymous invocation returned HTTP 401.
+- The lab project has no `_Trace` observability bucket: a safe `get_trace` request for a guaranteed
+  nonexistent ID reached the underlying tool and returned that exact prerequisite error. No trace,
+  bucket, dataset, view, span or other telemetry was created.
+- Confirmed that `ListTraces` and `GetTrace` are off-default `DATA_READ` Data Access methods and the
+  service-specific MCP wrapper is also off-default Data Access. No test-principal audit entry was
+  present under default settings.
+- Removed the disposable key, identity, IAM grants, custom role, gcloud configuration and local
+  responses. Cloud Trace remained enabled at its pre-test baseline; exact checks found no active
+  identity, binding, configuration or local residue, and the role is only soft-deleted.
+
 ## 2026-09-29 — Error Reporting remote MCP and stack-trace harvesting
 
 - Mapped the new global `https://clouderrorreporting.googleapis.com/mcp` endpoint. It exposes one
