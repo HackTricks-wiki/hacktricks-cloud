@@ -710,6 +710,7 @@
     - [AWS - STS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md)
     - [AWS - Transfer Family Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md)
     - [AWS - Verified Permissions Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-verified-permissions-privesc/README.md)
+    - [AWS - WorkSpaces Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workspaces-privesc/README.md)
     - [AWS - WorkDocs Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md)
   - [AWS - Services](pentesting-cloud/aws-security/aws-services/README.md)
     - [AWS - Account Management Enum](pentesting-cloud/aws-security/aws-services/aws-account-management-enum.md)

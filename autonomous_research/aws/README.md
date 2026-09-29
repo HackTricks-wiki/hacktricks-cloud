@@ -47,7 +47,7 @@ and the session scratchpad artifacts `LEDGER.csv` / `PROBE_LEDGER.tsv` / `TRACKE
 - **Minimum permissions.** Test each technique with the least privileges that confirm it; record those perms in the wiki technique.
 - **No garbage.** Only report techniques that are real, useful attacks — verified OR high-confidence
   from docs when live testing is blocked by the cost/permission exceptions. Never manufacture pages.
-- **Cost/time exception.** Skip live testing only if a technique costs >$5/30min, cannot be deleted
+- **Cost/time exception.** Skip live testing only if a technique costs >$10/30min, cannot be deleted
   until X time passes, or needs privileges you don't have (then document from docs as high-probability).
 - **Irreversible-primitive caution.** For Object-Lock / retention / compliance tests use the **minimum
   1-day** retention, never a long/auto retain-until (see the standing residue note in STATUS.md).
