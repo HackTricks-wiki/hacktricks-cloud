@@ -1,5 +1,15 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — Gemini Cloud Assist
+
+- [x] Published all six MCP tool families, immutable investigation-history harvesting and the
+      surprising direct Storage object-read surface in Gemini Cloud Assist User. Live-verified the
+      latter with a known synthetic bucket and no Storage role.
+- [ ] Repeat the agent/downstream authorization matrix only in a Private-Preview-entitled disposable
+      project. Test project-versus-App-Hub investigation scope, list-only field reduction and
+      Storage IAM/condition/deny/VPC-SC boundaries with synthetic data. Keep any caller-authority or
+      cross-application disclosure private-first; see `gemini-cloud-assist/checklist.md`.
+
 ## 2026-09-29 release delta — CX Agent Studio
 
 - Published the 60-tool CES MCP surface, transcript/tool-trace harvesting, guardrail defense evasion,

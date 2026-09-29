@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Gemini Cloud Assist investigation history and predefined-role reach
+- Added a dedicated Gemini Cloud Assist service page and two post-exploitation techniques: saved
+  investigation/revision harvesting and direct known-bucket object reads from the Storage
+  permissions bundled into `roles/geminicloudassist.user`.
+- Mapped all six current MCP tools and verified their separate wrapper gate. The current project
+  lacks Private Preview entitlement, so matching backend denials for Owner and the reduced caller
+  are recorded as a lab limitation, not an authorization finding.
+- A disposable principal holding only Gemini Cloud Assist User listed and downloaded a synthetic
+  marker through the Storage JSON API. Object reads were absent under default Data Access settings;
+  bucket administration remained visible in Admin Activity. Removed all IAM, Storage, API,
+  credential, config and local test state and restored the original API baselines. Coverage is now
+  309/309 post-exploitation techniques; privilege-escalation and persistence remain 274/274 and
+  161/161.
+
 ### 2026-09-29 — CX Agent Studio application data and behavioral persistence
 - Added a dedicated CX Agent Studio service page, two post-exploitation techniques and two explicitly
   app-level persistence techniques: conversation/tool-trace harvesting, guardrail defense evasion,
