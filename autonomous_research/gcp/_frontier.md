@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Gemini Enterprise resource IAM
+- [x] Mapped granular app and data-store policies and shipped `engines`, `dataStores`, and
+      `collections.setIamPolicy` as scoped custom-role escalation and service-level persistence.
+      Both app and corpus access are required; source connector ACLs remain enforced, and broad
+      project Agentspace roles override the isolation entirely.
+- [ ] Run the engine/data-store/collection propagation matrix only in an existing disposable Gemini
+      Enterprise fixture. Capture stable-v1 data-store IAM audit method names and test blind policy
+      replacement plus conditions, then restore every binding. See `discovery-engine/checklist.md`.
+
 ## 2026-09-29 release delta — Dataform user credentials and remote MCP
 - [x] Folded the GA stored-Google-Account mode into enumeration and the existing invocation
       technique. `workflowInvocations.create` can trigger a known saved user-credential workflow,

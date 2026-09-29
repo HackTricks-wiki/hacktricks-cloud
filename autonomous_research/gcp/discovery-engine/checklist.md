@@ -1,5 +1,17 @@
 # Discovery Engine / Gemini Enterprise — open leads
 
+- [x] Map the September 28 granular app/data-store IAM model, resource roles, connector-entity
+  propagation, minimum policy-write permissions, and audit classes. Shipped the useful custom-role
+  self-grant and service-level persistence paths without presenting full Admin as an escalation.
+- [ ] In an already provisioned disposable Gemini Enterprise project, verify the full negative and
+  positive matrix: engine only, data store only, both resources, collection only, and collection
+  plus every entity store. Capture `v1` method names for standalone data-store policy writes, then
+  remove every resource policy binding and fixture. Do not enable/provision the licensed service
+  solely for this test.
+- [ ] Test policy inheritance and IAM Conditions at app/data-store scope, including whether a
+  resource-scoped custom role containing only `setIamPolicy` can blind-replace the policy without
+  `getIamPolicy`. Treat any missing permission check or resource-confusion result as private-first.
+
 - [ ] Live-test a periodic BigQuery connector with two synthetic principals: a source-table reader
   that creates the connector and a Gemini Enterprise app user explicitly denied direct BigQuery
   data access. Capture Discovery Engine, connector and BigQuery audit events, then delete the app,

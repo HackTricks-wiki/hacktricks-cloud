@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Gemini Enterprise granular resource IAM
+- Added current app/data-store IAM enumeration and the scoped `setIamPolicy` privilege-escalation
+  and persistence paths. The model requires both app and linked-corpus grants, retains source ACLs,
+  and can be defeated by broad project-level Agentspace roles; connector collections need matching
+  child-entity policies when configured through REST.
+- Completed impact, minimum-permission, stealth, and expandable logging metadata for the two older
+  Discovery Engine persistence techniques. All retained IAM mutations are always-on Admin Activity.
+- The lab had the Discovery Engine API disabled and no existing resource fixture, so no service was
+  enabled and no cloud state was created. Live propagation and v1 data-store method-name capture
+  remain gated on an already provisioned disposable Gemini Enterprise environment.
+
 ### 2026-09-29 — Dataform user credentials and MCP boundary
 - Updated Dataform for GA Google Account workflow credentials: enumeration now exposes the effective
   custom service account or output-only user owner/scopes, and the existing invocation technique
