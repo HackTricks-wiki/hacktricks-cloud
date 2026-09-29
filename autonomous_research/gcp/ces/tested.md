@@ -1,5 +1,31 @@
 # Gemini Enterprise for Customer Experience / CX Agent Studio — tested
 
+## 2026-09-29 — 60-tool MCP surface and retained application attacks
+
+- The unauthenticated live schemas at both `https://ces.googleapis.com/mcp` and
+  `https://ces.us.rep.googleapis.com/mcp` were identical and exposed 60 tools. They cover complete
+  CRUD for apps, agents, tools, guardrails, deployments and toolsets; app-version create/delete/
+  restore; changelogs; import/export; evaluations; conversations; and operations. Schema discovery
+  disclosed no victim state and anonymous tool invocation returned HTTP 401.
+- Owner controls listed the supported `us` location through both v1 REST and the regional MCP
+  server, returning an empty application set. A fresh service account was bound to an exact
+  `ces.apps.list` custom role, `roles/ces.viewer` and `roles/mcp.toolUser`; Cloud Asset policy
+  analysis confirmed both required permissions, but CES continued to return IAM denials to that
+  principal. Because this project previously rejected CES writes despite a granted permission, the
+  result is recorded as product-entitlement/cache behavior rather than an authorization finding.
+- Retained two high-value post-exploitation patterns from the current schemas and official contract:
+  conversation/tool-trace harvesting and guardrail defense evasion. Retained two application-level
+  persistence patterns: agent/tool behavior implants and immutable-version/deployment pinning. Each
+  is bounded to existing CES application/runtime authority; none is represented as GCP IAM
+  escalation.
+- CES documents conversation and design-time reads plus agent/tool/guardrail/deployment/version
+  writes as Data Access, disabled by default. Default live validation produced no direct or MCP
+  caller record. App create/update/delete/import remain always-on Admin Activity.
+- No CES app or nested resource was created, updated, executed or deleted. Removed the disposable
+  key, account, three role bindings, gcloud configuration, active custom role and schema/response
+  artifacts; disabled CES back to its original baseline. Exact API, identity, binding, config, active
+  role and temporary-file residue checks were empty.
+
 ## 2026-09-28 — retained tool service-account authorization probe blocked by eligibility
 
 - Read current CES discovery revision `20260924`. A standalone OpenAPI tool can store arbitrary
@@ -23,4 +49,3 @@
 - Two bounded setup attempts were cleaned. Independent verification found zero active test service
   accounts, CES service agent, project IAM references, cached credentials, Cloud Asset matches or
   enabled CES API. No app, tool, receiver, token capture or billable execution was created.
-

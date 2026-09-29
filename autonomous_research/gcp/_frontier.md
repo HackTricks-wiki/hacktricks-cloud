@@ -1,5 +1,18 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — CX Agent Studio
+
+- Published the 60-tool CES MCP surface, transcript/tool-trace harvesting, guardrail defense evasion,
+  agent/tool behavior implants and version/deployment pinning. These are bounded to application
+  authority and are not represented as project IAM escalation.
+- The current lab is not a valid minimum-role CES write environment and also denied a newly bound
+  read identity despite Cloud Asset resolving both grants. Repeat minimum-role read/write controls
+  only in a separately onboarded disposable project; do not infer an authorization issue from the
+  stricter denial.
+- Keep the retained OpenAPI service-account-auth update hypothesis private-first. Test it only where
+  an Owner create control succeeds, with a zero-role target identity, no token capture and full
+  teardown. Publish only expected delegation behavior; report any missing `actAs` recheck privately.
+
 State (2026-09-29): the authenticated technique surface is at deep saturation. Six independent
 diff/scan axes run this engagement all came back exhausted beyond the 3 gaps shipped in batch 4:
 service-prefix diff, individual-write-perm diff, resource-type-token diff, setIamPolicy/use/actAs

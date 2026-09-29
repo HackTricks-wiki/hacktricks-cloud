@@ -1,5 +1,16 @@
 # Gemini Enterprise for Customer Experience / CX Agent Studio — open ideas
 
+## Current public coverage
+
+- [x] Map both live MCP endpoints and all 60 current tool schemas.
+- [x] Document service/resource enumeration, exact MCP dual-permission boundary and audit classes.
+- [x] Retain conversation/tool-trace harvesting and guardrail defense evasion with bounded impact.
+- [x] Retain agent/tool behavior implants and version/deployment pinning as app-level persistence.
+- [x] Confirm Owner REST/MCP positive controls, anonymous invocation rejection and disabled-by-default
+      caller telemetry without creating any CES resource.
+- [ ] Re-run minimum-role positive controls only in an explicitly CES-onboarded disposable project;
+      the current lab's separate product eligibility boundary makes non-owner results inconclusive.
+
 ## OpenAPI tool retained identity
 
 - [ ] In an explicitly CES-write-enabled disposable project, create a standalone OpenAPI tool with

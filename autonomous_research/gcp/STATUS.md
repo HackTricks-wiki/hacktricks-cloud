@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — CX Agent Studio application data and behavioral persistence
+- Added a dedicated CX Agent Studio service page, two post-exploitation techniques and two explicitly
+  app-level persistence techniques: conversation/tool-trace harvesting, guardrail defense evasion,
+  agent/tool behavior implants and immutable version/deployment pinning.
+- Mapped both live MCP endpoints and all 60 current tools. Owner REST and MCP controls listed the
+  empty supported region; anonymous execution returned 401. A new non-owner remained denied despite
+  Cloud Asset confirming the CES and MCP grants, so the product-entitlement/cache result is recorded
+  only as a lab limitation, not an attack.
+- Default validation produced no CES or MCP Data Access entry. Created no application resource and
+  removed every disposable credential, identity, grant, config, active role and artifact; restored
+  the API to its disabled baseline. Coverage is now 307/307 post-exploitation and 161/161 persistence
+  techniques; privilege-escalation coverage remains 274/274.
+
 ### 2026-09-29 — Service Health and Unified Maintenance operational intelligence
 - Added dedicated service pages and two retained post-exploitation techniques: project-specific
   Service Health relevance/history can infer product and regional usage, while Unified Maintenance
