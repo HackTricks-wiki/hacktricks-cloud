@@ -712,6 +712,14 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## 2026-09-29 MCP catalog frontier
 
+- [x] Application Design Center: mapped the six-tool Preview MCP surface and independently verified
+      wrapper/backend IAM. Published the more consequential predefined-role path: Design Center
+      Viewer can directly list/read objects from known project buckets even before product setup.
+      Full teardown verified. See `application-design-center/tested.md`.
+- [ ] In an existing disposable management-project/folder fixture, test cross-space artifact
+      boundaries, folder-inherited Storage reach, enabled Data Access telemetry, deployment-SA
+      rechecks and cross-project IaC import. Keep any authorization discrepancy private-first; see
+      `application-design-center/checklist.md`.
 - [x] Secure Source Manager: map the aggregate and six specialized regional endpoints, verify the
       independent MCP authorization gate, and test whether project-wide Viewer can recover stored
       webhook query secrets. All live get/list paths returned `[REDACTED]`; the retained attack value
@@ -752,6 +760,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [x] Complete the explicit stealth rating and expandable log table on every qualifying GCP
       privilege-escalation, post-exploitation and persistence technique. The deterministic
       `scripts/check_gcp_technique_metadata.mjs` scan on 2026-09-29 reports **274/274 privesc,
-      317/317 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
+      318/318 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
       new technique and review both primary-service and downstream/platform telemetry before rating
       stealth.

@@ -2,6 +2,23 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Application Design Center role reach and remote MCP
+- Added dedicated Application Design Center enumeration and post-exploitation pages. Mapped the
+  resource/deployment hierarchy, all six live MCP tools, role families, downstream boundaries and
+  separate Design Center, MCP, Storage and deployment audit layers.
+- A reduced caller passed the `mcp.tools.call` wrapper but remained denied on the underlying
+  `designcenter.applicationTemplates.list`, confirming independent authorization. The deliberately
+  unconfigured project remained outside the service's management-project hierarchy; no space,
+  setup, application or service identity was created.
+- Live-verified the valuable cross-service role edge: project-level `roles/designcenter.viewer`
+  directly listed and downloaded an object from a known synthetic bucket while project bucket
+  listing remained denied. The read worked without any Storage role and even without Design Center
+  setup. Default audit settings produced no Storage, Design Center or MCP read record; only the role
+  grants appeared as Admin Activity.
+- Deleted the object/bucket, identity/key/config, all three grants and local artifacts; disabled the
+  API back to baseline and verified exact zero residue. Coverage is now 318/318 post-exploitation
+  techniques; privilege escalation and persistence remain 274/274 and 161/161.
+
 ### 2026-09-29 — App Lifecycle Manager feature-flag application control and remote MCP
 - Added feature-flag enumeration and a dedicated post-exploitation technique: a narrow caller can
   update an existing flag, snapshot it, publish a FlagRelease and roll it across Units without any
