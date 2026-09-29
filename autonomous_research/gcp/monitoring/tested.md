@@ -1,5 +1,31 @@
 # Cloud Monitoring post-exploitation research
 
+## 2026-09-29 — alert history and remote MCP read surface
+
+- Mapped the nine read-only tools at `https://monitoring.googleapis.com/mcp`: time series and
+  PromQL, alert policies, alerts, metric descriptors and dashboards. Each tool maps to the matching
+  `monitoring.*.get/list` permission and additionally requires `mcp.tools.call`.
+- Retained a new post-exploitation technique for `monitoring.alerts.list/get`. Alert objects expose
+  current/historical state and time bounds, policy snapshots, monitored-resource and metric labels,
+  system/user metadata, and labels extracted from logs. The list response contains complete alert
+  objects; a separate get is not necessary when enumeration already returns the desired record.
+- A caller holding only `monitoring.alerts.list`, project read and quota use retrieved one existing
+  closed alert through direct REST. It was denied at the MCP outer gate until an unconditional MCP
+  Tool User grant propagated, after which MCP returned the same alert. Direct and MCP get requests
+  remained denied without `monitoring.alerts.get`; anonymous invocation returned HTTP 401.
+- A user-token control initially charged service usage to its credential quota project and failed
+  because Monitoring was disabled there. Adding `x-goog-user-project` selected the intended MCP
+  consumer project and the documented snake-case `open_time desc` MCP ordering succeeded. Public
+  examples now make that consumer/target split explicit.
+- The current 2026-09-25 Monitoring audit catalog lists neither `AlertService.GetAlert` nor
+  `AlertService.ListAlerts` in its audited-method table or explicit no-audit list. Default live
+  validation produced no test-principal entry. The book therefore records the direct signal as
+  undocumented and the MCP wrapper as off-default Data Access, not as permanently audit-silent.
+- No alert, policy, metric or dashboard was created or changed. Deleted the disposable key,
+  identity, both grants, custom role, gcloud configuration and local schemas/responses. Monitoring
+  remained enabled at baseline; exact checks found no active identity, binding, config or local
+  residue, and the role is only soft-deleted.
+
 ## 2026-09-28 — documentation audit
 
 No live cloud resources were created or modified during this pass. Findings were reconciled against current Google Cloud REST, IAM, audit-logging, and gcloud documentation.

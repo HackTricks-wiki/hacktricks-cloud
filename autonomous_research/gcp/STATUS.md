@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Monitoring alert history and remote MCP surface
+- Added a post-exploitation technique for `monitoring.alerts.list/get`: current and historical
+  violations expose policy snapshots, severity, time bounds, resource/metric/system/user labels and
+  log-extracted labels. A list-only caller retrieved a complete existing closed-alert object while
+  get remained independently denied.
+- Mapped all nine read-only Monitoring MCP tools across time series/PromQL, policies, alerts,
+  descriptors and dashboards. The same list-only caller was denied without `mcp.tools.call`, then
+  retrieved the same alert after the outer grant propagated; anonymous invocation returned 401.
+- The direct AlertService methods are absent from both sections of the current Monitoring audit
+  catalog and produced no default live entry, so visibility is documented as unknown rather than
+  permanently absent. Deleted every disposable IAM/credential/config/local artifact and preserved
+  Monitoring's enabled baseline. Post-exploitation coverage is now 301/301 retained techniques.
+
 ### 2026-09-29 — Cloud Trace remote MCP transport
 - Added Cloud Trace's `list_traces` and `get_trace` read-only MCP tools to the existing trace
   credential-harvesting technique and service enumeration, including exact direct/MCP permission
