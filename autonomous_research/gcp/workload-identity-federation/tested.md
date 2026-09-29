@@ -42,6 +42,9 @@ The prior page recorded disposable-lab validation on 2026-09-08 with cleanup aft
    federated Console sign-in.
 5. Add an attestation rule to an existing managed workload identity, bounded to X.509/SPIFFE
    credentials and services/relying workloads that trust that identity.
+6. Use a compromised Workforce SCIM tenant token to add an already accepted subject to a privileged
+   group, or in Looker's users-and-groups mode modify a mapped custom claim. This is limited to the
+   currently supported Gemini Enterprise and Looker integrations, not arbitrary GCP services.
 
 ## Retained persistence primitives
 
@@ -53,10 +56,11 @@ The prior page recorded disposable-lab validation on 2026-09-08 with cleanup aft
 
 ## Rejected or folded hypotheses
 
-- **SCIM group injection into arbitrary GCP IAM-bound workforce groups:** rejected. Current Google
-  documentation says Workforce Identity Federation uses group claims from the assertion and ignores
-  SCIM membership for ordinary federation; SCIM-managed groups are currently a Gemini Enterprise
-  authorization feature.
+- **SCIM group injection into arbitrary GCP IAM-bound workforce groups:** still rejected as an
+  organization-wide claim. The 2026-09-25 documentation now supports SCIM as the authorization and
+  OAuth claim source for Gemini Enterprise and Looker (Preview), so the supported-product path is
+  retained separately. Ordinary federation outside those integrations still uses its configured
+  assertion/token group source.
 - **Managed identity attestation rule as a second persistence heading:** folded into privilege
   escalation. The described action hijacks an existing authorized identity and duplicated the same
   primitive.
@@ -115,3 +119,18 @@ The prior page recorded disposable-lab validation on 2026-09-08 with cleanup aft
   code or refresh token to the caller. Keep client/credential enumeration because
   `GetOauthClientCredential` returns the secret and is off-by-default Admin Read Data Access, but do
   not claim an independent token backdoor without separately evidenced IAP control/code delivery.
+
+## 2026-09-29 SCIM / Looker release-delta review
+
+- Reconciled the September 21/25 documentation change that adds
+  `enabled-for-users-groups` for Looker. In that mode SCIM users, groups and mapped custom claims
+  feed IAM authorization and Looker OAuth; `enabled-for-groups` remains the Gemini Enterprise mode.
+- Retained a bounded privilege-escalation technique for a compromised tenant provisioning token.
+  The token is attached to the tenant service agent; `roles/iam.scimSyncer` supplies the exact SCIM
+  user/group permissions. `PatchGroup`, `CreateUser`, and `PatchUser` are always-on Admin Activity
+  under `iamscim.googleapis.com`, but attribution is to the shared service agent.
+- The project-only lab identity has no organization visibility or workforce-pool permissions, so no
+  tenant was created and no IdP sign-in was attempted. Read-only organization discovery was denied;
+  one create request against an intentionally nonexistent pool returned `NOT_FOUND` and created no
+  resource. The technique rests on the explicit current service contract and standard SCIM PATCH
+  semantics.

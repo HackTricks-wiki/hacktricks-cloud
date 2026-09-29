@@ -9,7 +9,8 @@
 - [x] Bound workforce provider takeover, including the local-JWKS Console limitation.
 - [x] Reconcile workforce pool/provider enablement and soft-delete restoration with residual access.
 - [x] Check current pool-admin, workforce-editor, OAuth-client-admin, SCIM-syncer, and Editor roles.
-- [x] Remove the false general-purpose SCIM group-injection escalation.
+- [x] Replace the false general-purpose SCIM group-injection claim with the current bounded Gemini
+      Enterprise / Looker SCIM-token technique after the September 2026 Looker release.
 - [x] Correct managed identity from STS/OAuth language to X.509/SPIFFE semantics.
 - [x] Consolidate disabled/deleted resource restoration into one residual-trust technique.
 - [x] Remove duplicate managed-identity persistence coverage.
@@ -34,4 +35,8 @@
   of an IAP application's workforce settings/code-delivery path; do not restore an OAuth persistence
   heading unless an attacker-observable authorization code or refresh token is demonstrated.
 - [ ] Verify whether the current helper commands ever add permissions beyond the raw REST permission
-  when project/resource identifiers are fully supplied; retain raw REST as the minimum baseline.
+      when project/resource identifiers are fully supplied; retain raw REST as the minimum baseline.
+- [ ] With an authorized disposable organization/IdP fixture, create one SCIM tenant, user and group;
+      patch membership using only the tenant token; verify Gemini Enterprise and Looker claim/IAM
+      propagation plus service-agent attribution; then hard-delete the tenant and remove every
+      organization grant. Do not run where workforce pool/provider tombstones cannot be accepted.

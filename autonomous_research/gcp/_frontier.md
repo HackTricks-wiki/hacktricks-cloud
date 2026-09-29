@@ -7,6 +7,14 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Workforce SCIM for Looker
+- [x] Reconcile the new `enabled-for-users-groups` mode. Shipped the bounded provisioning-token
+      group/custom-claim injection path for Gemini Enterprise and Looker, with service-agent audit
+      attribution and an explicit non-universal-GCP constraint.
+- [ ] Live-verify group/claim propagation, current Cloud OAuth `/groups` output and service-agent
+      audit fields only when an authorized disposable organization plus IdP fixture is available and
+      every tenant/grant can be hard-cleaned. See `workload-identity-federation/checklist.md`.
+
 ## 2026-09-29 release delta — Model Armor exclusions
 - [x] Live-verified catch-all template exclusion defense evasion. A partial-match `(?s).*` rule
       changed a HIGH-confidence PI/JB detection to `NO_MATCH_FOUND` with no override signal while

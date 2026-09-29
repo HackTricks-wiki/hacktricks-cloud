@@ -14,6 +14,8 @@ Last reviewed: 2026-09-28
 - [x] Reconcile exact documented Looker application audit methods/classes/defaults and downstream Storage/KMS telemetry.
 - [x] Remove destructive-only, duplicate persistence, metadata-only backup, and unsupported credential-theft claims.
 - [x] Run focused Markdown, shell, reference, URL, and diff validation without cloud mutation.
+- [x] Reconcile the September 2026 Workforce SCIM users/groups claim source and link the bounded
+      provisioning-token escalation without reviving the rejected `looker.instances.update` claim.
 
 ## Safe future validation
 

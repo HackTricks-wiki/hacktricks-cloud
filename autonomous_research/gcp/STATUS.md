@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Workforce SCIM group/claim injection for Looker and Gemini Enterprise
+- Reconciled the new Looker `enabled-for-users-groups` SCIM mode with the earlier Gemini-only review.
+  A tenant provisioning token can patch an accepted subject into a privileged SCIM group (or alter
+  a mapped Looker custom claim), inheriting existing supported-product access without an IAM-policy
+  write. The book now includes exact preconditions, impact, service-agent attribution and logs.
+- Kept the boundary narrow: current SCIM provisioning applies to Gemini Enterprise and Looker
+  (Preview), not every GCP service. Updated federation enumeration to inventory tenants, tokens,
+  claim mappings, service agents and `scimUsage`; corrected the Looker no-privesc statement.
+- The lab principal lacks organization/workforce access, so no tenant or identity was created. A
+  denied organization read and a `NOT_FOUND` request against a nonexistent pool left no resources.
+
 ### 2026-09-29 — Model Armor template exclusion defense evasion
 - Live-verified that a template update can add a partial-match `(?s).*` exclusion and silently turn a
   HIGH-confidence prompt-injection result into `NO_MATCH_FOUND` while enforcement remains enabled.

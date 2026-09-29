@@ -40,3 +40,15 @@ No Looker instance, bucket, key, IAM policy, application identity, or other clou
 - Looker application roles and permission-dependency documentation.
 - Cloud Storage and Cloud KMS audit catalogs.
 - Local `gcloud looker instances export --help`, `instances update --help`, and current predefined-role descriptions.
+
+## 2026-09-29 — Workforce SCIM claim-source delta
+
+- The September 2026 `enabled-for-users-groups` provider mode supersedes the prior zero-privesc
+  conclusion for one identity-plane case. A compromised SCIM tenant token can patch an accepted
+  workforce subject into a group, or change a mapped custom user claim, that already receives more
+  privileged Looker OAuth/IAM or application-group access.
+- This is documented once on the Workforce Identity Federation privilege-escalation page and linked
+  from Looker. It does not make `looker.instances.update` an OAuth takeover permission and does not
+  apply to arbitrary GCP services.
+- No Looker or workforce resource was created. The lab identity lacks organization/workforce-pool
+  access; the conclusion is bounded to Google's current SCIM, Cloud OAuth and Looker contracts.
