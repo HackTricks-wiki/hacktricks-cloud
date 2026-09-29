@@ -335,6 +335,7 @@
     - [GCP - App Engine Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-engine-enum.md)
     - [GCP - App Hub Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-hub-enum.md)
     - [GCP - App Lifecycle Manager Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-lifecycle-manager-enum.md)
+    - [GCP - App Topology Enum](pentesting-cloud/gcp-security/gcp-services/gcp-app-topology-enum.md)
     - [GCP - Artifact Registry Enum](pentesting-cloud/gcp-security/gcp-services/gcp-artifact-registry-enum.md)
     - [GCP - Bare Metal Solution Enum](pentesting-cloud/gcp-security/gcp-services/gcp-bare-metal-solution-enum.md)
     - [GCP - Batch Enum](pentesting-cloud/gcp-security/gcp-services/gcp-batch-enum.md)

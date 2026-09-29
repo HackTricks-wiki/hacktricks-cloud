@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — App Topology correlated attack-path reconnaissance
+- Added the newly GA App Topology service and its global SRE/DEVOPS/SECURITY graphs. The SRE schema
+  joins IAM keys/impersonation, resource inventory, traffic, vulnerabilities, artifacts, workloads,
+  and agent/MCP relationships; basic Viewer already carries its generation permissions.
+- Corrected stale graph-pattern nesting and documented targeted gcloud/MCP queries, bounded impact,
+  exact permission layers, and MCP audit semantics. An underlying-only disposable viewer listed all
+  domains directly after cache propagation but was denied at `mcp.googleapis.com/tools.call`.
+- Corrected the batch-wide generic MCP telemetry contract to use service names ending in `/mcp`,
+  enabled through `mcp.googleapis.com`. Deleted all test IAM/credential state and disabled App
+  Topology to baseline; final inventory found no residue.
+
 ### 2026-09-29 — Data Lineage graph reconnaissance and MCP boundary
 - Added Data Lineage to Dataplex/Knowledge Catalog enumeration: adjacent REST link search and the
   Preview MCP tool's multi-root breadth-first upstream/downstream traversal expose provenance,

@@ -16,7 +16,9 @@
   remained valid. Documentation was bounded to endpoint/parent location parity rather than claiming
   that all global and regional lineage data are interchangeable.
 - Recorded exact `DATA_READ` methods `SearchLinks` and `SearchLineageStreaming`; both are
-  off-by-default Data Access. No separate MCP-wrapper audit mapping is published.
+  off-by-default Data Access. The wrapper is separately documented as service-specific MCP Data
+  Access under `datalineage.googleapis.com/mcp`, enabled through the `mcp.googleapis.com` audit
+  configuration.
 - Removed the project binding, user-managed key, service account, custom role and isolated local
   credentials, then disabled Data Lineage to its baseline. Final checks found no residual asset.
 

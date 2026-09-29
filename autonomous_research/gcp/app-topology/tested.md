@@ -1,0 +1,24 @@
+# App Topology — tested
+
+## 2026-09-29 — GA reconnaissance surface and MCP authorization parity
+
+- Added the September 24 GA App Topology service to the book. It correlates IAM, resource,
+  observability, security, deployment, artifact, Kubernetes and agent data into queryable graphs.
+  Current SRE schema inspection exposed hundreds of node types plus high-value edges such as
+  `IAM/IMPERSONATES`, vulnerability/artifact relationships and traffic relationships.
+- Owner controls listed global `DEVOPS`, `SECURITY`, and `SRE` domains and retrieved the SRE schema.
+  The documented direct graph example was stale: putting `label_matcher_expr` directly below
+  `starting_node` produced an unknown-field error. The live API accepted the nested
+  `starting_node.label_properties_pattern.label_matcher_expr` shape; a project-node query returned
+  a valid empty graph because no topology data was ingested for that label in the lab.
+- Unauthenticated MCP `tools/list` exposed only five static schemas. A disposable principal held
+  all documented App Topology domain/schema/generation permissions plus
+  `serviceusage.services.use`, but not `mcp.tools.call`. After App Topology's service-specific IAM
+  cache settled, direct domain listing returned all three domains; MCP `list_domains` was denied on
+  `mcp.googleapis.com/tools.call`. No bypass was found.
+- Corrected the generic MCP audit contract across this batch: Google documents service-specific
+  Data Access names ending in `/mcp`, enabled through the `mcp.googleapis.com` audit configuration.
+  The project had no such audit config, and correct-name queries found no wrapper entries. App
+  Topology does not yet publish a separate direct-method audit matrix.
+- Removed the test binding, key, account, custom role and isolated local credentials and disabled
+  App Topology to its prior baseline. Final inventory found no residue.

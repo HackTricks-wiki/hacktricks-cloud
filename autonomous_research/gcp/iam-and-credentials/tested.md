@@ -167,7 +167,8 @@ rules anywhere in `src/`.
   matching MCP call was rejected on `mcp.googleapis.com/tools.call`.
 - Kept MCP as an alternate transport for the existing synchronous and long-running Cloud Asset
   techniques rather than duplicating them. Recorded the project-only MCP scope, extra gate, and
-  current lack of a separately published MCP-wrapper audit mapping in the service enumeration page.
+  service-specific `cloudasset.googleapis.com/mcp` Data Access logging contract in the service
+  enumeration page.
 - Removed the test binding, key, account and custom role and securely deleted the isolated local
   credentials/configuration. Cloud Asset Inventory remained enabled at its pre-test baseline; final
   checks found no residual identity, binding, active role, key file, or local configuration.

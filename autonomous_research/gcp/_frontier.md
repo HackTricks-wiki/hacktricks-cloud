@@ -7,6 +7,23 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — App Topology GA
+- [x] Added correlated SRE/DEVOPS/SECURITY graph reconnaissance, corrected live `GraphPattern`
+      nesting, mapped broad basic-Viewer exposure, documented MCP transport/logging, and verified
+      the outer `mcp.tools.call` gate with an underlying-only principal.
+- [ ] In a pre-populated disposable App Hub/telemetry/security fixture, capture real
+      `IAM/IMPERSONATES`, vulnerability-to-workload, traffic and agent-to-MCP edges plus exact direct
+      audit methods. Test application-boundary scope only in an owned multi-project hierarchy; see
+      `app-topology/checklist.md`.
+
+## 2026-09-29 release delta — Data Lineage MCP
+- [x] Added direct adjacent-link and Preview MCP breadth-first provenance/blast-radius search,
+      including column/process expansion, global/regional parent semantics, exact Data Access
+      methods and a verified `mcp.tools.call` boundary.
+- [ ] Capture representative entity, column and cross-region links only in a disposable project
+      where lineage already exists. Treat cross-project visibility beyond stored-link permissions as
+      private-first; see `dataplex/checklist.md`.
+
 ## 2026-09-29 release delta — Semantic Governance policies
 - [x] Shipped policy update/delete as bounded defense evasion with exact Admin Activity and common
       Agent Platform User exposure. It removes only the semantic intent/business-rule layer; all
