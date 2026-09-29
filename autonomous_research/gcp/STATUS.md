@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Recommender intelligence and state defense evasion
+- Moved the old embedded IAM Recommender material into dedicated service and post-exploitation
+  pages. Added exact permissions, impact and telemetry for precomputed privilege/attack-path
+  intelligence and for recommendation/insight state tampering.
+- Mapped nine live MCP tools—four reads plus five state mutations—versus the four reads currently
+  shown in the static overview. A reduced IAM Recommender Viewer returned three existing findings
+  containing exact over-privileged principals, roles and policy operations.
+- Used only a guaranteed nonexistent UUID for write authorization checks; all three real IAM
+  recommendations remained ACTIVE. Recommender and MCP produced no default caller log. Removed
+  every disposable identity, grant, key and config while preserving the enabled API baseline.
+  Coverage is now 312/312 post-exploitation techniques; privilege escalation and persistence remain
+  274/274 and 161/161.
+
 ### 2026-09-29 — Cloud Quotas capacity intelligence and remote MCP
 - Added a dedicated Cloud Quotas service page and one post-exploitation technique for quota values,
   dimensions, eligibility, submitted preference history and inherited quota-adjuster state.

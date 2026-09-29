@@ -1,5 +1,13 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — Recommender
+
+- [x] Published all nine live MCP tools, moved IAM attack-path reconnaissance into a dedicated
+      post-exploitation page and added unlogged recommendation/insight state defense evasion.
+- [ ] Exercise state transitions only against a purpose-created low-risk recommendation, compare
+      project/folder/organization/billing partial visibility, and capture enabled wrapper telemetry
+      without touching production findings; see `recommender/checklist.md`.
+
 ## 2026-09-29 release delta — Cloud Quotas
 
 - [x] Published the five-tool REST/MCP surface and retained high-stealth capacity, dimension,
