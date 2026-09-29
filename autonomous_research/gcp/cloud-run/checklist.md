@@ -1,5 +1,21 @@
 # Cloud Run — open leads
 
+## Custom URLs (Preview, announced 2026-09-28)
+- [x] Verify create/delete/reclaim behavior, short propagation, service-deletion retention, public
+      reachability, cleanup, and the documented cross-project domain-sniping boundary. Shipped as an
+      unauthenticated Cloud Run technique.
+- [ ] With a second disposable project, measure the release-to-cross-project-claim race and whether
+      an organization policy, abuse reservation, or cooldown changes behavior for brand-like names.
+      Release only a random test name and reclaim or delete it immediately; never snipe a third-party
+      name.
+- [ ] Capture the live `CreateDomainMapping`/`DeleteDomainMapping` Admin Activity payload after log
+      indexing, including authorizationInfo, resource type, request redaction and system-event legs.
+      Reconcile the current role-catalog lag: docs require `roles/run.admin` and audit docs name
+      `run.domainmappings.*`, while the local predefined-role listing omits those permissions.
+- [ ] Test whether custom audiences, Invoker IAM, disabled default URLs, ingress settings, IAP and
+      VPC-SC behave identically on `*.cloud.run`. Keep any authentication or ingress discrepancy
+      private-first and delete the mapping/service after every case.
+
 ## Documentation and audit drift
 - [x] Reconcile Cloud Run get/list and `RunJob` logging against the current audit reference instead
       of treating an older missing-log capture as an immutable platform contract.

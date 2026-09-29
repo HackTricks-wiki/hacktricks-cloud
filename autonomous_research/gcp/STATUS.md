@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Run custom URL sniping
+- Live-verified the new globally unique `*.cloud.run` lifecycle. A released mapping was immediately
+  reclaimable and served the controlled revision after a short propagation delay; deleting the
+  service alone preserved the mapping and its name claim.
+- Added the cross-project release-sniping path to unauthenticated coverage with bounded impact,
+  prerequisites, stealth and audit methods, and added custom URL inventory/lifecycle guidance to
+  Cloud Run enumeration. Also completed metadata for the older open-service enumeration technique.
+- Cleanup deleted the final mapping, service, revision and resource IAM policy and removed local
+  responses. Cloud Run remained enabled at baseline; independent inventories found no residue.
+
 ### 2026-09-29 — Cloud Product Registry GA boundary
 - Mapped the new read-only REST and remote MCP catalog. Unauthenticated REST/tool calls rejected
   unregistered callers while public `tools/list` exposed only schemas, so there is no victim-specific

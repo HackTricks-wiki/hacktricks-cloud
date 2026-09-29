@@ -1,5 +1,27 @@
 # Cloud Run — tested
 
+## 2026-09-29 — custom `*.cloud.run` URL lifecycle and sniping
+- Deployed one scale-to-zero public service in `europe-west1` and claimed a globally unique
+  `*.cloud.run` mapping. The mapping reported both `Ready=True` and `DomainRoutable=True`; after a
+  short propagation delay, the URL served the target revision over HTTPS.
+- Deleted the mapping and immediately reclaimed the same name. The second mapping had a new creation
+  timestamp and served the same controlled service, confirming immediate reuse. Google's current
+  documentation explicitly broadens this from same-project reuse to claims by other users across
+  Google Cloud and warns about domain sniping.
+- Deleted the Cloud Run service while leaving the second mapping. The mapping remained present,
+  retained the deleted `routeName`, and continued reserving the name. This confirms that deleting a
+  service alone does not create a claimable dangling URL; the mapping must itself be released.
+- Mapped `run.domainmappings.create` and `.delete` to the documented
+  `google.cloud.run.v1.DomainMappings.CreateDomainMapping` and `.DeleteDomainMapping` always-on
+  Admin Activity methods. Audit entries had not indexed before final cleanup, so exact live payload
+  fields remain a follow-up rather than an observed claim.
+- Published the useful result as an unauthenticated victim-boundary technique: an attacker needs
+  only its own billed project, service, and mapping permission; the victim sees its deletion but not
+  the cross-project reclaim or subsequent request logs.
+- Cleanup deleted the service, revision, public service IAM policy and final mapping. Independent
+  service, mapping, and revision inventories were empty; Cloud Run API remained enabled at its
+  pre-test baseline and all local response files were removed.
+
 ## 2026-09-26 — post-exploitation permission and audit drift review
 - Corrected an outdated absolute claim that service/job/revision reads and `RunJob` can never be
   attributed. The current Cloud Run audit table maps the reads to Data Access `ADMIN_READ` and

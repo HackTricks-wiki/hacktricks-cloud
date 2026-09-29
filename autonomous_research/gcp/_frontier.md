@@ -7,6 +7,14 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Cloud Run custom URLs
+- [x] Live-verified immediate `*.cloud.run` mapping reuse and service-deletion retention. Shipped the
+      documented cross-user name-sniping path as an unauthenticated technique: only explicit mapping
+      deletion releases the name; deleting the backend service preserves the claim.
+- [ ] Use a second disposable project to time cross-project reuse and capture fully indexed mapping
+      audit payloads. Test custom audience, Invoker, disabled-default-URL, ingress, IAP and VPC-SC
+      parity only with random owned names. See `cloud-run/checklist.md`.
+
 ## 2026-09-29 release delta — Cloud Product Registry
 - [x] Mapped the GA read-only REST/MCP catalog and rejected public MCP tool schemas as a useful
       unauthenticated technique. A registered underlying-only caller test stayed inconclusive because
