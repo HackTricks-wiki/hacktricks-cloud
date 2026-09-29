@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Data Lineage graph reconnaissance and MCP boundary
+- Added Data Lineage to Dataplex/Knowledge Catalog enumeration: adjacent REST link search and the
+  Preview MCP tool's multi-root breadth-first upstream/downstream traversal expose provenance,
+  column propagation, transformations, and downstream blast radius without reading referenced data.
+- A disposable underlying-only viewer succeeded through direct REST after propagation but was denied
+  at `mcp.googleapis.com/tools.call`; the owner positive control executed the same empty synthetic
+  graph query. The global MCP endpoint required a global parent, unlike valid regional REST calls.
+- Documented the exact off-default `SearchLinks` and `SearchLineageStreaming` Data Access methods.
+  Deleted the account, key, binding, role and local configuration and disabled the API to baseline.
+
 ### 2026-09-29 — Policy Analyzer remote MCP authorization parity
 - Added the current GA Cloud Asset MCP transport to IAM/Cloud Asset enumeration without duplicating
   the underlying analysis and long-running export techniques. The wrapper exposes four tools,

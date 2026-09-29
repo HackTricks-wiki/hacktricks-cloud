@@ -1,5 +1,25 @@
 # Dataplex privilege-escalation research ledger
 
+## 2026-09-29 — Data Lineage graph reconnaissance and MCP boundary
+
+- Added the previously missing Data Lineage surface to Dataplex/Knowledge Catalog enumeration. The
+  direct `SearchLinks` method returns adjacent entity links, while the Preview `search_lineage` MCP
+  tool performs multi-root breadth-first upstream/downstream searches with column-level and process
+  expansion. This maps provenance and downstream blast radius but does not read the referenced data.
+- Unauthenticated `tools/list` exposed only the single static tool schema. A disposable principal
+  held `datalineage.locations.searchLinks`, `datalineage.events.get`,
+  `datalineage.events.getFields`, `datalineage.processes.get`, and
+  `serviceusage.services.use`, but not `mcp.tools.call`. After IAM propagation, direct REST returned
+  an empty success for a nonexistent owned FQN while MCP was denied on
+  `mcp.googleapis.com/tools.call`; the owner positive control executed the same MCP request.
+- The global MCP endpoint rejected a regional parent and required `locations/global`; regional REST
+  remained valid. Documentation was bounded to endpoint/parent location parity rather than claiming
+  that all global and regional lineage data are interchangeable.
+- Recorded exact `DATA_READ` methods `SearchLinks` and `SearchLineageStreaming`; both are
+  off-by-default Data Access. No separate MCP-wrapper audit mapping is published.
+- Removed the project binding, user-managed key, service account, custom role and isolated local
+  credentials, then disabled Data Lineage to its baseline. Final checks found no residual asset.
+
 ## 2026-09-28 — Data Product principal replacement revalidates backing-resource IAM
 
 - Live-tested an existing Data Product whose `readers` access group mapped a producer service

@@ -22,6 +22,9 @@
 - [x] Independent cross-review bounded the downstream Dataproc batch event to executions that reach
       that stage, marked `CreateTask` as an LRO, and removed an unsupported separate policy-tag
       data-read audit claim.
+- [x] Map Data Lineage direct and remote-MCP graph search, validate the global parent requirement,
+      confirm the extra `mcp.tools.call` gate with an underlying-only identity, and record the exact
+      off-by-default `SearchLinks` / `SearchLineageStreaming` telemetry.
 
 ## Safe future validation leads
 
