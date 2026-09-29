@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Database Insights SQL/schema reconnaissance and remote MCP surface
+- Added a dedicated Database Insights service page and a post-exploitation technique for mining
+  normalized SQL, database/user/client/application dimensions, workload and wait history, and
+  AlloyDB index recommendations containing exact schema/table/column names and `CREATE INDEX` DDL.
+- Mapped all seven read-only MCP tools and their exact underlying permissions. A narrow caller
+  required `databaseinsights.queryMetrics.fetch` plus `monitoring.timeSeries.list`; harmless direct
+  REST and authorized MCP calls against a nonexistent instance selector both returned an empty
+  result, while anonymous access failed.
+- The service is absent from the current audit-service catalog and default validation produced no
+  caller entry, so direct visibility is documented as unknown while Monitoring and MCP reads are
+  off-default Data Access. No database fixture was created. Deleted every disposable identity,
+  binding, credential, config and local artifact, soft-deleted the custom role, and restored the API
+  to its disabled baseline. Post-exploitation coverage is now 302/302 retained techniques.
+
 ### 2026-09-29 — Monitoring alert history and remote MCP surface
 - Added a post-exploitation technique for `monitoring.alerts.list/get`: current and historical
   violations expose policy snapshots, severity, time bounds, resource/metric/system/user labels and

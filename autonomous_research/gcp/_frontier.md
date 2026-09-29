@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Database Insights
+- [x] Added the seven-tool read-only REST/MCP surface and one bounded reconnaissance technique for
+      normalized query structure, users/clients/tags, advanced AlloyDB history and index-advisor
+      schema/DDL. Verified the minimum standard-query permission pair without creating a database.
+- [ ] Capture representative results only in a pre-existing disposable Cloud SQL/AlloyDB fixture;
+      then test two-project parent/resource authorization, regional parity and published audit
+      methods. Do not provision a database solely for telemetry-read validation; see
+      `database-insights/checklist.md`.
+
 ## 2026-09-29 release delta — App Topology GA
 - [x] Added correlated SRE/DEVOPS/SECURITY graph reconnaissance, corrected live `GraphPattern`
       nesting, mapped broad basic-Viewer exposure, documented MCP transport/logging, and verified
