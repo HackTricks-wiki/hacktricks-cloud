@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Workforce extended sessions for Looker
+- [x] Shipped the scoped `GcpUserAccessBinding` session extension as bounded Looker/workforce
+      persistence: up to 90 days versus the normal 12-hour maximum, using the existing org-level
+      `gcpAccessAdmin` surface and without a project IAM write.
+- [ ] Live-verify new/existing session adoption, append/replace, refresh mode, IdP revocation and
+      exact audit payloads only in a disposable organization/Looker/WIF fixture. Keep any scope,
+      one-binding, provider-isolation or 24-hour staleness bypass private-first; see
+      `access-context-manager/checklist.md`.
+
 ## 2026-09-29 release delta — Cloud EKM external-key migration
 - [x] Mapped the per-version URI/path/backend override and shipped its targeted interception/DoS
       path. Live authorization probing proved the service requires

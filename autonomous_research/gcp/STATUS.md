@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Workforce 90-day Looker session persistence
+- Added Preview Access Context Manager scoped session settings to binding enumeration, the existing
+  binding-escalation technique, and persistence. A `gcpAccessAdmin` can append selected Looker core
+  projects to the one all-workforce-pools binding and raise eligible sessions from 12 hours to 90
+  days without touching project IAM.
+- Bounded the path to Looker core, provider background-refresh prerequisites and Looker application
+  controls. It is not universal GCP persistence: Google invalidates sessions when IdP attributes are
+  stale for 24 hours, preserving IdP/SCIM deprovisioning as the kill path.
+- The lab has no organization/workforce fixture, so this was source/CLI/role validation only. No API,
+  binding, provider or identity was created or changed and no cleanup was necessary.
+
 ### 2026-09-29 — Cloud EKM per-version route override and permission correction
 - Added the Preview per-version external-key route override as a bounded KMS escalation technique
   and added `externalProtectionLevelOptions` inventory. Unlike shared EKM-connection tampering, one
