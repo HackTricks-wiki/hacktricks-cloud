@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Error Reporting stack-trace harvesting and remote MCP boundary
+- Added a dedicated post-exploitation technique for mining Error Reporting groups and sampled
+  events for stack traces, request/user context, internal topology and accidentally embedded
+  credentials. Added exact minimum permissions, bounded impact, high-stealth rating and the
+  off-default Data Access methods.
+- Added Error Reporting's one-tool remote MCP transport. `list_group_stats` returns representative
+  events but not every sampled event and requires both `mcp.tools.call` and
+  `errorreporting.groups.list`; an underlying-only caller was denied, an authorized caller returned
+  the same existing group as direct REST, and anonymous invocation returned HTTP 401.
+- No error data was created or mutated. Deleted the key, account, IAM grants, custom role and local
+  configuration/artifacts, and disabled the API to its prior baseline. Post-exploitation coverage is
+  now 300/300 retained techniques.
+
 ### 2026-09-29 — Cloud Billing enumeration and Preview MCP surface
 - Added the missing Cloud Billing enumeration page and its 29-tool MCP transport, covering account
   hierarchy/IAM, project payer associations, negotiated pricing, and the public catalog. Included

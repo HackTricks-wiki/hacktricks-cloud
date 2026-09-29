@@ -1,5 +1,30 @@
 # Google Cloud Observability security research ledger
 
+## 2026-09-29 — Error Reporting remote MCP and stack-trace harvesting
+
+- Mapped the new global `https://clouderrorreporting.googleapis.com/mcp` endpoint. It exposes one
+  read-only tool, `list_group_stats`, backed by `errorreporting.groups.list`. Its result includes
+  group status/counts, affected services/users, time bounds and a representative event with the
+  error message, stack trace and request/source context; individual sampled events remain available
+  only through the direct `projects.events.list` API.
+- An isolated caller with only `errorreporting.groups.list`, project read and quota-use permission
+  returned the same existing representative group through direct REST but was denied by MCP on
+  `mcp.googleapis.com/tools.call`. An unconditional `roles/mcp.toolUser` grant enabled the MCP call,
+  while an anonymous tool call returned HTTP 401. This confirms the documented two-layer boundary;
+  no authorization bypass or unexpected vulnerability was found.
+- Tool-name-only and service-plus-tool conditional grants did not authorize during a bounded
+  propagation window, while the unconditional grant worked quickly. This was fail-closed and had
+  no security impact. Re-test before claiming that Error Reporting currently honors the documented
+  MCP allow-policy attributes; the one-tool server does not need that condition for tool separation.
+- Confirmed the visibility boundary: `ListGroupStats` and `ListEvents` are `DATA_READ` Data Access
+  methods disabled by default, and the service-specific MCP wrapper is also off-default Data Access
+  enabled through the `mcp.googleapis.com` audit configuration. No principal-attributed entry was
+  present under the project's default settings.
+- No error was injected, updated or deleted. Removed the disposable key, identity, both IAM grants,
+  custom role and gcloud configuration, disabled Error Reporting back to its pre-test baseline, and
+  verified zero active identity, binding, configuration, enabled API or local-artifact residue. The
+  custom role remains only in Google's normal soft-deleted state.
+
 ## 2026-09-29 — new v1 storage, scope and BigQuery-link surface
 
 - Reviewed public Observability v1 discovery revision `20260917`, Google Cloud SDK 586.0.0,

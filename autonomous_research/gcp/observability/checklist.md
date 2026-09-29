@@ -2,6 +2,10 @@
 
 ## Completed — 2026-09-29
 
+- [x] Map the Error Reporting remote MCP schema, underlying permission, representative-event data,
+      direct-versus-MCP authorization layers, anonymous boundary and default audit visibility.
+- [x] Validate the Error Reporting MCP path with an isolated minimum-permission caller and restore
+      the API, IAM, credential, configuration and local state to its disabled/absent baseline.
 - [x] Map the stable v1 discovery resource graph, fields, methods and locations.
 - [x] Map Observability, scope, analytics, view-access and service-agent predefined roles.
 - [x] Separate direct view access, legacy Trace reads, trace scopes and BigQuery links.
@@ -12,6 +16,12 @@
 
 ## Safe live-validation frontier
 
+- [ ] Re-test Error Reporting's documented `mcp.googleapis.com/tool.name` allow-policy attribute
+      after a longer propagation window. The 2026-09-29 bounded tool-only and service-plus-tool
+      grants failed closed while an unconditional grant succeeded; do not call this a bypass.
+- [ ] Temporarily enable both Error Reporting and MCP Data Access audit logging on a disposable
+      project, call one non-secret group, capture the exact direct/wrapper log payloads, and restore
+      the complete prior audit configuration rather than replacing unrelated audit settings.
 - [ ] In a disposable project that already contains synthetic `_Trace/Spans` data, give an isolated
       caller only `observability.links.create`, BigQuery Data Viewer and query-job authority. Prove
       direct `observability.views.access` denial, create the link, query a non-secret marker through
