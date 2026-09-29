@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — IAM remote MCP and fine-grained tool control
+- Added IAM's 12-tool remote MCP transport for project custom roles and deny policies, with scope,
+  permission layers, quota-project behavior, impact, attack-page routing, and wrapper-versus-
+  underlying audit visibility. Corrected the current Owner boundary: deny-policy get/list are now
+  included, but write permissions remain org-level `denyAdmin` only.
+- A roles-list-only identity succeeded directly and failed at the outer MCP gate. An Owner control
+  updated only the disposable role title and emitted `google.iam.admin.v1.UpdateRole`; MCP Data
+  Access remained absent by default. Tool discovery without authentication exposed schemas only.
+- A settled tool-name condition allowed `list_roles` and denied `update_role`, while direct update
+  proved the underlying permission. Stateless calls required `Mcp-Method: tools/call` for the tool
+  attribute; a transient broader-grant cache was bounded before drawing conclusions. Deleted all
+  active IAM/credential state and preserved IAM's enabled baseline.
+
 ### 2026-09-29 — Cloud CLI Execution remote MCP surface
 - Added the Preview Cloud CLI Execution service and its destructive `run_gcloud_command` and
   `run_bq_command` tools. The page documents the execution-project/target-project split, broad
