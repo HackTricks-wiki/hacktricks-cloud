@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Support case intelligence and MCP boundary
+- Added a new Cloud Support enumeration page and one high-value post-exploitation technique for
+  mining case descriptions, comments, contacts, attachment metadata, and attachment bytes. Direct
+  `SearchCases` is explicitly excluded from Cloud Audit Logs; known-resource reads and the MCP
+  wrapper are off-default Data Access.
+- Mapped the six Premium-only, project-parented MCP read tools and their metadata-only attachment
+  boundary. A Tech Support Viewer succeeded directly but was denied without `mcp.tools.call`; an
+  exact `search_cases` conditional grant allowed search while `get_case` remained denied.
+- The project contained no cases, so no support content was accessed or modified. Removed the key,
+  identity, bindings, conditional grants, and local credentials; disabled the API to its baseline.
+  Post-exploitation coverage is now 299/299 retained techniques.
+
 ### 2026-09-29 — Organization Policy remote MCP surface
 - Added the 12-tool Organization Policy MCP transport: six constraint/policy reconnaissance tools
   and six policy/custom-constraint mutation tools, including full-overwrite warnings, exact scope,
