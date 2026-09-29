@@ -16,6 +16,19 @@
 
 ## Safe live-validation leads
 
+- [ ] Validate the new feature-flag control plane with synthetic standalone resources: create a
+      flag, immutable revision, release and rollout, prove that the selected Unit receives the new
+      value through `saasconfig.googleapis.com`, then delete every resource. Reduce the caller to
+      exact `flags.*`, `flagRevisions.*`, `flagReleases.*` and `rollouts.create` permissions.
+- [ ] Confirm whether changing a live flag revision/release can alter authorization or debug behavior
+      in a deliberately instrumented test application without any infrastructure deployment
+      permission. Publish as application post-exploitation only if the flag-to-unit propagation and
+      impact are directly observed.
+- [ ] Map the live 35-tool `saasservicemgmt.googleapis.com/mcp` surface. In particular, verify the
+      independent `mcp.tools.call` gate and whether `create_flag`, `create_flag_revision` and
+      `create_flag_release` preserve the same underlying authorization and Admin Activity logging as
+      the REST methods.
+
 - [ ] In an already prepared disposable App Lifecycle Manager fixture, provision a benign Unit with
       a zero-risk actuation account, then give an isolated caller only Release create plus
       UnitOperation create. Apply a second blueprint that writes a synthetic marker using the

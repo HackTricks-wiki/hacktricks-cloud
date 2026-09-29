@@ -1654,3 +1654,23 @@ delay for the API surface to actually change. Loop stays alive.
   detailed-audit-mode caveats and reversible versus permanent CMEK denial.
 - Documentation and official-reference review only; no Dataproc or Storage resource was created.
   Detailed results and remaining validation questions are in `dataproc/` and `storage/`.
+
+### 2026-09-29 — Secure Source Manager remote MCP and read-side intelligence
+
+- Live-mapped the regional aggregate SSM MCP endpoint: 38 tools (17 read-only, 21 mutating),
+  including instance/repository IAM policy writes, with six narrower toolset endpoints. Anonymous
+  schema listing worked as documented; anonymous invocation returned HTTP 401; authenticated calls
+  required `mcp.tools.call` plus the underlying SSM permission.
+- Added a dedicated post-exploitation technique for private source, unmerged PR diff/comment,
+  branch-governance and webhook-integration intelligence available to project Viewer / repository
+  Reader roles. Updated the existing self-grant, branch-rule/PR-bypass and malicious-hook techniques
+  with their live MCP equivalents and wrapper telemetry.
+- Tested the apparent `sensitiveQueryString` disclosure lead using a disabled synthetic hook and a
+  reduced SSM Viewer. Owner create, Viewer MCP get/list and Viewer direct REST all returned
+  `[REDACTED]`; no vulnerability exists. The hook, repository, instance, Viewer identity, key,
+  configuration, all temporary IAM bindings, service-agent binding and API enablement were removed.
+  Exact identity/IAM/local inventories and the disabled API confirmed baseline restoration. See
+  `secure-source-manager/tested.md`.
+- The metadata gate is now 274/274 privesc, 315/315 post-exploitation and 161/161 persistence.
+  Next high-value lead: App Lifecycle Manager's newly documented feature-flag control plane and
+  35-tool MCP server; its bounded validation plan is in `app-lifecycle-manager/checklist.md`.

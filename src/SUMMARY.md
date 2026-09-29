@@ -173,6 +173,7 @@
     - [GCP - Recommender Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-recommender-post-exploitation.md)
     - [GCP - Secretmanager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md)
     - [GCP - Security Command Center Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-security-command-center-post-exploitation.md)
+    - [GCP - Secure Source Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secure-source-manager-post-exploitation.md)
     - [GCP - Google SecOps (Chronicle) Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-google-secops-post-exploitation.md)
     - [GCP - Managed Microsoft AD Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-managed-microsoft-ad-post-exploitation.md)
     - [GCP - Service Directory Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-service-directory-post-exploitation.md)

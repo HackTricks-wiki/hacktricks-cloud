@@ -704,6 +704,19 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [ ] Compare the same collision across MCP, remote A2A-agent and generic Endpoint helper paths.
       Do not generalize the published MCP redirect primitive to consumers that were not verified.
 
+## 2026-09-29 MCP catalog frontier
+
+- [x] Secure Source Manager: map the aggregate and six specialized regional endpoints, verify the
+      independent MCP authorization gate, and test whether project-wide Viewer can recover stored
+      webhook query secrets. All live get/list paths returned `[REDACTED]`; the retained attack value
+      is source, unmerged-review, governance and integration metadata reconnaissance. Full teardown
+      verified. See `secure-source-manager/tested.md`.
+- [ ] App Lifecycle Manager: validate its new feature-flag resources and 35-tool remote MCP surface.
+      Use a synthetic standalone Unit/flag/revision/release/rollout, prove the value reaches only that
+      Unit through `saasconfig.googleapis.com`, then delete the full dependency chain. Publish only
+      observed application-control impact; keep authorization discrepancies private-first. See
+      `app-lifecycle-manager/checklist.md`.
+
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
@@ -730,32 +743,9 @@ sub-resources within already-documented services** — a slow trickle, not a bac
   mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
 
 ## Documentation-quality backlog: per-technique stealth
-- [ ] Complete the explicit stealth rating on every genuine privesc and post-exploitation technique.
-      The deterministic `scripts/check_gcp_technique_metadata.mjs` scan after the BigQuery, Compute,
-      Vertex AI and IAM batch finds **140 unrated** qualifying sections: 246/287 privesc and 245/344
-      post-exploitation H3 blocks that already contain exact `Potential Impact` and `Logs generated`
-      markers also have an exact `Stealth` marker. Persistence is 153/153. These figures supersede
-      the former manual baseline, which could not be reproduced against its own published commit.
-      Secret Manager,
-      Cloud Tasks, Parameter Manager, Secure Source Manager, Cloud
-      Run, IAP, Cloud KMS, Dataproc privesc, GKE privesc, Security Command Center and Cloud
-      Logging post-exploitation, Cloud Storage post-exploitation, Firebase privesc, Monitoring and
-      Cloud DNS post-exploitation, Integration Connectors, Cloud Build privesc, Cloud SQL and
-      Discovery Engine, Bigtable and Artifact Registry post-exploitation, Cloud Storage, Artifact
-      Registry, App Engine, Composer, Resource Manager, Cloud Deploy, Pub/Sub and Workflows privesc,
-      Sensitive Data Protection post-exploitation and persistence, Dataform and Network Security
-      privesc, reCAPTCHA Enterprise post-exploitation, Eventarc privesc/post-exploitation/persistence,
-      Cloud Functions privesc, Managed Kafka, Dataproc Metastore and Google SecOps post-exploitation,
-      Bigtable, Dataplex, Apigee, Dataflow, Cloud Billing, Cloud Scheduler, Spanner, Cloud Source
-      Repositories, Runtime Config, Analytics Hub, Certificate Authority Service, Data Fusion and
-      Deployment Manager privesc, Document AI, Cloud Source Repositories, Runtime Config and
-      Deployment Manager post-exploitation, Certificate Authority Service persistence, Database
-      Migration Service and Service Usage zero-H3 audits, BeyondCorp, BigLake/Lakehouse, Container
-      Analysis and VM Migration privesc/post-exploitation, BeyondCorp, BigLake/Lakehouse and
-      Container Analysis persistence, VM Migration zero-H3 persistence, Cloud Identity,
-      Developer Connect, Advisory Notifications and Healthcare privesc/post-exploitation,
-      Cloud Identity and Healthcare persistence, Google Groups and Healthcare unauthenticated
-      access, API Gateway unauthenticated techniques, Workload/Workforce Identity Federation,
-      OS Config, Contact Center Insights, AlloyDB, BigQuery, Compute Engine, Vertex AI and IAM have
-      been handled.
-- [ ] Review ratings against the service's current audit reference and any downstream service/platform logs; do not classify solely by whether the primary API call is logged. Record corrections in each service's `tested.md`, then update PR #414 in small batches.
+- [x] Complete the explicit stealth rating and expandable log table on every qualifying GCP
+      privilege-escalation, post-exploitation and persistence technique. The deterministic
+      `scripts/check_gcp_technique_metadata.mjs` scan on 2026-09-29 reports **274/274 privesc,
+      315/315 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
+      new technique and review both primary-service and downstream/platform telemetry before rating
+      stealth.
