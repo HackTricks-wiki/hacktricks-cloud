@@ -523,3 +523,19 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - No networks existed in either allowed Region and no resources were created. Bot reset/admin session
   and three possible validation/request-relay paths remain private, fixture-dependent test ideas; no
   AWS vulnerability report was created.
+
+## cont.96 (2026-09-29) — API Gateway developer-portal boundaries
+- SHIPPED #73 (documented model + exact-resource authorization): `UpdatePortal` can replace Cognito
+  authorization with `None`; `PublishPortal` makes the documentation/catalog internet-accessible.
+  The minimum includes both exact-portal writes and dependent `GetPortalProduct` on included products,
+  but no Cognito administrator action or `iam:PassRole`.
+- SHIPPED #74: documented unauthenticated public-portal recon, the conditional Cognito self-sign-up
+  foothold, and the fact that **Try it** retains endpoint authorization and excludes private, mTLS,
+  and private/self-signed-certificate APIs.
+- SHIPPED #75 (cross-account): an AWS RAM PortalProduct share lets a recipient add owner-maintained
+  API documentation to its own portal. The live default permission was read-only and did not grant API
+  invocation, source mutation, or re-sharing.
+- Safe reads found no portals/products in either allowed Region. Signed not-found requests generated
+  API Gateway management events; no service, RAM, Cognito, or IAM resources were created.
+- Endpoint-page IDOR, Try-it request relay, `logoUri` confused-deputy, stored XSS, preview-link, and
+  foreign-Cognito-pool ideas remain private fixture-dependent tests. No AWS vulnerability report.
