@@ -32,3 +32,20 @@
 - [ ] Test whether an eligible service-account caller receives the same automatic creator binding as
   an end-user caller when `setAuthenticatedUserAdmin=true`; keep the book wording user-scoped until
   confirmed.
+
+## 2026-09-29 user-credential and MCP delta
+
+- [x] Map stable `InvocationConfig.endUserAuthConfig`, output-only `userEmail`, additional OAuth
+      scopes, workflow-config invocation, and the custom-service-account alternative.
+- [x] Correct enumeration and fold the bounded existing-user-workflow invocation path into the
+      current `workflowInvocations.create` technique without claiming token recovery or SQL authoring.
+- [x] Verify with a never-authorized principal that the Dataform remote MCP server enforces
+      `mcp.tools.call` before its underlying `dataform.repositories.list` permission.
+- [ ] With an already provisioned disposable repository and consenting test Google Account, patch
+      only schedule/action-selection fields as a different workflow-config editor. Determine whether
+      the stored owner remains, reauthorization is required, or the backend rejects a non-owner.
+      Keep retained-user-credential configuration tampering out of the book until this is resolved.
+- [ ] In the same fixture, test whether a third-party Git commit or release-config update can reach a
+      scheduled user-credential workflow without any service-account `actAs` check. Use only synthetic
+      BigQuery/Drive/Bigtable data, revoke BigQuery Pipelines consent, and delete every repository,
+      config, compilation result, invocation, dataset, and IAM grant.

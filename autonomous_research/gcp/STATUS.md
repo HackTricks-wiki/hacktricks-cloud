@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Dataform user credentials and MCP boundary
+- Updated Dataform for GA Google Account workflow credentials: enumeration now exposes the effective
+  custom service account or output-only user owner/scopes, and the existing invocation technique
+  covers triggering a known saved user-credential workflow without incorrectly requiring service-
+  account `actAs`. The path is bounded to pre-existing actions and does not disclose OAuth tokens.
+- Live-negative-tested the Dataform remote MCP server with an underlying-only principal. Direct REST
+  list succeeded while MCP list was denied on `mcp.googleapis.com/tools.call`; all temporary IAM and
+  identity state was deleted and no Dataform resource existed.
+
 ### 2026-09-29 — Application Integration bulletin delta
 - Added historical coverage for three patched managed-service flaws published September 28:
   GCP-2026-064 internal-only task RPC execution, GCP-2026-065 JavaScript Task deserialization RCE,

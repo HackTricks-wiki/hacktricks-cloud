@@ -37,3 +37,29 @@
 
 This pass used current official Google Cloud documentation and local CLI inspection only. It did not
 call Dataform, IAM, BigQuery, or any other cloud API and created no cloud resources.
+
+## 2026-09-29 — user-credential GA and remote MCP boundary
+
+- Reviewed the current stable discovery revision (`20260920`) and the GA user-credential execution
+  contract. `InvocationConfig` is mutually selectable between `serviceAccount` and
+  `endUserAuthConfig`; the latter exposes an output-only `userEmail` plus consented additional OAuth
+  scopes, never an access or refresh token.
+- Corrected the enumeration page's stale default-service-agent statement. Current workflows require
+  a custom service account or a Google Account authorization; the default Dataform service agent
+  cannot be the workflow execution identity.
+- Folded the useful user-credential case into the existing invocation technique. A principal with
+  `dataform.workflowInvocations.create` can reference a known workflow configuration whose owner
+  already authorized BigQuery Pipelines. The caller can trigger only the saved release/action set;
+  this does not expose the credential or permit SQL/configuration changes.
+- Kept strict `iam.serviceAccounts.actAs` wording limited to service-account-backed invocations. A
+  user-credential workflow has no attached service account, but depends on the consenting user's
+  OAuth grant and downstream permissions remaining valid.
+- Live-negative-tested the Dataform remote MCP wrapper with a fresh service account holding only
+  `dataform.repositories.list`. Direct REST listing succeeded, while MCP `list_repositories` was
+  denied specifically on `mcp.googleapis.com/tools.call`. No repository was created or read.
+- Removed the disposable identity and project binding. Final inventory showed no test principal,
+  IAM member, or Dataform repository. The API was already enabled and remained at baseline.
+
+No interactive Google Account OAuth fixture exists in this lab, so retained-owner patch behavior is
+not claimed. The public technique is bounded to the documented create-invocation contract and saved
+workflow configuration.

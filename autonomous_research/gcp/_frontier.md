@@ -7,6 +7,16 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Dataform user credentials and remote MCP
+- [x] Folded the GA stored-Google-Account mode into enumeration and the existing invocation
+      technique. `workflowInvocations.create` can trigger a known saved user-credential workflow,
+      but cannot recover the token, rewrite SQL, or change the saved action selection by itself.
+- [x] Verified the remote MCP server's outer authorization gate: an underlying-only principal was
+      denied on `mcp.googleapis.com/tools.call`, while direct REST listing succeeded.
+- [ ] In a pre-provisioned disposable end-user OAuth fixture, test retained-owner behavior for
+      non-auth field patches and third-party Git/release-config supply-chain execution. Do not create
+      a permanent service identity or use a real user's Drive/Bigtable data solely for this test.
+
 ## 2026-09-29 boundary-day frontier — Telemetry API
 - [x] Live-verified the minimum-permission OTLP log path and shipped it as an extension of the
       existing log-forgery technique. The endpoint enforces `logging.logEntries.create` but accepts
