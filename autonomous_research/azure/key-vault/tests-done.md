@@ -1,7 +1,6 @@
 # Key Vault — Tests Done
 
-Lab: `azure-labs-owCfs7hi`. Wiki pages: `az-key-vault-privesc.md`, `az-keyvault-post-exploitation.md`,
-`az-keyvault-persistence.md`, unauth `az-keyvault-unauth`.
+Lab: `azure-labs-owCfs7hi`. Wiki pages: `az-key-vault-privesc.md`, `az-keyvault-post-exploitation.md`, `az-keyvault-persistence.md`, unauth `az-keyvault-unauth`.
 
 | # | Technique | Min perms | Status | Notes |
 |---|-----------|-----------|--------|-------|
@@ -14,5 +13,4 @@ Lab: `azure-labs-owCfs7hi`. Wiki pages: `az-key-vault-privesc.md`, `az-keyvault-
 | 7 | Planted key material / cert app-cred persistence | KV data-plane write | **DOC-ONLY** | On persistence page with Stealth. |
 | 8 | `createMode=recover` vault-squat persistence | `vaults/write` | **DOC-ONLY** | On persistence page. |
 
-**Teardown:** test vault `htrckv9118` is soft-deleted with **purge protection** → cannot be manually
-purged (`az keyvault purge` → `MethodNotAllowed`); Azure auto-purges **2026-09-30**. No billable resource.
+**Teardown:** test vault `htrckv9118` is soft-deleted with **purge protection** → cannot be manually purged (`az keyvault purge` → `MethodNotAllowed`); Azure auto-purges **2026-09-30**. No billable resource.

@@ -13,10 +13,4 @@ Wiki: IoT Hub privesc/post/persistence, unauth `az-iot-hub-dps-unauth`.
 
 **Honest negatives:** no anon MQTT; TPM attestation not a mass-forgery vector (unlike group key).
 
-**Lab record (test #1, 2026-09-24):** RG `htrc-iotforge`, F1 hub `htrchub10935` (free) + DPS `htrcdps28354`.
-Created symmetric enrollment group `forgegroup`, retrieved its primary key + `idScope=0ne012D9954`.
-Derived a device key for a never-enrolled ID `ceo-laptop-forged-16363` via `compute-device-key`, then
-`az iot device registration create --enrollment-group-id forgegroup` → `status: assigned`,
-`assignedHub: htrchub10935.azure-devices.net`. Forged device showed **enabled** / `sas` in the hub
-registry; `send-d2c-message` with the derived key → accepted (live DeviceConnect foothold). **Teardown:**
-`az group delete htrc-iotforge` (removes hub + DPS + enrollment group). No standing residue.
+**Lab record (test #1, 2026-09-24):** RG `htrc-iotforge`, F1 hub `htrchub10935` (free) + DPS `htrcdps28354`. Created symmetric enrollment group `forgegroup`, retrieved its primary key + `idScope=0ne012D9954`. Derived a device key for a never-enrolled ID `ceo-laptop-forged-16363` via `compute-device-key`, then `az iot device registration create --enrollment-group-id forgegroup` → `status: assigned`, `assignedHub: htrchub10935.azure-devices.net`. Forged device showed **enabled** / `sas` in the hub registry; `send-d2c-message` with the derived key → accepted (live DeviceConnect foothold). **Teardown:** `az group delete htrc-iotforge` (removes hub + DPS + enrollment group). No standing residue.

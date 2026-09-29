@@ -1,7 +1,6 @@
 # Databricks — Candidate Attacks (not yet lab-fired)
 
-Cost note: Databricks clusters incur DBU + VM cost — verify a single-node job cluster stays <$5/30min
-before firing, and tear down immediately.
+Cost note: Databricks clusters incur DBU + VM cost — verify a single-node job cluster stays <$5/30min before firing, and tear down immediately.
 
 - [ ] Live-fire notebook/init-script RCE and dump the workspace MSI token via IMDS from the driver;
       confirm what (if anything) lands in Activity Log vs. workspace audit (separate plane).

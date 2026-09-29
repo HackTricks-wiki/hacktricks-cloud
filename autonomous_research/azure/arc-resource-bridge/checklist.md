@@ -41,5 +41,4 @@
 - [ ] Deleting/recreating a bridge with the same name leaves old exported credentials valid against
       the replacement.
 
-Do not report any item in this section or add it to HackTricks as a vulnerability until a live,
-reproducible authorization or scope failure is demonstrated.
+Do not report any item in this section or add it to HackTricks as a vulnerability until a live, reproducible authorization or scope failure is demonstrated.

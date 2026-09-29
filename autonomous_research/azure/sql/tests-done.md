@@ -1,7 +1,6 @@
 # Azure SQL — Tests Done
 
-Wiki: SQL privesc/post-exploitation/persistence pages. **Microsoft.Sql has 0 ARM dataActions**
-(data plane is pure T-SQL). Op names verified in `scratchpad/sql_all_writes.txt`.
+Wiki: SQL privesc/post-exploitation/persistence pages. **Microsoft.Sql has 0 ARM dataActions** (data plane is pure T-SQL). Op names verified in `scratchpad/sql_all_writes.txt`.
 
 | # | Technique | Min perms | Status |
 |---|-----------|-----------|--------|
@@ -15,5 +14,4 @@ Wiki: SQL privesc/post-exploitation/persistence pages. **Microsoft.Sql has 0 ARM
 | 8 | `dnsAliases/acquire` alias hijack (persistence) | that action | DOC-ONLY |
 | 9 | `encryptionProtector/write` TDE-repoint kill-switch (persistence) | that action | DOC-ONLY |
 
-**Wall:** SQL logical server provisioning blocked in lab + no usable outbound 1433 → no live T-SQL path.
-Control-plane ops catalog-confirmed; T-SQL from MS docs.
+**Wall:** SQL logical server provisioning blocked in lab + no usable outbound 1433 → no live T-SQL path. Control-plane ops catalog-confirmed; T-SQL from MS docs.

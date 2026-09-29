@@ -10,19 +10,10 @@
 
 Microsoft's current permission catalog defines:
 
-- `Microsoft.ResourceConnector/appliances/listKeys/action` — get appliance cluster customer-user
-  keys.
-- `Microsoft.ResourceConnector/appliances/listClusterUserCredential/action` — get an appliance
-  cluster-user credential.
+- `Microsoft.ResourceConnector/appliances/listKeys/action` — get appliance cluster customer-user keys.
+- `Microsoft.ResourceConnector/appliances/listClusterUserCredential/action` — get an appliance cluster-user credential.
 
-The stable `2022-10-27` SDK models show that `listKeys` can return kubeconfigs, a map containing
-customer SSH public/private keys and a certificate, and artifact-upload profiles. The SDK method
-documentation clarifies that an empty `artifactType` returns no artifact endpoint; supported values
-and endpoint capability remain untested. The
-`listClusterUserCredential` result can return kubeconfigs plus `hybridConnectionConfig`, described
-as a rendezvous endpoint and notification-service Listener access token. The CLI documentation
-states that the default `get-credentials` mode retrieves customer credentials to files, while
-`--partner true` prints private-cloud RP/service credentials to stdout.
+The stable `2022-10-27` SDK models show that `listKeys` can return kubeconfigs, a map containing customer SSH public/private keys and a certificate, and artifact-upload profiles. The SDK method documentation clarifies that an empty `artifactType` returns no artifact endpoint; supported values and endpoint capability remain untested. The `listClusterUserCredential` result can return kubeconfigs plus `hybridConnectionConfig`, described as a rendezvous endpoint and notification-service Listener access token. The CLI documentation states that the default `get-credentials` mode retrieves customer credentials to files, while `--partner true` prints private-cloud RP/service credentials to stdout.
 
 Read-only role-definition queries in subscription `azure-labs-owCfs7hi` found:
 
@@ -34,16 +25,9 @@ Read-only role-definition queries in subscription `azure-labs-owCfs7hi` found:
 
 ## Lab limitation and cleanup
 
-The subscription contained no `Microsoft.ResourceConnector/appliances` resources and the provider
-was `NotRegistered`. A valid bridge requires an on-premises VMware, SCVMM, or Azure Local substrate;
-none was available. No provider was registered, no extension installed, no role assignment made,
-and no Azure resource created, so there was nothing to clean up. Live authorization, returned RBAC,
-credential lifetime, cross-bridge isolation, and telemetry remain explicitly untested.
-The higher-level CLI wrapper's preliminary/helper permissions also remain untested, so only the raw
-REST Action is treated as the proposed exact minimum.
+The subscription contained no `Microsoft.ResourceConnector/appliances` resources and the provider was `NotRegistered`. A valid bridge requires an on-premises VMware, SCVMM, or Azure Local substrate; none was available. No provider was registered, no extension installed, no role assignment made, and no Azure resource created, so there was nothing to clean up. Live authorization, returned RBAC, credential lifetime, cross-bridge isolation, and telemetry remain explicitly untested. The higher-level CLI wrapper's preliminary/helper permissions also remain untested, so only the raw REST Action is treated as the proposed exact minimum.
 
-No zero-day finding exists from this pass. The unresolved vulnerability hypotheses remain in
-`checklist.md` and must not be reported without a reproducible live failure.
+No zero-day finding exists from this pass. The unresolved vulnerability hypotheses remain in `checklist.md` and must not be reported without a reproducible live failure.
 
 Official references:
 

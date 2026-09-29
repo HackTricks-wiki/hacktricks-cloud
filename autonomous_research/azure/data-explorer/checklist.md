@@ -1,7 +1,6 @@
 # Data Explorer (Kusto/ADX) — Candidate Attacks (not yet lab-fired)
 
-Cost note: even Dev/no-SLA ADX clusters run continuously — likely OVER the $5/30min gate. Verify the
-Dev SKU hourly cost before provisioning; prefer to keep DOC-ONLY unless a cheap window exists.
+Cost note: even Dev/no-SLA ADX clusters run continuously — likely OVER the $5/30min gate. Verify the Dev SKU hourly cost before provisioning; prefer to keep DOC-ONLY unless a cheap window exists.
 
 - [ ] If a cheap cluster window exists: live-fire `.add database admins` data-plane self-grant and
       confirm it does NOT appear in Activity Log (control-plane blind spot).
