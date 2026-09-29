@@ -13,7 +13,8 @@ Refactor Spaces, WorkSpaces Thin Client, Migration Hub Orchestrator, AppIntegrat
 Discovery Service, core Migration Hub, Migration Hub Strategy Recommendations, MemoryDB, and
 Resilience Hub (including the September 2026 next-generation API), Glue, Redshift/Redshift
 Serverless, S3 Tables, S3 Vectors, Backup Search, Entity Resolution, Timestream, and Bedrock Data
-Automation, Systems Manager GUI Connect, Billing Conductor, and License Manager. Every published
+Automation, Systems Manager GUI Connect, Billing Conductor, License Manager, and WorkMail Message
+Flow. Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
