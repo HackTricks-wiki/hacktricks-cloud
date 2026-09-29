@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Quotas capacity intelligence and remote MCP
+- Added a dedicated Cloud Quotas service page and one post-exploitation technique for quota values,
+  dimensions, eligibility, submitted preference history and inherited quota-adjuster state.
+- Mapped all five MCP tools and verified the separate wrapper gate with a reduced Viewer caller.
+  Direct and MCP reads returned the same bounded Compute quota data; missing quota-project context
+  produced misleading authorization errors, so examples now send it explicitly.
+- Read and wrapper telemetry is off-default Data Access, while preference/adjuster writes remain
+  always-on Admin Activity. Removed all disposable IAM, identity, credential, config and API state
+  and independently verified the effective tested quota at its original baseline. Coverage is now
+  310/310 post-exploitation techniques; privilege escalation and persistence remain 274/274 and
+  161/161.
+
 ### 2026-09-29 — Gemini Cloud Assist investigation history and predefined-role reach
 - Added a dedicated Gemini Cloud Assist service page and two post-exploitation techniques: saved
   investigation/revision harvesting and direct known-bucket object reads from the Storage

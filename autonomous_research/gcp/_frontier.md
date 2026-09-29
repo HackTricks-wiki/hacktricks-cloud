@@ -1,5 +1,14 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — Cloud Quotas
+
+- [x] Published the five-tool REST/MCP surface and retained high-stealth capacity, dimension,
+      preference-history and adjuster-state reconnaissance. Verified the separate wrapper gate and
+      explicit quota-project requirement with a reduced Viewer caller.
+- [ ] Test hierarchy/inheritance and enabled Data Access telemetry only in an owned fixture with
+      existing synthetic preferences. Exercise quota-adjuster state only where already eligible,
+      and never request capacity merely to populate data; see `cloud-quotas/checklist.md`.
+
 ## 2026-09-29 release delta — Gemini Cloud Assist
 
 - [x] Published all six MCP tool families, immutable investigation-history harvesting and the
