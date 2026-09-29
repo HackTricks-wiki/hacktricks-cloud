@@ -1,6 +1,6 @@
 # AWS audit — status
 
-Last updated: 2026-09-27
+Last updated: 2026-09-29
 
 ## Active 2026-09-27 checkpoint
 
@@ -14,7 +14,7 @@ Discovery Service, core Migration Hub, Migration Hub Strategy Recommendations, M
 Resilience Hub (including the September 2026 next-generation API), Glue, Redshift/Redshift
 Serverless, S3 Tables, S3 Vectors, Backup Search, Entity Resolution, Timestream, and Bedrock Data
 Automation, Systems Manager GUI Connect, Billing Conductor, License Manager, and WorkMail Message
-Flow. Every published
+Flow, plus the separate Amazon Connect voice Contact Lens transcript API. Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
