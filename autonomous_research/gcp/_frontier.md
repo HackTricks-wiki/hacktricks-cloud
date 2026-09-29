@@ -1,5 +1,12 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — Dataproc MCP and workload reads
+
+- [x] Published all 16 live global/regional MCP tools and a dedicated workload-definition/error
+      harvesting technique; bounded testing found no analysis-to-Logging/Storage disclosure.
+- [ ] Re-test analysis only on a synthetic supported performance issue and watch for new job-submit,
+      session-template or Spark-application MCP tools; see `dataproc/checklist.md`.
+
 ## 2026-09-29 release delta — Network Intelligence Center
 
 - [x] Published the four-tool Network Management MCP surface and stored/new Connectivity Test path

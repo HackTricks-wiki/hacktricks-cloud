@@ -137,6 +137,7 @@
     - [GCP - Dataflow Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataflow-post-exploitation.md)
     - [GCP - Database Center Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-database-center-post-exploitation.md)
     - [GCP - Database Insights Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-database-insights-post-exploitation.md)
+    - [GCP - Dataproc Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataproc-post-exploitation.md)
     - [GCP - Dataproc Metastore Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataproc-metastore-post-exploitation.md)
     - [GCP - Deployment Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-deployment-manager-post-exploitation.md)
     - [GCP - Developer Connect Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-developer-connect-post-exploitation.md)

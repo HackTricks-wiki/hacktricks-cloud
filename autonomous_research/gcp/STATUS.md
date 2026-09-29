@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Dataproc workload intelligence and remote MCP
+- Expanded Dataproc enumeration from clusters/jobs to Serverless batches, interactive sessions and
+  the full 16-tool live MCP surface. Added a dedicated post-exploitation page for high-stealth
+  workload identity, code/dependency, output-location, property and failure-message harvesting.
+- Live-mapped the additional non-read-only `analyze_batch_service` tool and its Viewer-bundled
+  `dataproc.batches.analyze` Admin Activity LRO. A reduced Viewer could not read Cloud Logging or
+  driver-output Storage; ordinary batch get exposed the synthetic failure text, while analysis did
+  not transit it or raw logs. No authorization defect was found.
+- Deleted the batch, LROs, bucket, staging prefix, identities, grants, key, config and local files;
+  preserved the enabled API baseline and did not alter an unrelated older batch. Coverage is now
+  314/314 post-exploitation techniques; privilege escalation and persistence remain 274/274 and
+  161/161.
+
 ### 2026-09-29 — Network Intelligence Center stored path intelligence
 - Added dedicated Network Intelligence Center enumeration and post-exploitation pages. Mapped all
   four live Network Management MCP tools and retained stored/new Connectivity Test traces as
