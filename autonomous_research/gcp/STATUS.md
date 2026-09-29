@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Network Intelligence Center stored path intelligence
+- Added dedicated Network Intelligence Center enumeration and post-exploitation pages. Mapped all
+  four live Network Management MCP tools and retained stored/new Connectivity Test traces as
+  internal topology, reachability and enforcement intelligence.
+- Live-verified that a reduced Network Management Viewer with no Compute read role can recover a
+  full post-October-2024 stored trace through both list and get. The result disclosed the VM,
+  internal IP, VPC and exact deny rule/action/priority while a direct VM describe was denied.
+- Verified that the MCP wrapper separately enforces `mcp.tools.call`; no authorization defect was
+  found. Deleted the test, VM/disk, firewall, subnet and VPC, removed all identity/IAM/key/config
+  state, trashed local artifacts and restored the API to disabled. Coverage is now 313/313
+  post-exploitation techniques; privilege escalation and persistence remain 274/274 and 161/161.
+
 ### 2026-09-29 — Recommender intelligence and state defense evasion
 - Moved the old embedded IAM Recommender material into dedicated service and post-exploitation
   pages. Added exact permissions, impact and telemetry for precomputed privilege/attack-path

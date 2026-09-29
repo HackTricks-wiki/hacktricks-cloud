@@ -1,5 +1,12 @@
 # GCP audit — open frontier (next-iteration candidates)
 
+## 2026-09-29 release delta — Network Intelligence Center
+
+- [x] Published the four-tool Network Management MCP surface and stored/new Connectivity Test path
+      intelligence, including the post-October-2024 read-without-underlying-resource boundary.
+- [ ] Compare bounded cross-project redaction, hierarchical firewall disclosure and live-probe
+      telemetry in disposable fixtures; see `network-management/checklist.md`.
+
 ## 2026-09-29 release delta — Recommender
 
 - [x] Published all nine live MCP tools, moved IAM attack-path reconnaissance into a dedicated
