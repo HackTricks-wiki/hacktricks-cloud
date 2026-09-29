@@ -7,25 +7,9 @@
 
 ## 2026-09-29 — remote MCP surface and webhook-secret redaction
 
-- The live regional aggregate endpoint exposed 38 tools: 17 read-only and 21 mutating. Besides
-  repository, PR, branch-rule and hook operations, the aggregate endpoint exposed instance and
-  repository `get/setIamPolicy` tools. Six specialized endpoints were live for `code_review`,
-  `pull_request`, `branch_rule`, `repository`, `instance` and `hook`.
+- The live regional aggregate endpoint exposed 38 tools: 17 read-only and 21 mutating. Besides repository, PR, branch-rule and hook operations, the aggregate endpoint exposed instance and repository `get/setIamPolicy` tools. Six specialized endpoints were live for `code_review`, `pull_request`, `branch_rule`, `repository`, `instance` and `hook`.
 - Anonymous `tools/list` returned only static schemas. Anonymous `tools/call` was rejected with HTTP
-  401. Authenticated invocation required the documented independent `mcp.tools.call` gate plus the
-  underlying SSM permission.
-- Created one disposable empty repository and one disabled PUSH hook carrying a synthetic sensitive
-  query canary. The Owner-side create response, a reduced principal's MCP `get_hook` and
-  `list_hooks`, and the same reduced principal's direct REST `GetHook` all returned the literal
-  placeholder `[REDACTED]`; none returned the stored canary. The reduced principal held only
-  `roles/securesourcemanager.viewer`, `roles/mcp.toolUser` and Service Usage Consumer.
-- The redaction is expected secure behavior, not a vulnerability. Read-only roles still recover the
-  hook target URI, enabled events, branch filter/auth mode and timestamps, which remains useful
-  integration reconnaissance. The book now treats source/PR/diff/comment/branch-rule/hook reads as
-  a dedicated post-exploitation family and maps the MCP transport without claiming secret recovery.
-- Cleanup deleted the hook, repository, instance, Viewer service account, key, local gcloud
-  configuration, all three Viewer IAM bindings and the temporary service-agent role binding. The
-  Secure Source Manager API was restored to its disabled baseline. Exact service-account inventory
-  returned neither the Viewer nor the Google-managed SSM service identity; project IAM contained no
-  test or SSM-service-agent binding; local artifact checks were empty; and the disabled service API
-  rejected the deleted instance path.
+  401. Authenticated invocation required the documented independent `mcp.tools.call` gate plus the underlying SSM permission.
+- Created one disposable empty repository and one disabled PUSH hook carrying a synthetic sensitive query canary. The Owner-side create response, a reduced principal's MCP `get_hook` and `list_hooks`, and the same reduced principal's direct REST `GetHook` all returned the literal placeholder `[REDACTED]`; none returned the stored canary. The reduced principal held only `roles/securesourcemanager.viewer`, `roles/mcp.toolUser` and Service Usage Consumer.
+- The redaction is expected secure behavior, not a vulnerability. Read-only roles still recover the hook target URI, enabled events, branch filter/auth mode and timestamps, which remains useful integration reconnaissance. The book now treats source/PR/diff/comment/branch-rule/hook reads as a dedicated post-exploitation family and maps the MCP transport without claiming secret recovery.
+- Cleanup deleted the hook, repository, instance, Viewer service account, key, local gcloud configuration, all three Viewer IAM bindings and the temporary service-agent role binding. The Secure Source Manager API was restored to its disabled baseline. Exact service-account inventory returned neither the Viewer nor the Google-managed SSM service identity; project IAM contained no test or SSM-service-agent binding; local artifact checks were empty; and the disabled service API rejected the deleted instance path.

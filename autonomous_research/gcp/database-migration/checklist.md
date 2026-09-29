@@ -39,27 +39,9 @@
 
 ## Exact no-residue plan for the Cloud SQL boundary test
 
-- Use only an already-DMS-enabled disposable project that can be deleted after the test. Do not
-  enable DMS in the shared lab: the currently absent Google-managed service agent might survive an
-  API disable and violate the cleanup requirement.
-- As the administrator, create an inert MySQL source profile that points to TEST-NET-1
-  (`192.0.2.1`) and carries a unique run label. The source does not need to be reachable when the
-  profile is stored.
-- Give the restricted test principal only `datamigration.connectionprofiles.create`,
-  `datamigration.connectionprofiles.get`, `datamigration.operations.get`, and
-  `serviceusage.services.use`; verify that it has no `cloudsql.*` permission. Submit only the Cloud
-  SQL destination-profile creation as that principal, using the inert source profile, a ZONAL
-  `db-n1-standard-1` MySQL 8.0 destination, a 10-GB PD_HDD disk, random disposable passwords, and
-  the same unique run label.
-- Treat an immediate `cloudsql.instances.create` denial or a later LRO failure for missing Cloud SQL
-  authority as rejection of the complete escalation. Treat it as confirmed only if the operation
-  succeeds, the destination profile exposes a non-empty `cloudsql.cloudSqlId`, and the principal's
-  lack of every `cloudsql.*` permission is independently demonstrated.
-- Never guess the replica name: the create request has no separate instance-ID field. Capture the
-  output-only `cloudsql.cloudSqlId` from the destination profile before cleanup. If profile creation
-  partially fails, enumerate Cloud SQL instances by the unique run label.
-- Cleanup as the administrator after the operation reaches a terminal state: force-delete the
-  destination profile, explicitly delete the captured or label-discovered Cloud SQL instance if it
-  remains, delete the inert source profile and DMS operation record, remove the custom-role binding,
-  service account and custom role, and finally delete the disposable project. Recheck both DMS and
-  Cloud SQL inventories before declaring the test clean.
+- Use only an already-DMS-enabled disposable project that can be deleted after the test. Do not enable DMS in the shared lab: the currently absent Google-managed service agent might survive an API disable and violate the cleanup requirement.
+- As the administrator, create an inert MySQL source profile that points to TEST-NET-1 (`192.0.2.1`) and carries a unique run label. The source does not need to be reachable when the profile is stored.
+- Give the restricted test principal only `datamigration.connectionprofiles.create`, `datamigration.connectionprofiles.get`, `datamigration.operations.get`, and `serviceusage.services.use`; verify that it has no `cloudsql.*` permission. Submit only the Cloud SQL destination-profile creation as that principal, using the inert source profile, a ZONAL `db-n1-standard-1` MySQL 8.0 destination, a 10-GB PD_HDD disk, random disposable passwords, and the same unique run label.
+- Treat an immediate `cloudsql.instances.create` denial or a later LRO failure for missing Cloud SQL authority as rejection of the complete escalation. Treat it as confirmed only if the operation succeeds, the destination profile exposes a non-empty `cloudsql.cloudSqlId`, and the principal's lack of every `cloudsql.*` permission is independently demonstrated.
+- Never guess the replica name: the create request has no separate instance-ID field. Capture the output-only `cloudsql.cloudSqlId` from the destination profile before cleanup. If profile creation partially fails, enumerate Cloud SQL instances by the unique run label.
+- Cleanup as the administrator after the operation reaches a terminal state: force-delete the destination profile, explicitly delete the captured or label-discovered Cloud SQL instance if it remains, delete the inert source profile and DMS operation record, remove the custom-role binding, service account and custom role, and finally delete the disposable project. Recheck both DMS and Cloud SQL inventories before declaring the test clean.

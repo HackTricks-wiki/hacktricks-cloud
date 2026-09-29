@@ -52,31 +52,11 @@ Scope was current official documentation, API references, and local Google Cloud
 
 ## 2026-09-28 — post-exploitation taxonomy and telemetry audit
 
-- Rebuilt the page around four verified disclosure/foothold families: Memcache reads/poisoning,
-  application-log reads, full version configuration, and retained source. Removed service/
-  version deletion as destructive availability-only behavior and source modification as a duplicate
-  deployment privilege-escalation/persistence action.
-- Corrected Memcache telemetry. Current official docs classify Console `GetMemcacheItem` as Data
-  Read and set/delete/flush as Data Write, all off by default; application-originated bundled
-  Memcache calls are explicitly not audit logged. The old categorical “no logs” claim was false for
-  Console operations.
-- Corrected version `GetVersion`/`ListVersions` from `DATA_READ` to `ADMIN_READ` Data Access and kept
-  their independent raw-permission boundary. `view=FULL` can return literal environment values,
-  runtime identity and source locations, but does not grant the referenced Storage object.
-- Bounded source review: `getFileContents` remains a Console-only permission absent from the public
-  REST discovery, while the scriptable path needs version metadata plus separate
-  `storage.objects.get` and can fail after staging-object cleanup. Catalog omission is recorded as
-  undocumented telemetry, not proof of silence.
-- Rechecked `exportAppImage` against the current v1 discovery document. The method and fully
-  qualified Artifact Registry destination are real, but the public contract does not document the
-  export service identity or complete cross-project destination checks. The prior reasoned
-  always-on Admin Activity claim was removed because the current App Engine audit catalog omits the
-  RPC; live victim/destination telemetry and minimum destination authorization remain open tests.
-  Because those are material prerequisites, the candidate remains in this ledger and checklist and
-  was removed from the book until verified.
-- Documentation, discovery-schema, role and read-only existing-application inventory only. No App
-  Engine version, repository, image, IAM binding or service configuration was created or changed.
-- Assessed `appengine.runtimes.actAsAdmin`, which remains in broad legacy Viewer-style roles but has
-  no documented public API/CLI method and is not supported in custom roles. It is not promoted as a
-  runtime-admin impersonation primitive without a callable surface or demonstrated boundary.
+- Rebuilt the page around four verified disclosure/foothold families: Memcache reads/poisoning, application-log reads, full version configuration, and retained source. Removed service/ version deletion as destructive availability-only behavior and source modification as a duplicate deployment privilege-escalation/persistence action.
+- Corrected Memcache telemetry. Current official docs classify Console `GetMemcacheItem` as Data Read and set/delete/flush as Data Write, all off by default; application-originated bundled Memcache calls are explicitly not audit logged. The old categorical “no logs” claim was false for Console operations.
+- Corrected version `GetVersion`/`ListVersions` from `DATA_READ` to `ADMIN_READ` Data Access and kept their independent raw-permission boundary. `view=FULL` can return literal environment values, runtime identity and source locations, but does not grant the referenced Storage object.
+- Bounded source review: `getFileContents` remains a Console-only permission absent from the public REST discovery, while the scriptable path needs version metadata plus separate `storage.objects.get` and can fail after staging-object cleanup. Catalog omission is recorded as undocumented telemetry, not proof of silence.
+- Rechecked `exportAppImage` against the current v1 discovery document. The method and fully qualified Artifact Registry destination are real, but the public contract does not document the export service identity or complete cross-project destination checks. The prior reasoned always-on Admin Activity claim was removed because the current App Engine audit catalog omits the RPC; live victim/destination telemetry and minimum destination authorization remain open tests. Because those are material prerequisites, the candidate remains in this ledger and checklist and was removed from the book until verified.
+- Documentation, discovery-schema, role and read-only existing-application inventory only. No App Engine version, repository, image, IAM binding or service configuration was created or changed.
+- Assessed `appengine.runtimes.actAsAdmin`, which remains in broad legacy Viewer-style roles but has no documented public API/CLI method and is not supported in custom roles. It is not promoted as a runtime-admin impersonation primitive without a callable surface or demonstrated boundary.
 - Expanded telemetry to include Compute helper reads, OS Login `ImportSshPublicKey`/`SignSshPublicKey`, guest `CheckPolicy`/2FA methods, IAP `AuthorizeUser`, and the no-audit OS Login profile/key-maintenance methods.

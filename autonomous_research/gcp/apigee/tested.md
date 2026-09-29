@@ -49,9 +49,4 @@ All three retained techniques are rated **Low** stealth because the state-changi
 
 ### Independent review
 
-A separate root review re-opened the current official REST contracts for proxy import/deployment,
-shared-flow deployment, flow-hook attachment, and environment IAM. It independently confirmed the
-dual deploy-permission checks, optional `iam.serviceAccounts.actAs` branch, flow-hook permission,
-and complete-policy/field-mask semantics. It also confirmed that the documented ingress access-log
-feature is Preview, must be explicitly enabled, and applies to managed Apigee rather than Hybrid.
-No additional book correction was required after that review.
+A separate root review re-opened the current official REST contracts for proxy import/deployment, shared-flow deployment, flow-hook attachment, and environment IAM. It independently confirmed the dual deploy-permission checks, optional `iam.serviceAccounts.actAs` branch, flow-hook permission, and complete-policy/field-mask semantics. It also confirmed that the documented ingress access-log feature is Preview, must be explicitly enabled, and applies to managed Apigee rather than Hybrid. No additional book correction was required after that review.

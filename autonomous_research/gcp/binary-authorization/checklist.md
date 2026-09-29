@@ -11,14 +11,8 @@
 
 ## Safe future checks
 
-- [ ] In a disposable enforcing project, test whether GA v1 `UpdatePolicy` evaluates
-  `attestors.get/list` for an `ALWAYS_ALLOW` body with no attestor references; current public audit
-  contract lists both permissions, so the book conservatively includes them.
-- [ ] Capture the exact Cloud Run breakglass event payload fields for v2 `UpdateService` and compare
-  the event with the ordinary Admin Activity record.
-- [ ] Confirm in a disposable GKE cluster that Continuous Validation continues reporting a running
-  image after the project-singleton admission policy is relaxed; platform policies monitor rather
-  than reject the deploy.
+- [ ] In a disposable enforcing project, test whether GA v1 `UpdatePolicy` evaluates `attestors.get/list` for an `ALWAYS_ALLOW` body with no attestor references; current public audit contract lists both permissions, so the book conservatively includes them.
+- [ ] Capture the exact Cloud Run breakglass event payload fields for v2 `UpdateService` and compare the event with the ordinary Admin Activity record.
+- [ ] Confirm in a disposable GKE cluster that Continuous Validation continues reporting a running image after the project-singleton admission policy is relaxed; platform policies monitor rather than reject the deploy.
 
-All future tests require disposable workloads and immediate policy, attestor, occurrence, image, and
-workload cleanup.
+All future tests require disposable workloads and immediate policy, attestor, occurrence, image, and workload cleanup.

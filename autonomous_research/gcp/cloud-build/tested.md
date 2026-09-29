@@ -1,15 +1,10 @@
 # Cloud Build — tested
 
-Current retained boundaries are build-step execution, repository-source poisoning, connection-IAM
-self-grant into source poisoning, and stored-output recovery. Network-positioning and egress through
-private pools remain useful behavior but are not independently a Cloud IAM privilege escalation.
+Current retained boundaries are build-step execution, repository-source poisoning, connection-IAM self-grant into source poisoning, and stored-output recovery. Network-positioning and egress through private pools remain useful behavior but are not independently a Cloud IAM privilege escalation.
 
 ## Closed legacy candidate — repository shadowing
 
-`cloudbuild.repositories.create` under an existing second-generation connection does not retarget a
-trigger, which binds a specific repository resource. Without separate trigger/build execution or
-writable source that the trigger accepts, repository creation executes nothing. The idea is closed
-under the no-garbage rule; see the checklist.
+`cloudbuild.repositories.create` under an existing second-generation connection does not retarget a trigger, which binds a specific repository resource. Without separate trigger/build execution or writable source that the trigger accepts, repository creation executes nothing. The idea is closed under the no-garbage rule; see the checklist.
 
 ## 2026-09-28 — Official-documentation privilege-escalation audit
 
@@ -43,30 +38,13 @@ Documentation-only review; no Cloud Build jobs, repositories, connections, worke
 
 ## 2026-09-28 — post-exploitation taxonomy and current-contract audit
 
-Documentation, local CLI help, prior authorized-test records, and public audit/API contracts only.
-No build, trigger, service account, role, logging setting, bucket, or other cloud state was changed.
+Documentation, local CLI help, prior authorized-test records, and public audit/API contracts only. No build, trigger, service account, role, logging setting, bucket, or other cloud state was changed.
 
-- Retained one post-exploitation primitive: reading build output that was actually retained in Cloud
-  Logging or Cloud Storage. Split the exact authorization boundaries for project/container Logging
-  queries, named log views, user-owned Storage buckets, and Google's default log bucket. A successful
-  build can have no stored output, and secret references or KMS ciphertext are not plaintext secrets.
-- Removed trigger mutation/approval-gate removal from post-exploitation because attacker-controlled
-  build execution as the pinned service account is already covered by the Cloud Build privilege-
-  escalation page. Removed build cancellation because it is availability-only.
-- Removed `ApproveBuild` as a standalone H3. The current REST method, predefined Approver role,
-  approval guide, and earlier contained test establish `cloudbuild.builds.approve` as the caller
-  boundary. The audit catalog additionally lists `.create` for the method, but the predefined role
-  omits it and it is not a documented caller prerequisite. Approval still cannot author or change a
-  build: it matters only when an already-pending build is attacker-useful or the caller separately
-  controls accepted input, so it is folded into the existing source-poisoning/build-execution chain
-  rather than presented independently.
-- Corrected telemetry: `ApproveBuild` is an Admin Activity LRO under the current catalog; Cloud
-  Logging `ListLogEntries` and Storage object get/list are off-by-default Data Access. Cloud Build
-  `GetBuild`/`ListBuilds` are optional discovery reads, not prerequisites when the destination and
-  object/log query are known.
-- Corrected the Google-owned default-bucket path: `gcloud builds log` first performs the off-default
-  `GetBuild`, then reads an object from Google's bucket project. The customer cannot enable or query
-  the bucket project's Storage Data Access log.
+- Retained one post-exploitation primitive: reading build output that was actually retained in Cloud Logging or Cloud Storage. Split the exact authorization boundaries for project/container Logging queries, named log views, user-owned Storage buckets, and Google's default log bucket. A successful build can have no stored output, and secret references or KMS ciphertext are not plaintext secrets.
+- Removed trigger mutation/approval-gate removal from post-exploitation because attacker-controlled build execution as the pinned service account is already covered by the Cloud Build privilege- escalation page. Removed build cancellation because it is availability-only.
+- Removed `ApproveBuild` as a standalone H3. The current REST method, predefined Approver role, approval guide, and earlier contained test establish `cloudbuild.builds.approve` as the caller boundary. The audit catalog additionally lists `.create` for the method, but the predefined role omits it and it is not a documented caller prerequisite. Approval still cannot author or change a build: it matters only when an already-pending build is attacker-useful or the caller separately controls accepted input, so it is folded into the existing source-poisoning/build-execution chain rather than presented independently.
+- Corrected telemetry: `ApproveBuild` is an Admin Activity LRO under the current catalog; Cloud Logging `ListLogEntries` and Storage object get/list are off-by-default Data Access. Cloud Build `GetBuild`/`ListBuilds` are optional discovery reads, not prerequisites when the destination and object/log query are known.
+- Corrected the Google-owned default-bucket path: `gcloud builds log` first performs the off-default `GetBuild`, then reads an object from Google's bucket project. The customer cannot enable or query the bucket project's Storage Data Access log.
 
 Official sources:
 

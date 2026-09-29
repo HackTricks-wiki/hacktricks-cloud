@@ -43,23 +43,11 @@
 
 ## 2026-09-29 release delta — CX Agent Studio
 
-- Published the 60-tool CES MCP surface, transcript/tool-trace harvesting, guardrail defense evasion,
-  agent/tool behavior implants and version/deployment pinning. These are bounded to application
-  authority and are not represented as project IAM escalation.
-- The current lab is not a valid minimum-role CES write environment and also denied a newly bound
-  read identity despite Cloud Asset resolving both grants. Repeat minimum-role read/write controls
-  only in a separately onboarded disposable project; do not infer an authorization issue from the
-  stricter denial.
-- Keep the retained OpenAPI service-account-auth update hypothesis private-first. Test it only where
-  an Owner create control succeeds, with a zero-role target identity, no token capture and full
-  teardown. Publish only expected delegation behavior; report any missing `actAs` recheck privately.
+- Published the 60-tool CES MCP surface, transcript/tool-trace harvesting, guardrail defense evasion, agent/tool behavior implants and version/deployment pinning. These are bounded to application authority and are not represented as project IAM escalation.
+- The current lab is not a valid minimum-role CES write environment and also denied a newly bound read identity despite Cloud Asset resolving both grants. Repeat minimum-role read/write controls only in a separately onboarded disposable project; do not infer an authorization issue from the stricter denial.
+- Keep the retained OpenAPI service-account-auth update hypothesis private-first. Test it only where an Owner create control succeeds, with a zero-role target identity, no token capture and full teardown. Publish only expected delegation behavior; report any missing `actAs` recheck privately.
 
-State (2026-09-29): the authenticated technique surface is at deep saturation. Six independent
-diff/scan axes run this engagement all came back exhausted beyond the 3 gaps shipped in batch 4:
-service-prefix diff, individual-write-perm diff, resource-type-token diff, setIamPolicy/use/actAs
-diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added since the
-session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
-sub-resources within already-documented services** — a slow trickle, not a backlog.
+State (2026-09-29): the authenticated technique surface is at deep saturation. Six independent diff/scan axes run this engagement all came back exhausted beyond the 3 gaps shipped in batch 4: service-prefix diff, individual-write-perm diff, resource-type-token diff, setIamPolicy/use/actAs diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added since the session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview sub-resources within already-documented services** — a slow trickle, not a backlog.
 
 ## 2026-09-29 release delta — Service Health and Unified Maintenance
 - [x] Added project-relevance incident intelligence and cross-service maintenance/resource-window
@@ -742,19 +730,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 
 ## Assessed and intentionally NOT authored (no-garbage bar)
-- **(batch 7, 2026-09-25)** iamconnectors.retrieveCredentials (= Agent Identity, documented),
-  dataprocrm.nodes.mintOAuthToken (internal node protocol), cloudsql.createTestingAgentSession
-  (admin-only / Gemini agent), aiplatform.sandboxEnvironments/extensions/sessions execute
-  (Google-managed identity, no project SA), firebaseauth.createSession / firebasedataconnect
-  impersonate (documented in Firebase pages), confidentialcomputing.challenges (TEE-gated, not
-  cost-light, attestation-0day if abusable), networkmanagement.generateProviderAccessToken /
-  developerconnect.generateGitHubStateToken (niche/non-credential). All ruled out — see STATUS batch 7.
+- **(batch 7, 2026-09-25)** iamconnectors.retrieveCredentials (= Agent Identity, documented), dataprocrm.nodes.mintOAuthToken (internal node protocol), cloudsql.createTestingAgentSession (admin-only / Gemini agent), aiplatform.sandboxEnvironments/extensions/sessions execute (Google-managed identity, no project SA), firebaseauth.createSession / firebasedataconnect impersonate (documented in Firebase pages), confidentialcomputing.challenges (TEE-gated, not cost-light, attestation-0day if abusable), networkmanagement.generateProviderAccessToken / developerconnect.generateGitHubStateToken (niche/non-credential). All ruled out — see STATUS batch 7.
 - compute.instantSnapshots — same disk-exfil family; annotated as a NOTE, not a technique.
-- compute.regionSslPolicies.setIamPolicy, dataplex.entryLinkTypes.* — generic self-grant / catalog
-  metadata; no distinct primitive.
+- compute.regionSslPolicies.setIamPolicy, dataplex.entryLinkTypes.* — generic self-grant / catalog metadata; no distinct primitive.
 - fpnv.phoneNumberTokens.* — telco/payments test tokens, not a GCP-access primitive.
-- KMS kajPolicyConfigs, GKE Backup channels, Storage Insights, Developer Connect, NSI
-  mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
+- KMS kajPolicyConfigs, GKE Backup channels, Storage Insights, Developer Connect, NSI mirroring/intercept deployment groups — all covered-concept or documented elsewhere.
 
 ## Documentation-quality backlog: per-technique stealth
 - [x] Complete the explicit stealth rating and expandable log table on every qualifying GCP

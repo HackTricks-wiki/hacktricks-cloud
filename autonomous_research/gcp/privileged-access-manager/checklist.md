@@ -2,8 +2,7 @@
 
 Open ideas — Privileged Access Manager.
 
-No open candidate (hypothesis tested + reframed correctly). PAM API was left enabled after teardown
-(free, no resources).
+No open candidate (hypothesis tested + reframed correctly). PAM API was left enabled after teardown (free, no resources).
 
 ## 2026-09-28 follow-ups
 

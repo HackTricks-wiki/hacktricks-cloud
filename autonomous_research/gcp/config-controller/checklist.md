@@ -11,14 +11,9 @@
 
 ## Safe future checks
 
-- [ ] On a disposable Config Controller, capture exact custom-resource Kubernetes audit method names
-  for `IAMPolicyMember` and `IAMServiceAccountKey`; the public GKE documentation guarantees the
-  `k8s.io` Admin Activity class but does not publish every CRD method string.
-- [ ] Test the narrowest lifecycle custom role needed for `IAMServiceAccountKey` reconciliation
-  (`create` alone versus create/get/list/delete) and record controller retry behavior.
-- [ ] Compare Secret Data Access logging defaults on newly created Standard and Autopilot-backed
-  Config Controller instances.
+- [ ] On a disposable Config Controller, capture exact custom-resource Kubernetes audit method names for `IAMPolicyMember` and `IAMServiceAccountKey`; the public GKE documentation guarantees the `k8s.io` Admin Activity class but does not publish every CRD method string.
+- [ ] Test the narrowest lifecycle custom role needed for `IAMServiceAccountKey` reconciliation (`create` alone versus create/get/list/delete) and record controller retry behavior.
+- [ ] Compare Secret Data Access logging defaults on newly created Standard and Autopilot-backed Config Controller instances.
 - [ ] Test Policy Controller constraints that prevent KCC IAM and key resources from being admitted.
 
-Any future test must use a disposable instance, a non-sensitive test service account, immediate key
-revocation/deletion, and full custom-resource and instance cleanup.
+Any future test must use a disposable instance, a non-sensitive test service account, immediate key revocation/deletion, and full custom-resource and instance cleanup.

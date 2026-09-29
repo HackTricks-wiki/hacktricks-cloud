@@ -64,10 +64,5 @@
 
 ### Independent cross-review
 
-- Rechecked the three privilege-escalation and one persistence boundaries against the current CA
-  Service REST/audit catalogs, template/pool policy intersection and Cloud KMS logging. The official
-  catalog confirms `UpdateCaPool` and `UpdateCertificateTemplate` are Admin Activity LROs and
-  `CreateCertificate` is non-LRO `DATA_WRITE`; no correction was required.
-- Rechecked the offline-signing example's single-hash and base64-output semantics, the separation of
-  caller versus CA Service service-agent KMS permissions, and the downstream trust/name-constraint
-  bounds. The retained claims remain appropriately conditional.
+- Rechecked the three privilege-escalation and one persistence boundaries against the current CA Service REST/audit catalogs, template/pool policy intersection and Cloud KMS logging. The official catalog confirms `UpdateCaPool` and `UpdateCertificateTemplate` are Admin Activity LROs and `CreateCertificate` is non-LRO `DATA_WRITE`; no correction was required.
+- Rechecked the offline-signing example's single-hash and base64-output semantics, the separation of caller versus CA Service service-agent KMS permissions, and the downstream trust/name-constraint bounds. The retained claims remain appropriately conditional.

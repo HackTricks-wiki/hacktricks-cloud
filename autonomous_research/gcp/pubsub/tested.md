@@ -52,28 +52,9 @@ This pass used current official Google Cloud documentation and local Google Clou
 
 ## 2026-09-28 — independent cross-review
 
-An independent official-documentation and local-CLI review confirmed all three retained primitives
-and made two final bounds explicit:
+An independent official-documentation and local-CLI review confirmed all three retained primitives and made two final bounds explicit:
 
-- The authenticated-push path correctly requires subscription create or update, caller
-  `iam.serviceAccounts.actAs`, a user-managed service account in the subscription project, and
-  Pub/Sub service-agent `iam.serviceAccounts.getOpenIdToken`. The audience is attacker-selectable
-  but the resulting credential remains an audience-bound OIDC identity token. Under VPC Service
-  Controls, a new push endpoint is limited to a Cloud Run default `run.app` URL; a Workflows target
-  is allowed only through Eventarc and its push-auth service account must be included in the
-  perimeter, the topic/subscription perimeter boundary must be allowed, and an existing push
-  subscription cannot be updated. The page now states that these constraints
-  normally block the public capture endpoint used by the technique.
-- The export REST schemas make caller `actAs` conditional on setting `serviceAccountEmail` and do
-  not currently document the authenticated-push same-project rule for custom export identities.
-  The book example therefore uses a same-project custom account and does not claim cross-project
-  custom-account support. Cross-project destination buckets and tables remain supported when the
-  selected delivery identity has the documented destination permissions.
+- The authenticated-push path correctly requires subscription create or update, caller `iam.serviceAccounts.actAs`, a user-managed service account in the subscription project, and Pub/Sub service-agent `iam.serviceAccounts.getOpenIdToken`. The audience is attacker-selectable but the resulting credential remains an audience-bound OIDC identity token. Under VPC Service Controls, a new push endpoint is limited to a Cloud Run default `run.app` URL; a Workflows target is allowed only through Eventarc and its push-auth service account must be included in the perimeter, the topic/subscription perimeter boundary must be allowed, and an existing push subscription cannot be updated. The page now states that these constraints normally block the public capture endpoint used by the technique.
+- The export REST schemas make caller `actAs` conditional on setting `serviceAccountEmail` and do not currently document the authenticated-push same-project rule for custom export identities. The book example therefore uses a same-project custom account and does not claim cross-project custom-account support. Cross-project destination buckets and tables remain supported when the selected delivery identity has the documented destination permissions.
 
-The review also reconfirmed that `ModifyPushConfig` and patch both require only
-`pubsub.subscriptions.update` at the Pub/Sub resource layer; creation requires
-`pubsub.subscriptions.create` on the subscription project plus
-`pubsub.topics.attachSubscription` on the topic; the current gcloud flags in all examples are GA;
-and the Pub/Sub audit catalog/default visibility and BigQuery/Cloud Storage downstream caveats are
-accurate. No cloud resources, APIs, subscriptions, topics, service accounts, policies, or data were
-read or changed.
+The review also reconfirmed that `ModifyPushConfig` and patch both require only `pubsub.subscriptions.update` at the Pub/Sub resource layer; creation requires `pubsub.subscriptions.create` on the subscription project plus `pubsub.topics.attachSubscription` on the topic; the current gcloud flags in all examples are GA; and the Pub/Sub audit catalog/default visibility and BigQuery/Cloud Storage downstream caveats are accurate. No cloud resources, APIs, subscriptions, topics, service accounts, policies, or data were read or changed.

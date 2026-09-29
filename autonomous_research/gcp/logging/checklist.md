@@ -31,11 +31,6 @@ Last researched: 2026-09-28
 
 ## Constraints
 
-- Do not create or delete production log buckets, links, sinks, views, metrics, exclusions, or IAM
-  bindings for these checks.
-- Bucket lock and CMEK attachment are irreversible or operationally risky. Test only on disposable
-  buckets and clean every reversible resource immediately.
-- A log bucket deletion has a seven-day recovery window and continues receiving routed entries while
-  `DELETE_REQUESTED`; restore it during the same test session. Delete active links first. A locked
-  bucket isn't a valid deletion test target until every stored entry has fulfilled its retention
-  period.
+- Do not create or delete production log buckets, links, sinks, views, metrics, exclusions, or IAM bindings for these checks.
+- Bucket lock and CMEK attachment are irreversible or operationally risky. Test only on disposable buckets and clean every reversible resource immediately.
+- A log bucket deletion has a seven-day recovery window and continues receiving routed entries while `DELETE_REQUESTED`; restore it during the same test session. Delete active links first. A locked bucket isn't a valid deletion test target until every stored entry has fulfilled its retention period.

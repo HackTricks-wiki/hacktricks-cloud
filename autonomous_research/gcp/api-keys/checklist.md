@@ -2,9 +2,7 @@
 
 Last researched: 2026-09-28
 
-The 2026-09-25 API Keys remote MCP server Preview adds a new authorization and audit wrapper around
-the existing API Keys API. It adds no new `apikeys.keys.*` capability, so do not author a book
-technique unless testing proves a distinct security boundary failure.
+The 2026-09-25 API Keys remote MCP server Preview adds a new authorization and audit wrapper around the existing API Keys API. It adds no new `apikeys.keys.*` capability, so do not author a book technique unless testing proves a distinct security boundary failure.
 
 ## Possible vulnerabilities — keep internal until verified
 
@@ -36,13 +34,10 @@ technique unless testing proves a distinct security boundary failure.
 
 ## Test constraints
 
-- Prefer an existing disposable lab key. A newly created API key remains soft-deleted for 30 days
-  after deletion and therefore cannot satisfy immediate hard cleanup.
+- Prefer an existing disposable lab key. A newly created API key remains soft-deleted for 30 days after deletion and therefore cannot satisfy immediate hard cleanup.
 - Restore an existing key's exact original restrictions immediately after an update test.
 - Remove all temporary IAM bindings, custom roles, deny policies, and local credentials.
-- Do not re-test `serviceusage.mcppolicy.get/update` or `serviceusage.effectivemcppolicy.get` as an
-  enablement control: MCP policy management was shut down on 2026-07-30 and these permissions are
-  deprecated catalog residue.
+- Do not re-test `serviceusage.mcppolicy.get/update` or `serviceusage.effectivemcppolicy.get` as an enablement control: MCP policy management was shut down on 2026-07-30 and these permissions are deprecated catalog residue.
 
 ## Authorization-key follow-ups
 

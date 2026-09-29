@@ -2,11 +2,7 @@
 
 Open ideas — Secret Manager.
 
-- The older Pub/Sub-triggered managed-rotation hypothesis collapses into the ALREADY-documented
-  "Rotation misuse" section of `gcp-secrets-manager-enum.md` (redirect the rotation Pub/Sub topic /
-  modify the rotation worker via `secrets.update`). No distinct privilege-crossing effect beyond that.
-  Minor optional enhancement only: the doc could name the `secretmanager.secrets.rotate` /
-  `enableManagedRotation` trigger perms explicitly — a one-line addition, not a new technique.
+- The older Pub/Sub-triggered managed-rotation hypothesis collapses into the ALREADY-documented "Rotation misuse" section of `gcp-secrets-manager-enum.md` (redirect the rotation Pub/Sub topic / modify the rotation worker via `secrets.update`). No distinct privilege-crossing effect beyond that. Minor optional enhancement only: the doc could name the `secretmanager.secrets.rotate` / `enableManagedRotation` trigger perms explicitly — a one-line addition, not a new technique.
 
 ## New 2026-07 managed Cloud SQL rotation feature
 - [x] **Verified and shipped 2026-09-28.** `secretmanager.secrets.enableManagedRotation` alone can set a caller-chosen password for a Cloud SQL user through the regional secret's built-in identity. The caller had no Cloud SQL permission and no secret-version access. See `tested.md` and `gcp-secretmanager-privesc.md`.

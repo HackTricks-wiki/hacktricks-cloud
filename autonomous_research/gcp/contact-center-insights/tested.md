@@ -36,15 +36,8 @@ No live cloud resources were read, created or modified. The pass used the curren
 
 ## 2026-09-28 — independent reciprocal review
 
-- Rechecked the 100,000 maximum list page size, `BASIC` versus explicit `FULL` views, Viewer role
-  contents, exact v1 audit methods and disabled-by-default Data Access behavior.
-- Rechecked signed audio as a Preview GET/bearer capability and confirmed that signed-URL XML GETs
-  are eligible for Cloud Storage Data Access logging when enabled. Normalized categorical Stealth
-  labels and added the Preview bound.
-- Rechecked the supported-format limit on direct GCS-source creation and the absence of an
-  arbitrary-byte response path.
-- Rechecked cross-project export's `conversations.list` permission, pre-existing table/location,
-  default truncation, service-agent destination IAM, and non-disableable BigQuery Data Access
-  evidence. No correctness issue remained after those bounds.
-- Validation passed for Bash, JSON construction, four H3 metadata/log tables, references, details/
-  fences, official URLs and `git diff --check`. No cloud state was accessed or mutated.
+- Rechecked the 100,000 maximum list page size, `BASIC` versus explicit `FULL` views, Viewer role contents, exact v1 audit methods and disabled-by-default Data Access behavior.
+- Rechecked signed audio as a Preview GET/bearer capability and confirmed that signed-URL XML GETs are eligible for Cloud Storage Data Access logging when enabled. Normalized categorical Stealth labels and added the Preview bound.
+- Rechecked the supported-format limit on direct GCS-source creation and the absence of an arbitrary-byte response path.
+- Rechecked cross-project export's `conversations.list` permission, pre-existing table/location, default truncation, service-agent destination IAM, and non-disableable BigQuery Data Access evidence. No correctness issue remained after those bounds.
+- Validation passed for Bash, JSON construction, four H3 metadata/log tables, references, details/ fences, official URLs and `git diff --check`. No cloud state was accessed or mutated.

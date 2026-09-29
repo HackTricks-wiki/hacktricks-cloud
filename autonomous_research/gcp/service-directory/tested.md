@@ -35,6 +35,4 @@ Not tested live. The task prohibited cloud mutation, and official method/permiss
 
 ### Independent reciprocal review
 
-Confirmed the endpoint network immutability/attach boundary, client-dependent endpoint selection,
-namespace/service IAM inheritance, command syntax, audit classes/defaults, and policy-preserving IAM
-helpers. Every telemetry statement now cites its official audit or downstream logging contract.
+Confirmed the endpoint network immutability/attach boundary, client-dependent endpoint selection, namespace/service IAM inheritance, command syntax, audit classes/defaults, and policy-preserving IAM helpers. Every telemetry statement now cites its official audit or downstream logging contract.

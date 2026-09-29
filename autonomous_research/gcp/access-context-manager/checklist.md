@@ -10,6 +10,4 @@ Open ideas — Access Context Manager / VPC-SC.
       Looker application-session limits, and exact request payloads. Restore the binding/provider.
 - [ ] Private-first: test whether restricted-project scope, one-binding enforcement, attribute
       staleness, or provider/pool separation can be bypassed. Never use a production IdP identity.
-- The `replaceAll`×2 → `policies.delete` teardown chain is ALREADY documented in
-  `gcp-privilege-escalation/gcp-access-context-manager-privesc.md` (bulk-overwrite section, with min
-  perms, audit method names and teardown angle). Verified duplicate → not re-tested, nothing to ship.
+- The `replaceAll`×2 → `policies.delete` teardown chain is ALREADY documented in `gcp-privilege-escalation/gcp-access-context-manager-privesc.md` (bulk-overwrite section, with min perms, audit method names and teardown angle). Verified duplicate → not re-tested, nothing to ship.

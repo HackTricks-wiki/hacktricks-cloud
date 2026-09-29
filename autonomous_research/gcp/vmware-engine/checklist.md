@@ -38,13 +38,8 @@ Last reviewed: 2026-09-28
 
 ## Guardrails for future live work
 
-- Use only a disposable private cloud and synthetic workloads; never clone, snapshot, inspect, or
-  reroute production data.
-- Snapshot/export every relevant appliance configuration and record every object created before a
-  test; restore policies/routes/rules and verify inventory afterward.
-- Avoid password reset unless the test includes a confirmed restoration path and no human/operator
-  session depends on the current credential.
-- Never use private-cloud/cluster deletion, delete-now, destructive datastore operations, or broad
-  allow-any rules.
-- Remove VM clones, snapshots, temporary vCenter/NSX identities, IAM bindings, routes, NAT rules,
-  firewall rules, external addresses, and logging changes before closing a test.
+- Use only a disposable private cloud and synthetic workloads; never clone, snapshot, inspect, or reroute production data.
+- Snapshot/export every relevant appliance configuration and record every object created before a test; restore policies/routes/rules and verify inventory afterward.
+- Avoid password reset unless the test includes a confirmed restoration path and no human/operator session depends on the current credential.
+- Never use private-cloud/cluster deletion, delete-now, destructive datastore operations, or broad allow-any rules.
+- Remove VM clones, snapshots, temporary vCenter/NSX identities, IAM bindings, routes, NAT rules, firewall rules, external addresses, and logging changes before closing a test.

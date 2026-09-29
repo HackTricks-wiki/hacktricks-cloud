@@ -7,9 +7,7 @@ No cloud resources were created or mutated. The page was audited against current
 ### Retained
 
 - **Broker consumption:** SASL requires `managedkafka.clusters.connect`, network reachability, and effective Kafka `READ` authorization on the topic and consumer group. mTLS uses certificate identity and ACLs without `clusters.connect`. Impact is bounded to authorized, retained records.
-- **Broker injection:** SASL connection plus Kafka producer authorization can inject records.
-  Existing topics require `WRITE`; automatic topic creation additionally requires `CREATE`, and
-  transactional producers also require transactional-ID `WRITE`.
+- **Broker injection:** SASL connection plus Kafka producer authorization can inject records. Existing topics require `WRITE`; automatic topic creation additionally requires `CREATE`, and transactional producers also require transactional-ID `WRITE`.
 - **Kafka Connect sink exfiltration:** connector create/update is a server-side exfiltration route with a different permission boundary from direct broker access. It requires an existing Connect cluster, source read authorization for the Managed Kafka service agent, and destination write access. An attacker-controlled Pub/Sub project can grant its own topic to the victim Connect-project service agent.
 - **Targeted topic destruction:** control-plane topic update/delete and equivalent broker-admin paths were retained. The Google API needs `topics.update`/`topics.delete`; it does not use Schema Registry's `config.update`. Retention expiry is segment-based and asynchronous.
 - **Consumer-group offset tampering:** update requires an inactive group and explicit per-partition offsets. Deletion removes offsets but restart behavior depends on client `auto.offset.reset`.
@@ -47,27 +45,13 @@ No cloud resources were created or mutated. The page was audited against current
 
 ## 2026-09-28 — privilege-escalation deduplication
 
-- Removed both prior privilege-escalation H3s. Managed Kafka resources expose no resource
-  `setIamPolicy`, caller-selectable runtime service account or credential-minting method.
-- Demoted the Connect-secret proposal to a controlled test lead. The service agent must already be
-  authorized for each exact secret version; the worker mounts it read-only; and the caller receives
-  only a path/config-provider expression. The old page did not establish a supported curated plugin
-  that reliably emits an arbitrary substituted secret, so it overstated a general read oracle.
-- Reclassified stolen broker-token and topic-borne credential material. Token theft is a prior
-  identity compromise; broker use remains bounded by network and Kafka ACLs; topic reads are already
-  documented post-exploitation rather than as cloud privilege escalation.
-- This pass used current official access-control, RPC, Connect-secret and authentication references
-  only. It did not call a cloud API, read a cluster, mount a secret or change any resource.
+- Removed both prior privilege-escalation H3s. Managed Kafka resources expose no resource `setIamPolicy`, caller-selectable runtime service account or credential-minting method.
+- Demoted the Connect-secret proposal to a controlled test lead. The service agent must already be authorized for each exact secret version; the worker mounts it read-only; and the caller receives only a path/config-provider expression. The old page did not establish a supported curated plugin that reliably emits an arbitrary substituted secret, so it overstated a general read oracle.
+- Reclassified stolen broker-token and topic-borne credential material. Token theft is a prior identity compromise; broker use remains bounded by network and Kafka ACLs; topic reads are already documented post-exploitation rather than as cloud privilege escalation.
+- This pass used current official access-control, RPC, Connect-secret and authentication references only. It did not call a cloud API, read a cluster, mount a secret or change any resource.
 
 ## 2026-09-28 — reciprocal review
 
-- Independently rechecked the no-primitive conclusion against the current Managed Kafka v1 RPC
-  surface, access-control contract, Connect secret-mount model, curated connector boundary and local
-  SDK 586.0.0 generated clients. No resource-level IAM policy method, caller-selected service
-  account or credential-minting method was found, so no additional privilege-escalation H3 was
-  restored.
-- Reconfirmed that a mounted Secret Manager version is exposed to a worker as a read-only file and
-  referenced through the config provider; that alone does not prove a supported connector can emit
-  an arbitrary value. The synthetic-plugin matrix remains the correct bounded test lead.
-- No cloud API was called and no cluster, Connect resource, secret, ACL or IAM policy was accessed
-  or changed during this review.
+- Independently rechecked the no-primitive conclusion against the current Managed Kafka v1 RPC surface, access-control contract, Connect secret-mount model, curated connector boundary and local SDK 586.0.0 generated clients. No resource-level IAM policy method, caller-selected service account or credential-minting method was found, so no additional privilege-escalation H3 was restored.
+- Reconfirmed that a mounted Secret Manager version is exposed to a worker as a read-only file and referenced through the config provider; that alone does not prove a supported connector can emit an arbitrary value. The synthetic-plugin matrix remains the correct bounded test lead.
+- No cloud API was called and no cluster, Connect resource, secret, ACL or IAM policy was accessed or changed during this review.

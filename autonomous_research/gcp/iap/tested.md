@@ -9,5 +9,4 @@ Identity-Aware Proxy (IAP). Covered: unauth `allUsers`→`iap.httpsResourceAcces
 
 ## Standing items
 - Beta egress `iap.webServiceVersions.egressViaIAP` audit class unconfirmed.
-- `serviceusage.contentsecuritypolicy.*` / `groups.*` / `effectivemcppolicy.get` have no verified
-  offensive framing yet.
+- `serviceusage.contentsecuritypolicy.*` / `groups.*` / `effectivemcppolicy.get` have no verified offensive framing yet.

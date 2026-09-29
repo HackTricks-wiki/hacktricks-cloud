@@ -2,27 +2,11 @@
 
 ## 2026-09-29 — external-key version migration authorization boundary
 
-- Mapped the September 23 Preview ability to PATCH an existing `EXTERNAL`/`EXTERNAL_VPC` version's
-  protection level and `externalProtectionLevelOptions`. This creates a per-version route override
-  distinct from editing the shared `EkmConnection`: `externalKeyUri`, `ekmConnectionKeyPath`, and
-  `ekmConnectionBackendOverride` can move while the version resource name remains stable.
-- Resolved a current official-documentation conflict with a minimum-permission live probe. The
-  migration guide says `cloudkms.cryptoKeys.update`; the audit catalog says
-  `cloudkms.cryptoKeyVersions.update`. A disposable principal holding only the version permission
-  passed authorization and received `NOT_FOUND` for an intentionally nonexistent version. A second
-  principal holding only the key permission was denied explicitly on
-  `cloudkms.cryptoKeyVersions.update`.
-- Both calls emitted `UpdateCryptoKeyVersion` Admin Activity entries. The version-only entry showed
-  the permission granted and status code 5 (`NOT_FOUND`); the key-only entry showed it denied and
-  status code 7. No key, key ring, version, EKM connection, or external request was created.
-- Classified the expected attack as a targeted external-key route override: a compatible
-  attacker-controlled route that proxies/serves the same material can intercept the selected
-  version's external crypto exchange; a wrong/invalid route produces targeted DoS. It is not a way
-  to convert SOFTWARE/HSM keys, recover original external material, or use an arbitrary SSRF URL.
-- Cleanup removed both project bindings, service accounts and active custom roles, returned Cloud
-  KMS to its disabled baseline, and securely shredded generated keys/configs. IAM Credentials
-  remained enabled at baseline. Exact `ht-kms-none` asset search was empty; older September 22
-  `ht-kms-key*` resources already in `DESTROY_SCHEDULED` were left untouched.
+- Mapped the September 23 Preview ability to PATCH an existing `EXTERNAL`/`EXTERNAL_VPC` version's protection level and `externalProtectionLevelOptions`. This creates a per-version route override distinct from editing the shared `EkmConnection`: `externalKeyUri`, `ekmConnectionKeyPath`, and `ekmConnectionBackendOverride` can move while the version resource name remains stable.
+- Resolved a current official-documentation conflict with a minimum-permission live probe. The migration guide says `cloudkms.cryptoKeys.update`; the audit catalog says `cloudkms.cryptoKeyVersions.update`. A disposable principal holding only the version permission passed authorization and received `NOT_FOUND` for an intentionally nonexistent version. A second principal holding only the key permission was denied explicitly on `cloudkms.cryptoKeyVersions.update`.
+- Both calls emitted `UpdateCryptoKeyVersion` Admin Activity entries. The version-only entry showed the permission granted and status code 5 (`NOT_FOUND`); the key-only entry showed it denied and status code 7. No key, key ring, version, EKM connection, or external request was created.
+- Classified the expected attack as a targeted external-key route override: a compatible attacker-controlled route that proxies/serves the same material can intercept the selected version's external crypto exchange; a wrong/invalid route produces targeted DoS. It is not a way to convert SOFTWARE/HSM keys, recover original external material, or use an arbitrary SSRF URL.
+- Cleanup removed both project bindings, service accounts and active custom roles, returned Cloud KMS to its disabled baseline, and securely shredded generated keys/configs. IAM Credentials remained enabled at baseline. Exact `ht-kms-none` asset search was empty; older September 22 `ht-kms-key*` resources already in `DESTROY_SCHEDULED` were left untouched.
 
 ## 2026-09-26 — audit visibility and Autokey prerequisite review
 

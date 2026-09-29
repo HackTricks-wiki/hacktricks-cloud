@@ -1,42 +1,19 @@
 # Cloud Run — tested
 
 ## 2026-09-29 — custom `*.cloud.run` URL lifecycle and sniping
-- Deployed one scale-to-zero public service in `europe-west1` and claimed a globally unique
-  `*.cloud.run` mapping. The mapping reported both `Ready=True` and `DomainRoutable=True`; after a
-  short propagation delay, the URL served the target revision over HTTPS.
-- Deleted the mapping and immediately reclaimed the same name. The second mapping had a new creation
-  timestamp and served the same controlled service, confirming immediate reuse. Google's current
-  documentation explicitly broadens this from same-project reuse to claims by other users across
-  Google Cloud and warns about domain sniping.
-- Deleted the Cloud Run service while leaving the second mapping. The mapping remained present,
-  retained the deleted `routeName`, and continued reserving the name. This confirms that deleting a
-  service alone does not create a claimable dangling URL; the mapping must itself be released.
-- Mapped `run.domainmappings.create` and `.delete` to the documented
-  `google.cloud.run.v1.DomainMappings.CreateDomainMapping` and `.DeleteDomainMapping` always-on
-  Admin Activity methods. Audit entries had not indexed before final cleanup, so exact live payload
-  fields remain a follow-up rather than an observed claim.
-- Published the useful result as an unauthenticated victim-boundary technique: an attacker needs
-  only its own billed project, service, and mapping permission; the victim sees its deletion but not
-  the cross-project reclaim or subsequent request logs.
-- Cleanup deleted the service, revision, public service IAM policy and final mapping. Independent
-  service, mapping, and revision inventories were empty; Cloud Run API remained enabled at its
-  pre-test baseline and all local response files were removed.
+- Deployed one scale-to-zero public service in `europe-west1` and claimed a globally unique `*.cloud.run` mapping. The mapping reported both `Ready=True` and `DomainRoutable=True`; after a short propagation delay, the URL served the target revision over HTTPS.
+- Deleted the mapping and immediately reclaimed the same name. The second mapping had a new creation timestamp and served the same controlled service, confirming immediate reuse. Google's current documentation explicitly broadens this from same-project reuse to claims by other users across Google Cloud and warns about domain sniping.
+- Deleted the Cloud Run service while leaving the second mapping. The mapping remained present, retained the deleted `routeName`, and continued reserving the name. This confirms that deleting a service alone does not create a claimable dangling URL; the mapping must itself be released.
+- Mapped `run.domainmappings.create` and `.delete` to the documented `google.cloud.run.v1.DomainMappings.CreateDomainMapping` and `.DeleteDomainMapping` always-on Admin Activity methods. Audit entries had not indexed before final cleanup, so exact live payload fields remain a follow-up rather than an observed claim.
+- Published the useful result as an unauthenticated victim-boundary technique: an attacker needs only its own billed project, service, and mapping permission; the victim sees its deletion but not the cross-project reclaim or subsequent request logs.
+- Cleanup deleted the service, revision, public service IAM policy and final mapping. Independent service, mapping, and revision inventories were empty; Cloud Run API remained enabled at its pre-test baseline and all local response files were removed.
 
 ## 2026-09-26 — post-exploitation permission and audit drift review
-- Corrected an outdated absolute claim that service/job/revision reads and `RunJob` can never be
-  attributed. The current Cloud Run audit table maps the reads to Data Access `ADMIN_READ` and
-  `RunJob` to `DATA_WRITE`; both remain disabled by default. Preserved the earlier contrary live
-  observation as a reason for defenders to validate delivery, not as the documented contract.
-- Corrected the image-recovery workflow to use the immutable v1 revision `status.imageDigest` and
-  export the assembled container filesystem. `spec.containers[].image` can retain the input tag and
-  is not itself proof of the digest that the revision serves.
-- Corrected the nonexistent `vpcaccess.connectors.use` permission. Attaching an existing connector
-  relies on `vpcaccess.connectors.get` plus `compute.networks.access`; the supported predefined
-  grant is `roles/vpcaccess.user`, with Compute Viewer also documented for deployment tooling.
-- Added exact minimum permissions and categorical stealth ratings to all five post-exploitation
-  techniques, and removed the overclaim that deletion erases Cloud Audit/request/container logs.
-- The lab currently contains no Cloud Run services. Enumeration was read-only; no service,
-  connector, image or other infrastructure was created.
+- Corrected an outdated absolute claim that service/job/revision reads and `RunJob` can never be attributed. The current Cloud Run audit table maps the reads to Data Access `ADMIN_READ` and `RunJob` to `DATA_WRITE`; both remain disabled by default. Preserved the earlier contrary live observation as a reason for defenders to validate delivery, not as the documented contract.
+- Corrected the image-recovery workflow to use the immutable v1 revision `status.imageDigest` and export the assembled container filesystem. `spec.containers[].image` can retain the input tag and is not itself proof of the digest that the revision serves.
+- Corrected the nonexistent `vpcaccess.connectors.use` permission. Attaching an existing connector relies on `vpcaccess.connectors.get` plus `compute.networks.access`; the supported predefined grant is `roles/vpcaccess.user`, with Compute Viewer also documented for deployment tooling.
+- Added exact minimum permissions and categorical stealth ratings to all five post-exploitation techniques, and removed the overclaim that deletion erases Cloud Audit/request/container logs.
+- The lab currently contains no Cloud Run services. Enumeration was read-only; no service, connector, image or other infrastructure was created.
 
 ## 2026-09-26 — `run.locations.exportImage` source-registry bypass
 - Created a custom role containing exactly `run.locations.exportImage`; GCP accepted the permission even though it is absent from the common Cloud Run/basic predefined roles. A caller with only that role successfully called `ExportImage` and `ExportStatus` for a known revision without `run.revisions.get` or any Artifact Registry permission.

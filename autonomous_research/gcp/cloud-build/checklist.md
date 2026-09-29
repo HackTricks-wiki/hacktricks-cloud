@@ -3,13 +3,7 @@
 Open ideas — Cloud Build.
 
 - (none open) — the gen2 `repositories.create` "shadow-repo" idea is NOT a distinct technique:
-  creating a repository resource under a connection executes nothing and does not retarget existing
-  triggers (a trigger binds a specific repository resource). Code execution as the build SA still
-  requires `triggers.create`/`builds.create` + `iam.serviceAccounts.actAs`, OR repo-writer / PR-to-
-  connected-repo — the execution/source-poisoning chains are already documented in
-  `gcp-cloudbuild-privesc.md` and noted in the enum page. Approval only releases an existing pending
-  build; it cannot author one. Cannot be lab-fired here because it needs an external GitHub OAuth
-  connection. Closed per no-garbage.
+  creating a repository resource under a connection executes nothing and does not retarget existing triggers (a trigger binds a specific repository resource). Code execution as the build SA still requires `triggers.create`/`builds.create` + `iam.serviceAccounts.actAs`, OR repo-writer / PR-to- connected-repo — the execution/source-poisoning chains are already documented in `gcp-cloudbuild-privesc.md` and noted in the enum page. Approval only releases an existing pending build; it cannot author one. Cannot be lab-fired here because it needs an external GitHub OAuth connection. Closed per no-garbage.
 
 ## 2026-09-28 — Open validation leads after privilege-escalation audit
 
@@ -22,10 +16,5 @@ These are deliberately not published as techniques without safe validation:
 
 ## 2026-09-28 — Post-exploitation follow-ups
 
-- [ ] Capture the complete current `ApproveBuild` LRO/follow-on-build audit sequence and distinguish
-  caller versus service-agent authorization entries. The caller boundary is `.approve`; test only if
-  retention of unavoidable build/audit history is explicitly acceptable, then delete the trigger,
-  runtime account, custom role and bindings immediately.
-- [ ] Compare exact access to Logging, user-owned buckets, regional Cloud Build-owned buckets and the
-  Google-owned default bucket under separate minimum principals. Never place a real credential in
-  output; use a random non-secret marker and do not change an existing production log destination.
+- [ ] Capture the complete current `ApproveBuild` LRO/follow-on-build audit sequence and distinguish caller versus service-agent authorization entries. The caller boundary is `.approve`; test only if retention of unavoidable build/audit history is explicitly acceptable, then delete the trigger, runtime account, custom role and bindings immediately.
+- [ ] Compare exact access to Logging, user-owned buckets, regional Cloud Build-owned buckets and the Google-owned default bucket under separate minimum principals. Never place a real credential in output; use a random non-secret marker and do not change an existing production log destination.

@@ -62,31 +62,11 @@ Scope was documentation/read-only only. No API was enabled, no Developer Connect
 
 ## 2026-09-28 independent cross-review
 
-- Reconfirmed from current predefined-role metadata that GA Developer Connect Admin includes system
-  Git-proxy read/write but excludes both raw-token fetch permissions. The Beta Token Accessor roles
-  are the raw-token boundary; the Beta OAuth User/Admin roles remain the self-scoped account-
-  connector boundary even though the account-connector service is now GA.
-- Removed the unsupported claim that a token fetched for one `gitRepositoryLink` can necessarily be
-  reused across every repository visible to an installation or stored PAT. The stable API promises
-  a read or read/write token for the named link and does not publish its concrete provider type or
-  authority outside that repository.
-- Corrected Git examples to avoid embedding provider/Google tokens in the remote URL and process
-  arguments. The system-proxy workflow now uses Google's documented `gcloud.sh` credential helper;
-  the raw-token workflow uses an ephemeral Git helper backed by exported shell variables.
-- Bounded Git-proxy writes to the documented `roles/developerconnect.gitProxyUser` workflow, whose
-  role contains both `gitProxyRead` and `gitProxyWrite`. Public documentation does not establish a
-  supported `gitProxyWrite`-only workflow.
-- Tightened the CI/CD escalation chain: the exact external repository/ref/event must be watched, the
-  provider must permit that ref update, required approvals must not block it, and the triggered
-  execution identity must exceed the caller's authority. Developer Connect itself executes no code.
-- Rechecked GCP-2026-048 against the product bulletin and release notes. For GitLab Enterprise and
-  Bitbucket Data Center connection secrets, both caller and P4SA now need
-  `secretmanager.versions.access`; this statement is not generalized to unrelated Preview generic
-  HTTP-connection secret fields.
-- Reconfirmed exact audit treatment: raw `FetchReadToken`/`FetchReadWriteToken` are non-LRO,
-  off-default `DATA_READ`; `GetGitRepositoryLink` is off-default `ADMIN_READ`; account-connector and
-  Git-proxy methods remain absent from both the audited and explicit no-audit lists, so visibility is
-  documented as unknown rather than no-log.
-- All four post-exploitation techniques and the single conditional privilege-escalation chain clear
-  the usefulness bar after these bounds. No extra CRUD, destructive-only, or persistence heading was
-  added, and no cloud/provider operation was performed.
+- Reconfirmed from current predefined-role metadata that GA Developer Connect Admin includes system Git-proxy read/write but excludes both raw-token fetch permissions. The Beta Token Accessor roles are the raw-token boundary; the Beta OAuth User/Admin roles remain the self-scoped account- connector boundary even though the account-connector service is now GA.
+- Removed the unsupported claim that a token fetched for one `gitRepositoryLink` can necessarily be reused across every repository visible to an installation or stored PAT. The stable API promises a read or read/write token for the named link and does not publish its concrete provider type or authority outside that repository.
+- Corrected Git examples to avoid embedding provider/Google tokens in the remote URL and process arguments. The system-proxy workflow now uses Google's documented `gcloud.sh` credential helper; the raw-token workflow uses an ephemeral Git helper backed by exported shell variables.
+- Bounded Git-proxy writes to the documented `roles/developerconnect.gitProxyUser` workflow, whose role contains both `gitProxyRead` and `gitProxyWrite`. Public documentation does not establish a supported `gitProxyWrite`-only workflow.
+- Tightened the CI/CD escalation chain: the exact external repository/ref/event must be watched, the provider must permit that ref update, required approvals must not block it, and the triggered execution identity must exceed the caller's authority. Developer Connect itself executes no code.
+- Rechecked GCP-2026-048 against the product bulletin and release notes. For GitLab Enterprise and Bitbucket Data Center connection secrets, both caller and P4SA now need `secretmanager.versions.access`; this statement is not generalized to unrelated Preview generic HTTP-connection secret fields.
+- Reconfirmed exact audit treatment: raw `FetchReadToken`/`FetchReadWriteToken` are non-LRO, off-default `DATA_READ`; `GetGitRepositoryLink` is off-default `ADMIN_READ`; account-connector and Git-proxy methods remain absent from both the audited and explicit no-audit lists, so visibility is documented as unknown rather than no-log.
+- All four post-exploitation techniques and the single conditional privilege-escalation chain clear the usefulness bar after these bounds. No extra CRUD, destructive-only, or persistence heading was added, and no cloud/provider operation was performed.

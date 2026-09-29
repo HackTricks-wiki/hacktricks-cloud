@@ -15,10 +15,7 @@ No cloud resources or policies were created, updated, or deleted. The review use
 ### Retained boundaries
 
 1. **Application IAM self-grant.** `beyondcorp.sgApplications.setIamPolicy` can add `roles/beyondcorp.sgApplicationUser`. Current service discovery also requires an existing gateway `serviceDiscoveryUser` binding or control of the gateway policy. This grants access only through a licensed/configured Chrome client and does not bypass upstream authentication.
-2. **Repoint an application the caller can already use.** `beyondcorp.sgApplications.update` can
-   change endpoint matchers while retaining the application's IAM policy. Direct privilege gain
-   requires the caller already be a data-plane user and the target hostname already be reachable
-   through the application's configured upstream/VPC.
+2. **Repoint an application the caller can already use.** `beyondcorp.sgApplications.update` can change endpoint matchers while retaining the application's IAM policy. Direct privilege gain requires the caller already be a data-plane user and the target hostname already be reachable through the application's configured upstream/VPC.
 3. **Configuration disclosure.** Current gateway/application reads disclose private web hostnames, VPC resource names, gateway identities, egress settings, authorized principals, and access conditions without touching upstream applications.
 4. **Service-level persistence.** Durable gateway/application user bindings can outlive loss of the original configuration role, but not loss of the controlled Chrome identity/client setup or deletion of the resources.
 
@@ -32,11 +29,7 @@ No cloud resources or policies were created, updated, or deleted. The review use
 - **Rejected:** endpoint update as automatic credential/session interception. HTTPS certificate validation and upstream authentication remain; redirection can cause route tampering or denial of service, but credential capture additionally requires an accepted certificate/protocol/application condition.
 - **Removed as low-value/destructive:** gateway/application deletion and `beyondcorp.subscriptions.terminate`. These are denial of service, not post-exploitation or privilege escalation.
 - **Retired from active techniques:** regional App Connector creation. Google stopped new connector creation in May 2026 and documented support ending in July 2026. Old resources remain relevant only to legacy inventory.
-- **Corrected CLI:** nested `--upstreams` requires
-  `network=name=projects/.../global/networks/...`; external targets require the nested
-  `external.endpoints[]` shape. The previous `external=host:port` and flat `network=...` examples
-  did not match the current schema. This validates client-side serialization, not server-side
-  mutability of an existing application's upstream.
+- **Corrected CLI:** nested `--upstreams` requires `network=name=projects/.../global/networks/...`; external targets require the nested `external.endpoints[]` shape. The previous `external=host:port` and flat `network=...` examples did not match the current schema. This validates client-side serialization, not server-side mutability of an existing application's upstream.
 
 ### Telemetry findings
 
@@ -48,35 +41,12 @@ No cloud resources or policies were created, updated, or deleted. The review use
 
 ## 2026-09-28 — independent reciprocal cross-review
 
-- Rechecked the current private-web/SaaS guides, App Connector retirement notice, v1 REST and audit
-  catalogs, live predefined-role descriptions, and installed stable CLI implementation without
-  changing cloud state.
+- Rechecked the current private-web/SaaS guides, App Connector retirement notice, v1 REST and audit catalogs, live predefined-role descriptions, and installed stable CLI implementation without changing cloud state.
 - Confirmed the documented `--upstreams=network=name=projects/.../global/networks/...` shorthand:
-  local parser inspection produced the nested request object
-  `{"network":{"name":"projects/.../global/networks/..."}}`. The endpoint matcher likewise
-  produced a numeric port list. Current management guidance documents endpoint-matcher updates but
-  not upstream replacement, so the active technique now keeps the existing upstream/VPC; accepting
-  the CLI flag is not treated as proof that the backend accepts that update mask.
-- Corrected the application-update helper boundary. Stable `gcloud ... applications update` first
-  calls `GetApplication` to merge the selected fields, then calls `UpdateApplication`; synchronous
-  use polls `GetOperation`. The helper therefore needs `beyondcorp.sgApplications.get`,
-  `.update`, and `beyondcorp.operations.get`. A raw PATCH needs only `.update`, and `--async`
-  avoids only the poll.
-- Confirmed both add-binding implementations request IAM policy version 3 and send the returned
-  policy object, including existing conditional bindings, version, and etag. Their documented
-  `getIamPolicy` plus `setIamPolicy` minimum is correct.
-- Found that the installed standalone GA/Beta declarative `get-iam-policy` commands omit
-  `options.requestedPolicyVersion=3` (GA currently addresses the v1alpha endpoint; Beta addresses
-  v1). Enumeration now uses the documented v1 REST GET with an explicit version-3 option so access
-  conditions are returned instead of `_withcond_...` role hashes. This does not affect the custom
-  add-binding helpers, which explicitly request version 3.
-- Kept the route-update impact bounded to browser-mediated web access. Although the generic CLI
-  schema accepts numeric ports, the current product guides document SaaS/private web applications
-  and browser proxying; that is not evidence of a general SSH/database/arbitrary-TCP tunnel.
-- Removed the active-page suggestion that the gateway discovery binding could be omitted for a
-  legacy PAC configuration. The current official guides explicitly require the gateway-level
-  `serviceDiscoveryUser` binding; any legacy exception remains an unverified research lead only.
-- Confirmed the audit gap remains real as of the current generated catalog: current Security
-  Gateway CRUD methods and their LRO classes are listed, while generic IAM method entries enumerate
-  only legacy connector-resource permissions, not current `securityGateways`/`sgApplications` IAM
-  permissions.
+  local parser inspection produced the nested request object `{"network":{"name":"projects/.../global/networks/..."}}`. The endpoint matcher likewise produced a numeric port list. Current management guidance documents endpoint-matcher updates but not upstream replacement, so the active technique now keeps the existing upstream/VPC; accepting the CLI flag is not treated as proof that the backend accepts that update mask.
+- Corrected the application-update helper boundary. Stable `gcloud ... applications update` first calls `GetApplication` to merge the selected fields, then calls `UpdateApplication`; synchronous use polls `GetOperation`. The helper therefore needs `beyondcorp.sgApplications.get`, `.update`, and `beyondcorp.operations.get`. A raw PATCH needs only `.update`, and `--async` avoids only the poll.
+- Confirmed both add-binding implementations request IAM policy version 3 and send the returned policy object, including existing conditional bindings, version, and etag. Their documented `getIamPolicy` plus `setIamPolicy` minimum is correct.
+- Found that the installed standalone GA/Beta declarative `get-iam-policy` commands omit `options.requestedPolicyVersion=3` (GA currently addresses the v1alpha endpoint; Beta addresses v1). Enumeration now uses the documented v1 REST GET with an explicit version-3 option so access conditions are returned instead of `_withcond_...` role hashes. This does not affect the custom add-binding helpers, which explicitly request version 3.
+- Kept the route-update impact bounded to browser-mediated web access. Although the generic CLI schema accepts numeric ports, the current product guides document SaaS/private web applications and browser proxying; that is not evidence of a general SSH/database/arbitrary-TCP tunnel.
+- Removed the active-page suggestion that the gateway discovery binding could be omitted for a legacy PAC configuration. The current official guides explicitly require the gateway-level `serviceDiscoveryUser` binding; any legacy exception remains an unverified research lead only.
+- Confirmed the audit gap remains real as of the current generated catalog: current Security Gateway CRUD methods and their LRO classes are listed, while generic IAM method entries enumerate only legacy connector-resource permissions, not current `securityGateways`/`sgApplications` IAM permissions.

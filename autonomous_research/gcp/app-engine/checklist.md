@@ -31,15 +31,7 @@
 - [ ] Re-test the historical staging-bucket manifest race only if a safe disposable deployment is available; require reproducible checksum/manifest handling before restoring it to the book.
 - [ ] Re-test image tag/digest behavior during an in-flight flexible deployment; do not treat repository write access as App Engine escalation without reproducible execution of the replacement image.
 - [ ] Recheck role, build-identity, and Artifact Registry requirements after future App Engine or Cloud Build default-service-account changes.
-- [x] Apply the post-exploitation no-garbage bar and remove deletion plus duplicate source-modification
-  headings; add exact stealth/telemetry metadata to all four retained disclosure families.
-- [ ] In an authorized disposable repository, call `exportAppImage` with the smallest victim-side
-  custom role, capture the actual destination writer identity and both projects' audit entries, poll
-  the LRO, then delete the exported package/repository and verify absence. Do not use a shared
-  destination or assume the current audit catalog's omission means silence.
-- [ ] Capture Console Memcache get/set/delete/flush with App Engine Data Access disabled and enabled,
-  confirming the published `cloud_cache.MemcacheAdminService.*` names. Use only non-sensitive marker
-  values, restore/delete them, and never flush a non-disposable cache.
-- [ ] Revisit `appengine.runtimes.actAsAdmin` only if Google exposes a callable public surface. It is
-  currently present in broad legacy roles, unsupported in custom roles, and undocumented beyond the
-  permission index; do not infer an admin impersonation path from its name.
+- [x] Apply the post-exploitation no-garbage bar and remove deletion plus duplicate source-modification headings; add exact stealth/telemetry metadata to all four retained disclosure families.
+- [ ] In an authorized disposable repository, call `exportAppImage` with the smallest victim-side custom role, capture the actual destination writer identity and both projects' audit entries, poll the LRO, then delete the exported package/repository and verify absence. Do not use a shared destination or assume the current audit catalog's omission means silence.
+- [ ] Capture Console Memcache get/set/delete/flush with App Engine Data Access disabled and enabled, confirming the published `cloud_cache.MemcacheAdminService.*` names. Use only non-sensitive marker values, restore/delete them, and never flush a non-disposable cache.
+- [ ] Revisit `appengine.runtimes.actAsAdmin` only if Google exposes a callable public surface. It is currently present in broad legacy roles, unsupported in custom roles, and undocumented beyond the permission index; do not infer an admin impersonation path from its name.

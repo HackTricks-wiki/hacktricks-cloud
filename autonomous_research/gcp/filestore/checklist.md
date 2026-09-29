@@ -13,16 +13,8 @@
 
 ## Follow-up validation ideas
 
-- [ ] With prior approval, test `file.instances.createCrossProjectBackup` using a tiny disposable
-  source share and attacker-owned destination project. Capture which project receives
-  `CreateBackup`, every secondary permission check, and whether a current supported client can
-  express the cross-project source. Delete the destination backup immediately and confirm no source
-  mutation; do not run this without the exact cost/cleanup plan approved first.
-- [ ] With prior approval, grant a custom role containing only `file.backups.useReadOnly` on a
-  disposable backup and `file.instances.create` on a clean target project, then confirm the precise
-  create-from-backup authorization boundary and delete the clone immediately.
-- [ ] Capture one `UpdateInstance` LRO with a synthetic reversible export rule and restore the exact
-  prior rule set, confirming which NFS fields appear in Admin Activity request metadata.
+- [ ] With prior approval, test `file.instances.createCrossProjectBackup` using a tiny disposable source share and attacker-owned destination project. Capture which project receives `CreateBackup`, every secondary permission check, and whether a current supported client can express the cross-project source. Delete the destination backup immediately and confirm no source mutation; do not run this without the exact cost/cleanup plan approved first.
+- [ ] With prior approval, grant a custom role containing only `file.backups.useReadOnly` on a disposable backup and `file.instances.create` on a clean target project, then confirm the precise create-from-backup authorization boundary and delete the clone immediately.
+- [ ] Capture one `UpdateInstance` LRO with a synthetic reversible export rule and restore the exact prior rule set, confirming which NFS fields appear in Admin Activity request metadata.
 
-All future live tests must use synthetic data, minimum permissions, bounded cost, pre-recorded
-rollback, immediate teardown, and post-cleanup inventory confirmation.
+All future live tests must use synthetic data, minimum permissions, bounded cost, pre-recorded rollback, immediate teardown, and post-cleanup inventory confirmation.

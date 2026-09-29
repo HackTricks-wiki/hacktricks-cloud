@@ -31,8 +31,5 @@ Not tested live: the authorized project had no disposable domain in scope, and r
 
 ### Independent reciprocal review
 
-- Corrected the enum field list: current `Registration` responses expose DNS/contact/management,
-  supported-privacy, lifecycle, label and failure fields, but not `domainProperties` or a registrar
-  field. Those properties belong to separate registration/transfer-parameter responses.
-- Confirmed command syntax, permission boundaries, LRO classifications and policy-preserving IAM
-  merge behavior; linked every telemetry/default-visibility statement to the audit catalog.
+- Corrected the enum field list: current `Registration` responses expose DNS/contact/management, supported-privacy, lifecycle, label and failure fields, but not `domainProperties` or a registrar field. Those properties belong to separate registration/transfer-parameter responses.
+- Confirmed command syntax, permission boundaries, LRO classifications and policy-preserving IAM merge behavior; linked every telemetry/default-visibility statement to the audit catalog.

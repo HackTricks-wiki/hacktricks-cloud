@@ -9,19 +9,15 @@
 - [x] Verify optional `AuthorizeUser` Data Access and Security Gateway connection-log configuration.
 - [x] Bound private access to supported web routing and reject generic TCP and metadata-server claims.
 - [x] Remove destructive DoS, automatic MITM, anonymous bypass, and retired connector creation claims from active technique coverage.
-- [x] Independently validate the nested application-upstream parser, update-helper preflight GET and
-  LRO poll permissions, and IAM helper policy-version/condition/etag preservation.
-- [x] Inspect standalone current-resource IAM reads and replace condition-loss-prone CLI reads with
-  explicit v1 REST `requestedPolicyVersion=3` enumeration.
+- [x] Independently validate the nested application-upstream parser, update-helper preflight GET and LRO poll permissions, and IAM helper policy-version/condition/etag preservation.
+- [x] Inspect standalone current-resource IAM reads and replace condition-loss-prone CLI reads with explicit v1 REST `requestedPolicyVersion=3` enumeration.
 
 ## Safe future validation
 
 - [ ] On an already-existing disposable licensed gateway, capture application and gateway `GetIamPolicy`/`SetIamPolicy` entries. Record exact `protoPayload.methodName`, log name/class, monitored resource, and default visibility; immediately restore the exact etag-protected policies.
 - [ ] With an existing synthetic private HTTPS application, verify the minimum data-plane combination: application `sgApplicationUser`, gateway `serviceDiscoveryUser`, managed Chrome configuration, and no additional configuration-plane permission.
 - [ ] Temporarily change a disposable application's endpoint matcher within the same already-authorized VPC and capture the `UpdateApplication` LRO start/completion pair, route propagation delay, `AuthorizeUser`, connection log, and target access log. Restore the exact original application immediately.
-- [ ] Separately test whether the current service accepts `upstreams` in an application update mask.
-  The stable CLI serializes the nested field, but current management guidance only documents
-  changing endpoint matchers; do not claim cross-VPC repointing until server behavior is captured.
+- [ ] Separately test whether the current service accepts `upstreams` in an application update mask. The stable CLI serializes the nested field, but current management guidance only documents changing endpoint matchers; do not claim cross-VPC repointing until server behavior is captured.
 - [ ] Verify whether a principal with application access but no gateway service-discovery binding can use a legacy PAC-configured gateway, and clearly separate legacy/current client behavior.
 - [ ] Test whether public principals are rejected or simply unusable at authorization time; do not describe `allUsers` as unauthenticated access unless the full client/data-plane path is demonstrated.
 - [ ] Confirm that secure-gateway connection logging is disabled on a new gateway by default if a cost-approved disposable licensed environment becomes available.

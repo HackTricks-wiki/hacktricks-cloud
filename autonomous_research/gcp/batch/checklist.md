@@ -17,8 +17,6 @@ Last researched: 2026-09-28
 
 ## Safety and cleanup
 
-- Use one minimal task and the smallest practical machine; record the job and every underlying
-  Compute resource before execution.
+- Use one minimal task and the smallest practical machine; record the job and every underlying Compute resource before execution.
 - Delete the Batch job and verify VMs, disks, addresses, and job-scoped logs/resources after testing.
-- Never print live tokens or secrets into Cloud Logging. Use a controlled sink and revoke/expire any
-  captured short-lived credential.
+- Never print live tokens or secrets into Cloud Logging. Use a controlled sink and revoke/expire any captured short-lived credential.
