@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Database Center
+- [x] Added the six-tool cross-product fleet surface and one bounded reconnaissance technique for
+      products, exact resource configuration, security/resilience findings and normalized query
+      statistics. Verified the minimum aggregate permission without creating a database fixture.
+- [ ] In an owned multi-project hierarchy, measure partial-access filtering at folder/organization
+      parents, pagination, deltas and tag/label filters; capture query statistics only from an
+      existing synthetic workload. Treat any inaccessible-resource disclosure as private-first; see
+      `database-center/checklist.md`.
+
 ## 2026-09-29 release delta — Database Insights
 - [x] Added the seven-tool read-only REST/MCP surface and one bounded reconnaissance technique for
       normalized query structure, users/clients/tags, advanced AlloyDB history and index-advisor

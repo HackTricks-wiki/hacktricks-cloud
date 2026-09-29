@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Database Center fleet and weakness reconnaissance
+- Added a dedicated Database Center service page and one bounded post-exploitation technique for
+  cross-product fleet inventory, detailed resource metadata, health/security findings and normalized
+  query statistics at project, folder or organization scope.
+- Mapped all six read-only MCP tools and their exact underlying permissions. A minimal caller with
+  `databasecenter.fleetStats.list` returned the same two-product aggregate after the broad Viewer
+  role was removed; MCP independently enforced `mcp.tools.call`, and anonymous invocation failed.
+- Database Center is absent from the current audit-service catalog and produced no default direct
+  read entry, while the MCP wrapper is off-default Data Access. Used only pre-existing resources,
+  removed every disposable identity/binding/credential/config/role/artifact and restored the API to
+  its disabled baseline. Post-exploitation coverage is now 303/303 retained techniques.
+
 ### 2026-09-29 — Database Insights SQL/schema reconnaissance and remote MCP surface
 - Added a dedicated Database Insights service page and a post-exploitation technique for mining
   normalized SQL, database/user/client/application dimensions, workload and wait history, and
