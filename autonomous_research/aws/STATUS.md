@@ -29,6 +29,9 @@ Amazon Connect coverage now includes `CreateParticipant` as the control-plane-to
 adding a custom chat bot or WebRTC customer to a known active contact without a Connect user login.
 Amazon EVS coverage now maps environment/host/VLAN/connector exposure and the separate IAM gates for
 recovering EVS-managed VCF, ESX root and connector appliance credentials from Secrets Manager.
+SageMaker HyperPod coverage now includes the cluster-only `UpdateClusterSoftware` custom-AMI path:
+it replaces node root volumes and can run as the existing instance-group role without caller-side
+`iam:PassRole`, subject to same-account image and orchestrator constraints.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
