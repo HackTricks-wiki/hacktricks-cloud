@@ -1,5 +1,56 @@
 # App Lifecycle Manager security research ledger
 
+## 2026-09-29 — standalone feature-flag control, runtime proof and remote MCP
+
+- Created the documented standalone topology in global plus `us-central1`: matching SaaS and
+  UnitKind resources, one non-provisioning Unit, a Boolean flag, immutable revision, FlagRelease,
+  RolloutKind and global/regional child Rollout. The initial rollout succeeded and the Unit exposed
+  its regional `featureFlagsConfig` with the expected revision despite remaining
+  `UNIT_STATE_NOT_PROVISIONED`, confirming that flag-only use does not require infrastructure
+  deployment.
+- A separate runtime identity holding only `roles/saasconfig.viewer` plus Service Usage Consumer
+  successfully streamed the regional flagd document. With authoritative default `Disabled=false`,
+  the client returned `False`, reason `STATIC`, variant `Disabled` and no evaluation error.
+- Reduced the writer to a custom project role containing exactly
+  `saasservicemgmt.flags.{get,update}`, `saasservicemgmt.flagRevisions.create`,
+  `saasservicemgmt.flagReleases.create`, `saasservicemgmt.rollouts.create`, and
+  `saasservicemgmt.operations.get`, plus Service Usage Consumer. It had no Compute, deployment,
+  IAM mutation, actAs, token-mint or SaaS Config runtime-read role.
+- The reduced writer changed the flag default to `Enabled`, created revision 2, created release 2,
+  and initiated rollout 2. Both global and regional rollouts reached `ROLLOUT_STATE_SUCCEEDED`, the
+  Unit changed to the regional revision 2, and the independent runtime identity then returned
+  `True`, reason `STATIC`, variant `Enabled` with an explicitly opposite `False` fallback. This
+  directly verifies application-configuration impact without a code or infrastructure deployment.
+- The live aggregate MCP endpoint exposed 35 tools: 24 read-only list/get tools and 11 create tools.
+  It includes create tools for SaaS, Tenant, UnitKind, Unit, UnitOperation, infrastructure Release,
+  RolloutKind, Flag, FlagRevision, FlagRelease and FlagAttribute. It has list/get but no create tool
+  for Rollout, and has no update/delete tools, so it cannot complete the existing-flag update chain
+  by itself.
+- Anonymous `tools/list` returned HTTP 200 and all 35 schemas; anonymous `tools/call` returned 401.
+  An authenticated caller with backend `flags.get` but without `mcp.tools.call` received an explicit
+  wrapper denial. After adding only `roles/mcp.toolUser`, `get_flag` succeeded. A `create_flag`
+  `validateOnly` request then failed specifically on absent `saasservicemgmt.flags.create`, proving
+  the wrapper role does not bypass backend IAM.
+- The four initiating writes appeared as always-on Admin Activity under the reduced writer:
+  `SaasFlags.UpdateFlag`, `CreateFlagRevision`, `CreateFlagRelease`, and
+  `SaasRollouts.CreateRollout`. Regional replication generated service-agent `UpdateUnitKind`,
+  replicated `CreateFlag`, `CreateUnitOperation`, and `UpdateUnit` activity. Flagd `SyncFlags` and
+  `FetchAllFlags` are documented `DATA_READ` SaaS Config events and are disabled by default; MCP
+  wrapper telemetry is independently disabled-by-default Data Access.
+- Cleanup first recovered and deleted the stale run-owned `alm-saas-0928233538` object left by the
+  earlier Preview teardown. For the current fixture it deleted both root/child rollouts, RolloutKind,
+  global and replicated regional releases/revisions/flags, Unit, both UnitKinds and both SaaS
+  resources. Clearing `defaultFlagRevisions` on both UnitKinds was required before the final
+  revision deletes. Both service-generated Artifact Registry repositories were deleted explicitly.
+- Removed both disposable identities and keys, every project binding, the custom role, the managed
+  service-agent binding, gcloud configurations and local artifacts. Both APIs were restored to their
+  disabled baseline. Exact IAM, service-account, repository, configuration and `/tmp` inventories
+  were empty, and a final API probe returned `SERVICE_DISABLED`.
+- Retained one high-value expected post-exploitation technique: application-defined behavior
+  manipulation through the flag revision/release/rollout chain. It is not automatically cloud IAM
+  escalation and is specially noisy because every control-plane write is Admin Activity. No
+  authorization vulnerability was found in the flag or MCP control planes.
+
 ## 2026-09-28/29 — current Release, UnitOperation, Rollout and identity boundary
 
 - Reviewed current official v1 discovery revision `20260914`, local Google Cloud SDK 586.0.0 beta

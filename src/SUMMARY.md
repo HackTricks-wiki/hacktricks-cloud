@@ -101,6 +101,7 @@
     - [GCP - API Gateway Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-api-gateway-post-exploitation.md)
     - [GCP - Apigee Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-apigee-post-exploitation.md)
     - [GCP - App Engine Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md)
+    - [GCP - App Lifecycle Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-lifecycle-manager-post-exploitation.md)
     - [GCP - Artifact Registry Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md)
     - [GCP - Backup and DR Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-backup-and-dr-post-exploitation.md)
     - [GCP - BeyondCorp Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-beyondcorp-post-exploitation.md)

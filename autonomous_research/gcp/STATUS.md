@@ -2,6 +2,26 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — App Lifecycle Manager feature-flag application control and remote MCP
+- Added feature-flag enumeration and a dedicated post-exploitation technique: a narrow caller can
+  update an existing flag, snapshot it, publish a FlagRelease and roll it across Units without any
+  Compute, application-deployment, IAM-mutation, actAs or runtime-reader permission. A separate
+  SaaS Config Viewer observed the authoritative value change from `Disabled=false` to
+  `Enabled=true` after both global and regional rollouts succeeded.
+- The live writer used only flag get/update, revision create, release create, rollout create and
+  operation get. All four writes produced always-on Admin Activity, while runtime flag streaming is
+  off-default SaaS Config Data Access. Impact is explicitly bounded to the application's flag
+  semantics and is not described as automatic GCP IAM escalation.
+- Mapped all 35 live MCP tools: 24 read-only and 11 create operations. Anonymous discovery worked;
+  anonymous invocation failed; an authenticated backend-authorized caller still needed
+  `mcp.tools.call`; and the wrapper continued to enforce the underlying create permission. The
+  surface has no flag update or rollout create tool, so MCP alone cannot complete this chain.
+- Deleted every global/regional management object, both generated Artifact Registry repositories,
+  two identities/keys, all bindings, the custom role, service-agent binding, configurations and
+  local artifacts; also recovered one stale run-owned SaaS tombstone from the prior ALM batch. Both
+  APIs are disabled again and exact residue checks are empty. Coverage is now 316/316
+  post-exploitation techniques; privilege escalation and persistence remain 274/274 and 161/161.
+
 ### 2026-09-29 — Dataproc workload intelligence and remote MCP
 - Expanded Dataproc enumeration from clusters/jobs to Serverless batches, interactive sessions and
   the full 16-tool live MCP surface. Added a dedicated post-exploitation page for high-stealth

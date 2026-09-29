@@ -256,6 +256,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       primitive: register attacker Terraform as a new Release and apply it to an existing Unit or
       Rollout population using its prepared `actuation_sa`. Bounded the path by all actuation,
       artifact, Infrastructure Manager, UnitKind, filter and target-service prerequisites.
+- [x] Validate the standalone feature-flag chain and remote MCP server. A six-permission writer
+      changed an existing flag, created a revision/release/rollout and caused an independent runtime
+      identity to observe the new value. Mapped 35 MCP tools and both authorization layers; full
+      global/regional and generated-repository teardown is verified.
 - [ ] In an already prepared disposable fixture, verify retained-actuation behavior under only
       Release create plus UnitOperation create, then repeat fleet mode with Rollout create. Capture
       downstream Infra Manager and target-service principals and delete the full dependency graph;
@@ -711,11 +715,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       webhook query secrets. All live get/list paths returned `[REDACTED]`; the retained attack value
       is source, unmerged-review, governance and integration metadata reconnaissance. Full teardown
       verified. See `secure-source-manager/tested.md`.
-- [ ] App Lifecycle Manager: validate its new feature-flag resources and 35-tool remote MCP surface.
-      Use a synthetic standalone Unit/flag/revision/release/rollout, prove the value reaches only that
-      Unit through `saasconfig.googleapis.com`, then delete the full dependency chain. Publish only
-      observed application-control impact; keep authorization discrepancies private-first. See
-      `app-lifecycle-manager/checklist.md`.
+- [x] App Lifecycle Manager: validated the standalone Unit/flag/revision/release/rollout chain and
+      all 35 live tools. The value reached a separate read-only runtime identity; MCP independently
+      enforced `mcp.tools.call` and backend IAM; no authorization defect was found. Published only
+      the application-control impact and deleted the complete dependency chain. See
+      `app-lifecycle-manager/tested.md`.
 
 ## Monitoring cadence (the productive vein)
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
@@ -746,6 +750,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [x] Complete the explicit stealth rating and expandable log table on every qualifying GCP
       privilege-escalation, post-exploitation and persistence technique. The deterministic
       `scripts/check_gcp_technique_metadata.mjs` scan on 2026-09-29 reports **274/274 privesc,
-      315/315 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
+      316/316 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
       new technique and review both primary-service and downstream/platform telemetry before rating
       stealth.
