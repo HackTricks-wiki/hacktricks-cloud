@@ -452,6 +452,7 @@
     - [GCP - Cloud SQL Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-cloud-sql-unauthenticated-enum.md)
     - [GCP - Cloud Tasks Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-cloud-tasks-unauthenticated-enum.md)
     - [GCP - Compute Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-compute-unauthenticated-enum.md)
+    - [GCP - Historical Kubelet Read-Only API Exposure](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-gke-kubelet-unauthenticated-access.md)
     - [GCP - Firebase Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-firebase-unauthenticated-enum.md)
     - [GCP - Google Groups Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-google-groups-unauthenticated-enum.md)
     - [GCP - Healthcare API Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-healthcare-unauthenticated-enum.md)
