@@ -1,5 +1,29 @@
 # Lambda — tested
 
+## VERIFIED (end-to-end, least privilege) — durable execution history and callback authorization
+- **Idea:** determine whether retained durable-execution history exposes useful workflow data and whether
+  a callback ID can be completed with permission on a different execution or replayed after use.
+- **Result (2026-09-29, acct 228478051196):** a disposable Python 3.14 durable function created two
+  simultaneous callback-waiting executions. History with execution data returned both callback IDs.
+  A test role allowed `lambda:SendDurableExecutionCallbackSuccess` only on execution B. It was denied
+  when it supplied execution A's callback ID, while A remained `RUNNING`; the same role completed B
+  with an attacker-chosen JSON result and B reached `SUCCEEDED`. Replaying B's consumed callback ID
+  returned `CallbackTimeoutException`.
+- **Authorization boundary:** callback IDs are bound to their owning execution ARN. The usable attack
+  is a known live callback ID plus the matching send-success or send-failure permission, not a
+  cross-execution or replay bypass. `GetDurableExecutionHistory --include-execution-data` is a
+  separate sensitive-data read and can disclose callback IDs and payloads.
+- **Telemetry:** `GetDurableExecution` and `GetDurableExecutionHistory` appeared as read-only Lambda
+  management events in default Event History. Callback send and stop calls did not appear there;
+  record that as observed behavior, not proof that no configurable data-event trail can capture them.
+- **Cleanup:** execution A was stopped; B was terminal. The function, execution role, restricted test
+  role, CloudWatch log group, deployment archive, and local source fixture were deleted and absence
+  verified. Durable history has a minimum one-day retention and no per-execution delete API, so only
+  the AWS-managed terminal records remain until expiry. No compute or other infrastructure remains.
+- **Status:** expected history-disclosure and callback-injection techniques shipped to the wiki. The
+  cross-execution authorization and callback-replay 0-day hypotheses were falsified; no private
+  vulnerability report created.
+
 ## VERIFIED (end-to-end, least privilege) — full resource-policy direct invoke and ARN scoping
 - **Idea:** use `lambda:PutResourcePolicy` with its two dependent permission-only actions to grant
   `lambda:InvokeFunction` through the function policy, without an identity-based invoke allow.

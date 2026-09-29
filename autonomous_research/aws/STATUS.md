@@ -15,7 +15,8 @@ Resilience Hub (including the September 2026 next-generation API), Glue, Redshif
 Serverless, S3 Tables, S3 Vectors, Backup Search, Entity Resolution, Timestream, and Bedrock Data
 Automation, Systems Manager GUI Connect, Billing Conductor, License Manager, WorkMail Message Flow,
 the separate Amazon Connect voice Contact Lens transcript API, and the WorkSpaces Instances
-AMI/user-data/instance-profile launch path. Every published
+AMI/user-data/instance-profile launch path, plus Lambda durable-execution history disclosure and
+callback result injection. Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
