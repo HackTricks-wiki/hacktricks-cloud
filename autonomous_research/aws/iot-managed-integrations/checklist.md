@@ -23,6 +23,11 @@ account (or a real engagement).
       end-to-end onboarding actually yields a usable device identity before claiming privesc.
       Min perm: `iotmanagedintegrations:CreateProvisioningProfile` (+ account onboarded). Persistence/
       initial-access. Cheap to verify (single Create+Delete) ONCE the account is onboarded.
+      A 2026-09-29 isolated-user probe granted only this action and reached the service's
+      `Account configuration record not found ... call RegisterCustomEndpoint first` gate. The user,
+      key and policy were deleted and profile/certificate inventories remained empty. This confirms
+      the action boundary but not credential usability; do not call the irreversible
+      `RegisterCustomEndpoint` in this lab merely to complete the test.
 - [x] **`iotmanagedintegrations:CreateDestination` + `iam:PassRole` — official contract reconciled;
       live delivery correctly deferred.** Requires `DeliveryDestinationArn` (currently Kinesis only),
       `DeliveryDestinationType=KINESIS`, and `RoleArn`. AWS's notification guide requires wildcard

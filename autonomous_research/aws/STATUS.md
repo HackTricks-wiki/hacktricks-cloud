@@ -504,3 +504,22 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Filled the existing IVS Chat technique's missing explicit impact, stealth, minimum permission, and
   expandable log table. The disposable room and exact-room minter role/policy were removed; final IVS
   Chat and IAM inventories were empty.
+
+## cont.95 (2026-09-29) — Wickr stored credentials and invitation footholds
+- SHIPPED #71 (documented model + exact-resource authorization): `wickr:GetOpentdfConfig` directly
+  returns an OpenTDF client ID and secret without Secrets Manager, KMS, or IdP permissions. Published
+  the resulting client-credential access with explicit scope/entitlement limits.
+- Completed the existing `GetOidcInfo` coverage: the response contains distinct stored secret fields;
+  optional access/ID/refresh-token output still requires a valid caller-supplied OAuth flow and was
+  not presented as automatic token minting.
+- SHIPPED #72 (preview API, conditional): `wickr:ListUsers` exposes invite codes and invitation state.
+  An unexpired pending code can provide a Wickr application foothold with the invited user's groups,
+  but not that user's IAM identity.
+- Retrofitted the data-retention-bot challenge technique with exact-network minimum permission,
+  explicit impact, Low stealth, and an expandable telemetry table.
+- Safe signed probes confirmed Wickr management-event telemetry. Observed requests recorded network
+  identifiers but omitted tested OIDC parameters and response bodies; successful secret response
+  logging remains deliberately unclaimed because the account had no configured network.
+- No networks existed in either allowed Region and no resources were created. Bot reset/admin session
+  and three possible validation/request-relay paths remain private, fixture-dependent test ideas; no
+  AWS vulnerability report was created.
