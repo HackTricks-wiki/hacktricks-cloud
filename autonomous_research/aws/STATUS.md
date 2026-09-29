@@ -554,3 +554,18 @@ result, and — if it works and clears the no-garbage bar — into the public bo
 - Inventory found 397 reports (63 explicit-acceptance), ten available account agreements, no accepted
   customer agreements, and no compliance inquiries. No document URL was redeemed and all disposable
   IAM roles/policies were deleted; final matching-role inventory was empty.
+
+## cont.98 (2026-09-29) — AWS Interconnect activation keys and Entity Resolution correction
+- SHIPPED #79 (exact-resource minimum verified): `interconnect:GetConnection` returns the sensitive
+  partner activation key used to complete a pending multicloud/last-mile connection. Published the
+  conditional network-path impact, partner-account/state gates, and explicit non-IAM limitations.
+- A role scoped to one synthetic connection reached `ResourceNotFoundException` while a different ID
+  was denied. A separate list-only role returned empty inventory and could not call the getter.
+  Both roles/policies and temporary scripts were deleted; final `ht-interconnect-*` inventory was empty.
+- Interconnect inventories were empty in both allowed Regions. Unsigned calls required SigV4; no
+  connection, Direct Connect gateway, route, or provider workflow was created. CloudTrail confirmed
+  read-only management events and the official example redacts activation keys.
+- Corrected Entity Resolution provider enumeration: current `provider-service-name` requires the full
+  AWS-managed provider-service ARN, which can use a different catalog Region and has a blank account
+  field. Added the provider credential **secret-ARN** disclosure boundary without implying secret-value
+  access. Existing high-value Entity Resolution attacks remain complete; no AWS defect was found.

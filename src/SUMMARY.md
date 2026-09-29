@@ -809,6 +809,7 @@
     - [AWS - Sign-In Enum](pentesting-cloud/aws-security/aws-services/aws-signin-enum.md)
     - [AWS - Inspector Enum](pentesting-cloud/aws-security/aws-services/aws-inspector-enum.md)
     - [AWS - Invoicing and Billing Enum](pentesting-cloud/aws-security/aws-services/aws-invoicing-enum.md)
+    - [AWS - Interconnect Enum](pentesting-cloud/aws-security/aws-services/aws-interconnect-enum.md)
     - [AWS - IoT Core Enum](pentesting-cloud/aws-security/aws-services/aws-iot-core-enum.md)
     - [AWS - Interactive Video Service (IVS) Enum](pentesting-cloud/aws-security/aws-services/aws-ivs-enum.md)
     - [AWS - IoT SiteWise Enum](pentesting-cloud/aws-security/aws-services/aws-iot-sitewise-enum.md)
