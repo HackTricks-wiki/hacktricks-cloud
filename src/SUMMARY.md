@@ -349,6 +349,7 @@
     - [AWS - Historical Cross-Account Vulnerabilities](pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md)
     - [AWS - Cross-Account Detection and Hardening](pentesting-cloud/aws-security/aws-cross-account-attacks/detection-and-hardening.md)
   - [AWS - Persistence](pentesting-cloud/aws-security/aws-persistence/README.md)
+    - [AWS - Amplify Persistence](pentesting-cloud/aws-security/aws-persistence/aws-amplify-persistence/README.md)
     - [AWS - API Gateway Persistence](pentesting-cloud/aws-security/aws-persistence/aws-api-gateway-persistence/README.md)
     - [AWS - AppFlow Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appflow-persistence/README.md)
     - [AWS - AppIntegrations Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appintegrations-persistence/README.md)

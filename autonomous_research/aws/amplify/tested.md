@@ -1,5 +1,18 @@
 # AWS Amplify — tested
 
+## CreateWebhook credential-less build trigger — live VERIFIED (2026-09-29) [net-new]
+
+- An app-ARN-only `amplify:CreateWebHook` policy was denied against the branch ARN. The corrected
+  caller held only that action on the exact branch and successfully minted a webhook URL.
+- The access key, policy, and IAM user were deleted before the URL was invoked. An unsigned JSON
+  POST returned HTTP 202 and changed the branch job count from zero to one.
+- CloudTrail recorded `CreateWebhook` with app, branch, description, webhook ARN/ID, and a redacted
+  `webhookUrl: "***"`. No caller `StartJob` event accompanied the external trigger.
+- All three fixtures (authorization-boundary, local-output-error, and conclusive run) were cleaned.
+  Independent inventories found no prefixed app, CodeCommit repository, IAM role, or IAM user.
+- Published as Amplify branch-level persistence; it becomes code-execution persistence only when
+  paired with an already poisoned build path.
+
 ## UpdateBranch environment-variable build RCE — live VERIFIED (2026-09-29) [net-new]
 
 - A disposable CodeCommit-connected static app contained a benign repository `amplify.yml` whose

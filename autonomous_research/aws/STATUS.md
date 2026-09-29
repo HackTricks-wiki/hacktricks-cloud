@@ -20,6 +20,8 @@ callback result injection and CloudWatch Observability Admin telemetry-pipeline 
 The latest live Amplify branch test also proved that exact-branch `UpdateBranch` environment-variable
 control plus `StartJob` can activate a repository-local runtime hook and access AWS resources as the
 app's existing service role, without caller-side `iam:PassRole` or downstream access.
+Amplify `CreateWebHook` was also verified as exact-branch, credential-less trigger persistence: an
+unsigned URL created a build job after the creating IAM user and key were deleted.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
