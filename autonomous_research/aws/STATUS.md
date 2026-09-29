@@ -16,7 +16,8 @@ Serverless, S3 Tables, S3 Vectors, Backup Search, Entity Resolution, Timestream,
 Automation, Systems Manager GUI Connect, Billing Conductor, License Manager, WorkMail Message Flow,
 the separate Amazon Connect voice Contact Lens transcript API, and the WorkSpaces Instances
 AMI/user-data/instance-profile launch path, plus Lambda durable-execution history disclosure and
-callback result injection. Every published
+callback result injection and CloudWatch Observability Admin telemetry-pipeline anti-forensics.
+Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
