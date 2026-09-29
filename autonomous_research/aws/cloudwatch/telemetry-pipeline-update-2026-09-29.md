@@ -67,6 +67,26 @@ Two fixture-only false starts were resolved and cleaned:
   (`UnrecognizedClientException`); the final matrix waited for `GetCallerIdentity` before testing
   authorization and produced the conclusive denial above.
 
+## Third-party credential-relay canary
+
+A separate disposable Palo Alto Networks source tested whether the API-pull pipeline would send a
+canary Secrets Manager username/password to an operator-controlled HTTPS endpoint. The complete
+configuration used the documented `paloaltonetworks_nextgenerationfirewall` source, OCSF mapping,
+Secrets Manager extension with a dedicated source role, and a CloudWatch Logs sink. Validation
+returned zero errors and the pipeline reached `ACTIVE`.
+
+The capture endpoint recorded only whether an Authorization header existed and its SHA-256 digest;
+it was deliberately incapable of logging the canary value. No request reached the endpoint. The
+pipeline existed from 10:25:52 to 10:27:39 local time and was active for roughly 75 seconds before
+the supervising shell was interrupted, so this is an **inconclusive negative**, not evidence that
+credential relay is impossible. A repeat needs a detached cleanup guard and an observation window
+longer than the source's polling/retry interval. Do not publish this hypothesis unless that repeat
+observes the expected canary hash.
+
+The API accepted an arbitrary HTTPS hostname syntactically, which only establishes configuration
+acceptance. It does not establish that credentials are transmitted or that an `UpdateTelemetryPipeline`
+caller can repoint an existing source without the relevant `iam:PassRole` dependency.
+
 ## Telemetry
 
 - `CreateTelemetryPipeline`, `UpdateTelemetryPipeline`, `DeleteTelemetryPipeline`,
@@ -84,14 +104,14 @@ Two fixture-only false starts were resolved and cleaned:
 ## Cleanup and cost
 
 All disposable pipelines reached deletion and `ListTelemetryPipelines` returned empty. Every
-temporary IAM role, user, inline policy, and access key was deleted; prefix-filtered user and role
-inventories returned empty. No log group, source role, secret, stream, metric, or other data-plane
-resource was created. The selection criteria matched no data, so the test incurred only negligible
-control-plane activity.
+temporary IAM role, user, inline policy, access key, API Gateway endpoint, Lambda function, canary
+secret, CloudWatch Logs resource policy, and log group was deleted; prefix-filtered inventories
+returned empty. The metrics selection criteria matched no data and the API-pull canary endpoint
+received no request, so the tests incurred only negligible control-plane and serverless activity.
 
 No unexpected security defect survived validation, so no private 0-day report was created. The
-vendor-endpoint/Secrets Manager credential-relay hypothesis remains queued for a dedicated canary
-test.
+vendor-endpoint/Secrets Manager credential-relay hypothesis remains queued for a longer canary
+observation and an update-specific least-privilege test.
 
 ## Sources
 
