@@ -7,6 +7,16 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Cloud EKM external-key migration
+- [x] Mapped the per-version URI/path/backend override and shipped its targeted interception/DoS
+      path. Live authorization probing proved the service requires
+      `cloudkms.cryptoKeyVersions.update`, not the migration guide's stated key-level permission;
+      no persistent KMS resource was created.
+- [ ] In a pre-existing disposable EKM fixture, verify the additional connection-use boundary,
+      same-material validation, successful audit request fields, state continuity and rollback.
+      Keep parser, stale-route, cross-project or authorization discrepancies private-first; see
+      `kms/checklist.md`.
+
 ## 2026-09-29 release delta — Private NAT source-based rules
 - [x] Live-verified source-scoped trusted-range impersonation over NCC. A matching beta rule changed
       destination-visible source `10.10.1.2` to the trusted `172.16.0.2`; a nonmatching selector

@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud EKM per-version route override and permission correction
+- Added the Preview per-version external-key route override as a bounded KMS escalation technique
+  and added `externalProtectionLevelOptions` inventory. Unlike shared EKM-connection tampering, one
+  version can move to another URI/backend/path while its resource name and enabled state persist.
+- Live-resolved conflicting official permission guidance without creating a key: version-update-only
+  reached `NOT_FOUND`, while key-update-only was denied on `cloudkms.cryptoKeyVersions.update`.
+  Both emitted `UpdateCryptoKeyVersion` Admin Activity; the migration guide's current
+  `cloudkms.cryptoKeys.update` statement is not the live gate.
+- Removed both probe identities, bindings and roles, disabled Cloud KMS to baseline and securely
+  shredded local keys/configs. No KMS resource or service agent was created; exact asset inventory
+  was empty and older unrelated destroy-scheduled KMS resources were untouched.
+
 ### 2026-09-29 — Private NAT source-based trusted-range impersonation
 - Live-verified that a router editor can translate an attacker-controlled NCC-spoke workload into an
   existing `PRIVATE_NAT` range trusted by a destination firewall without changing the destination.
