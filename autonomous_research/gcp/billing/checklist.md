@@ -1,5 +1,20 @@
 # Cloud Billing research checklist
 
+## Verified MCP/enumeration surface — 2026-09-29
+
+- [x] Inventory all 29 remote MCP tools and their read/write annotations.
+- [x] Separate public catalog, private negotiated pricing, project association, account hierarchy,
+      and Billing IAM permission boundaries.
+- [x] Map wrapper, Resource Manager, Billing Data Access/Admin Activity, and unaudited public-catalog
+      telemetry.
+- [x] Confirm no MCP tool updates a project's billing assignment; direct REST/gcloud remains a
+      separate two-resource authorization boundary.
+- [ ] In a dedicated reseller billing test account, exercise subaccount create/delete lifecycle and
+      a reversible account move without touching production billing or payment instruments.
+- [ ] In a disposable billing account, compare exact `tool.name` conditions for private pricing,
+      IAM reads, and `set_iam_policy`; preserve and immediately restore the original etag/version-3
+      policy.
+
 ## Verified from current official documentation — 2026-09-28
 
 - [x] Billing-account IAM is separate from project IAM and can inherit organization bindings.

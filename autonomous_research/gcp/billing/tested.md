@@ -1,5 +1,23 @@
 # Cloud Billing research tested
 
+## 2026-09-29 — Preview remote MCP and enumeration surface
+
+- Added the missing Cloud Billing enumeration page and mapped all 29 Preview MCP tools: seven
+  account/IAM operations, two project-association reads, ten private account catalog/price reads,
+  and ten public catalog/price reads.
+- Documented the complete-policy replacement hazard for `set_iam_policy`, reseller-only subaccount
+  creation, multi-resource account moves, the absence of a project-assignment update tool, and the
+  separation between Billing IAM and project IAM.
+- Direct and MCP positive controls returned the same project payer ID and billing-enabled state;
+  anonymous invocation returned HTTP 401. No billing account, association, IAM policy, negotiated
+  price, payment configuration, or organization relationship was modified.
+- Mapped telemetry drift: public Pricing/Catalog reads are explicitly unaudited; private pricing and
+  account reads are off-default Data Access; project billing info is Resource Manager
+  `ADMIN_READ`; create/move/IAM mutations are always-on Admin Activity; the MCP wrapper is separate
+  off-default Data Access.
+- Deleted both test identities, keys, bindings, the custom role, and local configurations, then
+  disabled `cloudbilling.googleapis.com` to its pre-test baseline.
+
 ## 2026-09-28 privilege-escalation documentation audit
 
 This pass used current official Google Cloud documentation, local gcloud help/source, and read-only

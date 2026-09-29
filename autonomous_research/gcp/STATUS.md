@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Billing enumeration and Preview MCP surface
+- Added the missing Cloud Billing enumeration page and its 29-tool MCP transport, covering account
+  hierarchy/IAM, project payer associations, negotiated pricing, and the public catalog. Included
+  complete-policy replacement, subaccount, account-move, quota, scope, and project-IAM boundaries.
+- Added exact stealth and telemetry distinctions: public catalog methods are unaudited, private
+  account/price reads and the wrapper are off-default Data Access, project billing info uses
+  Resource Manager `ADMIN_READ`, and account/IAM writes are always-on Admin Activity.
+- Corrected the Billing privilege-escalation page to point to the new service page. No billing state
+  was changed; deleted both identities, keys, grants, custom role, and local credentials and
+  disabled the API to baseline.
+
 ### 2026-09-29 — Cloud Support case intelligence and MCP boundary
 - Added a new Cloud Support enumeration page and one high-value post-exploitation technique for
   mining case descriptions, comments, contacts, attachment metadata, and attachment bytes. Direct
