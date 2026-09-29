@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Service Health and Unified Maintenance
+- [x] Added project-relevance incident intelligence and cross-service maintenance/resource-window
+      reconnaissance, including exact list/get splits, MCP boundaries, impact and telemetry.
+- [ ] Compare project and organization relevance only in an owned multi-project fixture. Capture
+      representative maintenance records only where synthetic maintenance already exists; test
+      filters, summaries, pagination and `-` location behavior there. Treat child-project leakage or
+      producer-control authorization discrepancies as private-first; see `service-health/checklist.md`
+      and `unified-maintenance/checklist.md`.
+
 ## 2026-09-29 release delta — Database Center
 - [x] Added the six-tool cross-product fleet surface and one bounded reconnaissance technique for
       products, exact resource configuration, security/resilience findings and normalized query

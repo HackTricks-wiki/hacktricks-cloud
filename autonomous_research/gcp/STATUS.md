@@ -2,6 +2,17 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Service Health and Unified Maintenance operational intelligence
+- Added dedicated service pages and two retained post-exploitation techniques: project-specific
+  Service Health relevance/history can infer product and regional usage, while Unified Maintenance
+  can disclose exact cross-service resources and planned disruption windows.
+- Exact list-only permissions returned full Service Health update history and succeeded through both
+  direct and MCP transports; get remained independently denied. Maintenance list succeeded directly
+  and through MCP while get remained denied. Both servers enforced the separate MCP wrapper gate.
+- Direct and wrapper reads are off-default Data Access. No product/maintenance resource was created;
+  every disposable identity, role, binding, key, configuration, response artifact and API change was
+  removed. Post-exploitation coverage is now 305/305 retained techniques.
+
 ### 2026-09-29 — Database Center fleet and weakness reconnaissance
 - Added a dedicated Database Center service page and one bounded post-exploitation technique for
   cross-product fleet inventory, detailed resource metadata, health/security findings and normalized
