@@ -591,3 +591,17 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   customer workflow and documented the central-account/no-resource-policy boundary.
 - No paid membership or infrastructure was created. Both Regions remained empty; no AWS defect or
   private report resulted.
+
+## cont.101 (2026-09-29) — AWS DevOps Agent integration and persistence boundaries
+- SHIPPED #81: sanitized registered-service/association recon exposes endpoints, resource selection,
+  roles, auth methods and provider identifiers without returning stored credentials.
+- SHIPPED #82: association overwrite/update can poison monitoring, resource and MCP-tool selection;
+  webhook-capable association creation can additionally return a one-time external bearer credential
+  that persists at agent-space level after the AWS session ends.
+- SHIPPED #83: private-connection certificate replacement gives an immediate outage path and,
+  conditional on destination/network control, credential interception or malicious tool responses.
+- Corrected the stale IdP-swap page: `UpdateOperatorAppIdpConfig` only rotates the secret. Full IdP
+  replacement requires noisy Disable+Enable plus PassRole to `aidevops.amazonaws.com`.
+- Both Regions had zero spaces/services/private connections; no resources or third-party requests
+  were created. Provider credential-relay and private-connection SSRF ideas remain private,
+  fixture-dependent hypotheses; no AWS defect or report.

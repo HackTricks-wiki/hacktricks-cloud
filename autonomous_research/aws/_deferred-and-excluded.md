@@ -16,8 +16,11 @@ enabled, cost model changes, or a helper library becomes available).
 
 - **securityagent** — `CreatePentest`/`StartPentestJob`/`UpdateFinding`/`StartCodeRemediation`. LIVE
   in us-east-1 (authz probed OK) but preview with under-documented semantics. Deferred.
-- **devops-agent / aidevops** — `UpdateOperatorAppIdpConfig` (rogue-IdP shape). No in-region
-  endpoint / preview. Page correctly labeled "documented from public docs" where mentioned.
+- ~~**devops-agent / aidevops** — `UpdateOperatorAppIdpConfig` (rogue-IdP shape).~~ **CLOSED
+  2026-09-29:** the current API is live and this operation accepts only `idpClientSecret`; it cannot
+  swap issuer/client/role. The actual IdP replacement requires noisy `DisableOperatorApp` then
+  `EnableOperatorApp` plus PassRole. Full service inventory, association/webhook persistence and
+  private-certificate tampering are now documented; see `devops-agent/audit-2026-09-29.md`.
 - **iotfleetwise** — inconclusive: account not enabled / no endpoint. Documented as a *pattern* NOT
   claimed verified. Revisit if the account is enabled.
 
