@@ -13,7 +13,7 @@
 
 ## Private-first validation frontier
 
-- [ ] Create two source Agents and two synthetic auth providers bound to the same MCP target. Prove
+- [x] Create two source Agents and two synthetic auth providers bound to the same MCP target. Prove
       whether ADK ignores the source identifier and chooses the first target match. Use distinct
       non-secret marker keys, provider-scoped runtime grants and an in-process receiver only.
 - [ ] Repeat the two-source test with reversed creation order and pagination to determine whether
@@ -33,5 +33,5 @@
       MCP toolset helper.
 - [ ] No claim that gateway/egress policy, hostname validation or audience enforcement cannot block
       the redirected request.
-- [ ] Keep any cross-source auth-provider confusion private until reproduced end to end with two
-      isolated principals and synthetic credentials.
+- [x] Keep cross-source auth-provider confusion out of the book: the live provider-scoped test
+      produced a wrong-provider selection and 403, not a credential authorization bypass.

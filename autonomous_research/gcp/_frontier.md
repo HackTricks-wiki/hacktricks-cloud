@@ -497,11 +497,11 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 
 ## 2026-09-29 Agent Registry private-first frontier
 
-- [ ] Create two source Agents and two synthetic API-key providers bound to one MCP target, then
+- [x] Create two source Agents and two synthetic API-key providers bound to one MCP target, then
       run the current ADK under provider-scoped identities. Its resolver currently receives no
-      source-agent identifier and selects the first Binding whose target URN matches. If one source
-      receives or sends the other source's marker credential, keep the finding private and write a
-      full report under `~/cloud_bb/gcp/` before any public disclosure.
+      source-agent identifier and selected provider B for source A. Provider A retrieval succeeded
+      while provider B returned 403, so the strict-IAM result is misrouting/denial rather than a
+      credential-boundary bypass. A bounded private report records the reproduction.
 - [ ] Reverse Binding creation order and force pagination to distinguish deterministic first-match
       behavior from unstable credential selection. Use an in-process receiver, never a public token
       collector, and delete all Services, Bindings, providers, principals, keys and API changes.

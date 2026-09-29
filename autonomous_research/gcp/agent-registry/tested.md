@@ -33,12 +33,16 @@
   Registry, Agent Identity, Agent Identity Credentials and the automatically enabled App Hub API
   were restored to their disabled baseline. No test asset or IAM reference remains.
 
-## Private-first follow-up
+## Private-first follow-up result
 
-- The current ADK binding resolver receives no source-agent identifier and matches only the target
-  URN while iterating all Bindings. Test two source agents bound to the same target with different
-  auth providers. If one source receives the other's provider and can use its credential, treat it
-  as a private vulnerability report rather than a public expected-functionality technique.
+- The API accepted two source agents bound to the same MCP target with different synthetic auth
+  providers. Current ADK automatic resolution selected the first target match without distinguishing
+  the source agent. A source-A runtime that could retrieve only provider A was given provider B by
+  the resolver; its direct provider-A positive control returned the synthetic marker, while provider
+  B correctly returned 403.
+- This is a reproducible authentication-misrouting/availability defect but not a demonstrated IAM
+  bypass: strict provider-level IAM prevented the wrong credential from being returned. It is kept
+  in a local private report and was not promoted to the book as an attack technique.
 - Test whether duplicate target bindings are rejected, deterministically ordered or returned in an
   unstable order. Capture only synthetic credential markers and never send a real token externally.
 - Compare MCP, A2A-agent and generic Endpoint helper behavior. The published book entry is bounded

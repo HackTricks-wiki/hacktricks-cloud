@@ -16,8 +16,9 @@ Last updated: 2026-09-29
   `UpdateService` LRO produced two attributable, always-on Admin Activity entries; registry reads
   and later Agent Identity credential retrieval are Data Access and off by default.
 - Current ADK code resolves auth-provider Bindings by target URN without accepting a source-agent
-  identifier. Cross-source provider confusion is queued for an immediate private-first two-binding
-  test and is not included in the public expected-functionality claim.
+  identifier. A follow-up with two source-specific Bindings made source A select provider B, but
+  provider-scoped IAM correctly denied retrieval. The result is a private authentication-misrouting
+  report, not an IAM bypass or public attack technique.
 - Cleanup deleted all four regional/global Services, Binding, synthetic provider, test identity,
   key, IAM grants, local ADK environment and API changes. Agent Registry, Agent Identity, Agent
   Identity Credentials and the auto-enabled App Hub API are back to their disabled baseline.
