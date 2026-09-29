@@ -22,6 +22,15 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       denied by an additional backend/onboarding gate; the policy stayed empty. Do not promote this
       to persistence without an onboarded-service fixture.
 
+## 2026-09-29 bulletin frontier — Application Integration
+- [x] Added the three September 28 patched Application Integration issues to historical coverage:
+      internal-only task RPC execution, JavaScript Task deserialization RCE and Email Task
+      attachment-path file read (GCP-2026-064/065/066).
+- [ ] Run the safe task-type/path/deserialization regression matrix only in an already provisioned
+      disposable integration fixture. The current lab has neither the API nor service identity;
+      enabling it solely for testing would violate zero-residue teardown. See
+      `application-integration/checklist.md`.
+
 ## 2026-09-29 boundary-day frontier — Observability API
 - [x] Mapped the new stable v1 storage/scope surface and shipped sensitive trace reads plus the
       expected `observability.links.create` -> linked BigQuery permission-plane crossing. Link

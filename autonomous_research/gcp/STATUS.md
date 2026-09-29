@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Application Integration bulletin delta
+- Added historical coverage for three patched managed-service flaws published September 28:
+  GCP-2026-064 internal-only task RPC execution, GCP-2026-065 JavaScript Task deserialization RCE,
+  and GCP-2026-066 Email Task attachment-path file read.
+- Recorded a private-first variation matrix covering task-type allowlisting across ingest paths,
+  attachment canonicalization/confinement, inert-schema deserialization and draft/deploy/runtime
+  parity. The current lab lacks both the API and Application Integration service identity, so no
+  live fixture was created and no fixed issue is presented as currently exploitable.
+
 ### 2026-09-29 — permission-catalog cadence
 - Re-pulled the complete project-testable IAM permission catalog read-only: it remains unchanged at
   13,701 unique permissions across 317 service prefixes. Recorded the sorted-list SHA-256 in the
