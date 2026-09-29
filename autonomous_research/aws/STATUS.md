@@ -569,3 +569,25 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   AWS-managed provider-service ARN, which can use a different catalog Region and has a blank account
   field. Added the provider credential **secret-ARN** disclosure boundary without implying secret-value
   access. Existing high-value Entity Resolution attacks remain complete; no AWS defect was found.
+
+## cont.99 (2026-09-29) — Backup Search export authorization correction
+- Corrected the existing export technique: omitting optional `RoleArn` requires only exact-job
+  `backup-search:StartSearchResultExportJob`; the custom-role form additionally needs exact-role
+  PassRole with `iam:PassedToService=backup-search.amazonaws.com`.
+- Kept role trust (`backup.amazonaws.com`) distinct from the PassRole context, documented optional
+  tagging/KMS dependencies, exact export-job reads and the absence of presigned URLs/content access.
+- Both allowed Regions finished with zero search/export jobs and indexes; disposable IAM fixtures and
+  scripts were deleted. Expected functionality only; no AWS report.
+
+## cont.100 (2026-09-29) — Security Incident Response account oracle and defense impairment
+- SHIPPED #80 (exact-resource model + failed-call telemetry):
+  `BatchGetMemberAccountDetails` classifies up to 100 already-known account IDs per request by
+  organization and membership relationship without Organizations or membership-read permission.
+- Promoted exact-membership triage/OU-coverage impairment and immediate `CancelMembership`
+  destruction, plus the Organizations management-account path for delegated Security IR membership
+  termination. All are deliberately labeled with their documented/live confidence and noisy signals.
+- Corrected CloudTrail claims: sensitive case/contact/attachment fields are redacted and read
+  responses do not log returned presigned URLs. Narrowed attachment poisoning to the self-managed
+  customer workflow and documented the central-account/no-resource-policy boundary.
+- No paid membership or infrastructure was created. Both Regions remained empty; no AWS defect or
+  private report resulted.
