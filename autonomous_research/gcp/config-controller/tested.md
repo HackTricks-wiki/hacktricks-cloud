@@ -11,7 +11,7 @@ Documentation, predefined-role inspection, and local Google Cloud CLI source/hel
 
 ### Retained post-exploitation boundary
 
-- **Kubernetes Secret read.** Kept as the only distinct post-exploitation H3. It can expose operator- supplied Cloud SQL passwords, Secret Manager payload inputs, Config Sync Git credentials, TLS keys, and KCC-generated service-account keys that actually exist in readable namespaces. It does not make every Google Cloud Secret Manager payload visible.
+- **Kubernetes Secret read.** Kept as the only distinct post-exploitation H3. It can expose operator-supplied Cloud SQL passwords, Secret Manager payload inputs, Config Sync Git credentials, TLS keys, and KCC-generated service-account keys that actually exist in readable namespaces. It does not make every Google Cloud Secret Manager payload visible.
 
 ### Removed or rejected claims
 

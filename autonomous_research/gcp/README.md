@@ -2,9 +2,7 @@
 
 Persistent research log for the HackTricks Cloud GCP technique audit (PR #414, branch `gcp-techniques-audit-2026-09`). This folder is the browsable, per-service record the `/goal` asks for so that **future agents know what has already been tested, what worked, and what is still open** — without re-reading the whole git history or the memory prose.
 
-> This is an **internal research-tracking artifact**, not wiki content. Confirmed, useful
-> techniques live in the public book under `src/pentesting-cloud/gcp-security/`. This folder
-> only records *process*: what was tried, the result, and the still-open idea backlog.
+> This is an **internal research-tracking artifact**, not wiki content. Confirmed, useful techniques live in the public book under `src/pentesting-cloud/gcp-security/`. This folder only records *process*: what was tried, the result, and the still-open idea backlog.
 
 ## How this folder is organized
 

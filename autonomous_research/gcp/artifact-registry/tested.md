@@ -66,7 +66,7 @@ Material corrections and bounds:
 Removed or folded from the post-exploitation page:
 
 - Repository/rule/version/package deletion and DENY-download rules: destructive availability or rollback damage rather than a focused information-gathering or defense-evasion primitive.
-- Attachment deletion: destructive evidence removal and lower value than the retained metadata- integrity case; its `DeleteAttachment` Data Write behavior remains documented by the official audit catalog and can be revisited if live testing shows a distinct high-value chain.
+- Attachment deletion: destructive evidence removal and lower value than the retained metadata-integrity case; its `DeleteAttachment` Data Write behavior remains documented by the official audit catalog and can be revisited if live testing shows a distinct high-value chain.
 - The VPC-SC allowance aside: a high-privilege enabler for the separate remote-repository persistence technique, not a standalone Artifact Registry post-exploitation technique.
 
 This audit used current official Google Cloud documentation and local gcloud help only. No live Artifact Registry, Cloud Storage, IAM, logging, or scanning configuration was read or changed.

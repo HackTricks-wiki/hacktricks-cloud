@@ -35,7 +35,7 @@ No repository, trigger, IAM policy, service, or other cloud resource was created
 
 ### Telemetry result
 
-The retained H3s distinguish the off-default Git data plane from always-on repository IAM writes. They also separate a manual Cloud Build trigger-run LRO from the build record and configuration- dependent logs produced when a repository event is processed internally.
+The retained H3s distinguish the off-default Git data plane from always-on repository IAM writes. They also separate a manual Cloud Build trigger-run LRO from the build record and configuration-dependent logs produced when a repository event is processed internally.
 
 ## 2026-09-28 - independent cross-review
 

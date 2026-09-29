@@ -2,7 +2,7 @@
 
 ## 2026-09-28 privilege-escalation documentation audit
 
-This pass used current official documentation, local Google Cloud CLI help, and read-only predefined- role inspection only. It created or changed no Google Cloud resource, IAM policy, API, or service configuration.
+This pass used current official documentation, local Google Cloud CLI help, and read-only predefined-role inspection only. It created or changed no Google Cloud resource, IAM policy, API, or service configuration.
 
 ### Retained primitives
 
