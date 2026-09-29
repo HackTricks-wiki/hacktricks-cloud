@@ -27,6 +27,8 @@ the shared Slurm authentication key or REST JWT signing key through `GetCluster`
 authorized Secrets Manager read.
 Amazon Connect coverage now includes `CreateParticipant` as the control-plane-to-bearer bridge for
 adding a custom chat bot or WebRTC customer to a known active contact without a Connect user login.
+Amazon EVS coverage now maps environment/host/VLAN/connector exposure and the separate IAM gates for
+recovering EVS-managed VCF, ESX root and connector appliance credentials from Secrets Manager.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative

@@ -23,6 +23,10 @@ enabled, cost model changes, or a helper library becomes available).
 
 ## No distinct primitive (verified-none — do not manufacture a page)
 
+- **SimpleDB `StartDomainExport`** — no such operation exists in the current SimpleDB API or AWS
+  CLI service model. The exposed operations remain domain/item CRUD, `Select`, metadata and listing;
+  `simpledbv2` is deprecated. Keep the existing SimpleDB read coverage, but do not document a
+  fabricated export-to-S3 technique unless AWS publishes a real API.
 - **BCM Dashboards `UpdateDashboard` / `UpdateScheduledReport`** — `UpdateDashboard` has no role
   input. `UpdateScheduledReport` can replace the same-account execution role and depends on
   `iam:PassRole`, but the modeled workflow is limited to fixed dashboard/cost/budget reads and PDF
