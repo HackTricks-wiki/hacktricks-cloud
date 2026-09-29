@@ -33,8 +33,10 @@
       `GetIamPolicy` when BigQuery Admin Read logging is explicitly enabled.
 - [ ] Capture the exact current BigQueryAuditMetadata fields for authorized-dataset and
       authorized-routine access entries and for their downstream query lineage.
-- [ ] Reconcile the current view-management guide's authorization-preservation statement with the
-      DatasetAccessEntry REST field's reauthorization statement in a disposable authorized view.
+- [x] Reconcile the current view-management guide's authorization-preservation statement with the
+      DatasetAccessEntry REST field's reauthorization statement. The live service rechecked source
+      `tables.getData` and source `datasets.update`, then preserved authorization after a successful
+      update and later direct-source revocation.
 - [ ] In a disposable Cloud SQL database, capture the exact connection-use authorization entries,
       foreign SQL retained in BigQuery job metadata, and database-side principal attribution; keep
       the test read-only and destroy the database and connection afterward.

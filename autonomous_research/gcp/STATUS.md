@@ -2,6 +2,25 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — permission-catalog cadence
+- Re-pulled the complete project-testable IAM permission catalog read-only: it remains unchanged at
+  13,701 unique permissions across 317 service prefixes. Recorded the sorted-list SHA-256 in the
+  frontier so later pulls can detect same-count replacements as well as count changes. No new
+  service prefix or permission-level attack surface was introduced by this pull.
+
+### 2026-09-29 — BigQuery authorized-view update boundary live-verified
+- Resolved the conflicting authorized-view lifecycle wording with a two-table, two-dataset matrix.
+  An editor without source access could query the existing view but its SQL update was denied first
+  on source `bigquery.tables.getData`; granting source read exposed the next enforced check,
+  `bigquery.datasets.update` on the authorized source dataset.
+- With both source checks temporarily satisfied, the update succeeded. After revocation, a direct
+  source read was denied while the updated authorized view still returned its synthetic marker.
+  The book now states that successful updates preserve authorization, while source-blind widening
+  remains blocked. Admin Activity captured canonical and legacy table-update events and every
+  granted/denied authorization check.
+- Cleanup deleted all jobs, datasets, tables, view, ACL/IAM entries, the temporary account/key and
+  local credentials; independent checks found no residue. Technique totals are unchanged.
+
 ### 2026-09-29 — Agent Registry bound-target redirect live-verified
 - Added the missing Agent Registry service-enumeration page and a focused privilege-escalation
   technique. A caller with Agent Registry Editor plus Service Usage Consumer changed an existing
@@ -27,7 +46,7 @@ Last updated: 2026-09-29
   floating default pointer. Impact is bounded to agents that mount/refresh that logical Skill and
   the retained pointer is service-level persistence. No live Skill was created because deleted IDs
   are permanently reserved, which would violate clean teardown.
-- Technique totals are now 270/270 privilege escalation, 293/293 post-exploitation and 156/156
+- Technique totals are now 271/271 privilege escalation, 295/295 post-exploitation and 155/155
   persistence.
 
 ### 2026-09-29 — Telemetry OTLP ingestion and log-forgery path live-verified

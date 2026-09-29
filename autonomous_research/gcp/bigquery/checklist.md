@@ -9,10 +9,12 @@
 - [ ] Capture a short synthetic continuous query under a service account and verify initial job,
   cancellation/completion, and destination publish telemetry. Do not infer periodic or per-row
   BigQuery audit entries when the service does not promise them.
-- [ ] Reconcile the current view-management guide (updates preserve authorized-view status) with the
-  DatasetAccessEntry REST field description (which still says an updated view must be reauthorized).
-  Validate with non-sensitive rows, including the exact source-data check after the editor loses
-  source access and authorized-dataset future-view behavior.
+- [x] Reconcile the current view-management guide (updates preserve authorized-view status) with the
+  DatasetAccessEntry REST field description. A live individual-view matrix showed that an update
+  checks source `tables.getData` and source `datasets.update`, then preserves authorization after
+  those direct permissions are revoked; the same principal's direct source read was denied.
+- [ ] Validate authorized-dataset future-view behavior separately with non-sensitive rows; do not
+  infer it from the completed individual authorized-view matrix.
 - [ ] Recheck BigQuery's dataset ACL schema for any future addition of tokenless `allUsers`; current
   documentation lists only `allAuthenticatedUsers` among public-like special groups.
 

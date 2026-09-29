@@ -1,6 +1,6 @@
 # GCP audit — open frontier (next-iteration candidates)
 
-State (2026-09-25): the authenticated technique surface is at deep saturation. Six independent
+State (2026-09-29): the authenticated technique surface is at deep saturation. Six independent
 diff/scan axes run this engagement all came back exhausted beyond the 3 gaps shipped in batch 4:
 service-prefix diff, individual-write-perm diff, resource-type-token diff, setIamPolicy/use/actAs
 diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added since the
@@ -512,8 +512,9 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
       NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump:
-      **13,701 permissions, reconfirmed unchanged 2026-09-28** (batch 5 was +3 vs 13,698;
-      AI/analytics/preview noise, none attack-relevant).
+      **13,701 permissions across 317 prefixes, reconfirmed unchanged 2026-09-29**; sorted SHA-256
+      `7c7ba6cf2827f94ac6199fd2c18125f589e655ccc7eba38e1e867a9a6d0ce9ab` (batch 5 was +3 vs
+      13,698; AI/analytics/preview noise, none attack-relevant).
 - [ ] Watch newly-GA GCP features (release notes) for identity/traffic/exec/exfil surfaces; those are
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 

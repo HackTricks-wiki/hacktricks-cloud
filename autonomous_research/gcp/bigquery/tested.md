@@ -137,3 +137,25 @@
   verified 404 while the API was live, and Data Catalog was returned to its original disabled state.
   The dataset/table, service account, key, role, binding and local configuration were also verified
   absent.
+
+## 2026-09-29 — authorized-view update and revocation matrix
+
+- Created two one-row source tables and an individually authorized view, then gave an isolated
+  principal view-dataset `WRITER`, project query-job authority and no source access. It could query
+  the existing authorized view but could not change the SQL to the second source table.
+- The first failed update's Admin Activity authorization data showed view
+  `bigquery.tables.update=true` and source `bigquery.tables.getData=false`. After adding source read,
+  the next failure showed source `tables.getData=true` but source `bigquery.datasets.update=false`.
+  The canonical `PatchTable` and legacy `tableservice.update` entries both recorded the denial and
+  proposed SQL.
+- A temporary source `OWNER` access entry satisfied both checks and the same view update succeeded.
+  Removing that source entry caused a direct `bq head` of the source table to fail, while querying
+  the updated authorized view still returned the synthetic marker. This resolves the documentation
+  tension: a successful update preserves individual-view authorization, but update-time
+  reauthorization checks prevent a source-blind view editor from widening it.
+- The direct API minimum observed in audit authorization data is view `bigquery.tables.update`,
+  source `bigquery.tables.getData`, and source `bigquery.datasets.update`; the `bq update` helper also
+  reads view metadata. No `bigquery.datasets.update` check on the view dataset appeared.
+- Deleted every explicit query job, both datasets and tables, the view, source/view ACL entries,
+  project IAM bindings, service-account key/account and isolated local configuration. Independent
+  dataset, IAM, service-account and temporary-directory checks found no residue.

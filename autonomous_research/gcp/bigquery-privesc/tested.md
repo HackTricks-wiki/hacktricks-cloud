@@ -16,10 +16,11 @@
   defaults must be evaluated independently.
 - Kept current/legacy BigQuery audit method names as alternatives. Documentation does not promise a
   duplicate pair of entries for every request.
-- Kept authorized-view/dataset and authorized-routine paths bounded: source-data access is required
-  when creating/changing the object. The current view-management guide says a view update preserves
-  its authorization; authorized-routine updates instead require reauthorization. Neither is a
-  source-IAM bypass after the editor's source access is revoked.
+- Kept authorized-view/dataset and authorized-routine paths bounded. A later live matrix confirmed
+  that changing an authorized view checks `bigquery.tables.getData` and `bigquery.datasets.update`
+  on the source, then preserves authorization after a successful change and later direct-source
+  revocation. Authorized-routine updates instead require reauthorization. Neither lets a
+  source-blind editor widen access after revocation.
 
 ## Rejected or recategorized hypotheses
 
