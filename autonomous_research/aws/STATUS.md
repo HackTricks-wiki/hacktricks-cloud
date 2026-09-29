@@ -539,3 +539,18 @@ result, and — if it works and clears the no-garbage bar — into the public bo
   API Gateway management events; no service, RAM, Cognito, or IAM resources were created.
 - Endpoint-page IDOR, Try-it request relay, `logoUri` confused-deputy, stored XSS, preview-link, and
   foreign-Cognito-pool ideas remain private fixture-dependent tests. No AWS vulnerability report.
+
+## cont.97 (2026-09-29) — AWS Artifact reports, agreements, and inquiries
+- SHIPPED #76 (verified exact-report minimum): `GetTermForReport` plus `GetReport` generates a
+  short-lived AWS-owned S3 URL for a confidential compliance report without customer S3 permission.
+  Public coverage includes watermark attribution, acceptance-type/ARN caveats, impact, and telemetry.
+- SHIPPED #77 (documented current APIs + safe reads): mapped the complete tokenized account-agreement
+  acceptance and customer-agreement termination workflows. These can change durable legal/compliance
+  state, potentially organization-wide only with the documented management-account prerequisites;
+  no write was performed.
+- SHIPPED #78 (documented model): Assurance Assistant inquiry reads/export can disclose uploaded
+  questionnaires, generated answers, citations, revisions, metadata/tags, and a presigned export.
+  The account had no inquiries, so exact newer-event response logging remains explicitly unclaimed.
+- Inventory found 397 reports (63 explicit-acceptance), ten available account agreements, no accepted
+  customer agreements, and no compliance inquiries. No document URL was redeemed and all disposable
+  IAM roles/policies were deleted; final matching-role inventory was empty.
