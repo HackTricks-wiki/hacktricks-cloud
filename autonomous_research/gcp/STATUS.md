@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Private NAT source-based trusted-range impersonation
+- Live-verified that a router editor can translate an attacker-controlled NCC-spoke workload into an
+  existing `PRIVATE_NAT` range trusted by a destination firewall without changing the destination.
+  The native source timed out, the matching source rule succeeded as the NAT address, and changing
+  only the source selector to a nonmatching range restored the timeout.
+- Shipped a bounded Compute post-exploitation technique with exact prerequisites, impact, beta/v1
+  audit methods and optional NAT/firewall telemetry. The beta write checked only
+  `compute.routers.update` plus `compute.networks.updatePolicy` and logged the full CEL/range action.
+- Deleted both VMs/disks, router/NAT, firewall rules, NCC spokes/hub, subnets, VPCs, generated SSH
+  metadata and local artifacts. Independent inventories found no cloud, IAM/service-agent or local
+  residue; both APIs remained enabled at baseline.
+
 ### 2026-09-29 — Workforce SCIM group/claim injection for Looker and Gemini Enterprise
 - Reconciled the new Looker `enabled-for-users-groups` SCIM mode with the earlier Gemini-only review.
   A tenant provisioning token can patch an accepted subject into a privileged SCIM group (or alter

@@ -13,6 +13,9 @@
 - [x] Reconcile Shielded VM, availability, anti-recovery, guest-attribute, and serial-console claims.
 - [x] Correct commands that referenced nonexistent flags or invalid operation ordering.
 - [x] Use only official Google Cloud references; no cloud resources touched.
+- [x] Live-validate Private NAT source-based rules over NCC, including native-source denial,
+      translated-source success, nonmatching-source denial, exact audit permissions, optional flow
+      logs, and full teardown.
 
 ## Future live validation candidates
 

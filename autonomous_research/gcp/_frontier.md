@@ -7,6 +7,14 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Private NAT source-based rules
+- [x] Live-verified source-scoped trusted-range impersonation over NCC. A matching beta rule changed
+      destination-visible source `10.10.1.2` to the trusted `172.16.0.2`; a nonmatching selector
+      restored denial. Shipped with the exact two-permission router boundary and telemetry.
+- [ ] Test `nexthop.is_hybrid`, overlapping-rule precedence, API-version parity and rapid-update
+      propagation only in owned disposable networks. Treat stale/misapplied selection or a route/
+      range authorization discrepancy as private-first. See `cloud-nat/checklist.md`.
+
 ## 2026-09-29 release delta — Workforce SCIM for Looker
 - [x] Reconcile the new `enabled-for-users-groups` mode. Shipped the bounded provisioning-token
       group/custom-claim injection path for Gemini Enterprise and Looker, with service-agent audit
