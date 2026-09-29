@@ -2,10 +2,7 @@
 
 ## Scope and account state
 
-Reviewed the separate `workmailmessageflow` data plane for in-transit message disclosure and
-tampering. The authorized account had zero WorkMail organizations in both `us-east-1` and
-`eu-west-1`; no organization, directory, mailbox, rule, Lambda function, bucket or billable
-subscription was created.
+Reviewed the separate `workmailmessageflow` data plane for in-transit message disclosure and tampering. The authorized account had zero WorkMail organizations in both `us-east-1` and `eu-west-1`; no organization, directory, mailbox, rule, Lambda function, bucket or billable subscription was created.
 
 ## Verified boundaries
 
@@ -20,8 +17,7 @@ subscription was created.
 
 ## Minimum-permission and telemetry evidence
 
-CloudTrail retained the complete lifecycle of the earlier disposable role
-`ht-audit-sweep-workmailmessageflow`:
+CloudTrail retained the complete lifecycle of the earlier disposable role `ht-audit-sweep-workmailmessageflow`:
 
 - inline policy: only `workmailmessageflow:PutRawMessageContent` on `*`;
 - service response: `ResourceNotFoundException` for `htnonexistentzzz`;
@@ -29,14 +25,7 @@ CloudTrail retained the complete lifecycle of the earlier disposable role
 - event classification: management event, `readOnly=false`;
 - cleanup: `DeleteRolePolicy` and `DeleteRole` both succeeded immediately.
 
-The 2026-09-29 `GetRawMessageContent` call used the administrator role and a deliberately nonexistent
-ID. It created no output object and changed no service state. CloudTrail later recorded it under
-`workmailmessageflow.amazonaws.com` as a management event with `readOnly=true`, the message ID in
-`requestParameters`, and the expected `ResourceNotFoundException`. End-to-end body
-retrieval/replacement was not attempted because creating a WorkMail organization and subscription
-solely for this test would add billable, asynchronously provisioned infrastructure. The feature
-contract and prior single-action authorization probe are sufficient to publish the expected
-behavior with those limitations.
+The 2026-09-29 `GetRawMessageContent` call used the administrator role and a deliberately nonexistent ID. It created no output object and changed no service state. CloudTrail later recorded it under `workmailmessageflow.amazonaws.com` as a management event with `readOnly=true`, the message ID in `requestParameters`, and the expected `ResourceNotFoundException`. End-to-end body retrieval/replacement was not attempted because creating a WorkMail organization and subscription solely for this test would add billable, asynchronously provisioned infrastructure. The feature contract and prior single-action authorization probe are sufficient to publish the expected behavior with those limitations.
 
 ## Cleanup proof
 

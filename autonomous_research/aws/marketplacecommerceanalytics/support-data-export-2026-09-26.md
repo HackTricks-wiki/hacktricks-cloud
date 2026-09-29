@@ -2,20 +2,11 @@
 
 ## Verdict — retired PII export, not PassRole
 
-`marketplacecommerceanalytics:StartSupportDataExport` was a genuine seller-side export of AWS
-Marketplace Product Support Connection (PSC) customer contact and subscription data. It was not a
-general role-execution primitive: the role was the pre-enrolled delivery role that let an AWS-owned
-Marketplace account write the resulting CSV/metadata to S3 and publish status to SNS.
+`marketplacecommerceanalytics:StartSupportDataExport` was a genuine seller-side export of AWS Marketplace Product Support Connection (PSC) customer contact and subscription data. It was not a general role-execution primitive: the role was the pre-enrolled delivery role that let an AWS-owned Marketplace account write the resulting CSV/metadata to S3 and publish status to SNS.
 
-The target is now dead. AWS ended Product Support Connection and customer-contact sharing on November
-30, 2022; current SDK/CLI models mark the operation deprecated and say PSC is no longer supported as of
-December 2022. The broader Commerce Analytics Service remains available for seller usage, subscription,
-and billing reports through `GenerateDataSet`, so only this support-contact operation is retired.
+The target is now dead. AWS ended Product Support Connection and customer-contact sharing on November 30, 2022; current SDK/CLI models mark the operation deprecated and say PSC is no longer supported as of December 2022. The broader Commerce Analytics Service remains available for seller usage, subscription, and billing reports through `GenerateDataSet`, so only this support-contact operation is retired.
 
-This is a reasoned exclusion from the public book. It cannot currently provide customer data, is not an
-IAM PassRole escalation, and the lab is not enrolled in Commerce Analytics or equipped with the
-historical delivery role. The still-active `GenerateDataSet` sibling should be reviewed separately if
-seller-report delivery becomes in scope; its continued existence does not revive PSC contact exports.
+This is a reasoned exclusion from the public book. It cannot currently provide customer data, is not an IAM PassRole escalation, and the lab is not enrolled in Commerce Analytics or equipped with the historical delivery role. The still-active `GenerateDataSet` sibling should be reviewed separately if seller-report delivery becomes in scope; its continued existence does not revive PSC contact exports.
 
 ## Caller authorization — no PassRole dependency
 
@@ -29,20 +20,13 @@ The current Service Authorization Reference defines the caller permission as:
 }
 ```
 
-The service supports no resource ARN and no service-specific condition keys. Critically, the
-authorization table lists no `iam:PassRole` dependent action. The archived official Seller Guide gives
-the same one-action policy and instructs existing CAS users to reuse their CAS onboarding role. The
-`roleNameArn` model match is therefore a cont.82 scanner false positive for PassRole.
+The service supports no resource ARN and no service-specific condition keys. Critically, the authorization table lists no `iam:PassRole` dependent action. The archived official Seller Guide gives the same one-action policy and instructs existing CAS users to reuse their CAS onboarding role. The `roleNameArn` model match is therefore a cont.82 scanner false positive for PassRole.
 
-The caller does not need direct `s3:PutObject`, `sns:Publish`, or `iam:GetRolePolicy`; those are
-permissions of the delivery role assumed by AWS Marketplace. Seller enrollment and the discontinued PSC
-product enrollment were separate service-side eligibility gates.
+The caller does not need direct `s3:PutObject`, `sns:Publish`, or `iam:GetRolePolicy`; those are permissions of the delivery role assumed by AWS Marketplace. Seller enrollment and the discontinued PSC product enrollment were separate service-side eligibility gates.
 
 ## Delivery-role trust and permissions
 
-Current AWS onboarding documentation says that enrollment creates `MarketplaceCommerceAnalyticsRole` in
-the seller account and that AWS Marketplace account `452565589796` uses it. The documented role actions
-required by both `GenerateDataSet` and the former support export are:
+Current AWS onboarding documentation says that enrollment creates `MarketplaceCommerceAnalyticsRole` in the seller account and that AWS Marketplace account `452565589796` uses it. The documented role actions required by both `GenerateDataSet` and the former support export are:
 
 - `s3:PutObject`
 - `s3:GetBucketLocation`
@@ -50,21 +34,11 @@ required by both `GenerateDataSet` and the former support export are:
 - `sns:Publish`
 - `iam:GetRolePolicy`
 
-A least-privilege role policy therefore restricts `GetBucketLocation` to the enrolled bucket,
-`PutObject` to the intended bucket/prefix, both SNS actions to the enrolled topic, and `GetRolePolicy` to
-the delivery role itself. AWS troubleshooting documentation says the onboarding-generated inline policy
-is limited to the exact bucket and topic selected during enrollment; changing either destination requires
-editing that role policy.
+A least-privilege role policy therefore restricts `GetBucketLocation` to the enrolled bucket, `PutObject` to the intended bucket/prefix, both SNS actions to the enrolled topic, and `GetRolePolicy` to the delivery role itself. AWS troubleshooting documentation says the onboarding-generated inline policy is limited to the exact bucket and topic selected during enrollment; changing either destination requires editing that role policy.
 
-The current public documentation identifies the trusted AWS account but does not publish the exact
-generated assume-role policy or say whether it contains an external ID or another condition. No such role
-exists in the lab to inspect. Therefore the verified trust boundary is account `452565589796` using a
-seller-account role; an exact JSON trust policy beyond that would be fabrication. A future review of an
-existing seller must capture the live trust document before making a confused-deputy or cross-account
-claim.
+The current public documentation identifies the trusted AWS account but does not publish the exact generated assume-role policy or say whether it contains an external ID or another condition. No such role exists in the lab to inspect. Therefore the verified trust boundary is account `452565589796` using a seller-account role; an exact JSON trust policy beyond that would be fabrication. A future review of an existing seller must capture the live trust document before making a confused-deputy or cross-account claim.
 
-This customer delivery role is not a credential vend: the API returns only a `dataSetRequestId`, and the
-caller never receives the assumed-role credentials.
+This customer delivery role is not a credential vend: the API returns only a `dataSetRequestId`, and the caller never receives the assumed-role credentials.
 
 ## Destination control and data-access boundary
 
@@ -74,26 +48,15 @@ The request directly selects:
 - an SNS topic ARN for completion/error notification; and
 - up to five caller-defined key/value pairs echoed unchanged in the SNS notification and metadata.
 
-Those parameters are only effective where the specified role is authorized. The normal onboarding role
-is restricted to the enrolled bucket and topic, so a caller holding only
-`StartSupportDataExport` cannot redirect data to an arbitrary external sink. Cross-account delivery would
-also require a pre-existing role permission and target bucket/topic resource policy that permit it. The
-archived guide explicitly recommended a separate S3 bucket for PSC contact data and required all intended
-buckets to be present in the role policy.
+Those parameters are only effective where the specified role is authorized. The normal onboarding role is restricted to the enrolled bucket and topic, so a caller holding only `StartSupportDataExport` cannot redirect data to an arbitrary external sink. Cross-account delivery would also require a pre-existing role permission and target bucket/topic resource policy that permit it. The archived guide explicitly recommended a separate S3 bucket for PSC contact data and required all intended buckets to be present in the role policy.
 
-The API has no seller-account, product-owner, or arbitrary query field. It historically returned only
-contact changes for PSC-enabled products belonging to the eligible seller. The official workflow required
-the same CAS role used by that seller. Cross-account role acceptance or another seller's data access is
-not established by the docs and was not testable after retirement.
+The API has no seller-account, product-owner, or arbitrary query field. It historically returned only contact changes for PSC-enabled products belonging to the eligible seller. The official workflow required the same CAS role used by that seller. Cross-account role acceptance or another seller's data access is not established by the docs and was not testable after retirement.
 
-Thus the operation could cause data to be written without granting the caller direct S3 read access, but
-the caller would only obtain the output if they already controlled or could read a role-authorized sink.
-That is a seller-data delivery permission, not privilege escalation through the role.
+Thus the operation could cause data to be written without granting the caller direct S3 read access, but the caller would only obtain the output if they already controlled or could read a role-authorized sink. That is a seller-data delivery permission, not privilege escalation through the role.
 
 ## Historical data sensitivity
 
-The real `customer_support_contacts_data` CSV contained changes from `fromDate` through roughly 15
-minutes before the request, including:
+The real `customer_support_contacts_data` CSV contained changes from `fromDate` through roughly 15 minutes before the request, including:
 
 - product ID and product code;
 - customer and subscription GUIDs plus subscription start date;
@@ -102,14 +65,11 @@ minutes before the request, including:
 - country code and ZIP code; and
 - create/update/delete operation type and timestamp.
 
-This was sensitive subscriber PII and commercial relationship data. Customers voluntarily provided the
-contact details for support on PSC-enabled products. The alternative
-`test_customer_support_contacts_data` contained static synthetic data in the same schema.
+This was sensitive subscriber PII and commercial relationship data. Customers voluntarily provided the contact details for support on PSC-enabled products. The alternative `test_customer_support_contacts_data` contained static synthetic data in the same schema.
 
 ## Region, onboarding, cost, and cleanup
 
-Commerce Analytics has only a `us-east-1` API endpoint, although the destination SNS topic shown by AWS
-could be in another Region. Historical prerequisites were:
+Commerce Analytics has only a `us-east-1` API endpoint, although the destination SNS topic shown by AWS could be in another Region. Historical prerequisites were:
 
 - AWS Marketplace seller registration and products;
 - acceptance/enrollment in Commerce Analytics Service;
@@ -117,15 +77,9 @@ could be in another Region. Historical prerequisites were:
 - the portal-created delivery role; and
 - PSC enrollment of the seller's products and customer opt-in to contact sharing.
 
-The current docs do not list a separate per-request Commerce Analytics price. Normal S3 storage/request
-and SNS charges apply, while seller registration, product publication, transactions, and listing fees are
-a materially larger onboarding boundary. PSC enrollment can no longer be created.
+The current docs do not list a separate per-request Commerce Analytics price. Normal S3 storage/request and SNS charges apply, while seller registration, product publication, transactions, and listing fees are a materially larger onboarding boundary. PSC enrollment can no longer be created.
 
-The export was asynchronous and had no cancel/delete-request API. A successful test would leave an S3
-CSV, metadata object, SNS delivery, request identifier, and audit history; objects could be deleted, but a
-delivered notification and audit records could not be recalled. Because the target is retired and the
-account has no enrolled role/resources, even a nonexistent-destination call could enqueue an irreversible
-asynchronous request before later failing. No live start call was made.
+The export was asynchronous and had no cancel/delete-request API. A successful test would leave an S3 CSV, metadata object, SNS delivery, request identifier, and audit history; objects could be deleted, but a delivered notification and audit records could not be recalled. Because the target is retired and the account has no enrolled role/resources, even a nonexistent-destination call could enqueue an irreversible asynchronous request before later failing. No live start call was made.
 
 ## Read-only account inventory
 
@@ -137,21 +91,13 @@ Authorized account `228478051196`, profile `ht-admin`, 2026-09-26:
 - `marketplace-catalog:ListEntities` for `AmiProduct` succeeded but returned no AMI seller products.
 - CloudTrail Event History in `us-east-1` had no `StartSupportDataExport` or `GenerateDataSet` events.
 
-This inventory is evidence of no CAS onboarding in the lab, not proof that the account has never begun a
-seller registration workflow. No seller enrollment, product, role, policy, bucket, topic, export request,
-or other AWS state was created or changed. Cleanup residue is zero.
+This inventory is evidence of no CAS onboarding in the lab, not proof that the account has never begun a seller registration workflow. No seller enrollment, product, role, policy, bucket, topic, export request, or other AWS state was created or changed. Cleanup residue is zero.
 
 ## Logging
 
-AWS's current EventBridge reference says Commerce Analytics events arrive through CloudTrail with
-`eventSource=marketplace-commerce-analytics.amazonaws.com` and EventBridge source
-`aws.marketplace-commerce-analytics`. A start request would therefore be a control-plane event to alert
-on, followed—if the retired workflow still ran—by the delivery role's S3 write and SNS publish.
+AWS's current EventBridge reference says Commerce Analytics events arrive through CloudTrail with `eventSource=marketplace-commerce-analytics.amazonaws.com` and EventBridge source `aws.marketplace-commerce-analytics`. A start request would therefore be a control-plane event to alert on, followed—if the retired workflow still ran—by the delivery role's S3 write and SNS publish.
 
-No current official example exposes the exact `StartSupportDataExport` CloudTrail request fields, and the
-lab has no historical or live event. Do not claim that role ARN, bucket, prefix, topic, `fromDate`, or
-customer-defined values are present or redacted without a real event. CloudTrail lookup found no recent
-activity.
+No current official example exposes the exact `StartSupportDataExport` CloudTrail request fields, and the lab has no historical or live event. Do not claim that role ARN, bucket, prefix, topic, `fromDate`, or customer-defined values are present or redacted without a real event. CloudTrail lookup found no recent activity.
 
 ## Completed checks
 

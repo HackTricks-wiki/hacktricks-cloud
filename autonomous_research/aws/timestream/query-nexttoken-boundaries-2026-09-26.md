@@ -2,8 +2,7 @@
 
 ## Hypothesis
 
-The Timestream Query API documents unusually strong pagination-token properties worth regression
-testing:
+The Timestream Query API documents unusually strong pagination-token properties worth regression testing:
 
 - the query initiator and result reader must be the same IAM principal;
 - both requests must use the same query string;
@@ -11,11 +10,7 @@ testing:
 - replay returns the same page; and
 - using a newer child token invalidates its older parent.
 
-Potential security failures include a token disclosing rows to a different/no-Select principal,
-cross-query use reaching another table, result delivery after an observable explicit IAM deny, or a
-racing replay counter allowing more than five uses. Token mutation, wrong-Region use, failure not
-consuming the owner's token, and same-role/different-STS-session identity semantics should accompany
-the core cases.
+Potential security failures include a token disclosing rows to a different/no-Select principal, cross-query use reaching another table, result delivery after an observable explicit IAM deny, or a racing replay counter allowing more than five uses. Token mutation, wrong-Region use, failure not consuming the owner's token, and same-role/different-STS-session identity semantics should accompany the core cases.
 
 ## Intended minimum fixture
 
@@ -28,17 +23,14 @@ the core cases.
 
 ## Preflight result
 
-Not testable in the authorized account. Both `timestream-write ListDatabases` and
-`timestream-query DescribeEndpoints` in `us-east-1` returned:
+Not testable in the authorized account. Both `timestream-write ListDatabases` and `timestream-query DescribeEndpoints` in `us-east-1` returned:
 
 ```text
 AccessDeniedException: Only existing Timestream for LiveAnalytics customers can access the service.
 Reach out to AWS support, for more information.
 ```
 
-AWS closed LiveAnalytics access to new customers on 2025-06-20 while allowing existing customers to
-continue. No database, table, IAM role, or other fixture was created. Do not try to bootstrap or
-bypass this account-level gate. Revisit only in an explicitly authorized existing-customer payer.
+AWS closed LiveAnalytics access to new customers on 2025-06-20 while allowing existing customers to continue. No database, table, IAM role, or other fixture was created. Do not try to bootstrap or bypass this account-level gate. Revisit only in an explicitly authorized existing-customer payer.
 
 ## Sources
 

@@ -8,14 +8,9 @@ Reviewed the five existing, live-verified single-permission trail-tampering tech
 - `PutEventSelectors` to suppress write, KMS/RDS Data API, or data events
 - `PutInsightSelectors` to disable Insights
 
-Each write supports authorization on the exact trail ARN and can be performed blind when the trail
-name and home Region are known; the associated describe/get actions are optional. The public page now
-states those minimum permissions/prerequisites and differentiates loud deletion/stopping from subtler
-healthy-looking selector and scope reductions. Existing impact and event-specific evidence were
-preserved.
+Each write supports authorization on the exact trail ARN and can be performed blind when the trail name and home Region are known; the associated describe/get actions are optional. The public page now states those minimum permissions/prerequisites and differentiates loud deletion/stopping from subtler healthy-looking selector and scope reductions. Existing impact and event-specific evidence were preserved.
 
-No AWS call or resource mutation was made during this pass. It was a metadata/contract review over
-the page's previously recorded live single-permission tests.
+No AWS call or resource mutation was made during this pass. It was a metadata/contract review over the page's previously recorded live single-permission tests.
 
 ## Sources
 

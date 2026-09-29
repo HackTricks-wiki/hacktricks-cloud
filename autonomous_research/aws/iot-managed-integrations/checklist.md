@@ -1,17 +1,8 @@
 # IoT Managed Integrations (iotmanagedintegrations) — checklist (onboarding-gated frontier)
 
-**Service:** "Managed integrations for AWS IoT Device Management" (API 2025-03-03, IAM prefix
-`iotmanagedintegrations:`, endpoint `api.iotmanagedintegrations`). GA and ACCESSIBLE in **eu-west-1**
-(list-managed-things / list-credential-lockers return {Items:[]}); NOT reachable in us-east-1.
-Zero book coverage.
+**Service:** "Managed integrations for AWS IoT Device Management" (API 2025-03-03, IAM prefix `iotmanagedintegrations:`, endpoint `api.iotmanagedintegrations`). GA and ACCESSIBLE in **eu-west-1** (list-managed-things / list-credential-lockers return {Items:[]}); NOT reachable in us-east-1. Zero book coverage.
 
-**Why not shipped / not live-tested (2026-09-25):** every provisioning/destination/connector primitive
-requires the account to first call **`RegisterCustomEndpoint`** ("Account configuration record not found
-this account, please call RegisterCustomEndpoint first"). There is **NO DeregisterCustomEndpoint /
-DeleteCustomEndpoint** op — onboarding is IRREVERSIBLE account-level state. Per the teardown rule and the
-cost/irreversibility exception, do NOT onboard the lab account just to test. Lab currently NOT onboarded
-(GetCustomEndpoint = "No customEndPoint found"). Ship only after verifying against an already-onboarded
-account (or a real engagement).
+**Why not shipped / not live-tested (2026-09-25):** every provisioning/destination/connector primitive requires the account to first call **`RegisterCustomEndpoint`** ("Account configuration record not found this account, please call RegisterCustomEndpoint first"). There is **NO DeregisterCustomEndpoint / DeleteCustomEndpoint** op — onboarding is IRREVERSIBLE account-level state. Per the teardown rule and the cost/irreversibility exception, do NOT onboard the lab account just to test. Lab currently NOT onboarded (GetCustomEndpoint = "No customEndPoint found"). Ship only after verifying against an already-onboarded account (or a real engagement).
 
 ## High-confidence primitives (from AWS's authoritative botocore contract; verify before shipping)
 - [ ] **`iotmanagedintegrations:CreateProvisioningProfile` → claim-cert private-key vend.** Output shape

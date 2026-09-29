@@ -2,24 +2,17 @@
 
 ## Outcome
 
-Negative / secure boundary result. Aurora DSQL rejected every cluster, action, Region, IAM-scope,
-database-role-mapping, mutation, expiry, and revocation bypass. Unchanged replay before expiration is
-documented behavior and worked. No AWS vulnerability report was created.
+Negative / secure boundary result. Aurora DSQL rejected every cluster, action, Region, IAM-scope, database-role-mapping, mutation, expiry, and revocation bypass. Unchanged replay before expiration is documented behavior and worked. No AWS vulnerability report was created.
 
-The public DSQL page already contained the useful expected techniques (`DbConnectAdmin`, `DbConnect`,
-and `PutClusterPolicy`). This audit filled their missing impact, explicit stealth, and expandable logs
-tables, and added verified token/revocation semantics.
+The public DSQL page already contained the useful expected techniques (`DbConnectAdmin`, `DbConnect`, and `PutClusterPolicy`). This audit filled their missing impact, explicit stealth, and expandable logs tables, and added verified token/revocation semantics.
 
 ## Fixture and minimum principals
 
-- Two empty single-Region Aurora DSQL clusters in `us-east-1`; public managed endpoints; no customer
-  KMS key, VPC endpoint, or multi-Region peer/witness.
+- Two empty single-Region Aurora DSQL clusters in `us-east-1`; public managed endpoints; no customer KMS key, VPC endpoint, or multi-Region peer/witness.
 - `admin-both`: `dsql:DbConnectAdmin` and `dsql:DbConnect` on exact cluster ARNs A and B.
-- `user-a`: `dsql:DbConnect` on exact cluster ARN A only; mapped to database role `ht_reader` on A
-  and B so the B denial isolated IAM cluster scope rather than mapping absence.
+- `user-a`: `dsql:DbConnect` on exact cluster ARN A only; mapped to database role `ht_reader` on A and B so the B denial isolated IAM cluster scope rather than mapping absence.
 - `unmapped`: `dsql:DbConnect` on exact cluster ARN A with no database-role mapping.
-- `ht_reader WITH LOGIN` existed on both clusters. `admin-both` was additionally mapped to it on A
-  for action/parser cases.
+- `ht_reader WITH LOGIN` existed on both clusters. `admin-both` was additionally mapped to it on A for action/parser cases.
 - PostgreSQL 16 client over TLS `verify-full` using Amazon Root CA 1.
 
 ## Live matrix
@@ -46,23 +39,16 @@ tables, and added verified token/revocation semantics.
 | Same mapping restored | Same still-valid token connected again |
 | IAM `DbConnect` policy deleted while token still valid | Next connection rejected immediately |
 
-The decisive results are that token generation is only local signing—not authorization—and that each
-new connection re-evaluates the signed request, current IAM authorization, and current database-role
-mapping. Token possession alone did not preserve revoked access.
+The decisive results are that token generation is only local signing—not authorization—and that each new connection re-evaluates the signed request, current IAM authorization, and current database-role mapping. Token possession alone did not preserve revoked access.
 
 ## Telemetry
 
 - Token generation performed no AWS API call and produced no CloudTrail event.
-- `DbConnect` and `DbConnectAdmin` are optional data events on `AWS::DSQL::Cluster`; default Event
-  History did not contain the connection matrix.
+- `DbConnect` and `DbConnectAdmin` are optional data events on `AWS::DSQL::Cluster`; default Event History did not contain the connection matrix.
 - SQL statements are not CloudTrail API events.
-- `CreateCluster`, `GetCluster`, and `DeleteCluster` were default management events. Event History
-  contained both fixture `CreateCluster` and both `DeleteCluster` events after propagation.
+- `CreateCluster`, `GetCluster`, and `DeleteCluster` were default management events. Event History contained both fixture `CreateCluster` and both `DeleteCluster` events after propagation.
 - A paid data-event selector/trail was not created solely for this negative test.
 
 ## Cleanup
 
-Mappings and the disposable database role were removed best-effort before cluster deletion. Both
-clusters reached not-found after asynchronous deletion, all three IAM roles and their inline policies
-were deleted, and the service-linked role did not exist afterward (it also did not pre-exist). Final
-independent inventory returned no matching DSQL cluster, IAM role, or Aurora DSQL service-linked role.
+Mappings and the disposable database role were removed best-effort before cluster deletion. Both clusters reached not-found after asynchronous deletion, all three IAM roles and their inline policies were deleted, and the service-linked role did not exist afterward (it also did not pre-exist). Final independent inventory returned no matching DSQL cluster, IAM role, or Aurora DSQL service-linked role.
