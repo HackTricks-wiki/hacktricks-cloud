@@ -22,6 +22,9 @@ control plus `StartJob` can activate a repository-local runtime hook and access 
 app's existing service role, without caller-side `iam:PassRole` or downstream access.
 Amplify `CreateWebHook` was also verified as exact-branch, credential-less trigger persistence: an
 unsigned URL created a build job after the creating IAM user and key were deleted.
+New AWS PCS coverage maps the cluster, queue and compute-group attack surface and documents theft of
+the shared Slurm authentication key or REST JWT signing key through `GetCluster` plus an independently
+authorized Secrets Manager read.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
