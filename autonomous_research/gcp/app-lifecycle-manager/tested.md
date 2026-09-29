@@ -1,5 +1,36 @@
 # App Lifecycle Manager security research ledger
 
+## 2026-09-29 — historical flag-revision rollback with no flag read/update authority
+
+- Built a fresh standalone flag-only topology with two immutable revisions of one Boolean
+  `security_gate_disabled` key. The global Flag's current default and revision 2 selected
+  `Weak=true`; the initial rollout succeeded globally and regionally, and a separate SaaS Config
+  Viewer fetched an authoritative flagd document with `defaultVariant=Weak`.
+- Created an isolated rollback principal with a custom role containing exactly
+  `saasservicemgmt.flagReleases.create`, `saasservicemgmt.rollouts.create`, and
+  `saasservicemgmt.operations.get`, plus Service Usage Consumer. An effective-permission test
+  explicitly excluded `flags.{get,update}` and `flagRevisions.{get,list}`.
+- Without any flag or revision read, the caller created a FlagRelease naming the known historical
+  `Safe=false` revision and created a Rollout against the existing RolloutKind. Both root and
+  regional child succeeded. The global Flag still reported `defaultTarget=Weak`, while the Unit now
+  referenced regional revision 1 and the independent runtime identity fetched
+  `defaultVariant=Safe`; the current OpenFeature provider evaluated `False`, reason `STATIC`,
+  variant `Safe`, against an opposite `True` fallback.
+- The successful caller audit sequence contained only `SaasFlags.CreateFlagRelease` and
+  `SaasRollouts.CreateRollout`, both always-on Admin Activity. Permission-propagation retries also
+  produced denied `CreateFlagRelease` Admin Activity entries with status code 7. No flag update or
+  revision-read event occurred.
+- Retained a distinct expected post-exploitation technique: a publisher can resurrect an older
+  security-weak application configuration with only release/rollout creation if it knows the old
+  revision and compatible UnitKind/RolloutKind names. The global Flag remaining on the newer value
+  creates a useful detection lesson: inspect Unit/release revision drift, not only the current Flag.
+- Deleted both root/child rollouts, RolloutKind, global and regional releases/revisions/flags, Unit,
+  both UnitKinds and SaaS resources; cleared generated `defaultFlagRevisions`; explicitly deleted
+  both generated Artifact Registry repositories; and removed both identities/keys, all grants, the
+  custom role, service-agent grant, configurations, local files and API enablement. Exact IAM,
+  identity, repository, `/tmp` and API inventories were empty and the final probe returned
+  `SERVICE_DISABLED`.
+
 ## 2026-09-29 — standalone feature-flag control, runtime proof and remote MCP
 
 - Created the documented standalone topology in global plus `us-central1`: matching SaaS and

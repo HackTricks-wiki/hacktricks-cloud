@@ -28,6 +28,10 @@
       independent `mcp.tools.call` gate and whether `create_flag`, `create_flag_revision` and
       `create_flag_release` preserve the same underlying authorization and Admin Activity logging as
       the REST methods.
+- [x] Test whether `flagReleases.create` plus `rollouts.create` can republish a historical revision
+      without flag get/update or revision-read authority. The exact three-permission caller restored
+      the older value while the global Flag kept its newer default; retain as a distinct rollback
+      technique and detect Unit/release revision drift.
 
 - [ ] Test targeted evaluation rules, `FlagAttribute` writes and dynamic allocations against two
       disposable Units. Determine whether a caller can influence one tenant/cohort without changing

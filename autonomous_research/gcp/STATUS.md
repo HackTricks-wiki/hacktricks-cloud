@@ -12,14 +12,20 @@ Last updated: 2026-09-29
   operation get. All four writes produced always-on Admin Activity, while runtime flag streaming is
   off-default SaaS Config Data Access. Impact is explicitly bounded to the application's flag
   semantics and is not described as automatic GCP IAM escalation.
+- Added a second lower-permission rollback technique. A caller with only FlagRelease create,
+  Rollout create and operation get republished a known older revision without flag get/update or
+  revision reads. The Unit and independent runtime reader moved from `Weak=true` to `Safe=false`
+  while the global Flag remained on `Weak`, proving that defenders must inspect effective Unit
+  revisions rather than only the current Flag definition.
 - Mapped all 35 live MCP tools: 24 read-only and 11 create operations. Anonymous discovery worked;
   anonymous invocation failed; an authenticated backend-authorized caller still needed
   `mcp.tools.call`; and the wrapper continued to enforce the underlying create permission. The
   surface has no flag update or rollout create tool, so MCP alone cannot complete this chain.
-- Deleted every global/regional management object, both generated Artifact Registry repositories,
-  two identities/keys, all bindings, the custom role, service-agent binding, configurations and
-  local artifacts; also recovered one stale run-owned SaaS tombstone from the prior ALM batch. Both
-  APIs are disabled again and exact residue checks are empty. Coverage is now 316/316
+- Across both bounded fixtures, deleted every global/regional management object, all four generated
+  Artifact Registry repositories, four identities/keys, all bindings, both custom roles,
+  service-agent bindings, configurations and local artifacts; also recovered one stale run-owned
+  SaaS tombstone from the prior ALM batch. Both APIs are disabled again and exact residue checks are
+  empty. Coverage is now 317/317
   post-exploitation techniques; privilege escalation and persistence remain 274/274 and 161/161.
 
 ### 2026-09-29 — Dataproc workload intelligence and remote MCP

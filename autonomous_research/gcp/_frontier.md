@@ -258,8 +258,10 @@ sub-resources within already-documented services** — a slow trickle, not a bac
       artifact, Infrastructure Manager, UnitKind, filter and target-service prerequisites.
 - [x] Validate the standalone feature-flag chain and remote MCP server. A six-permission writer
       changed an existing flag, created a revision/release/rollout and caused an independent runtime
-      identity to observe the new value. Mapped 35 MCP tools and both authorization layers; full
-      global/regional and generated-repository teardown is verified.
+      identity to observe the new value. A second three-permission caller republished a historical
+      revision without flag read/update authority while the global Flag stayed unchanged. Mapped 35
+      MCP tools and both authorization layers; both full global/regional and generated-repository
+      teardowns are verified.
 - [ ] In an already prepared disposable fixture, verify retained-actuation behavior under only
       Release create plus UnitOperation create, then repeat fleet mode with Rollout create. Capture
       downstream Infra Manager and target-service principals and delete the full dependency graph;
@@ -750,6 +752,6 @@ sub-resources within already-documented services** — a slow trickle, not a bac
 - [x] Complete the explicit stealth rating and expandable log table on every qualifying GCP
       privilege-escalation, post-exploitation and persistence technique. The deterministic
       `scripts/check_gcp_technique_metadata.mjs` scan on 2026-09-29 reports **274/274 privesc,
-      316/316 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
+      317/317 post-exploitation and 161/161 persistence**. Continue enforcing the checker on every
       new technique and review both primary-service and downstream/platform telemetry before rating
       stealth.
