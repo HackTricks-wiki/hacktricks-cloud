@@ -32,6 +32,10 @@
       without flag get/update or revision-read authority. The exact three-permission caller restored
       the older value while the global Flag kept its newer default; retain as a distinct rollback
       technique and detect Unit/release revision drift.
+- [x] Probe the unaudited SaaS Config `GetMetadata` RPC and anonymous flag reads against a valid
+      standalone Unit provider ID. `GetMetadata` was `UNIMPLEMENTED` for both authenticated and
+      anonymous callers; `FetchAllFlags` and `SyncFlags` rejected anonymous callers as
+      `UNAUTHENTICATED`. No unauthenticated reconnaissance technique exists on this surface.
 
 - [ ] Test targeted evaluation rules, `FlagAttribute` writes and dynamic allocations against two
       disposable Units. Determine whether a caller can influence one tenant/cohort without changing

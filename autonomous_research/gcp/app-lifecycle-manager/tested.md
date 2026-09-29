@@ -1,5 +1,21 @@
 # App Lifecycle Manager security research ledger
 
+## 2026-09-29 — SaaS Config unauthenticated metadata/read boundary dismissed
+
+- Created a lightweight valid standalone Unit and its regional `featureFlagsConfig` solely to test
+  the flagd gRPC authorization surface. No flag, revision, release or rollout was needed.
+- `flagd.sync.v1.FlagSyncService.GetMetadata` is listed as a method that produces no audit log, but
+  the production SaaS Config endpoint returned `UNIMPLEMENTED` with HTTP/2 status 404 for both an
+  anonymous TLS channel and an authenticated Owner token. It exposed no capability, attribute,
+  project or Unit metadata.
+- Anonymous `FetchAllFlags` and `SyncFlags` requests using the exact valid provider ID both returned
+  `UNAUTHENTICATED` with the standard missing-OAuth-credential error. There was no valid-versus-
+  invalid resource oracle before authentication and no unauthenticated flag disclosure.
+- Retained no book technique and no private vulnerability report from this lead. Deleted the Unit,
+  both UnitKinds and SaaS resources, both generated Artifact Registry repositories, the temporary
+  service-agent binding, local gRPC environment and both API enablements. Exact API/IAM/repository/
+  local inventories were empty.
+
 ## 2026-09-29 — historical flag-revision rollback with no flag read/update authority
 
 - Built a fresh standalone flag-only topology with two immutable revisions of one Boolean

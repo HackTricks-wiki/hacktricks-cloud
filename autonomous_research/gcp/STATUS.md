@@ -21,6 +21,9 @@ Last updated: 2026-09-29
   anonymous invocation failed; an authenticated backend-authorized caller still needed
   `mcp.tools.call`; and the wrapper continued to enforce the underlying create permission. The
   surface has no flag update or rollout create tool, so MCP alone cannot complete this chain.
+- Closed the separate unauthenticated SaaS Config lead: `GetMetadata` is unimplemented for both
+  authenticated and anonymous clients, while anonymous `FetchAllFlags` and `SyncFlags` are rejected
+  as `UNAUTHENTICATED`. No technique or vulnerability was retained.
 - Across both bounded fixtures, deleted every global/regional management object, all four generated
   Artifact Registry repositories, four identities/keys, all bindings, both custom roles,
   service-agent bindings, configurations and local artifacts; also recovered one stale run-owned
