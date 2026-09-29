@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Cloud Product Registry
+- [x] Mapped the GA read-only REST/MCP catalog and rejected public MCP tool schemas as a useful
+      unauthenticated technique. A registered underlying-only caller test stayed inconclusive because
+      both REST and MCP execution returned `INVALID_ARGUMENT`; no authorization bypass is claimed.
+- [ ] Re-test the `mcp.tools.call` boundary only after a normal caller can successfully list the
+      public catalog in a disposable consumer project. Diff lifecycle metadata for genuinely
+      non-public launch leakage, not ordinary public product names. See
+      `cloud-product-registry/checklist.md`.
+
 ## 2026-09-29 release delta — Gemini Enterprise resource IAM
 - [x] Mapped granular app and data-store policies and shipped `engines`, `dataStores`, and
       `collections.setIamPolicy` as scoped custom-role escalation and service-level persistence.

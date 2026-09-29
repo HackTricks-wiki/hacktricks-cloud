@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud Product Registry GA boundary
+- Mapped the new read-only REST and remote MCP catalog. Unauthenticated REST/tool calls rejected
+  unregistered callers while public `tools/list` exposed only schemas, so there is no victim-specific
+  reconnaissance technique to publish.
+- A disposable Service Usage Consumer lacking `mcp.tools.call` was created for the outer-gate test,
+  but both direct REST and MCP calls returned generic `INVALID_ARGUMENT` even with the API enabled;
+  the authorization comparison remains inconclusive rather than a bypass claim.
+- Removed the temporary IAM grant/account, disabled the API to baseline, and deleted response files.
+  No public book page was added for generic public catalog metadata.
+
 ### 2026-09-29 — Gemini Enterprise granular resource IAM
 - Added current app/data-store IAM enumeration and the scoped `setIamPolicy` privilege-escalation
   and persistence paths. The model requires both app and linked-corpus grants, retains source ACLs,
