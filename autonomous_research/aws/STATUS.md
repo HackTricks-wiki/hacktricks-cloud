@@ -13,8 +13,8 @@ Refactor Spaces, WorkSpaces Thin Client, Migration Hub Orchestrator, AppIntegrat
 Discovery Service, core Migration Hub, Migration Hub Strategy Recommendations, MemoryDB, and
 Resilience Hub (including the September 2026 next-generation API), Glue, Redshift/Redshift
 Serverless, S3 Tables, S3 Vectors, Backup Search, Entity Resolution, Timestream, and Bedrock Data
-Automation, Systems Manager GUI Connect, and Billing Conductor. Every published technique
-includes its minimum permissions and prerequisites, impact or persistence scope, stealth
+Automation, Systems Manager GUI Connect, Billing Conductor, and License Manager. Every published
+technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
 live branches, authorization boundaries, telemetry, and final cleanup evidence.
 
@@ -36,8 +36,7 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 post-retirement `FeatureNoLongerAvailableException`; only inert default configuration and zero
 metrics remain readable. No public page was added and no state was changed.
 
-Current next check: Network Flow Monitor, then continue the missing-service/action
-sweep, prioritizing services with
+Current next check: continue the missing-service/action sweep, prioritizing services with
 cross-account resource policies, credential/data export, stored service roles, mutable execution
 configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities
 or SDK models have materially changed.
