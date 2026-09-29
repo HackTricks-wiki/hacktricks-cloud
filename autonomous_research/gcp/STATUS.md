@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Resource Manager MCP project reconnaissance
+- Added the single read-only `search_projects` remote MCP tool, including filters, returned project
+  metadata, impact, telemetry, and its intentional exception from `roles/mcp.toolUser` and MCP-
+  specific IAM conditions.
+- A disposable identity without `mcp.tools.call` received exactly the same one-project visibility
+  through direct and MCP search. A fresh minimum-permission retest confirmed that
+  `resourcemanager.projects.get` plus quota consumption suffices after propagation; Browser is not
+  required. Anonymous invocation was rejected and no authorization or visibility bypass was found.
+- Captured `SearchProjects` Data Access entries (likely enabled by an ancestor policy) while the
+  wrapper log remained absent. Deleted the key, account, grants, local credentials, and active role;
+  Resource Manager stayed enabled at baseline.
+
 ### 2026-09-29 — IAM remote MCP and fine-grained tool control
 - Added IAM's 12-tool remote MCP transport for project custom roles and deny policies, with scope,
   permission layers, quota-project behavior, impact, attack-page routing, and wrapper-versus-
