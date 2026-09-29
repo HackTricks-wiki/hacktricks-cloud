@@ -47,3 +47,22 @@
   unstable order. Capture only synthetic credential markers and never send a real token externally.
 - Compare MCP, A2A-agent and generic Endpoint helper behavior. The published book entry is bounded
   to the verified MCP toolset path.
+
+## 2026-09-29 — executable Skill revision supply chain
+
+- Mapped Preview standalone Skills, immutable Skill revisions, Active/Draft/Disabled/Deprecated/
+  Decommissioned lifecycle, the mutable default revision and enabled-blocking/nonblocking/disabled
+  scanning policies.
+- Retained one expected privilege-escalation/persistence path: `skillRevisions.create` plus
+  `skills.update` publishes executable instructions/code and moves an existing logical Skill's
+  floating default pointer. Managed agents can mount the logical Skill into their environment, so
+  affected agents load the replacement within their sandbox/runtime authority.
+- Bounded the claim to agents that follow the logical Skill rather than an immutable revision, and
+  to later mount/refresh/execution. Uploading a revision is not immediate code execution. The
+  retained default pointer is service-level, not whole-project, persistence.
+- Current `roles/agentregistry.user` contains both writes; disabling blocking scanning is available
+  through the same Skill update surface. Create/update are Admin Activity LROs, while reads and
+  downloads are Data Access.
+- Did not live-create a Skill because official documentation says deleted Skill IDs remain
+  permanently reserved. The execution and IAM contracts are explicit, and consuming an irreversible
+  namespace merely to repeat them would violate the lab's cleanup requirement.

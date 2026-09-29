@@ -10,6 +10,11 @@
       without transmitting the credential.
 - [x] Capture the UpdateService LRO audit shape and map read/retrieval Data Access events.
 - [x] Delete every Service, Binding, provider, account, key, grant, local dependency and API change.
+- [x] Map executable Skill packages, revisions, floating default pointers, lifecycle, scanning
+      policy, User-role permissions and managed-agent mount semantics.
+- [x] Keep live Skill creation out of this lab because deleted IDs are permanently reserved; rely on
+      the explicit official package/runtime contract rather than leaving irreversible namespace
+      residue.
 
 ## Private-first validation frontier
 

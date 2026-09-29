@@ -22,7 +22,12 @@ Last updated: 2026-09-29
 - Cleanup deleted all four regional/global Services, Binding, synthetic provider, test identity,
   key, IAM grants, local ADK environment and API changes. Agent Registry, Agent Identity, Agent
   Identity Credentials and the auto-enabled App Hub API are back to their disabled baseline.
-  Technique totals are now 268/268 privilege escalation, 292/292 post-exploitation and 156/156
+- Added the Preview Skill supply-chain path from explicit official contracts: Agent Registry User
+  can upload an executable revision, disable blocking scanning and move an existing logical Skill's
+  floating default pointer. Impact is bounded to agents that mount/refresh that logical Skill and
+  the retained pointer is service-level persistence. No live Skill was created because deleted IDs
+  are permanently reserved, which would violate clean teardown.
+- Technique totals are now 270/270 privilege escalation, 293/293 post-exploitation and 156/156
   persistence.
 
 ### 2026-09-29 — Telemetry OTLP ingestion and log-forgery path live-verified
