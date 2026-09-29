@@ -154,3 +154,20 @@ rules anywhere in `src/`.
   by Resource Manager `ADMIN_READ` logging; and API enablement is the exact, always-on
   `google.api.serviceusage.v1.ServiceUsage.EnableService` LRO, whose polling can add
   `google.longrunning.Operations.GetOperation` Admin Activity entries.
+
+## 2026-09-29 — Policy Analyzer remote MCP authorization parity
+
+- Mapped the GA Cloud Asset MCP catalog: `list_assets`, `analyze_iam_policy`,
+  `export_iam_analysis_results`, and `get_iam_policy_analysis_status`. Anonymous `tools/list`
+  returned only the static tool schemas and safety annotations.
+- Verified the documented two-layer authorization model with a disposable identity holding exactly
+  `cloudasset.assets.analyzeIamPolicy`, `cloudasset.assets.searchAllResources`,
+  `cloudasset.assets.searchAllIamPolicies`, `iam.roles.get`, and `serviceusage.services.use`, but not
+  `mcp.tools.call`. Direct `AnalyzeIamPolicy` succeeded and returned the owned test binding; the
+  matching MCP call was rejected on `mcp.googleapis.com/tools.call`.
+- Kept MCP as an alternate transport for the existing synchronous and long-running Cloud Asset
+  techniques rather than duplicating them. Recorded the project-only MCP scope, extra gate, and
+  current lack of a separately published MCP-wrapper audit mapping in the service enumeration page.
+- Removed the test binding, key, account and custom role and securely deleted the isolated local
+  credentials/configuration. Cloud Asset Inventory remained enabled at its pre-test baseline; final
+  checks found no residual identity, binding, active role, key file, or local configuration.

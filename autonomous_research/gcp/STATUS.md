@@ -2,6 +2,18 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Policy Analyzer remote MCP authorization parity
+- Added the current GA Cloud Asset MCP transport to IAM/Cloud Asset enumeration without duplicating
+  the underlying analysis and long-running export techniques. The wrapper exposes four tools,
+  restricts analysis/export to project scope, and adds `mcp.tools.call` to the normal Cloud Asset
+  permissions.
+- A disposable underlying-only principal could run direct `AnalyzeIamPolicy` but the matching MCP
+  call was denied on `mcp.googleapis.com/tools.call`, confirming the documented two-layer boundary.
+  Anonymous tool listing exposed only static schemas; default audit configuration produced no test-
+  principal entry, consistent with the underlying off-default Data Access classification.
+- Deleted the test binding, key, account, role and isolated local credentials. Cloud Asset remained
+  enabled at baseline and final inventories found no residue.
+
 ### 2026-09-29 — Semantic Governance policy defense evasion
 - Added Semantic Governance inventory and a bounded Vertex AI post-exploitation technique. A
   principal with policy update/delete—including the broad Agent Platform User role—can weaken,
