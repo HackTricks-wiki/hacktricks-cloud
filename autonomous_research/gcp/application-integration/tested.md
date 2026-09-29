@@ -22,3 +22,18 @@
   so the fixed bulletins are historical pattern material rather than current attack claims.
 
 Primary source: https://docs.cloud.google.com/support/bulletins#gcp-2026-064
+
+## 2026-09-29 technique metadata and telemetry audit
+
+- Added explicit Potential Impact, categorical Stealth and expandable log tables to the three
+  retained credential-access/invocation/run-as technique families.
+- Current audit documentation classifies decrypted auth-config reads as `ADMIN_READ` Data Access;
+  v2 execution and v1alpha version create/update/publish/test/execute methods are `DATA_WRITE` Data
+  Access. None is logged by default without Application Integration Data Access logging.
+- Distinguished Cloud Audit Logs from product-local execution history. Local logging defaults to
+  asynchronous mode and can be disabled; export to Cloud Logging is configured per integration and
+  disabled by default. Two current pages, both updated 2026-09-24, conflict on product-local
+  retention: the execution-log page says at most 32 days while the local-logging page says 90 days.
+  The public page now discloses this conflict instead of asserting either value. Downstream services
+  can produce independent evidence.
+- No public technique was added for the fixed 2026 vulnerabilities, and no cloud state was changed.

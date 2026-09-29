@@ -10,6 +10,11 @@ Last updated: 2026-09-29
   attachment canonicalization/confinement, inert-schema deserialization and draft/deploy/runtime
   parity. The current lab lacks both the API and Application Integration service identity, so no
   live fixture was created and no fixed issue is presented as currently exploitable.
+- Completed the existing Application Integration credential-access page's technique metadata:
+  every retained auth-config read, invoke/credential-forwarding and run-as-service-account family
+  now has bounded impact, categorical stealth and an expandable log table based on the current
+  audit and execution-log contracts. Recorded the current 32-day-versus-90-day conflict between
+  Google's execution-log and local-logging retention pages rather than presenting either as fact.
 
 ### 2026-09-29 — permission-catalog cadence
 - Re-pulled the complete project-testable IAM permission catalog read-only: it remains unchanged at
