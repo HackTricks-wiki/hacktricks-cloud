@@ -25,6 +25,8 @@ unsigned URL created a build job after the creating IAM user and key were delete
 New AWS PCS coverage maps the cluster, queue and compute-group attack surface and documents theft of
 the shared Slurm authentication key or REST JWT signing key through `GetCluster` plus an independently
 authorized Secrets Manager read.
+Amazon Connect coverage now includes `CreateParticipant` as the control-plane-to-bearer bridge for
+adding a custom chat bot or WebRTC customer to a known active contact without a Connect user login.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative
