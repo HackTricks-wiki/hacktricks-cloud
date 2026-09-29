@@ -17,6 +17,9 @@ Automation, Systems Manager GUI Connect, Billing Conductor, License Manager, Wor
 the separate Amazon Connect voice Contact Lens transcript API, and the WorkSpaces Instances
 AMI/user-data/instance-profile launch path, plus Lambda durable-execution history disclosure and
 callback result injection and CloudWatch Observability Admin telemetry-pipeline anti-forensics.
+The latest live Amplify branch test also proved that exact-branch `UpdateBranch` environment-variable
+control plus `StartJob` can activate a repository-local runtime hook and access AWS resources as the
+app's existing service role, without caller-side `iam:PassRole` or downstream access.
 Every published
 technique includes its minimum permissions and prerequisites, impact or persistence scope, stealth
 assessment, and a compact logs-generated table. Per-service ledgers record successful and negative

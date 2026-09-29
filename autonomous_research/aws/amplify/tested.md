@@ -1,5 +1,27 @@
 # AWS Amplify — tested
 
+## UpdateBranch environment-variable build RCE — live VERIFIED (2026-09-29) [net-new]
+
+- A disposable CodeCommit-connected static app contained a benign repository `amplify.yml` whose
+  build phase invoked Node.js and a dormant local hook file.
+- A disposable IAM caller held only `amplify:UpdateBranch` on the exact branch ARN and
+  `amplify:StartJob` on that branch's `jobs/*` ARN. It had no Amplify read access, `iam:PassRole`,
+  or SSM access.
+- `UpdateBranch` set `NODE_OPTIONS=--require=./hook.js`; `StartJob RELEASE` succeeded. The build log
+  contained the hook marker and the deployed marker artifact proved execution.
+- The hook called `ssm:GetParameter` through the app's existing service role and published only a
+  SHA-256 digest. It matched the locally expected canary digest. CloudTrail attributed the read to
+  `assumed-role/<fixture-role>/BuildSession`, proving existing-role access rather than caller access.
+- `UpdateBranch` and `StartJob` were default management events. The former recorded the app/branch
+  but redacted `environmentVariables` and `buildSpec` in both request and response as `***`.
+- Negative boundary: a prior run replaced the branch `buildSpec`; `GetBranch` returned all 463 stored
+  bytes, but a successful build ran none of those commands. The positive environment-variable run
+  used a repository-controlled `amplify.yml`; direct branch-buildSpec RCE is therefore not claimed.
+- Cleanup independently confirmed no prefixed Amplify app, CodeCommit repository, IAM user/role, or
+  SSM parameter remained. The first negative-boundary fixture was also fully removed.
+- Public technique added to `aws-amplify-privesc/README.md` with prerequisites, impact, stealth, and
+  logs.
+
 ## UpdateApp role-repoint privesc (iamServiceRoleArn / computeRoleArn) — authz VERIFIED (cont.67) [net-new]
 
 - **Technique:** amplify:UpdateApp + iam:PassRole repoints the app's build/service role
