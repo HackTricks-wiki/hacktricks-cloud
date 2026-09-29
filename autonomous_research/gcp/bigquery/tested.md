@@ -156,6 +156,11 @@
 - The direct API minimum observed in audit authorization data is view `bigquery.tables.update`,
   source `bigquery.tables.getData`, and source `bigquery.datasets.update`; the `bq update` helper also
   reads view metadata. No `bigquery.datasets.update` check on the view dataset appeared.
+- Repeated the source-blind negative test with an authorized-dataset entry rather than an individual
+  view. A principal with view-dataset `WRITER` and query-job authority had
+  `bigquery.tables.create=true`, but creation of a new view over the source was denied on source
+  `bigquery.tables.getData=false`. Future-view authorization therefore does not remove the creator's
+  direct source-read prerequisite.
 - Deleted every explicit query job, both datasets and tables, the view, source/view ACL entries,
   project IAM bindings, service-account key/account and isolated local configuration. Independent
-  dataset, IAM, service-account and temporary-directory checks found no residue.
+  dataset, IAM, service-account and temporary-directory checks found no residue in either matrix.

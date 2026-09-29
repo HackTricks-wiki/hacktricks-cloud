@@ -18,6 +18,8 @@ Last updated: 2026-09-29
   The book now states that successful updates preserve authorization, while source-blind widening
   remains blocked. Admin Activity captured canonical and legacy table-update events and every
   granted/denied authorization check.
+- The authorized-dataset future-view variant also failed closed: a view-dataset writer had
+  `bigquery.tables.create` but the new view was denied on source `bigquery.tables.getData`.
 - Cleanup deleted all jobs, datasets, tables, view, ACL/IAM entries, the temporary account/key and
   local credentials; independent checks found no residue. Technique totals are unchanged.
 

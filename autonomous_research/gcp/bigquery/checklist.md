@@ -13,8 +13,9 @@
   DatasetAccessEntry REST field description. A live individual-view matrix showed that an update
   checks source `tables.getData` and source `datasets.update`, then preserves authorization after
   those direct permissions are revoked; the same principal's direct source read was denied.
-- [ ] Validate authorized-dataset future-view behavior separately with non-sensitive rows; do not
-  infer it from the completed individual authorized-view matrix.
+- [x] Validate authorized-dataset future-view behavior separately with non-sensitive rows. A writer
+  of the authorized view dataset still needed direct source `bigquery.tables.getData` to create a
+  future view; dataset-level authorization did not make source-blind view creation succeed.
 - [ ] Recheck BigQuery's dataset ACL schema for any future addition of tokenless `allUsers`; current
   documentation lists only `allAuthenticatedUsers` among public-like special groups.
 
