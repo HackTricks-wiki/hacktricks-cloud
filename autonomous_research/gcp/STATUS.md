@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Organization Policy remote MCP surface
+- Added the 12-tool Organization Policy MCP transport: six constraint/policy reconnaissance tools
+  and six policy/custom-constraint mutation tools, including full-overwrite warnings, exact scope,
+  expected permission layers, impact, and wrapper-versus-underlying audit behavior.
+- Corrected the existing privilege-escalation scope: project/folder policy targets are writable only
+  through authority inherited from an organization-level write-role binding;
+  `roles/orgpolicy.policyAdmin` is not directly grantable on projects or folders, and the v2 write
+  permissions are not supported in project custom roles.
+- Read-only positive controls returned the applicable constraint catalog and the lab project's empty
+  explicit-policy set; anonymous invocation was rejected. No policy or custom constraint was
+  created, changed, or deleted.
+- Default audit settings produced no read/wrapper entry. Deleted both test identities, keys,
+  bindings, custom role, and isolated local credentials; the API remained enabled at baseline.
+
 ### 2026-09-29 — Resource Manager MCP project reconnaissance
 - Added the single read-only `search_projects` remote MCP tool, including filters, returned project
   metadata, impact, telemetry, and its intentional exception from `roles/mcp.toolUser` and MCP-
