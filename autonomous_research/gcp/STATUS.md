@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Cloud CLI Execution remote MCP surface
+- Added the Preview Cloud CLI Execution service and its destructive `run_gcloud_command` and
+  `run_bq_command` tools. The page documents the execution-project/target-project split, broad
+  downstream reach, input/output files, command restrictions, minimum permissions, bounded impact,
+  and wrapper-versus-downstream telemetry.
+- A reduced identity could run the direct project read but was denied at
+  `mcp.googleapis.com/tools.call`; the Owner and anonymous controls behaved as documented. Simple
+  shell chaining and gcloud-configuration path injection were rejected. Read-only service-account
+  listing was accepted, while key creation was blocked before mutation, so no private vulnerability
+  was opened.
+- Deleted the temporary key, grant, identity, and local configuration, disabled
+  `cloudcli.googleapis.com` back to its disabled baseline, and confirmed no active binding or
+  principal remained. The temporary custom role is only present in GCP's normal soft-deleted state.
+
 ### 2026-09-29 — App Topology correlated attack-path reconnaissance
 - Added the newly GA App Topology service and its global SRE/DEVOPS/SECURITY graphs. The SRE schema
   joins IAM keys/impersonation, resource inventory, traffic, vulnerabilities, artifacts, workloads,

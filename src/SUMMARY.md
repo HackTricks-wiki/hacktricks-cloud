@@ -346,6 +346,7 @@
     - [GCP - Certificate Authority Service Enum](pentesting-cloud/gcp-security/gcp-services/gcp-certificate-authority-service-enum.md)
     - [GCP - Certificate Manager Enum](pentesting-cloud/gcp-security/gcp-services/gcp-certificate-manager-enum.md)
     - [GCP - Cloud Build Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-build-enum.md)
+    - [GCP - Cloud CLI Execution Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-cli-execution-enum.md)
     - [GCP - Cloud Deploy Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-deploy-enum.md)
     - [GCP - Cloud Domains Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-domains-enum.md)
     - [GCP - Cloud Functions Enum](pentesting-cloud/gcp-security/gcp-services/gcp-cloud-functions-enum.md)
