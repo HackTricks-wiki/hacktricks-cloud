@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Model Armor exclusions
+- [x] Live-verified catch-all template exclusion defense evasion. A partial-match `(?s).*` rule
+      changed a HIGH-confidence PI/JB detection to `NO_MATCH_FOUND` with no override signal while
+      enforcement stayed enabled. Shipped as expected scoped functionality, not a vulnerability.
+- [ ] Test RAI all-category suppression, boundary/size/Unicode/regex resistance, logging payloads,
+      and integration cache/parity only with disposable templates and synthetic content. Keep any
+      unexpected filter skip, stale-policy bypass or denial of service private-first. See
+      `model-armor/checklist.md`.
+
 ## 2026-09-29 release delta — Cloud Run custom URLs
 - [x] Live-verified immediate `*.cloud.run` mapping reuse and service-deletion retention. Shipped the
       documented cross-user name-sniping path as an unauthenticated technique: only explicit mapping

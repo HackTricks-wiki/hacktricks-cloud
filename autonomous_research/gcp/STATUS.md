@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Model Armor template exclusion defense evasion
+- Live-verified that a template update can add a partial-match `(?s).*` exclusion and silently turn a
+  HIGH-confidence prompt-injection result into `NO_MATCH_FOUND` while enforcement remains enabled.
+  The response contained no exclusion marker, matching Google's documented contract.
+- Split this scoped path from floor-setting disablement, bounded it to non-streaming PI/JB and RAI,
+  added exact impact/permissions/stealth/log tables, and corrected Model Armor audit method names.
+- Deleted the test template and local responses, disabled the API to baseline, and removed its newly
+  generated service-agent account/binding. Independent API/IAM/Cloud Asset checks found no residue.
+
 ### 2026-09-29 — Cloud Run custom URL sniping
 - Live-verified the new globally unique `*.cloud.run` lifecycle. A released mapping was immediately
   reclaimable and served the controlled revision after a short propagation delay; deleting the
