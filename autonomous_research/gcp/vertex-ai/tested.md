@@ -1,7 +1,24 @@
 # Vertex Ai — tested
 
-Vertex AI. 12 retained privilege-escalation techniques and 4 retained post-exploitation families:
-workload-spec disclosure, model/image-dataset export, RAG read-back, and Feature View data reads.
+Vertex AI. 12 retained privilege-escalation techniques and 5 retained post-exploitation families:
+workload-spec disclosure, model/image-dataset export, RAG read-back, Feature View data reads, and
+Semantic Governance defense evasion.
+
+## 2026-09-29 Semantic Governance policy boundary
+
+- Added policy update/delete as a bounded defense-evasion path: a Vertex AI User can replace the
+  natural-language constraint, move its agent/tool scope, or delete it, removing only the semantic
+  intent/business-rule guardrail. The agent still needs all original tool and downstream authority.
+- Safe nonexistent-resource probes captured exact always-on Admin Activity for
+  `UpdateSemanticGovernancePolicy` and `DeleteSemanticGovernancePolicy`; the latter was independently
+  denied to a no-role caller on `aiplatform.semanticGovernancePolicies.delete`.
+- Engine `.update` does not authorize the documented deprovision RPC. The backend checks an
+  unpublished `.deprovision` permission absent from testable-permission results and all checked
+  predefined roles, so deprovision is recorded as a product-contract discrepancy rather than an
+  attack technique.
+- No engine/policy was provisioned. All disposable identities, roles, bindings, keys and isolated
+  configs were removed, and the pre-existing engine remained `INACTIVE`. Full evidence and the
+  private-first follow-up matrix are in `semantic-governance/`.
 
 ## VERIFIED LIVE — RAG Engine confused-deputy
 - CreateRagCorpus (LRO) → `ragFiles:import` (importedRagFilesCount=1) → `:retrieveContexts` returned

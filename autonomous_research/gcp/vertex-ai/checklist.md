@@ -6,6 +6,10 @@ The broad AI/ML fan-out and permission sweep are complete, but the targeted vali
 remain open. Revisit on new `aiplatform.*` subservices and on changes to agent, RAG, Feature Store,
 and tuning surfaces.
 
+- [x] Map Semantic Governance policy update/delete, common-role exposure, exact Admin Activity, and
+      the separate non-catalog-grantable engine-deprovision permission. See
+      `../semantic-governance/checklist.md` for the active-fixture frontier.
+
 ## Follow-ups from 2026-09 privilege-escalation audit
 
 - [ ] Verify `CreateReasoningEngine` and `CreateNotebookExecutionJob` audit class/default visibility

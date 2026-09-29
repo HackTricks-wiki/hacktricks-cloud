@@ -7,6 +7,15 @@ diff, credential/token-mint diff, and a fresh-catalog delta (only 21 perms added
 session-8 dump, none attack-relevant). Remaining real gaps appear as **newly-GA/preview
 sub-resources within already-documented services** — a slow trickle, not a backlog.
 
+## 2026-09-29 release delta — Semantic Governance policies
+- [x] Shipped policy update/delete as bounded defense evasion with exact Admin Activity and common
+      Agent Platform User exposure. It removes only the semantic intent/business-rule layer; all
+      MCP and downstream authorization remains required.
+- [ ] Use an already provisioned disposable Agent Gateway fixture to measure denied-to-allowed
+      verdict changes, blind updates, etag/field-mask behavior, target rescoping and VPC-SC parity.
+      Do not provision an engine solely for this test while its documented deprovision RPC requires
+      an unpublished, non-catalog-grantable permission. See `semantic-governance/checklist.md`.
+
 ## 2026-09-29 release delta — Workforce extended sessions for Looker
 - [x] Shipped the scoped `GcpUserAccessBinding` session extension as bounded Looker/workforce
       persistence: up to 90 days versus the normal 12-hour maximum, using the existing org-level

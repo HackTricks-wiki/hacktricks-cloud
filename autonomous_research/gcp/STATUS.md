@@ -2,6 +2,20 @@
 
 Last updated: 2026-09-29
 
+### 2026-09-29 — Semantic Governance policy defense evasion
+- Added Semantic Governance inventory and a bounded Vertex AI post-exploitation technique. A
+  principal with policy update/delete—including the broad Agent Platform User role—can weaken,
+  rescope or remove the natural-language guardrail that evaluates agent tool calls and skill
+  invocations. This grants no IAM/tool authority and matters only for an already authorized agent.
+- Non-creating live probes captured exact, always-on Admin Activity for policy update/delete and an
+  independent no-role denial. The documented engine deprovision RPC instead checks an unpublished
+  `.deprovision` permission absent from the testable catalog and checked predefined roles; that
+  discrepancy is not presented as an attacker technique.
+- Deleted every probe account, key, binding, custom role and isolated local config. No policy or
+  engine was provisioned, the pre-existing singleton stayed `INACTIVE`, and Vertex AI remained at
+  its enabled baseline. Technique totals are now 274/274 privilege escalation, 298/298
+  post-exploitation and 159/159 persistence.
+
 ### 2026-09-29 — Workforce 90-day Looker session persistence
 - Added Preview Access Context Manager scoped session settings to binding enumeration, the existing
   binding-escalation technique, and persistence. A `gcpAccessAdmin` can append selected Looker core
