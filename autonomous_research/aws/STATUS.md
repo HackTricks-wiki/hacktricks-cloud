@@ -16,6 +16,24 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.119 (2026-09-30) — AppStream regional user-pool persistence
+
+- SHIPPED #99: global-scope `appstream:CreateUser` plus exact-stack
+  `BatchAssociateUserStack` created an enabled regional user-pool identity and durable stack
+  assignment without Describe or PassRole permissions; a different stack ARN was denied.
+- The usable attack needs a controlled mailbox for the welcome email and seven-day temporary
+  password. Tests used `MessageAction=SUPPRESS` with reserved `.invalid` addresses, so no mail was
+  delivered and no credential or portal session was created.
+- A fresh user briefly produced in-band `USER_NAME_NOT_FOUND` under an HTTP-successful batch
+  response; a bounded retry succeeded. Published the need to inspect the `errors` array.
+- SHIPPED #100 variant: `appstream:EnableUser` alone re-enabled a disabled controlled identity while
+  its stack assignment remained intact. This makes disable-only containment insufficient.
+- CloudTrail redacted email/name fields but retained authentication/message action, stack, and
+  notification flags; successful association was distinguishable by `responseElements.errors: []`.
+- Both assignments were explicitly removed, then both users/stacks were deleted. Independent final
+  inventories found zero matching users or stacks. No fleet, session, URL, role, S3, network, or
+  compute fixture existed. Expected functionality; no AWS report.
+
 ## cont.118 (2026-09-30) — AppStream AgentAccess MCP headless desktop control
 
 - SHIPPED #98 (end-to-end): exact-stack `appstream:UpdateStack` enabled vision, computer input,
