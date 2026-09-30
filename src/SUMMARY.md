@@ -96,6 +96,8 @@
     - [GCP - Historical Cross-Project Vulnerabilities](pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md)
     - [GCP - Cross-Project Detection & Hardening](pentesting-cloud/gcp-security/gcp-cross-project-attacks/detection-and-hardening.md)
   - [GCP - Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/README.md)
+    - [GCP - Datastream Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-datastream-post-exploitation.md)
+    - [GCP - GKE Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-gke-post-exploitation.md)
     - [GCP - Composer Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-composer-post-exploitation.md)
     - [GCP - Access Approval Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-access-approval-post-exploitation.md)
     - [GCP - AlloyDB Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-alloydb-post-exploitation.md)
