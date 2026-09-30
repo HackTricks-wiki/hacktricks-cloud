@@ -1226,7 +1226,6 @@
     - [Az - Logic Apps Persistence](pentesting-cloud/azure-security/az-persistence/az-logic-apps-persistence.md)
     - [Az - Service Bus Persistence](pentesting-cloud/azure-security/az-persistence/az-servicebus-persistence.md)
     - [Az - SQL Persistence](pentesting-cloud/azure-security/az-persistence/az-sql-persistence.md)
-    - [Az - Queue Storage Persistence](pentesting-cloud/azure-security/az-persistence/az-queue-persistence.md)
     - [Az - VMs Persistence](pentesting-cloud/azure-security/az-persistence/az-vms-persistence.md)
     - [Az - Storage Persistence](pentesting-cloud/azure-security/az-persistence/az-storage-persistence.md)
     - [Az - Virtual Desktop Persistence](pentesting-cloud/azure-security/az-persistence/az-virtual-desktop-persistence.md)
