@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.149 (2026-09-30) — Cognito provisioned-limit cost boundary
+
+- SHIPPED #144 (live action-only minimum + failure controls): `cognito-idp:UpdateProvisionedLimit` on `Resource: "*"` alone performed a no-cost `UserCreation=50` no-op and returned current/free values. A user-pool-ARN policy was denied because the account-level operation authorizes against `*`; `GetProvisionedLimit` was independently confirmed with its action alone.
+- Published the conditional regional cost-abuse path: where Service Quotas already grants headroom above the free value, the writer can activate paid RPS without a quota-increase, pool, or PassRole permission. The current pricing page documents per-category incremental-RPS billing and a one-day minimum.
+- NEGATIVE / hard boundary: 49 RPS was rejected below the free 50, and 51 was rejected above the approved ceiling 50. The action cannot lower free capacity or exceed pre-approved headroom, grants no token/directory access, and cannot manage another account.
+- CloudTrail recorded successful writes with the requested and resulting free/provisioned values. Successful reads retained the category but suppressed the response; the above-ceiling error retained the attempted value, while the IAM denial omitted request/response fields.
+- All six adjustable categories were at free/default ceilings. Final `UserCreation` remained 50/50/50, both Regions retained zero user pools, and no persistent resource or paid capacity was created. Expected functionality only; no AWS report.
+
 ## cont.148 (2026-09-30) — Cognito multi-Region authentication boundaries
 
 - SHIPPED #143 (current documented contract + safe exact-resource probe): an `ACTIVE` Cognito secondary accepts public authentication but keeps a password-failure/lockout counter independent from the primary. With one supported secondary, attackers can split guesses across two exponential-backoff schedules.
