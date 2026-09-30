@@ -661,6 +661,7 @@
     - [AWS - EC2 Image Builder Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-image-builder-privesc/README.md)
     - [AWS - ECR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md)
     - [AWS - ECS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md)
+      - [AWS - ECScape ECS Task Role Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/aws-ecscape-privesc.md)
     - [AWS - EFS Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md)
     - [AWS - Elastic Beanstalk Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md)
     - [AWS - EMR Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md)
