@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.167 (2026-10-01) — Partner Central Benefits API
+
+- SHIPPED #168: added the missing Benefits inventory and documented exact-allocation recovery of literal AWS promotional credit codes plus account/value/status/expiry and cash/consumable/access fulfillment data.
+- SHIPPED #169: documented full Benefit Application evidence recovery (benefit-specific JSON, workflow reasons, contacts, files and related resources) plus exact-application financial/workflow abuse: the documented amendment path can change the requested credit account, while draft replacement, recall/update/resubmit and permanent cancellation enable fraud or denial subject to state, revision, validation and AWS approval.
+- Live probes established authentication, `us-east-1` endpoint, Partner-enrollment gate and `partnercentral-benefits.amazonaws.com` management telemetry. The non-enrolled account could not distinguish allowed/different synthetic allocation ARNs because the business gate ran first, so public text identifies documentation-grounded versus live results explicitly.
+- The disposable IAM user/policy/access key was deleted; final matching users/roles were empty. No Benefit, Application, Allocation, tag, file, resource association, Marketplace object, credit, disbursement or external workflow was created or changed. Expected functionality only; no private report and no cleanup debt.
+
 ## cont.166 (2026-10-01) — Partner Central Account API
 
 - SHIPPED #167: added the missing `partnercentral-account` service inventory plus wildcard `GetVerification` recovery of business registration/workflow data and time-limited completion URLs, and exact-resource recovery of alliance contact PII, verified training domains, relationship account IDs, invitation content and qualification topology.
