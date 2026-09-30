@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.146 (2026-09-30) — Cognito TOTP-factor deletion
+
+- SHIPPED #141 (live exact-resource minimum): `cognito-idp:AdminDeleteSoftwareToken` alone on one exact user-pool ARN deleted a known user's registered TOTP factor; a different pool ARN was denied. Optional `AdminGetUserAuthFactors` exposes the user's factor types/preferences but no secret.
+- In an `OPTIONAL` pool with TOTP as the only MFA factor, unsigned password authentication changed from `SOFTWARE_TOKEN_MFA` to immediate tokens. In an `ON` pool, deletion returned `MFA_SETUP` and no token; an unsigned associate/verify/respond sequence registered an attacker-controlled replacement TOTP and returned tokens.
+- Bounded the technique: it requires a valid password or separate reset primitive for takeover, falls back to another available factor, does not disable pool-wide mandatory MFA, and without authentication capability is deletion/lockout only.
+- Added explicit minimum permission, impact, Low stealth, factor-recon command, and expandable CloudTrail table to the existing Cognito MFA escalation section. After an initial indexing delay, CloudTrail confirmed both new actions as default management events: pool ID visible, username masked, response null; the factor read was read-only and deletion was a write.
+- Four disposable pools were independently confirmed absent after two guarded failed runs and two successful tests. Final regional pool inventory is empty; no IAM, identity-pool, domain, trigger, passkey, SMS or external resource was created. Expected functionality only; no private report.
+
 ## cont.145 (2026-09-30) — ACM ACME external-account persistence
 
 - SHIPPED #140 (exact-resource authorization plus current service contract): exact-EAB `acm:GetAcmeExternalAccountBindingCredentials` returns the key ID and MAC secret needed to register an attacker-held ACME account. Registration survives loss of the AWS session and EAB expiry/revocation; the account must be separately revoked.
