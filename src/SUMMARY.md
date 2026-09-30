@@ -406,6 +406,7 @@
     - [AWS - OpenSearch Service Persistence](pentesting-cloud/aws-security/aws-persistence/aws-opensearch-access-policy-persistence/README.md)
     - [AWS - Directory Service Persistence](pentesting-cloud/aws-security/aws-persistence/aws-directory-service-persistence/README.md)
     - [AWS - MSK cross-account policy Persistence](pentesting-cloud/aws-security/aws-persistence/aws-msk-policy-persistence/README.md)
+    - [AWS - Oracle Database@AWS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-odb-persistence/README.md)
     - [AWS - MQ broker administrator Persistence](pentesting-cloud/aws-security/aws-persistence/aws-mq-broker-admin-persistence/README.md)
     - [AWS - Systems Manager Incident Manager Persistence](pentesting-cloud/aws-security/aws-persistence/aws-systems-manager-incident-manager-persistence/README.md)
     - [AWS - Managed Grafana Persistence](pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md)
