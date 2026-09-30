@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.156 (2026-09-30) — Snow Device Management remote physical-device control
+
+- SHIPPED #151 (documented current model + safe live preflight): added the previously missing Snow Device Management inventory and exact device/task/read authorization map. `CreateTask` has no resource type and therefore requires `Resource: "*"`; its only commands are parameterless `unlock` and `reboot` for up to ten managed-device IDs.
+- Published remote unlock as a conditional foothold enabler: it replaces the normal manifest/unlock-code step, but still requires a powered, activated, online device plus separate physical/local-network reach and local service credentials. It does not itself grant device data, EC2-compatible, or AWS IAM access.
+- Published reboot as a direct availability attack: it stops device EC2-compatible instances, interrupts S3-compatible writes, takes roughly ten minutes to recover and requires re-unlock. Explicitly rejected arbitrary-command/RCE overclaims.
+- Both wildcard and synthetic exact-device session probes reached the account's empty-device preflight, so the live environment could not prove the documented wildcard distinction. `ListTasks` failure appeared in CloudTrail, while the empty-account `CreateTask` failures did not; the public telemetry language preserves that limitation.
+- Both allowed-Region inventories had no usable device (`us-west-2` is SCP-denied), no resource was created, and no physical device or network was contacted. Expected functionality only; no AWS report and no cleanup debt.
+
 ## cont.155 (2026-09-30) — EventBridge V2 retention-window destruction
 
 - SHIPPED #150 (live exact-bus minimum + documented retention effect): `events:UpdateEventBus` alone changed one enhanced bus from 365-day retention to the one-day minimum. No read, publish, subscriber, policy, KMS or PassRole permission was present.
