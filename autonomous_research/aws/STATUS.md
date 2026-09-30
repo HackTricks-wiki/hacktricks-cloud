@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.136 (2026-09-30) — SageMaker Job Runtime trajectory/reward poisoning
+
+- SHIPPED #130 (live exact-resource authorization plus current API contract): a compromised multi-turn RFT agent can use job-scoped `sagemaker:CompleteRollout` to prematurely seal a known active trajectory and `sagemaker:UpdateReward` to submit attacker-selected per-turn rewards, corrupting the corpus used to fine-tune or evaluate the target policy model. Optional `Sample`/streaming access can append attacker prompt/response turns.
+- Added the missing `AgentRFT` / `AgentRFTEvaluation` inventory using `ListJobs`/`DescribeJob`; these jobs are separate from legacy `ListTrainingJobs`. Both categories were empty in `us-east-1`, while `eu-west-1` returned unsupported-operation errors. No paid training fixture was launched.
+- Inspected the current official token generator and agent client. Bearer tokens are locally generated Region-bound SigV4 presigned artifacts with a maximum 12-hour lifetime and no embedded job ARN. Generation creates no AWS call.
+- SECURE NEGATIVE: bearer authorization is conjunctive. `CallWithBearerToken` alone was denied the operation; the token consumer also needed the underlying exact-job named action. Exact job A permission failed on B, and wrong-Region, expired and foreign-account controls failed.
+- Runtime operations are opt-in `AWS::SageMaker::Job` data events and absent from Event History/default trails; token generation is invisible. The resulting technique is High stealth by default and Medium when Job data events are enabled.
+- Cleanup is complete: inert nonexistent-job/trajectory probes created no SageMaker state and only temporary STS sessions were used. Telemetry preflight uncovered the stale `ht-nova-audit-20260929` trail and dedicated `ht-nova-ct-228478051196-20260929` bucket; both and all contained log objects were deleted, with exact not-found verification. Expected functionality only; no private report.
+
 ## cont.135 (2026-09-30) — IAM Toolbox cross-principal denial snapshots
 
 - SHIPPED #129 (live exact-action authorization): `iam:GetRequestAuthorizationDetails` on `*` alone retrieved a different IAM principal's Access Troubleshooter snapshot from a known authorization ID. The inspector session was denied `iam:ListUsers`; a control session without the toolbox action was denied the snapshot.
@@ -40,7 +49,7 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - Documented the high-value data surface: trajectories include prompts, screenshots and agent responses; visible secrets can be captured in screenshots. `exportConfig` needs independent same-account `s3:PutObject`, and a returned trace/artifact location does not grant object read access.
 - CloudTrail records definition/run/inventory operations as default management events, but `CreateSession`, `CreateAct`, `UpdateAct` and `InvokeActStep` are opt-in data events. Live empty inventory and model discovery succeeded in `us-east-1`; `eu-west-1` had no endpoint.
 - Rejected direct act injection, forged tool results, status falsification and attacker-bucket export as standalone book attacks: each lacked automatic victim-client execution, crossed no separate data boundary, or reduced to conditional state corruption/DoS. These remain recorded in the service ledger for fixture-based re-evaluation.
-- Cleanup is complete: the prior empty metrics-only Nova Act service-linked role deletion reached `SUCCEEDED`, exact role lookup now returns `NoSuchEntity`, and no workflow, run, AgentCore runtime, ECR repository, S3 bucket, log group or IAM execution role was created. Expected functionality only; no private report.
+- Cleanup is complete: the prior empty metrics-only Nova Act service-linked role deletion reached `SUCCEEDED`, exact role lookup now returns `NoSuchEntity`, and no workflow, run, AgentCore runtime, ECR repository, Nova Act export bucket, log group or IAM execution role was created. A later preflight found and deleted the separate stale `ht-nova-audit-20260929` trail, all of its log objects, and dedicated `ht-nova-ct-228478051196-20260929` bucket; exact identifiers now return not found. Expected functionality only; no private report.
 
 ## cont.132 (2026-09-30) — AWS Support Authorization foundational audit
 
