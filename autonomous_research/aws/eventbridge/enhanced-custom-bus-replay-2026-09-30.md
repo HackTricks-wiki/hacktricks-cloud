@@ -125,4 +125,17 @@ The public technique is therefore bounded to a named foreign principal that alre
 
 All three fixture cycles cleaned in traps. Final inventories contained zero matching enhanced buses, IAM users and IAM roles, and no access key survived. Expected cross-account resource-policy functionality; no AWS vulnerability report.
 
+## Retention-window destruction follow-up
+
+A separate action-only fixture validated the control plane for destructive retention reduction:
+
+- Created an empty enhanced bus with the maximum `RetentionPeriodInDays=365`; no event, subscriber, target, role, key or policy was created.
+- Assumed a restricted session with only `events:UpdateEventBus` on that exact bus ARN. It had no list/describe, publish, subscriber, policy, KMS or PassRole action.
+- Updated only `StorageConfiguration.RetentionPeriodInDays` to `1`. The response and an independent administrator describe both returned one day, the bus's `RetentionWindowStartTime`, and `State=ACTIVE`.
+- CloudTrail recorded `UpdateEventBus` as `readOnly:false` under `eventsv2.amazonaws.com`, with the exact bus and requested one-day value. Its response returned the resulting one-day value, horizon and active state.
+
+The service contract defines the horizon as the earliest replayable point and events older than it as expired. Reducing a populated bus therefore destroys history outside the new window for paused/catch-up and future replay subscribers; restoring a longer configured period cannot recreate expired events. It does not stop live delivery, remove the newest day, affect already-delivered target data, or grant access.
+
+The empty fixture deliberately validated authorization, state and telemetry without leaving data for 24 hours or retaining a billable workload. Its trap deleted the exact bus, and independent inventory returned zero matching resources. Expected destructive configuration behavior; no AWS vulnerability report.
+
 Expected functionality only; no private AWS vulnerability report.

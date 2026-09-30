@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.155 (2026-09-30) — EventBridge V2 retention-window destruction
+
+- SHIPPED #150 (live exact-bus minimum + documented retention effect): `events:UpdateEventBus` alone changed one enhanced bus from 365-day retention to the one-day minimum. No read, publish, subscriber, policy, KMS or PassRole permission was present.
+- The bus stayed `ACTIVE` while its stored retention configuration changed and continued reporting the replay horizon. Events older than the resulting `RetentionWindowStartTime` are outside retention and cannot be recovered by later increasing the period, affecting paused consumers and future/catch-up replays without interrupting live delivery.
+- CloudTrail exposed the exact bus and one-day request, then returned the resulting retention, horizon and active state. Published explicit irreversible-history impact, Low stealth, detection guidance and the newest-day/already-delivered/other-bus boundaries.
+- The no-event fixture avoided storage cost and a 24-hour wait while validating action scope, state and telemetry. Its trap deleted the exact bus; final matching inventory is empty. Expected functionality only; no AWS report.
+
 ## cont.154 (2026-09-30) — EventBridge V2 resource-policy persistence
 
 - SHIPPED #149 (live exact-bus policy write + current cross-account contract): `events:PutResourcePolicy` alone installed a named foreign-principal `events:PutEvents` grant on one enhanced bus. The `default` policy persists beyond the writer session and can delegate injection or, with the consumer's additional subscriber/PassRole/target permissions, retrospective and continuing retained-event export.
