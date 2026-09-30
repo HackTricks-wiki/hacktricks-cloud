@@ -40,6 +40,17 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
   normalized every expandable section to `Logs generated`. No new AWS calls or resources were
   needed because the existing live authorization/CloudTrail matrix supported the corrections.
 
+## cont.104 (2026-09-30) — Pinpoint push-channel stored-credential boundary
+
+- Rejected `GetBaiduChannel` as a credential-disclosure technique: after storing synthetic API and
+  secret keys, both the update and subsequent getter omitted the `Credential` and secret values even
+  though the current SDK response model still documents a credential field.
+- GCM/FCM could not be proven with a fake key because `UpdateGcmChannel` contacted FCM and rejected
+  it as unregistered, even with the channel disabled. The account had no existing projects or GCM
+  channels, so no real third-party credential was introduced or accessed.
+- Both disposable Pinpoint projects were deleted; exact-ID reads returned `NotFoundException` and
+  the matching-name inventory was empty. No book technique or AWS vulnerability report was added.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
