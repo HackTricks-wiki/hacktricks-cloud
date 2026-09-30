@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.144 (2026-09-30) — Partner Central Revenue Measurement audit
+
+- SHIPPED #138: exact-parent Revenue Attribution reads plus optional wildcard discovery expose customer AWS account IDs, Marketplace offer or Partner Central opportunity identifiers/names, product metadata, percentage allocations and effective windows. This is bounded commercial/customer intelligence, not credentials, invoices or payout data.
+- SHIPPED #139: exact-attribution `StartRevenueAttributionAllocationsTask` can create/update up to 250 deal allocations; wildcard `CreateMarketplaceRevenueShareAllocation` and exact-share `UpdateMarketplaceRevenueShareAllocation` can alter partner-declared product revenue-share measurement. Impact is corrupted revenue attribution, dashboards and partner recognition/investment signals—not customer billing or Marketplace payout redirection.
+- Added the missing service inventory, global SigV4a endpoint, `partnercentral` IAM prefix, exact parent ARN formats, `partnercentral:Catalog` boundary and older-CLI caveat.
+- Restricted A/B probes proved exact-resource binding for attribution get/update/batch and Marketplace-share get/allocation-get/allocation-update. A production-only catalog condition denied Sandbox. The exact nonexistent batch passed IAM and stopped at the separate AWS Partner registration gate; no task was created.
+- CloudTrail indexed reads/writes under `partnercentral-prm.amazonaws.com` in `us-east-1`, even for `eu-west-1` Region input. Events retained catalog/target/write fields after IAM authorization but masked the submitted customer account ID; exact-resource denials omitted request parameters.
+- No create call was made because current attributions/shares have no delete API. Both catalogs remain empty through both allowed Region inputs; no Partner Central, Marketplace, IAM, task, tag or other state changed. Expected functionality only; no private report.
+
 ## cont.141 (2026-09-30) — Recycle Bin deleted-snapshot restoration
 
 - SHIPPED #133 (live exact-resource minimum): `ec2:RestoreSnapshotFromRecycleBin` alone on the exact accountless ARN restored a genuinely retained snapshot without `DescribeSnapshots`. Optional wildcard `ListSnapshotsInRecycleBin` enumerates IDs and recovery metadata.
