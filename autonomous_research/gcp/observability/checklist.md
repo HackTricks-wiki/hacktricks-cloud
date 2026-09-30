@@ -1,0 +1,56 @@
+# Google Cloud Observability security research checklist
+
+## Completed — 2026-09-29
+
+- [x] Map Cloud Trace's `list_traces` and `get_trace` remote MCP tools, their direct/MCP permission
+      layers, `_Trace` prerequisite, anonymous boundary and default audit behavior.
+- [x] Validate the Cloud Trace MCP gate with a disposable minimum reader and preserve the API's
+      enabled baseline while removing every IAM, credential, configuration and local artifact.
+- [x] Map the Error Reporting remote MCP schema, underlying permission, representative-event data,
+      direct-versus-MCP authorization layers, anonymous boundary and default audit visibility.
+- [x] Validate the Error Reporting MCP path with an isolated minimum-permission caller and restore
+      the API, IAM, credential, configuration and local state to its disabled/absent baseline.
+- [x] Map the stable v1 discovery resource graph, fields, methods and locations.
+- [x] Map Observability, scope, analytics, view-access and service-agent predefined roles.
+- [x] Separate direct view access, legacy Trace reads, trace scopes and BigQuery links.
+- [x] Verify official audit classes for link/scope/resource reads and legacy Trace reads.
+- [x] Establish the current system-managed bucket/dataset/view lifecycle limitation.
+- [x] Perform a no-storage eligibility/inventory probe and restore API, service-agent, IAM and local
+      state to the disabled/absent baseline.
+
+## Safe live-validation frontier
+
+- [ ] Re-test Error Reporting's documented `mcp.googleapis.com/tool.name` allow-policy attribute
+      after a longer propagation window. The 2026-09-29 bounded tool-only and service-plus-tool
+      grants failed closed while an unconditional grant succeeded; do not call this a bypass.
+- [ ] Temporarily enable both Error Reporting and MCP Data Access audit logging on a disposable
+      project, call one non-secret group, capture the exact direct/wrapper log payloads, and restore
+      the complete prior audit configuration rather than replacing unrelated audit settings.
+- [ ] In a disposable project that already contains synthetic `_Trace/Spans` data, give an isolated
+      caller only `observability.links.create`, BigQuery Data Viewer and query-job authority. Prove
+      direct `observability.views.access` denial, create the link, query a non-secret marker through
+      `_AllSpans`, then delete the link and verify the BigQuery dataset disappears.
+- [ ] Capture the successful Link LRO request/completion, service-agent IAM changes and BigQuery
+      `JobInsertion`/`TableDataRead` principals. Subtract CLI helper get/list/operation reads by
+      repeating the create through raw REST.
+- [ ] With an existing synthetic trace view, compare Observability Analytics and legacy
+      `GetTrace`/`ListTraces` audit behavior under default and temporarily enabled Data Access.
+      Restore the exact prior audit policy and do not record sensitive span values.
+- [ ] Test conditional `roles/observability.viewAccessor` grants on one view and confirm that
+      analytics views cannot widen access to another source view.
+- [ ] Inspect analytics-view SQL returned by get/list for stored literals, source view names and
+      detection logic. Publish only if it exposes consequential information beyond ordinary view
+      metadata.
+- [ ] Recheck the callable API when bucket/dataset/view delete/undelete methods reach public v1.
+      Do not create storage merely to test permission names before immediate teardown is supported.
+- [x] Review the adjacent Telemetry API's normal OTLP writer roles and live-test log-resource
+      spoofing with a reversible synthetic log. Consumer IAM, cross-project destination enforcement
+      and trace ingestion remain queued in `../telemetry/checklist.md` because they need a more
+      disposable fixture.
+
+## Do not publish without stronger evidence
+
+- [ ] No trace-scope cross-project read without source authorization.
+- [ ] No link-only data read without BigQuery data and job permissions.
+- [ ] No arbitrary cross-project link destination under the current Link schema.
+- [ ] No unverified claim that Observability Analytics queries are permanently unlogged.
