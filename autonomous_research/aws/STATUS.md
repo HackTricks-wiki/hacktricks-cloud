@@ -16,6 +16,26 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.122 (2026-09-30) — Route 53 ARC routing-control takeover
+
+- SHIPPED #105 (current API/IAM contract plus live ordinary state changes): exact-routing-control
+  `UpdateRoutingControlState(s)` can move application traffic between cells, and the same requests
+  accept `SafetyRulesToOverride` to bypass assertion/gating safeguards.
+- Published the critical permission boundary: an ordinary allow without a condition also leaves the
+  break-glass branch available. AWS documents
+  `route53-recovery-cluster:AllowSafetyRulesOverrides=false` for operators who may change safe
+  states but must not override rules. Failed rule evaluation itself reveals the blocking rule ARN.
+- Live fixtures confirmed cluster/control/assertion-rule lifecycle and successful batch state
+  initialization through a regional data-plane endpoint. Rule propagation exceeded the bounded
+  wait, so the restricted-operator override and false-condition denial remain explicitly recorded
+  as current documented behavior rather than live results.
+- `cloudtrail:LookupEvents` is SCP-denied in the required `us-west-2` Region; AWS documentation
+  confirms all ARC calls are management events and directs Event History review to `us-west-2`.
+- All three bounded fixture attempts were cleaned. Final independent inventories found zero
+  `ht-arc-*` clusters and zero `ht-arc-operator-*` roles; every exact rule/control was absent, and
+  no health check, DNS record, workload, network, or compute resource was ever created. Expected
+  functionality only; no AWS vulnerability report.
+
 ## cont.121 (2026-09-30) — Oracle Database@AWS foundational audit
 
 - SHIPPED #103 (current API/IAM model): exact-database `odb:CreateAutonomousDatabaseWallet`
