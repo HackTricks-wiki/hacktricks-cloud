@@ -16,6 +16,20 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.111 (2026-09-30) — AppStream existing-fleet streaming URL
+
+- SHIPPED #91: exact stack+fleet `appstream:CreateStreamingURL` creates a custom-user bearer session
+  into an existing fleet without user-pool/SAML setup, fleet mutation, or caller-side PassRole.
+- The URL can last seven days. A Desktop/shell-capable session inherits private-network/application
+  access and can recover the fleet's existing `appstream_machine_role` credentials; tightly locked
+  application-only fleets limit that escalation path.
+- Live least-privilege proof reached stack-not-found with only the exact two resource ARNs. Either
+  alternate resource and `DescribeStacks` were denied; the account had zero fleets/stacks.
+- CloudTrail recorded a management write, retained stack/fleet/application/validity, and redacted
+  the custom user, session context, and returned URL as `HIDDEN_DUE_TO_SECURITY_REASONS`.
+- No fleet, stack, user, URL, session, role, or other resource was created. Expected functionality
+  only; no AWS report.
+
 ## cont.110 (2026-09-30) — AppStream image export to EC2 AMI
 
 - SHIPPED #90: `appstream:CreateExportImageTask` plus `iam:PassRole` materializes an owned private
