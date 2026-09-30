@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       files:
-        description: 'Comma-separated src/*.md paths to translate (blank = book files changed in the last master commit)'
+        description: 'Optional comma-separated src/*.md paths to retry in addition to the language backlog'
         required: false
         default: ''
 
@@ -32,7 +32,7 @@ jobs:
     # Run N languages in parallel (tune max-parallel if needed)
     strategy:
       fail-fast: false
-      # max-parallel: 3 #Nothing to run all in parallel
+      max-parallel: 4
       matrix:
         include:
           - { name: "Afrikaans", language: "Afrikaans", branch: "af" }
@@ -77,42 +77,21 @@ jobs:
           fetch-depth: 0
 
       - name: Validate translator directive safeguards
-        run: python scripts/test_translator_directives.py -v
+        run: |
+          python scripts/test_translator_directives.py -v
+          python scripts/test_translator_batch.py -v
+          python scripts/test_translation_backlog.py -v
 
       - name: Verify image tools and download scripts
         run: |
           gh --version
           wget --version | head -n 1
 
-          # Download with retries so a transient network/TLS hiccup (e.g. a
-          # GnuTLS "Error in the pull function" from raw.githubusercontent.com)
-          # doesn't fail an otherwise-good translation job. Retries on ANY
-          # failure (wget --tries does not reliably retry TLS handshake errors)
-          # and verifies the saved file is non-empty before accepting it.
-          download_with_retry() {
-            local url="$1" out="$2"
-            local max_attempts=5 attempt=1 sleep_for=5
-            while true; do
-              if wget --timeout=30 --tries=1 -O "$out" "$url" && [ -s "$out" ]; then
-                echo "Downloaded $out (attempt $attempt)"
-                return 0
-              fi
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "ERROR: failed to download $url after $max_attempts attempts" >&2
-                return 1
-              fi
-              echo "Download of $url failed (attempt $attempt/$max_attempts); retrying in ${sleep_for}s..." >&2
-              rm -f "$out"
-              sleep "$sleep_for"
-              attempt=$((attempt + 1))
-              sleep_for=$((sleep_for * 2))
-            done
-          }
-
-          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/get_and_save_refs.py /tmp/get_and_save_refs.py
-          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/compare_and_fix_refs.py /tmp/compare_and_fix_refs.py
-          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/translator.py /tmp/translator.py
-          download_with_retry https://raw.githubusercontent.com/HackTricks-wiki/hacktricks-cloud/master/scripts/seo_postprocess.py /tmp/seo_postprocess.py
+          cp scripts/get_and_save_refs.py /tmp/get_and_save_refs.py
+          cp scripts/compare_and_fix_refs.py /tmp/compare_and_fix_refs.py
+          cp scripts/translator.py /tmp/translator.py
+          cp scripts/translation_backlog.py /tmp/translation_backlog.py
+          cp scripts/seo_postprocess.py /tmp/seo_postprocess.py
           cp scripts/mark_unchanged_s3_files.py /tmp/mark_unchanged_s3_files.py
           cp scripts/upload_immutable_images.sh /tmp/upload_immutable_images.sh
           cp .github/build_compact_search_index.py /tmp/build_compact_search_index.py
@@ -136,73 +115,66 @@ jobs:
           python /tmp/get_and_save_refs.py
 
       - name: Download language branch & update refs
+        shell: bash
         run: |
+          set -euo pipefail
           pwd
           ls -la
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global user.name 'Translator'
           git config --global user.email 'github-actions@github.com'
           git config pull.rebase false
-          git checkout $BRANCH
-          git pull
-          python /tmp/compare_and_fix_refs.py --files-unmatched-paths /tmp/file_paths.txt
-          git add .
-          git commit -m "Fix unmatched refs" || echo "No changes to commit"
-          git push || echo "No changes to push"
+          git checkout "$BRANCH"
+          git pull --ff-only origin "$BRANCH"
+          python /tmp/compare_and_fix_refs.py --files-unmatched-paths /tmp/ref-mismatches.txt
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix unmatched refs"
+            git push origin "$BRANCH"
+          fi
 
       - name: Run translation script on changed files
+        shell: bash
         env:
           INPUT_FILES: ${{ inputs.files }}
         run: |
+          set -euo pipefail
           git checkout master
           # Repair known SUMMARY.md breakage (duplicate entries) before it is
           # captured here, so the fixed copy is what gets synced to every
           # language branch below and mdbook does not abort the whole build.
-          python3 scripts/check_summary.py --fix || true
+          python3 scripts/check_summary.py --fix
           cp src/SUMMARY.md /tmp/master-summary.md
-          export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          if [ -n "$INPUT_FILES" ]; then
-            echo "Explicit file list supplied via workflow_dispatch"
-            printf '%s' "$INPUT_FILES" | tr ',' '\n' | while read -r file; do
-              file=$(echo "$file" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-              [ -z "$file" ] && continue
-              case "$file" in
-                src/*.md) ;;
-                *) echo "Skipping non-book Markdown path: $file"; continue ;;
-              esac
-              case "$file" in
-                */SUMMARY.md) echo "Skipping SUMMARY.md"; continue ;;
-              esac
-              [ -f "$file" ] || { echo "Skipping missing file: $file"; continue; }
-              printf ',%s' "$file" >> /tmp/file_paths.txt
-            done
-          else
-            git diff --name-only --diff-filter=ACMR HEAD~1 -- src/ | while IFS= read -r file; do
-              case "$file" in
-                src/*.md)
-                  case "$file" in */SUMMARY.md) continue ;; esac
-                  [ -f "$file" ] && printf ',%s' "$file" >> /tmp/file_paths.txt
-                  ;;
-              esac
+          git restore -- src/SUMMARY.md
+          python /tmp/translation_backlog.py plan \
+            --language "$BRANCH" \
+            --output /tmp/pending-pages.txt \
+            --extras /tmp/ref-mismatches.txt \
+            --extra-env INPUT_FILES
+          echo "$(wc -l < /tmp/pending-pages.txt) pages pending for $BRANCH"
+
+          if [ -s /tmp/pending-pages.txt ]; then
+            split -l 80 -d -a 3 /tmp/pending-pages.txt /tmp/translation-batch-
+            for batch in /tmp/translation-batch-*; do
+              git checkout master
+              python /tmp/translator.py \
+                --language "$LANGUAGE" \
+                --branch "$BRANCH" \
+                --api-key "${{ secrets.OPENAI_API_KEY }}" \
+                --file-list "$batch" \
+                --threads 2
+              python /tmp/translation_backlog.py mark \
+                --language "$BRANCH" \
+                --file-list "$batch"
+              git add .translation-source-blobs.json
+              if ! git diff --cached --quiet; then
+                git commit -m "Record translated English source blobs for $BRANCH"
+                git push origin "$BRANCH"
+              fi
             done
           fi
-
-          echo "Files to translate (`wc -l < /tmp/file_paths.txt`):"
-          cat /tmp/file_paths.txt
-          echo ""
-          echo ""
-          touch /tmp/file_paths.txt
-
-          if [ -s /tmp/file_paths.txt ]; then
-            python /tmp/translator.py \
-              --language "$LANGUAGE" \
-              --branch "$BRANCH" \
-              --api-key "$OPENAI_API_KEY" \
-              -f "$(cat /tmp/file_paths.txt)" \
-              -t 3
-          else
-            echo "No markdown files changed, skipping translation."
-          fi
+          git checkout master
+          python /tmp/translation_backlog.py verify --language "$BRANCH"
 
       - name: Sync SUMMARY.md from master
         run: |
