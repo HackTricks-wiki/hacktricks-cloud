@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.163 (2026-10-01) — CloudWatch Omni integration rebinding
+
+- SHIPPED #164 (verified exact-resource minimum): `cloudwatch:UpdateIntegration` on one exact external-agent integration replaced its stored API key and `catalogId` without Get/List, Secrets Manager, KMS, space, grant, telemetry or PassRole permission. Published as conditional provider/workflow rebinding and disruption, not old-secret disclosure or IAM escalation.
+- The created `EXTERNAL_AGENT` integration required a `catalogId`, accepted a dummy API key plus arbitrary test catalog string and became `ACTIVE`. Get/List exposed `authType: API_KEY` and the catalog but returned neither the key nor a `credentialArn`; no customer-visible `cw-omni-*` secret existed.
+- Secure role boundary: creating or changing an `AWS_INTEGRATION` role enforced exact-role `iam:PassRole` with `iam:PassedToService=cloudwatch.amazonaws.com`. Update was denied without it and succeeded after it was added. Because the documented role use is bounded Context Graph resource discovery and no STS tuple was returned, this is a guardrail note rather than a privilege-escalation technique.
+- CloudTrail redacted API keys as `HIDDEN_DUE_TO_SECURITY_REASONS` while retaining catalog and role attributes. Successful create/update emitted both a caller-attributed sanitized event and a service-internal companion with null identity; denied attempts omitted request parameters.
+- All integrations and matching IAM roles were deleted. A response-parser cleanup miss was caught by independent inventory and the one orphan was explicitly removed; final integration, matching-role and matching-secret inventories were empty. No domain, space, telemetry forwarding, compute or third-party provider was created. Expected functionality only, no private AWS report and no new cleanup debt.
+
 ## cont.162 (2026-10-01) — CloudWatch Omni asynchronous alert persistence
 
 - SHIPPED #162 (verified minimum and autonomous execution): `cloudwatch:CreateAlert` on the same-account `alert/*` prefix plus `cloudwatch:AssumeAccessProfile` on one exact existing profile created an enabled 30-second scheduled alert. The restricted caller had no list/get, grant/profile administration, telemetry-read, SNS, integration or PassRole permission. This is service-level persistence through the profile and operator-role ceilings, not IAM escalation.
