@@ -50,9 +50,26 @@ This verifies a post-exploitation data-export primitive: a narrowly scoped subsc
 ## Follow-up hypotheses
 
 - Test a shared bus with two controlled accounts: determine which account receives publish, subscriber and target telemetry, and validate revocation/reattachment behavior without overclaiming from the one-account fixture.
-- Test `UpdateSubscriber` target-role changes and universal targets as separate exfiltration or execution primitives. Target ARN and starting position are create-only, so replacement behavior must be treated separately.
+- Test `UpdateSubscriber` filter, run-state and mutable delivery settings separately. Target ARN and starting position are create-only, so replacement behavior must be treated separately.
 - Validate whether `PutEvents` and `PutRawEvents` for `event-busv2` use a newly selectable CloudTrail data resource type once current CloudTrail selector documentation exposes it.
 - Test resource-policy conditions `events:ContentFilterPresent` and `events:Metadata/*` against filter omission, multiple scopes and JSONata transforms.
 - Test KMS decrypt/encryption behavior for cross-account subscribers and vended log payloads using a controlled customer-managed key.
+
+## Universal-target role execution follow-up
+
+A second live fixture closed the universal-target hypothesis. One enhanced bus, one S3 bucket/object path and one delivery role were created. The role trusted `events.amazonaws.com` and had only `s3:PutObject` on the exact synthetic object.
+
+A restricted session had only:
+
+- `events:CreateSubscriber` on the exact bus and one future subscriber name pattern; and
+- `iam:PassRole` on that exact role with `iam:PassedToService=events.amazonaws.com`.
+
+It had no S3 action, EventBridge publish/read/update/delete permission, or permission to assume the role. The session created a `LATEST`, `RUNNING` subscriber with target `arn:aws:events:::aws-sdk:s3:putObject`, static API input and a one-event batch. A matching event published separately caused EventBridge to create the exact object through the role; the recovered body was the controlled synthetic marker.
+
+Two validation failures established required syntax without mutation: double-encoded `Input` was rejected for missing `Bucket`/`Key`, and omitting `BatchConfiguration` was rejected because universal targets require valid batch size/window values. Both failed fixture cycles ran through cleanup before the successful cycle.
+
+CloudTrail recorded the successful `CreateSubscriber` as a default `eventsv2.amazonaws.com` management write with both resource ARNs, the role, universal target ARN, `LATEST`, `RUNNING`, and the one-event batch. It replaced the entire universal API input and filter pattern with `HIDDEN_DUE_TO_SECURITY_REASONS`. The separate `PutEvents` trigger again remained absent from default Event History.
+
+Final independent inventory found zero matching enhanced buses, subscribers, IAM roles, S3 buckets and SQS queues. The three universal-target cycles and the second retained-event replay cycle were completely deleted. Expected service-role delegation; no AWS vulnerability report.
 
 Expected functionality only; no private AWS vulnerability report.

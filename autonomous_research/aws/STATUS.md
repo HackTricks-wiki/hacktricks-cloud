@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.151 (2026-09-30) — EventBridge V2 universal-target role execution
+
+- SHIPPED #146 (live exact-scope role execution): `events:CreateSubscriber` on one enhanced bus/future subscriber name plus exact-role `iam:PassRole` with `iam:PassedToService=events.amazonaws.com` created a universal `s3:PutObject` target. The caller session had no S3 action; one matching event caused the passed role to write the exact synthetic object.
+- Universal targets require a supported `arn:aws:events:::aws-sdk:<service>:<action>` target, a correctly shaped JSON request in `UniversalTargetParameters.Input`, and explicit batch configuration. Double-encoded input and a missing batch were rejected before creation.
+- Published as conditional privilege escalation: any supported write API authorized by the passed role can run on a retained/natural event without caller-side target permission or `events:PutEvents`; it returns no role credentials and a cross-account subscriber only uses a role in the subscriber owner's account.
+- CloudTrail exposed the bus, subscriber, target action, role, state and batch, but redacted the complete API request and event filter. The trigger was absent from default Event History; target-service data logging remains action dependent.
+- Re-ran retained-event replay and again recovered a pre-subscriber synthetic event through a HORIZON subscriber; removing PassRole failed. All four new fixture cycles cleaned in traps. Final enhanced-bus, IAM-role, S3-bucket and SQS-queue inventories are empty. Expected functionality only; no AWS report.
+
 ## cont.150 (2026-09-30) — Cognito replica resilience destruction
 
 - SHIPPED #145 (documented effect + live exact-resource authorization): `UpdateUserPoolReplica` can deactivate the only secondary authentication plane and `DeleteUserPoolReplica` can then remove that inactive replica. The primary directory survives, but regional authentication and future failover capacity are lost until a paid KMS-backed replica and its regional controls are rebuilt.
