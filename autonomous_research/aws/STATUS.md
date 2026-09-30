@@ -99,6 +99,22 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - No CodeBuild, SSM, or IAM resource was created; cleanup was vacuous. Expected functionality only;
   no AWS report.
 
+## cont.108 (2026-09-30) — Marketplace Deployment buyer-secret poisoning
+
+- SHIPPED #88: a compromised seller principal with product-scoped
+  `aws-marketplace:PutDeploymentParameter` can create or replace API keys, OAuth credentials,
+  external IDs, license keys or dynamic endpoint parameters in a buyer's Quick Launch managed secret.
+- The attack is bounded to a seller-owned product, valid agreement and buyer service-linked role; it
+  becomes supply-chain compromise only when the approved template/integration consumes the value.
+- Live exact-product authorization reached product-not-found with only `PutDeploymentParameter`.
+  Another product and `TagResource` were denied, confirming product scoping and the optional tagging
+  dependency.
+- CloudTrail recorded the calls as management writes, retained product/agreement/client-token/name,
+  and redacted `secretString` as `***`.
+- Only impossible synthetic identifiers and a non-secret string were sent. No deployment parameter,
+  secret, product, agreement, IAM role or other resource was created. Expected functionality only;
+  no AWS report.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
