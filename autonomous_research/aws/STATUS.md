@@ -8,13 +8,29 @@ Research remains active on branch `research/aws-technique-audit` and PR #413. Th
 
 Unexpected security-impact findings are not published in this repository. Confirmed candidates from this sweep are documented only in the restricted local AWS report directory for separate disclosure.
 
-Cleanup exception currently being monitored: one HealthImaging image-set version remains in an AWS-controlled `LOCKED / UPDATING` transition after its accepted revert. Its datastore cannot be deleted until that transition completes. The automated delete trap is healthy and all supporting test buckets and roles are already absent. Do not mark this audit fully cleaned until both the exact image set and datastore are confirmed absent.
+Cleanup exception currently being monitored: a pre-existing HealthImaging test image-set version remains in an AWS-controlled workflow that blocks deletion of its tagged research datastore. Fresh exact child and parent deletion attempts still fail; the issue and cleanup identifiers are maintained only in the private AWS report. All supporting buckets, roles and secondary image sets are absent. Do not mark this audit fully cleaned until both the exact image set and datastore are confirmed absent.
 
 The Application Auto Scaling custom-resource signed-request candidate is now closed: the exact AWS reference URL shape reached the current integration, but registration-only access was rejected by the documented caller-side validation for API Gateway GET/PATCH and CloudWatch permissions. All owned endpoint and service-linked-role fixtures were deleted.
 
 CodeGuru Security is closed as a reasoned exclusion: the live scan API now returns the service's post-retirement `FeatureNoLongerAvailableException`; only inert default configuration and zero metrics remain readable. No public page was added and no state was changed.
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
+
+## cont.141 (2026-09-30) — Recycle Bin deleted-snapshot restoration
+
+- SHIPPED #133 (live exact-resource minimum): `ec2:RestoreSnapshotFromRecycleBin` alone on the exact accountless ARN restored a genuinely retained snapshot without `DescribeSnapshots`. Optional wildcard `ListSnapshotsInRecycleBin` enumerates IDs and recovery metadata.
+- The restored snapshot retained its ID, source volume ID, size, description, encryption flag and user tags, reached `completed`, and was usable through normal snapshot paths. Plaintext access separately requires volume/attach or EBS direct permissions plus applicable KMS access.
+- Corrected an important negative: account-qualified snapshot ARNs are wrong, but an exact accountless live ARN works. Synthetic nonexistent-ID DryRun evaluated against `snapshot/*`; that behavior is not generalized to live resources.
+- Default management telemetry uses `rbin.amazonaws.com` for rules and `ec2.amazonaws.com` for delete/list/restore. Restore is low-stealth and visible even when the ID is already known and enumeration is skipped.
+- Three bounded cycles exercised first-rule propagation, full list/restore, and exact-live scoping. No rule was locked. All rules, volumes, active snapshots and recycled snapshots are independently absent; no AMI, instance, attachment, key, role or bucket was created. Expected functionality only; no private report.
+
+## cont.140 (2026-09-30) — Inspector Scan and Signer Data exclusions
+
+- CLOSED Inspector Scan as a reasoned exclusion. `inspector-scan:ScanSbom` is authenticated, wildcard-only and analyzes only a caller-supplied CycloneDX document; it has no victim-resource selector, persisted scan or cross-account surface. A restricted `Resource: "*"` session succeeded and a fabricated resource ARN failed.
+- A known-vulnerable Log4j component produced 2 critical, 2 high and 3 medium findings. Adding a forged reserved scanner property plus a link-local metadata URL as an external reference produced identical counts and latency, with no reflected/fetched data or suppression signal.
+- CLOSED Signer Data as a reasoned exclusion. Unsigned `GetRevocationStatus` failed, nonexistent identifiers returned an empty set rather than an existence oracle, and the ordinary `signer` and new `signer-data` clients behaved identically.
+- Signer's dual-resource IAM boundary held: job-only access was denied on the profile, profile-only access was denied on the job, and both exact resources were required. The API returns only revoked identifiers already supplied by the caller, not job/profile expansion or payload/certificate data.
+- After indexing delay, `ScanSbom` appeared as default management events under `inspector-scan.amazonaws.com`, including success and denial. `GetRevocationStatus` remained absent from Event History; the ledger records that bounded negative without generalizing it to every trail/future implementation. No persistent resource was created, modified or left behind; only synchronous calls and expiring restricted STS sessions were used. No book technique or private report.
 
 ## cont.139 (2026-09-30) — SageMaker experiment metric poisoning
 
