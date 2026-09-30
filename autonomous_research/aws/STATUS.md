@@ -16,6 +16,12 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.166 (2026-10-01) — Partner Central Account API
+
+- SHIPPED #167: added the missing `partnercentral-account` service inventory plus wildcard `GetVerification` recovery of business registration/workflow data and time-limited completion URLs, and exact-resource recovery of alliance contact PII, verified training domains, relationship account IDs, invitation content and qualification topology.
+- Live calls established the `us-east-1` endpoint, authentication requirement, empty AWS/Sandbox inventories, default connection preferences, CloudTrail source, wildcard verification resource boundary and functional `partnercentral:VerificationType` separation. No Partner enrollment or workflow existed, so documented response fields are not presented as a live recovered token.
+- Profile/contact poisoning, qualification transfer, connection disruption and invitation-message hypotheses remain queued until a reversible enrolled Partner fixture exists. All disposable IAM users, policies and access keys were deleted; no Partner Central state or preference was mutated and final matching IAM inventories were empty.
+
 ## cont.165 (2026-10-01) — SimpleDB v2 domain export
 
 - SHIPPED #166 (new March 2026 API + exact-resource authorization): `sdb:StartDomainExport` can asynchronously copy a complete SimpleDB domain as JSON to same-account, cross-Region or explicitly supported cross-account S3 without `Select`, `GetAttributes`, ListDomains or DomainMetadata. Published exact domain scope, destination S3/KMS gates, full impact, Low stealth and telemetry.
