@@ -1181,6 +1181,7 @@
     - [Az - Entra ID Governance (Entitlement Management) Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-entra-id-governance-privesc.md)
     - [Az - Analysis Services Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-analysis-services-privesc.md)
   - [Az - Persistence](pentesting-cloud/azure-security/az-persistence/README.md)
+    - [Az - Container Registry Persistence](pentesting-cloud/azure-security/az-persistence/az-container-registry-persistence.md)
     - [Az - Intune Persistence](pentesting-cloud/azure-security/az-persistence/az-intune-persistence.md)
     - [Az - Automation Accounts Persistence](pentesting-cloud/azure-security/az-persistence/az-automation-accounts-persistence.md)
     - [Az - Cloud Shell Persistence](pentesting-cloud/azure-security/az-persistence/az-cloud-shell-persistence.md)
