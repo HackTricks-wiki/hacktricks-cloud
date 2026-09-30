@@ -29,6 +29,17 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
   without subscribing, purchasing, deploying, or redeeming legal-document URLs. The temporary IAM
   role and inline policy were deleted and independently verified absent. No AWS defect was found.
 
+## cont.103 (2026-09-30) — Chime SDK technique metadata completion
+
+- Added explicit minimum-permission/prerequisite blocks to every executable Chime SDK privilege
+  escalation, post-exploitation and persistence technique.
+- Corrected PassRole telemetry: `iam:PassRole` has no standalone CloudTrail event; the receiving
+  media-pipeline request records the role ARN and downstream service-role activity supplies the
+  execution evidence.
+- Replaced generic Voice/SIP and media-pipeline logging labels with the actual API families, and
+  normalized every expandable section to `Logs generated`. No new AWS calls or resources were
+  needed because the existing live authorization/CloudTrail matrix supported the corrections.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
