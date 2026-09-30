@@ -16,6 +16,17 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.124 (2026-09-30) — AWS RTB Fabric foundational audit
+
+- SHIPPED #107 (current API/IAM model plus live responder mutation): added RTB Fabric inventory and exact-responder `UpdateResponderGateway` coverage. Replacing a managed ASG/EKS backend can redirect future OpenRTB traffic, expose bid-request data, manipulate responses or cause an outage, subject to endpoint-role, reachability and health/discovery boundaries.
+- SHIPPED #108 (current API model): exact-link `UpdateLinkModuleFlow` can force no-bids, throttle TPS, filter OpenRTB attributes or inject headers. Published as application integrity/availability manipulation rather than IAM privilege escalation.
+- SHIPPED #109 (conditional): exact-requester `CreateOutboundExternalLink` stages a caller-selected public HTTP/HTTPS endpoint. Public coverage explicitly requires a separate application-selection step before claiming any traffic or data exposure.
+- NEGATIVE / secure tested boundary: a synthetic EKS managed-endpoint configuration accepted an API Gateway URI at responder creation and in a successful active-state update, but RTB made no HTTP request and exposed no authorization metadata. The only capture was the harness's own unauthenticated probe. An immediate URI-based SSRF/EKS-token leak is therefore not claimed.
+- CloudTrail confirmed create/update/delete as default management writes and get as a management read. The EKS URI, cluster/namespace/resource names and role ARN were visible in the update request, the CA chain was masked as `***`, and `resources` was null. Fifteen-second lifecycle polling generated a conspicuous volume of getter events.
+- Creation reached `ACTIVE` at check 49. Deletion took 77 15-second polls before the gateway disappeared; independent inventory then found zero gateways, RTB-managed ENIs, test Lambdas/APIs/log groups and temporary roles.
+- Cleanup exception under active retry: the test-created `AWSServiceRoleForRTBFabric` remains protected and has no dependencies, but supported deletion repeatedly returns an internal failure with an empty usage list. Direct IAM deletion is correctly blocked as `UnmodifiableEntity`. No chargeable/network fixture remains, no security impact is established, and no new RTB fixture will be created until this role is absent.
+- Expected functionality only; no private AWS vulnerability report.
+
 ## cont.123 (2026-09-30) — Route 53 ARC readiness cross-account persistence
 
 - SHIPPED #106 (live authorization plus current API contract): wildcard-only
