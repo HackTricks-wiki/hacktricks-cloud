@@ -587,6 +587,7 @@
     - [AWS - Payment Cryptography Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-payment-cryptography-post-exploitation/README.md)
     - [AWS - Parallel Computing Service (PCS) Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-pcs-post-exploitation/README.md)
     - [AWS - Pinpoint Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-pinpoint-post-exploitation/README.md)
+    - [AWS - Amazon Q in Connect Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-q-in-connect-post-exploitation/README.md)
     - [AWS - RDS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md)
     - [AWS - Redshift Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-redshift-post-exploitation/README.md)
     - [AWS - Resilience Hub Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-resilience-hub-post-exploitation/README.md)

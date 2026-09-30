@@ -67,6 +67,23 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - Safe live inventory found zero registered domains. No transfer was attempted, no fixture was
   created, and cleanup was vacuous. Expected functionality only; no AWS report.
 
+## cont.106 (2026-09-30) — Amazon Q in Connect session traces
+
+- SHIPPED #86: `wisdom:ListMessages` can disclose customer/agent/bot text, citations, guardrail
+  state and tool results; `wisdom:ListSpans` can expose system instructions, LLM inputs/outputs,
+  reasoning, tool calls/results, prompt/model data, contact IDs and guardrail assessments.
+- Live least-privilege proof used an inline STS session policy. Both reads reached resource-not-found
+  on one exact synthetic Session ARN; another Session ARN and `GetSession` were denied. The reads
+  therefore require neither broad session access nor the metadata getter.
+- `SearchSessions` independently reached the service with `Resource: "*"`; its current filter is
+  exact `NAME EQUALS`, not unfiltered enumeration. The public page documents known-ID fallbacks,
+  impact, High/Medium stealth, and `qconnect.amazonaws.com` CloudTrail signals.
+- Event History retained the exact IDs/name filter and recorded each failed probe as a read-only
+  management event with `responseElements:null`; successful response-body logging remains unclaimed.
+- The allowed Region had zero assistants, and no assistant/session was created because sessions have
+  no delete API. Two preliminary IAM roles were cleaned and independently verified absent; the final
+  STS-policy test created no resources. Expected functionality only; no AWS report.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
