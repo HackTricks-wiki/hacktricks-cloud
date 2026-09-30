@@ -16,6 +16,23 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.116 (2026-09-30) — AppStream rolling fleet-image takeover
+
+- SHIPPED #96 (conditional attacker image): exact-fleet `appstream:UpdateFleet` changed a stopped
+  On-Demand fleet between AWS-owned Windows Server 2022 images while preserving its existing
+  machine role without Describe or caller-side PassRole.
+- For a running same-OS fleet, documented behavior rolls new/replacement instances onto the new
+  image without interrupting active sessions. An attacker-controlled same-account or fleet-shared
+  image can therefore persist code and conditionally inherit the fleet role.
+- The AWS-owned public-image branch required only the exact fleet ARN. The public technique
+  conservatively includes exact target-image authorization for customer-owned/shared targets, as
+  exposed by the service-authorization model; that target class was unavailable live.
+- CloudTrail retained the target image ARN and returned the full resulting fleet, including the
+  unchanged role, state, type and zero capacity.
+- The fleet stayed at desired/running capacity zero and was never started. It and both disposable
+  roles were deleted; final fleet/AppStream-ENI inventories were zero. Expected functionality; no
+  AWS report.
+
 ## cont.115 (2026-09-30) — AppStream Elastic-fleet SYSTEM session-script persistence
 
 - SHIPPED #95: exact-fleet `appstream:UpdateFleet` plus exact-object `s3:GetObject` set an Elastic
