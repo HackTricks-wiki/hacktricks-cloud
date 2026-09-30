@@ -16,6 +16,22 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.112 (2026-09-30) — AppStream existing image-builder administrator URL
+
+- SHIPPED #92: exact-builder `appstream:CreateImageBuilderStreamingURL` gives direct access to an
+  existing running builder without create/update, Describe, or caller-side PassRole permissions.
+- Non-domain-joined Windows builders offer local Administrator; Linux automatically uses a root
+  `ImageBuilderAdmin` session. This exposes the golden-image filesystem/private network and any
+  existing `appstream_machine_role` credentials.
+- Domain-joined Windows credentials and configured streaming access endpoints are explicit
+  constraints; the public technique does not present every builder as automatically reachable.
+- Live least-privilege proof reached builder-not-found on one exact ARN; another builder and
+  `DescribeImageBuilders` were denied. The account had zero image builders.
+- CloudTrail recorded the call as a management write, retained builder name/validity, and replaced
+  the returned URL with `HIDDEN_DUE_TO_SECURITY_REASONS`.
+- No builder, image, URL, session, role, network resource, or other asset was created. Expected
+  functionality only; no AWS report.
+
 ## cont.111 (2026-09-30) — AppStream existing-fleet streaming URL
 
 - SHIPPED #91: exact stack+fleet `appstream:CreateStreamingURL` creates a custom-user bearer session
