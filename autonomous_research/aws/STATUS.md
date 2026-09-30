@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.165 (2026-10-01) — SimpleDB v2 domain export
+
+- SHIPPED #166 (new March 2026 API + exact-resource authorization): `sdb:StartDomainExport` can asynchronously copy a complete SimpleDB domain as JSON to same-account, cross-Region or explicitly supported cross-account S3 without `Select`, `GetAttributes`, ListDomains or DomainMetadata. Published exact domain scope, destination S3/KMS gates, full impact, Low stealth and telemetry.
+- A restricted role allowed only one synthetic domain reached `NoSuchDomainException`; a different domain was denied on its exact ARN. Explicit denies on every SimpleDB read and `s3:*` did not prevent the allowed request from reaching domain resolution. Both failures arrived as CloudTrail management writes: the authorized call retained domain/bucket parameters and resource ARNs, while the IAM denial redacted parameters but retained the domain ARN. `ListExports` was empty before and after.
+- No end-to-end export was launched because the new API has no cancel/delete operation and records remain listable for three months. Current AWS documentation establishes background execution, standard JSON layout, cross-account `s3BucketOwner`, destination prerequisites and CloudTrail fields; public text does not overclaim a live-tested S3 permission minimum.
+- Closed the stale exclusion that `StartDomainExport` did not exist and removed `simpledbv2` from the zero-coverage/deprecated set. The disposable role/policy was deleted; final matching roles, domains and exports were empty. No bucket, object, key or irreversible export record was created. Expected functionality only, no private AWS report and no new cleanup debt.
+
 ## cont.164 (2026-10-01) — CloudWatch Omni mutable-view privilege escalation
 
 - SHIPPED #165 (verified end to end): view-scoped `cloudwatch:GetRecords`, wildcard query actions and either `CreateView` on `view/*` or exact-view `UpdateView` created/expanded a raw `logs.default` broker. Restricted readers recovered real alert-history rows while an explicit identity-policy deny still blocked direct `dataset/default` queries.

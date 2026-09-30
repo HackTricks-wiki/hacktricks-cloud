@@ -873,6 +873,7 @@
     - [AWS - Security Lake Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-security-lake-post-exploitation/README.md)
     - [AWS - SES Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-ses-post-exploitation/README.md)
     - [AWS - Shield Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-shield-post-exploitation/README.md)
+    - [AWS - SimpleDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-simpledb-post-exploitation/README.md)
     - [AWS - Snow Device Management Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-snow-device-management-post-exploitation/README.md)
     - [AWS - Snowball Edge Job Management Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-snowball-post-exploitation/README.md)
     - [AWS - SNS Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/README.md)
