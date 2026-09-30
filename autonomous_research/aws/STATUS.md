@@ -16,6 +16,23 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.113 (2026-09-30) — AppStream existing app-block-builder takeover
+
+- SHIPPED #93: exact-builder `appstream:CreateAppBlockBuilderStreamingURL` creates a bearer URL to
+  an existing running app-package builder without Describe, create/update, association, or
+  caller-side PassRole permissions.
+- The administrative Windows desktop can access the builder's existing `appstream_machine_role`.
+  When an APPSTREAM2 app block is associated, finishing a malicious package also creates a
+  conditional Elastic-fleet software-supply-chain path.
+- Live exact-resource proof reached builder-not-found only for the allowed ARN; another builder and
+  `DescribeAppBlockBuilders` were denied. A disposable associated builder then returned a real
+  60-second URL, which was never printed or redeemed.
+- CloudTrail recorded the successful call as a default management write, retained builder name and
+  validity, and replaced the returned URL with `HIDDEN_DUE_TO_SECURITY_REASONS`.
+- The builder was stopped, disassociated, and deleted. The app block, empty package bucket, and
+  temporary service role were deleted. Final inventories showed zero matching builders, app
+  blocks, associations, AppStream ENIs, bucket, or role. Expected functionality; no AWS report.
+
 ## cont.112 (2026-09-30) — AppStream existing image-builder administrator URL
 
 - SHIPPED #92: exact-builder `appstream:CreateImageBuilderStreamingURL` gives direct access to an
