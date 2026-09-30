@@ -278,6 +278,7 @@
   - [GCP - Persistence](pentesting-cloud/gcp-security/gcp-persistence/README.md)
     - [GCP - AlloyDB Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-alloydb-persistence.md)
     - [GCP - API Keys Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-api-keys-persistence.md)
+    - [GCP - Pub/Sub Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-pub-sub-persistence.md)
     - [GCP - Apigee Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-apigee-persistence.md)
     - [GCP - App Engine Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-app-engine-persistence.md)
     - [GCP - Artifact Registry Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md)
