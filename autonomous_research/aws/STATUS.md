@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.147 (2026-09-30) — AppConfig experiment-overlay poisoning
+
+- SHIPPED #142 (live exact-resource and consumer proof): `CreateExperimentDefinition` can store attacker-selected control/treatment values for an already deployed feature flag without `CreateHostedConfigurationVersion`; experiment start/update overlays them without adding a hosted version.
+- `StartExperimentRun` is not a deployment-authority bypass: it required dependent `appconfig:StartDeployment` on the application/profile/environment and otherwise-unlisted `AppConfig.ServiceManaged` strategy. `UpdateExperimentRun` required exact application/definition/run plus the same dependency; run 999 was denied.
+- Separate exact-run calls pinned synthetic entity `victim-123` to `t1` and raised exposure from 0% to 100%. The official disposable AppConfig Agent returned `__t1_override__` with `enabled: true` while the only hosted version remained disabled.
+- Found restrictive documentation drift: application-only definition creation was denied on the referenced profile ARN, while application + profile succeeded; the current authorization row lists only application. Combined exposure+override updates were securely rejected because only one deployment attribute can change per request.
+- CloudTrail retained full audience/treatment snapshots; override requests were masked but responses echoed entity mappings in clear. Each mutation's paired deployment named the run ARN and service-managed strategy. Added explicit consumer/impact/billing limits and Low stealth.
+- Four guarded fixtures, all AppConfig children/parents/strategies, and the local Agent container/new image were removed; both regional application inventories are empty. Expected behavior only; no private report.
+
 ## cont.146 (2026-09-30) — Cognito TOTP-factor deletion
 
 - SHIPPED #141 (live exact-resource minimum): `cognito-idp:AdminDeleteSoftwareToken` alone on one exact user-pool ARN deleted a known user's registered TOTP factor; a different pool ARN was denied. Optional `AdminGetUserAuthFactors` exposes the user's factor types/preferences but no secret.
