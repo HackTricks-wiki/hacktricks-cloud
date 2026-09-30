@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.157 (2026-09-30) — Snowball physical data export and device credentials
+
+- SHIPPED #152 (live wildcard boundary + documented credential return): `GetJobManifest` and `GetJobUnlockCode` require wildcard Snowball permissions and return the two credentials needed to unlock a `WithCustomer` appliance. Published the 60-minute URL, 360-day credential, physical/network reach and no-IAM-credential boundaries with default management telemetry.
+- SHIPPED #153 (live action/PassRole split + documented export lifecycle): `UpdateJob` alone can replace address/resources during an export job's roughly 60-minute `New` window while preserving the existing data-access role. Supplying a new role separately triggered `iam:PassRole`; omitting it reached the service with only `UpdateJob`. Published the conditional physical S3 exfiltration path, exact role/KMS/data limits and conspicuous logistics evidence.
+- SHIPPED #154 (live PassRole gate + documented role execution): `CreateJob` with a role failed without exact-role PassRole and passed that authorization gate with `iam:PassedToService=importexport.amazonaws.com`. Existing-customer accounts can use the role to export selected S3 data to a physical device; this is explicitly bounded to the role's S3/KMS permissions and is not arbitrary role credential theft.
+- Added complete job/address/cluster/pricing/shipping enumeration, the no-resource-ARN/no-service-condition authorization model, sensitive job-report/address metadata, and bounded early-state cancellation DoS.
+- No paid order was placed: the current client/live endpoint exposed non-security device-enum availability drift, every request remained invalid, and final jobs, addresses, pricing entries and usage stayed empty/zero. No infrastructure, shipment or cleanup debt; no AWS report.
+
 ## cont.156 (2026-09-30) — Snow Device Management remote physical-device control
 
 - SHIPPED #151 (documented current model + safe live preflight): added the previously missing Snow Device Management inventory and exact device/task/read authorization map. `CreateTask` has no resource type and therefore requires `Resource: "*"`; its only commands are parameterless `unlock` and `reboot` for up to ten managed-device IDs.
