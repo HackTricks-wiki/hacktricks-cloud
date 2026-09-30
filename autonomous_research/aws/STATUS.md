@@ -18,11 +18,11 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 
 ## cont.164 (2026-10-01) — CloudWatch Omni mutable-view privilege escalation
 
-- SHIPPED #165 (verified end to end): view-scoped `cloudwatch:GetRecords`, wildcard query actions and exact-view `UpdateView` expanded a delegated view from a narrow definition to raw `logs.default` access. The restricted reader recovered 15 real alert-history rows while an explicit identity-policy deny still blocked direct `dataset/default` queries.
+- SHIPPED #165 (verified end to end): view-scoped `cloudwatch:GetRecords`, wildcard query actions and either `CreateView` on `view/*` or exact-view `UpdateView` created/expanded a raw `logs.default` broker. Restricted readers recovered real alert-history rows while an explicit identity-policy deny still blocked direct `dataset/default` queries.
 - Live authorization treats a view as synthetic `arn:aws:cloudwatch:<region>:<account>:dataset/view.<name>` for `GetRecords`; it does not re-evaluate the caller against the view's underlying default Dataset. The update action accepted the exact returned `view/view.<name>/<uuid>` ARN and needed no Get/List or default-Dataset read.
 - Published this as a dangerous expected security-definer composition, not an AWS defect. `UpdateView` intentionally controls the reusable query definition. Coverage explicitly does not claim a bypass of Omni access-grant `dataScope`, which was not part of the direct-IAM fixture.
 - CloudTrail recorded the complete replacement SQL in the `UpdateView` request and response. The outer query remained hidden and returned rows were absent, so installation is Low stealth but subsequent collection is less reconstructable.
-- All three disposable views, their query sessions and matching IAM roles/policies were removed. Final USER-view and matching-role inventories were empty; no domain, space, grant, forwarding, compute or third-party resource was created. Expected functionality only, no private AWS report and no new cleanup debt.
+- All four disposable views, their query sessions and matching IAM roles/policies were removed. Final USER-view and matching-role inventories were empty; no domain, space, grant, forwarding, compute or third-party resource was created. Expected functionality only, no private AWS report and no new cleanup debt.
 
 ## cont.163 (2026-10-01) — CloudWatch Omni integration rebinding
 
