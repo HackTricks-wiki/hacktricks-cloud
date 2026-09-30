@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.138 (2026-09-30) — SageMaker Edge Manager EOL exclusion
+
+- Audited the still-shipped `sagemaker-edge` runtime model and legacy SageMaker fleet/package/deployment operations against AWS's current service state. AWS ended Edge Manager on April 26, 2024, deleted service-held fleet/device/package references and states that applications calling its APIs no longer work.
+- Live inert probes matched retirement: both allowed Regions' Edge Runtime hostnames timed out/unreachable; `ListDeviceFleets`, `ListEdgePackagingJobs` and `ListEdgeDeploymentPlans` returned terminal throttling even with retries disabled.
+- Excluded obsolete `GetDeviceRegistration`, `GetDeployments` and heartbeat-forgery ideas from the book. A current SDK model is not sufficient reason to publish an unusable technique.
+- Recorded the residual-resource boundary: old model artifacts, IoT things/certificates/role aliases, IAM roles and Greengrass components can remain, but must be assessed through their live owning services and existing S3/IoT/IAM/Greengrass coverage.
+- No create/register/deploy/heartbeat/delete action was called and no AWS resource or temporary infrastructure was created. No private report.
+
 ## cont.137 (2026-09-30) — Amazon Augmented AI human-review output recovery
 
 - SHIPPED #131 (live exact-resource authorization plus documented output contract): exact-loop `sagemaker:DescribeHumanLoop` resolves the completed review's timestamped S3 `output.json`; independent `s3:GetObject` and optional `kms:Decrypt` recover original loop input, upstream AI request/response context, activation conditions, human answers, submission details and private-workforce metadata.
