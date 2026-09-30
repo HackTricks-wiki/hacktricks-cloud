@@ -16,6 +16,23 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.114 (2026-09-30) — AppStream Elastic-application launch poisoning
+
+- SHIPPED #94: exact-application `appstream:UpdateApplication` replaced an enabled Windows
+  application's launch path with PowerShell and stored attacker-controlled arguments. No Describe,
+  S3, fleet/app-block mutation, or caller-side PassRole permission was present.
+- This is user-triggered, durable code execution for an already associated Elastic-fleet
+  application. It can expose mapped user data, fleet network access, and an existing
+  `appstream_machine_role`; separate `CreateStreamingURL` access provides a self-trigger.
+- Exact boundary: only the application ARN was required for launch fields. A different application
+  and app-block-only policy were denied. Supplying `AppBlockArn` required both exact resources.
+- CloudTrail recorded the full executable path and launch arguments in the request and returned the
+  complete resulting application definition, giving defenders a high-fidelity detection point.
+- Two disposable applications/app blocks and their six harmless S3 objects were deleted. Both
+  exact buckets were absent and final matching application/app-block inventories were zero. No
+  fleet, stack, URL, session, machine role, instance, or network resource was created. Expected
+  functionality; no AWS report.
+
 ## cont.113 (2026-09-30) — AppStream existing app-block-builder takeover
 
 - SHIPPED #93: exact-builder `appstream:CreateAppBlockBuilderStreamingURL` creates a bearer URL to
