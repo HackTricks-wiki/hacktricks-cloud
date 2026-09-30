@@ -24,6 +24,16 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - Default management telemetry uses `rbin.amazonaws.com` for rules and `ec2.amazonaws.com` for delete/list/restore. Restore is low-stealth and visible even when the ID is already known and enumeration is skipped.
 - Three bounded cycles exercised first-rule propagation, full list/restore, and exact-live scoping. No rule was locked. All rules, volumes, active snapshots and recycled snapshots are independently absent; no AMI, instance, attachment, key, role or bucket was created. Expected functionality only; no private report.
 
+## cont.142 (2026-09-30) — Systems Manager for SAP foundational audit
+
+- SHIPPED #134: `ssm-sap:GetDatabase` on `*` exposes the configured Secrets Manager identifier for each SAP HANA `ADMIN` credential. With a separate exact-secret `secretsmanager:GetSecretValue` grant and applicable KMS access, this becomes SAP database-administrator credential recovery; it does not itself expose the value or grant AWS IAM/EC2 access.
+- SHIPPED #135: exact-application `ssm-sap:StopApplication` stops registered SAP processes and can include a connected HANA DBMS. EC2 shutdown is explicitly bounded by the caller-side `ec2:StopInstances` check; `StopApplication` alone is not presented as host-shutdown authority.
+- Added the missing service inventory for applications, components, database topology/ports/credential references, operation milestones, configuration checks, tags and RESTORE resource-permission relationships.
+- Live inventory in `us-east-1` and `eu-west-1` was empty and unsigned access failed. Restricted nonexistent-resource probes confirmed `GetDatabase` is wildcard-only. A fabricated application cannot validate exact `StopApplication` scope because unresolved IDs authorize as `*`; current AWS authorization/troubleshooting docs explicitly establish exact ARNs for real applications.
+- Rejected weak overclaims: RESTORE resource permission is only one prerequisite to a destructive AWS Backup restore; settings-based credential/database connection poisoning remains fixture-dependent; registration invokes fixed service documents rather than caller-selected code.
+- CloudTrail indexed every restricted probe: `GetDatabase` was a management read and `StopApplication` a management write, both retaining the target and STS session, including denials. Stop operations also generate direct EventBridge state changes and downstream SSM/optional EC2 evidence.
+- No application, EC2/SSM node, secret, key, AWS Backup object, role or other fixture was created. Both regional inventories remain empty and `AWSServiceRoleForAWSSSMForSAP` is absent. Expected functionality only; no private report.
+
 ## cont.140 (2026-09-30) — Inspector Scan and Signer Data exclusions
 
 - CLOSED Inspector Scan as a reasoned exclusion. `inspector-scan:ScanSbom` is authenticated, wildcard-only and analyzes only a caller-supplied CycloneDX document; it has no victim-resource selector, persisted scan or cross-account surface. A restricted `Resource: "*"` session succeeded and a fabricated resource ARN failed.
