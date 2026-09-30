@@ -514,6 +514,7 @@
     - [Aws Sagemaker Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md)
     - [AWS - SNS Persistence](pentesting-cloud/aws-security/aws-persistence/aws-sns-persistence/README.md)
     - [AWS - Secrets Manager Persistence](pentesting-cloud/aws-security/aws-persistence/aws-secrets-manager-persistence/README.md)
+    - [AWS - Security Agent Persistence](pentesting-cloud/aws-security/aws-persistence/aws-security-agent-persistence/README.md)
     - [AWS - Security Hub Persistence](pentesting-cloud/aws-security/aws-persistence/aws-security-hub-persistence/README.md)
     - [AWS - Security Incident Response Persistence](pentesting-cloud/aws-security/aws-persistence/aws-security-incident-response-persistence/README.md)
     - [AWS - Timestream Persistence](pentesting-cloud/aws-security/aws-persistence/aws-timestream-persistence/README.md)

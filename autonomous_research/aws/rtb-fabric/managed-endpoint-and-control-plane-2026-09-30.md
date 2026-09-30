@@ -63,6 +63,7 @@ No private AWS security report was created.
 - Immediately afterward, independent inventory found zero requester gateways, responder gateways, `RTBFabricManaged=true` ENIs, test Lambdas, HTTP APIs, log groups and `ht-rtb-capture-*` IAM roles.
 - The test-created `AWSServiceRoleForRTBFabric` remained after every dependent resource disappeared. Repeated supported `DeleteServiceLinkedRole` tasks returned `FAILED` with reason `Cannot delete the role due to internal errors` and an empty `RoleUsageList`. Direct policy detach/role delete correctly returned `UnmodifiableEntity` because AWS protects service-linked roles.
 - The role has only `RTBFabricServiceRolePolicy`, no inline policies or tags, and its last-use timestamp corresponds to the gateway deletion path. Slow supported deletion retries remain active. This is an operational cleanup defect/caveat without demonstrated security impact; do not create more RTB fixtures until the role is absent.
+- Continuation 126 retried the supported deletion path with task `40ede7ee-5daf-4d5a-949f-1f30368d3e2f`. It again reached `FAILED` with `Cannot delete the role due to internal errors` and an empty `RoleUsageList`; the role's last-use timestamp remained `2026-09-30T14:09:02Z`.
 
 ## Next tests
 

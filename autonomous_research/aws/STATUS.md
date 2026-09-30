@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.126 (2026-09-30) — AWS Security Agent SSO membership persistence
+
+- SHIPPED #111 (current API/IAM/user-guide contract): exact-space `CreateMembership` can assign an existing controlled IAM Identity Center user to an SSO-configured Agent Space, preserving web-application access after the attacker's original AWS session is revoked.
+- Bounded the technique to service-level persistence: current memberships support only `USER` / `MEMBER`; the call does not create an Identity Center user, grant AWS IAM credentials or apply to IAM-only access, and effective activity remains constrained by the assigned space, connected resources and existing application role.
+- The authorization table lists no dependent `sso:*` or `iam:PassRole` action. The public API does not state that the opaque `membershipId` is always an Identity Store `UserId`, so the technique avoids that unsupported mapping and requires an identifier from the authorized assignment workflow.
+- Added minimum prerequisites, impact, Low stealth, an expandable CloudTrail/membership/SSO evidence table, removal guidance, the enum cross-reference and book navigation entry.
+- The training account still has zero Security Agent spaces/applications/integrations, so no live SSO assignment fixture was created. This is documented expected functionality backed by the current API, CLI, authorization table and user-guide access contract; exact identifier provenance remains a future controlled-fixture check. No AWS vulnerability report.
+- Retried supported deletion of the no-cost RTB Fabric service-linked role. Task `40ede7ee-5daf-4d5a-949f-1f30368d3e2f` again failed with AWS's internal-error reason and an empty usage list; the role remains the only tracked cleanup exception and no RTB gateway/network/test fixture exists.
+
 ## cont.125 (2026-09-30) — AWS Security Agent assessment-data and action-boundary refresh
 
 - SHIPPED #110 (current API/IAM model): exact-space `GetArtifact` and `BatchGetFindings` can disclose uploaded architecture/configuration and detailed assessment material, including attack/verification scripts, script URLs/instructions, environment-variable values, code locations, reasoning and remediation repository/PR links.

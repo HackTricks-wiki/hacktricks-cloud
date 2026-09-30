@@ -29,6 +29,14 @@
 - `UpdateFinding` can downgrade status/risk, and `BatchDeletePentests` destroys pentest records. Both are exact Agent Space writes and list `kms:Decrypt` for a customer-managed space key.
 - All techniques now have explicit minimum permissions, impact, stealth and expandable telemetry tables.
 
+### SSO membership persistence
+
+- `CreateMembership` is exact-Agent-Space scoped and grants an existing user access to one space inside an application. The authorization table lists no dependent `sso:*` or `iam:PassRole` action.
+- The persistence branch applies only when the application uses IAM Identity Center and the attacker already controls an existing user. The current API supports only `USER` plus role `MEMBER`; it does not create an Identity Center user or grant AWS IAM credentials.
+- AWS's public model describes `membershipId` only as the unique membership identifier. It does not expose a separate username/email request field, so the public technique deliberately tells operators to use the opaque identifier produced or selected by the authorized assignment workflow rather than claiming it is always an Identity Store `UserId`.
+- The membership survives loss of the creating AWS session and remains until `DeleteMembership` or identity disablement. Its impact is limited to the assigned space and the capabilities/resources available through that application's existing configuration and service role.
+- This expected-functionality path was validated against the current API, CLI, user guide, CloudTrail contract and authorization model. The training account's empty Security Agent inventory meant no SSO application/space existed for a safe live assignment test.
+
 ## API/version observations
 
 - Installed AWS CLI: `2.34.45`. It exposes the core artifact, pentest, finding, membership and integration commands.
@@ -37,7 +45,7 @@
 
 ## Deferred expected-technique tests
 
-1. `CreateMembership`: determine the exact Identity Center/user identifier boundary and whether exact-space permission alone creates durable service access for a controlled existing identity.
+1. `CreateMembership`: on the next controlled SSO fixture, confirm the exact provenance/format of `membershipId`, exact-space enforcement, login survival after caller revocation and deletion invalidation.
 2. `CreateOneTimeLoginSession`: this exact-Agent-Space permission-only/current-table action lacks a stable public API page; determine bearer/session output, lifetime, replay, and CloudTrail redaction without exposing tokens.
 3. `UpdateIntegratedResources`: test whether exact Agent Space **and** exact Integration permissions are both enforced, and which repository capabilities (code review/remediation/pentest context) can be enabled or removed.
 4. `InitiateProviderRegistration`: verify CSRF-state binding, redirect lifetime/replay and whether provider registration can be completed only by the initiating AWS identity/session.
