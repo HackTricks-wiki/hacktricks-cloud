@@ -34,6 +34,14 @@ REFERENCES_HEADING_RE = re.compile(r"^## References\s*$", re.MULTILINE)
 REFERENCE_LINE_RE = re.compile(
     r"^- \[(\d+)\] \[([^\]\n]+)\]\((.+)\)\s*$", re.MULTILINE
 )
+PROTECTED_MARKUP_RE = re.compile(
+    r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}"
+    r"|\{\{#[^{}]*\}\}"
+    r"|<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+    r"|^## References[ \t]*$"
+    r"|^- \[\d+\] \[[^\]\n]+\]\([^\n]+\)[ \t]*$",
+    re.MULTILINE,
+)
 
 MODEL_PREFIX_ENCODINGS = [
     ("gpt-5", "o200k_base"),
@@ -216,6 +224,58 @@ def preserve_reference_markup(source: str, translated: str) -> str:
 
     return REFERENCE_LINE_RE.sub(restore_reference, restored)
 
+
+def translate_around_protected_markup(language, text, file_path, model, client):
+    """Retry malformed Markdown with structural spans held outside model output."""
+    matches = list(PROTECTED_MARKUP_RE.finditer(text))
+    if not matches:
+        raise RuntimeError(f"Cannot isolate changed Markdown structure in {file_path}")
+
+    markers = [f"__HTC_STRUCT_{index:04d}__" for index in range(len(matches))]
+    masked = []
+    cursor = 0
+    for marker, match in zip(markers, matches):
+        masked.extend((text[cursor:match.start()], marker))
+        cursor = match.end()
+    masked.append(text[cursor:])
+    translated = translate_text(language, "".join(masked), file_path, model, client=client)
+
+    positions = [translated.find(marker) for marker in markers]
+    if all(translated.count(marker) == 1 for marker in markers) and positions == sorted(positions):
+        for marker, match in zip(markers, matches):
+            translated = translated.replace(marker, match.group(), 1)
+    else:
+        # A model that removes placeholders cannot damage the source markup:
+        # translate only the prose between the protected spans.
+        def prose(segment):
+            if not segment.strip():
+                return segment
+            leading = len(segment) - len(segment.lstrip())
+            trailing = len(segment) - len(segment.rstrip())
+            end = len(segment) - trailing if trailing else len(segment)
+            return (
+                segment[:leading]
+                + translate_text(language, segment[leading:end], file_path, model, client=client)
+                + segment[end:]
+            )
+
+        fragments = []
+        cursor = 0
+        for match in matches:
+            fragments.extend((prose(text[cursor:match.start()]), match.group()))
+            cursor = match.end()
+        fragments.append(prose(text[cursor:]))
+        translated = "".join(fragments)
+
+    if preserve_mdbook_directives(text, translated) == text and translated != text:
+        raise RuntimeError(f"Could not preserve mdBook directives in {file_path}")
+    if preserve_reference_markup(text, translated) == text and translated != text:
+        raise RuntimeError(f"Could not preserve reference markup in {file_path}")
+    prose_words = re.findall(r"\b[A-Za-z]{3,}\b", PROTECTED_MARKUP_RE.sub("", text))
+    if translated == text and len(prose_words) >= 30:
+        raise RuntimeError(f"Protected retry left translatable prose unchanged in {file_path}")
+    return translated
+
 def reportTokens(prompt, model):
     encoding = _get_encoding_for_model(model)
     # print number of tokens in light gray, with first 50 characters of prompt in green. if truncated, show that it is truncated
@@ -342,6 +402,7 @@ Translate the relevant English text to {language} and return the translation kee
 - Keep the heading `## References` exactly in English.
 - Keep every `<sup>[[N]](#references)</sup>` citation unchanged.
 - In numbered reference bullets, translate only the source title. Do not change the number, order, or URL.
+- If placeholders like `__HTC_STRUCT_0000__` appear, preserve every one exactly once in the same order.
 
 Also don't add any extra stuff in your response that is not part of the translation and markdown syntax."""},
         {"role": "user", "content": text},
@@ -399,13 +460,17 @@ Also don't add any extra stuff in your response that is not part of the translat
     # This preserves exact mdBook syntax while retaining translated prose.
     restored = preserve_mdbook_directives(text, response_message)
     if restored == text and response_message != text and MDBOOK_DIRECTIVE_RE.search(text):
-        raise RuntimeError(f"Translation changed mdBook directives in {file_path}")
+        print(f"Retrying {file_path} with protected mdBook markup")
+        return translate_around_protected_markup(language, text, file_path, model, client)
     response_message = restored
     restored = preserve_reference_markup(text, response_message)
     if restored == text and response_message != text and (
-        REFERENCES_HEADING_RE.search(text) or LINKED_CITATION_RE.search(text)
+        REFERENCES_HEADING_RE.search(text)
+        or LINKED_CITATION_RE.search(text)
+        or REFERENCE_LINE_RE.search(text)
     ):
-        raise RuntimeError(f"Translation changed reference markup in {file_path}")
+        print(f"Retrying {file_path} with protected reference markup")
+        return translate_around_protected_markup(language, text, file_path, model, client)
     response_message = restored
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
