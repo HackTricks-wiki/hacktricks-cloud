@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.160 (2026-10-01) — Chime SDK live-connector publishing-key disclosure
+
+- SHIPPED #157 (exact-resource authorization + documented secret response): `chime:GetMediaPipeline` on one media-pipeline ARN returns a live connector's complete RTMP(S) sink URL. AWS defines that URL as endpoint plus stream key, making the read a third-party publishing-credential disclosure rather than ordinary metadata.
+- A restricted session reached `NotFoundException` for the allowed synthetic pipeline while a different pipeline and `ListMediaPipelines` were denied. The read needs no meeting access, Chime write, PassRole, or downstream-platform permission when the pipeline ID is known.
+- Published bounded broadcast-injection/disruption impact, downstream key-lifetime/platform limits, High stealth, dedicated media-pipeline CloudTrail source and successful-response logging uncertainty. The authorized not-found event retained the pipeline ID; the IAM denial had null parameters. Marked the April 7, 2026 proxy-session end of support and kept its phone-number metadata as a low-value legacy check.
+- Administrative inventory stayed at zero pipelines. No meeting, live connector, external stream, service-linked role or IAM fixture was created; cleanup was vacuous. Expected functionality only; no AWS report.
+
 ## cont.159 (2026-10-01) — Amazon Q in Connect AI-agent default persistence
 
 - SHIPPED #156 (exact-resource authorization + documented runtime): `wisdom:UpdateAssistantAIAgent` alone on one Assistant ARN can persist a published custom AI-agent version as the selected use-case default for future Connect Customer contacts/Q sessions. A known version requires no Q read/list, `iam:PassRole`, Connect, Bedrock or downstream permission from the writer.
