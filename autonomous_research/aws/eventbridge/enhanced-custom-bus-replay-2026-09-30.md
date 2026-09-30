@@ -86,4 +86,27 @@ The first fixture proved both update calls but its local queue parser failed on 
 
 CloudTrail recorded both updates as `readOnly:false` management events under `eventsv2.amazonaws.com`. Requests contained the exact subscriber ARN plus `state`; the resume also contained `resumePosition: LATEST`. Responses returned bus/subscriber identity, fixed starting position, final state and last-modified time. This is expected documented behavior and a useful narrow defense-evasion technique, not an AWS vulnerability.
 
+## Filter clearing and delivery-log suppression follow-up
+
+The mutable subscriber configuration produced a second, distinct `UpdateSubscriber` primitive:
+
+1. Created a `RUNNING`, `LATEST` subscriber whose `DATA` filter matched only `detail.classification=public`, whose log level was `INFO/FULL`, and whose unchanged SQS delivery role had only `sqs:SendMessage` to the exact queue.
+2. Published a synthetic `classification=secret` control event. The correctly shaped filter stored by `DescribeSubscriber` rejected it and the queue remained empty.
+3. Assumed an STS session with only `events:UpdateSubscriber` on the exact subscriber **and exact bus** ARNs. It had no PassRole, EventBridge read/publish, IAM, SQS or target action.
+4. Sent `FilterConfiguration:{}` and `LogConfiguration:{Level:OFF,IncludePayload:ON_ERROR_ONLY}` in one update. The target and role were omitted and remained unchanged.
+5. `DescribeSubscriber` then omitted `FilterConfiguration`, returned `LogConfiguration.Level=OFF`, and kept the subscriber `RUNNING`.
+6. Published an otherwise-identical `classification=secret` event. It reached the unchanged SQS queue; the earlier filtered event never did.
+
+The authorization boundary differs from state-only updates. A preliminary restricted session with `UpdateSubscriber` on only the exact subscriber ARN was denied on the bus resource. Adding only the exact `event-busv2` ARN succeeded. No `iam:PassRole` check occurred because the invoke configuration was untouched.
+
+Negative and diagnostic controls:
+
+- `IncludePayload=NEVER` was rejected; the valid enum remains `ON_ERROR_ONLY|FULL`, even when the level is `OFF`.
+- The first filter control incorrectly asserted on the AWS CLI's empty output for an empty `ReceiveMessage` result; an isolated diagnostic confirmed the stored `detail.classification` pattern and zero delivery. The final fixture used an empty-response-safe parser.
+- An early publish attempt used the Classic per-entry bus shape and was rejected locally by the enhanced CLI, which requires top-level `--event-bus-arn`; no event was accepted in that cycle.
+
+CloudTrail recorded the successful update as `readOnly:false` under `eventsv2.amazonaws.com`. The request retained the exact subscriber ARN, literal empty `filterConfiguration`, and `level:OFF`/`includePayload:ON_ERROR_ONLY`; `resources` named both `AWS::EventsV2::Subscriber` and `AWS::EventsV2::EventBus`. The response did not echo the filter/log objects, but returned the unchanged bus/subscriber identity and `RUNNING` state. The subscriber's mandatory `AWS/EventsV2` metrics remain available even after vended delivery logs are disabled.
+
+All diagnostic, denied and successful cycles ran through exact cleanup traps. Final independent inventory found zero matching enhanced buses, subscribers, IAM roles and SQS queues. This is documented service behavior and a public post-exploitation/defense-evasion technique, not an AWS vulnerability.
+
 Expected functionality only; no private AWS vulnerability report.

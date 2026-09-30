@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.153 (2026-09-30) — EventBridge V2 filter clearing and log suppression
+
+- SHIPPED #148 (live exact-resource minimum): `events:UpdateSubscriber` on the exact subscriber **and bus** ARNs cleared all filters with `FilterConfiguration:{}` and disabled subscriber delivery logs with `Level=OFF`. The restricted session had no PassRole, target/queue, publish, IAM or EventBridge read permission.
+- An initial `detail.classification=secret` event was rejected by the stored public-only filter. After the patch, an otherwise-identical secret event reached the unchanged SQS target; the subscriber stayed `RUNNING`, its target/role did not change, and `DescribeSubscriber` omitted the filter and returned logging `OFF`.
+- Established a non-obvious authorization split: state-only changes accept exact-subscriber permission, but filter/log mutation additionally evaluated the exact bus. A subscriber-only session was denied on that bus ARN; adding only the bus resource succeeded.
+- CloudTrail exposed the literal empty filter, complete `OFF` log setting, session identity and both resource ARNs. Mandatory `AWS/EventsV2` metrics remain even when vended delivery records are disabled. Published explicit impact, Low stealth, prerequisites and detection guidance.
+- Negative/diagnostic cycles rejected invalid `IncludePayload=NEVER`, corrected the enhanced `PutEvents` top-level bus shape, and handled the CLI's empty SQS response safely. Every cycle cleaned via traps; final matching enhanced-bus/subscriber, role and queue inventories are empty. Expected functionality only; no AWS report.
+
 ## cont.152 (2026-09-30) — EventBridge V2 lossy subscriber resume
 
 - SHIPPED #147 (live exact-subscriber minimum): `events:UpdateSubscriber` alone stopped a live enhanced-bus consumer, then `RUNNING + ResumePosition=LATEST` skipped the complete retained backlog and resumed only at new events. No PassRole, bus, target, publish, role, queue or subscriber-read permission was present.
