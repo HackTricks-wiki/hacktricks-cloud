@@ -1191,6 +1191,7 @@
     - [Az - Managed Applications Persistence](pentesting-cloud/azure-security/az-persistence/az-managed-applications-persistence.md)
     - [Az - Data Explorer Persistence](pentesting-cloud/azure-security/az-persistence/az-data-explorer-persistence.md)
     - [Az - Data Factory Persistence](pentesting-cloud/azure-security/az-persistence/az-data-factory-persistence.md)
+    - [Az - AI Foundry Persistence](pentesting-cloud/azure-security/az-persistence/az-ai-foundry-persistence.md)
     - [Az - Redis Persistence](pentesting-cloud/azure-security/az-persistence/az-redis-persistence.md)
     - [Az - Service Fabric Persistence](pentesting-cloud/azure-security/az-persistence/az-service-fabric-persistence.md)
     - [Az - Load Testing Persistence](pentesting-cloud/azure-security/az-persistence/az-load-testing-persistence.md)
