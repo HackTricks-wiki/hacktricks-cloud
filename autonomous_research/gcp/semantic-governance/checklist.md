@@ -33,4 +33,3 @@
 - [ ] Reconcile feature-specific VPC-SC support wording with release notes and live perimeter
       behavior. Never infer that the broad `aiplatform.googleapis.com` service status guarantees
       every Semantic Governance data path.
-

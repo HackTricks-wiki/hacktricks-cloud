@@ -44,4 +44,3 @@ The operationally checked permission is therefore currently unpublished and not 
 - Removed the no-role delete-probe account and cloud key, shredded its local key/token material, and deleted its isolated config.
 - Verified no matching service account, active project binding, active custom role, key, or local config remained. The engine stayed `INACTIVE`; no policy or other service resource was created.
 - The Vertex AI API remained enabled because it was enabled before testing.
-

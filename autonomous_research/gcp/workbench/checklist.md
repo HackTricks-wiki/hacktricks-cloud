@@ -14,4 +14,3 @@
       far-future schedule and first test the full and nested update masks as owner. Only if the schema
       accepts one should a caller with schedule update but no actAs repeat it. Never resume the
       schedule; delete the schedule, notebook object, bucket and grants after the negative control.
-

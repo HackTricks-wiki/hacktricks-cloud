@@ -35,4 +35,3 @@ An attacker who can update a source VPC's existing Private NAT gateway can selec
 - Deleted both VMs and boot disks, Cloud Router/NAT, all three firewall rules, both NCC spokes, the hub, three subnets, and both VPCs.
 - Removed the test-generated project SSH metadata line and local SSH/startup artifacts while preserving the three pre-existing project SSH entries.
 - Verified zero `ht-pnat-*` instances, disks, routers, firewall rules, subnets, networks, hubs, or spokes; no new Compute/NCC service-agent binding remained. Compute and NCC APIs stayed enabled as at baseline.
-

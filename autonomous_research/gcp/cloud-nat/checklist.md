@@ -28,4 +28,3 @@
       VPC writes independently; retain the observed permission pair as the raw API minimum.
 - [ ] Test application-layer IP allowlists and proxy/header attribution only against an owned
       fixture. Do not generalize firewall behavior to identity-aware applications.
-

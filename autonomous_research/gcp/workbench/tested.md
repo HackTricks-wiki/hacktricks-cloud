@@ -8,4 +8,3 @@
 - Existing lab Admin Activity history independently records `aiplatform.schedules.create` and `aiplatform.pipelineJobs.create` followed by a separate actAs authorization check on the selected service account. No runtime was launched for this review.
 - `gcloud auth application-default login` stores user ADC on the current runtime VM; ADC is not a Schedule field and is deleted with the runtime. The retained-user-ADC update model is invalid.
 - Conclusion: the lead is currently unsupported and documented gated, not a book technique or zero-day. Keep only a regression-only raw update-mask negative test, and stop before execution.
-
