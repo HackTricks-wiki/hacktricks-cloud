@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.139 (2026-09-30) — SageMaker experiment metric poisoning
+
+- SHIPPED #132 (live exact-resource minimum): `sagemaker:BatchPutMetrics` alone on exact completed trial component A appended forged `validation:accuracy` points. The restricted session could not Describe A and was denied component B.
+- Verified additive semantics: a duplicate name/timestamp/step did not overwrite the baseline; `Count` became 2 and `Avg` reflected both values. A new higher step became the later `Last` point. `Completed` status did not freeze metric ingestion.
+- Bounded impact to SageMaker Studio/experiment charts and downstream humans or custom automation that trust Metrics Service data. It does not alter model artifacts or training code, and no claim is made that it automatically changes Hyperparameter Tuning's internal objective result.
+- `BatchPutMetrics`/`BatchGetMetrics` were absent from Event History and are opt-in `AWS::SageMaker::ExperimentTrialComponent` data events. Create/delete remained default SageMaker management events.
+- Two zero-compute trial components were the only fixtures. Both delete requests completed and exact-name lookups return `ResourceNotFound`; the filtered trial-component inventory is empty. No other resource or private report.
+
 ## cont.138 (2026-09-30) — SageMaker Edge Manager EOL exclusion
 
 - Audited the still-shipped `sagemaker-edge` runtime model and legacy SageMaker fleet/package/deployment operations against AWS's current service state. AWS ended Edge Manager on April 26, 2024, deleted service-held fleet/device/package references and states that applications calling its APIs no longer work.
