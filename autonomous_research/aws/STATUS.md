@@ -16,6 +16,21 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.110 (2026-09-30) — AppStream image export to EC2 AMI
+
+- SHIPPED #90: `appstream:CreateExportImageTask` plus `iam:PassRole` materializes an owned private
+  WorkSpaces Applications image as a same-account EC2 AMI for normal launch/copy/share inspection.
+- The current export is limited to available Windows Server 2022/2025 images and strips the service
+  agent plus Microsoft license-included applications. The AMI is not automatically public or
+  cross-account, so separate EC2 authority remains necessary.
+- Live minimum proof showed the action alone stops at PassRole; exact-role PassRole with
+  `iam:PassedToService=appstream.amazonaws.com` reached image-not-found without List/Describe.
+- An exact image ARN did not authorize the action, while the Region/account `image/*` pseudo-resource
+  did. This useful scoping/documentation nuance was recorded but is not an AWS vulnerability.
+- CloudTrail retained image name, AMI name, and role ARN for the service-authorized failed call and
+  classified it as a management write. Private/shared image, export-task, and matching AMI
+  inventories remained empty; no role, task, AMI, snapshot, instance, or other resource was created.
+
 ## cont.109 (2026-09-30) — AppStream private-image cross-account copying
 
 - SHIPPED #89: exact-image `appstream:UpdateImagePermissions` can grant a foreign account fleet use
