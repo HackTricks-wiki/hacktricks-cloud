@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.162 (2026-10-01) — CloudWatch Omni asynchronous alert persistence
+
+- SHIPPED #162 (verified minimum and autonomous execution): `cloudwatch:CreateAlert` on the same-account `alert/*` prefix plus `cloudwatch:AssumeAccessProfile` on one exact existing profile created an enabled 30-second scheduled alert. The restricted caller had no list/get, grant/profile administration, telemetry-read, SNS, integration or PassRole permission. This is service-level persistence through the profile and operator-role ceilings, not IAM escalation.
+- SHIPPED #163 (verified exact-resource update): exact-alert `UpdateAlert` plus exact-profile `AssumeAccessProfile` replaced the stored query, zero threshold, 30-second cadence and full notification list. The alert autonomously reached `CRITICAL` after the updater session ended. `UpdateAlert` alone could edit description, but notification replacement was denied until exact-profile assumption was present.
+- Both create and update accepted a foreign-account SNS ARN without target existence validation. Public coverage makes delivery conditional on an attacker-controlled topic policy and does not claim raw query-row export; the durable value also includes false alerts, notification redirection and monitoring suppression.
+- CloudTrail retained full alert queries, thresholds, cadence, profile IDs and foreign target ARNs in default write events; creation returned the generated alert ID/ARN and update responses were null. Installation stealth is therefore Low/Medium at best.
+- Built and removed a real IAM-only domain, space, operator role, access profile, grants and three alerts. Final domains, spaces, Omni integrations, Dataset integrations and matching IAM-role inventories were empty, and OTel enrichment remained stopped; no SNS, secret, KMS, forwarding, compute or third-party resource was created. Expected functionality only, no private AWS report and no new cleanup debt.
+
 ## cont.161 (2026-10-01) — CloudWatch Omni foundational audit
 
 - SHIPPED #158 (live minimum and zero-row execution): wildcard `StartTelemetryQuerySession`/`StartTelemetryQuery`/`GetTelemetryQueryResults` plus exact `cloudwatch:GetRecords` on `dataset/default` completed a bounded logs query without an Omni domain, space or access grant. Removing `GetRecords` failed on the exact Dataset ARN; space-scoping the session action failed on `resource: *`. The account had no forwarded records, so the query returned zero rows rather than sensitive content.
