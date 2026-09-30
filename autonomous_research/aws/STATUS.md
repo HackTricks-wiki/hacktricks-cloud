@@ -16,6 +16,18 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.129 (2026-09-30) — AWS Agent Registry approval and discovery audit
+
+- SHIPPED #118: added missing foundational coverage for the GA `agent-registry-control` / `agent-registry` namespaces, including registries, records, approval state, discovery authorization, synchronized descriptor sources, auto-detection/provenance and the public-preview namespace retirement date.
+- SHIPPED #119 (live exact-resource authorization): `agent-registry:UpdateRegistryRecordStatus` alone on one exact pending record ARN approved a synthetic custom record and made it discoverable. The session had no create, update, read, registry-update or discovery permission.
+- Bounded the impact to the catalog/supply-chain plane: approval can publish a malicious MCP server, agent, skill or descriptor, but does not execute it, grant IAM privileges or force a consumer to connect/install/use it.
+- SHIPPED #120 persistence (live split-session authorization): exact-registry `UpdateRegistry` changed the approval configuration to `APPROVE_ALL`; a different exact-record submit-only session then moved an unreviewed replacement revision directly from draft to approved/discoverable. The setting persists for future submissions until changed.
+- NEGATIVE / secure boundary: exact-record `UpdateRegistryRecord` alone created a new `DRAFT`, while discovery continued returning the previous approved description/revision. Update-only access did not bypass curation.
+- CloudTrail indexed the restricted writes as default management events. `UpdateRegistryRecordStatus` retained the IDs and `APPROVED` target while redacting the reason, `UpdateRegistry` retained `APPROVE_ALL`, and the submit-only response retained `APPROVED`; record name/description/descriptor fields were also redacted as `HIDDEN_DUE_TO_SECURITY_REASONS`. Record events used the short record ID as `resources[].ResourceName`. Discovery APIs are opt-in data events, so lifecycle EventBridge events and status/configuration transitions are essential signals.
+- Cleanup is complete: the record and registry both returned `ResourceNotFoundException`, `ListRegistries` is empty, and service-linked-role deletion task `85326ec5-6165-4a68-803c-79d4f075c701` succeeded. No runtime, gateway, identity provider, credential role, KMS, network, compute, storage or logging fixture was created.
+- Credential-provider redirect/replay, cross-registry identifier confusion, auto-detection provenance mutation, resource-policy account binding, JWT patch immutability and search/content poisoning remain private controlled-fixture hypotheses. No unexpected AWS vulnerability report.
+- Retried the unrelated Network Security Manager and RTB Fabric no-cost service-linked-role cleanup tasks; both again failed with AWS internal errors and empty usage lists. No service resource remains behind either role.
+
 ## cont.128 (2026-09-30) — AWS Network Security Manager foundational audit
 
 - SHIPPED #113: added the missing Network Security Manager inventory and security model for rules, templates, policies, scopes, deployments, immutable snapshots, synchronization diagnostics, administrator priorities and service-linked downstream authority.
