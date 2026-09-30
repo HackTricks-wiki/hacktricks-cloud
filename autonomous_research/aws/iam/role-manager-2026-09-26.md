@@ -1,0 +1,5 @@
+# IAM role manager negative branch, 2026-09-26
+
+AWS [launched IAM role manager](https://aws.amazon.com/about-aws/whats-new/2026/08/aws-iam-role-manager/) in August 2026. Candidate: `iam:AcquireRole` could create a role from a powerful template without direct IAM role-management permissions. AWS's [access-control documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_role-manager_enable-use.html) rules this out for expected behavior: `AcquireRole` checks `iam:CreateRole` plus `iam:PutRolePolicy` and/or `iam:AttachRolePolicy` for creation; reuse of a matching existing role needs `iam:GetRole`, and does not itself grant assumption or PassRole. This is not a useful distinct privilege-escalation technique and is kept out of the public book.
+
+Potential future security test: compare template-scoped IAM conditions (`iam:RoleTemplateARN`) with raw `CreateRole` and `AcquireRole` in a disposable account, checking whether an SCP denies both. This would be unexpected behavior only if authorization checks diverge; no live role-manager setup was performed in the shared lab.

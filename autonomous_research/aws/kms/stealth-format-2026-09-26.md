@@ -1,0 +1,3 @@
+# KMS post-exploitation stealth audit, 2026-09-26
+
+Twelve KMS post-exploitation sections had impact statements and expandable log tables but no explicit stealth rating. Added ratings that separate high-volume cryptographic calls from conspicuous key/store state changes. AWS [logs KMS cryptographic and management operations](https://docs.aws.amazon.com/kms/latest/developerguide/logging-using-cloudtrail.html) as management events. A trail can exclude KMS events, but [CloudTrail Event History cannot exclude them](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-management-events-with-cloudtrail.html). This was documentation-only; no KMS keys or stores were changed.

@@ -1,0 +1,5 @@
+# Organizations departure guardrail and event correction, 2026-09-26
+
+AWS [documents](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_best-practices_mgmt-acct.html) a root SCP automatically attached to organizations created through the AWS Management Console after July 10, 2026. It denies `organizations:LeaveOrganization` and `account:CloseAccount` for member-account principals. Organizations created through CLI/SDK/CloudFormation or earlier than that date need the SCP manually. Therefore member-account departure is conditional on the effective SCP, while a management-account `RemoveAccountFromOrganization` call is distinct.
+
+AWS [RemoveAccountFromOrganization](https://docs.aws.amazon.com/organizations/latest/APIReference/API_RemoveAccountFromOrganization.html) and [LeaveOrganization](https://docs.aws.amazon.com/organizations/latest/APIReference/API_LeaveOrganization.html) API references now specify the management-account membership event `AccountDepartedOrganization`, with `departureMethod:REMOVED` or `LEFT`. The old public page used `AccountRemovedFromOrganization`; corrected it. No destructive Organizations test was run.
