@@ -627,6 +627,7 @@
     - [AWS - DevOps Agent Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-devops-agent-post-exploitation/README.md)
     - [AWS - Direct Connect Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-direct-connect-post-exploitation/README.md)
     - [AWS - DLM Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dlm-post-exploitation/README.md)
+    - [AWS - DocumentDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-documentdb-post-exploitation/README.md)
     - [AWS - DRS & MGN Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-drs-mgn-post-exploitation/README.md)
     - [AWS - DynamoDB Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation/README.md)
     - [AWS - EC2, EBS, SSM & VPC Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md)
