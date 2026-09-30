@@ -17,6 +17,33 @@ function playground_text(playground, hidden = true) {
     }
 }
 
+(function openContentLinksInNewTabs() {
+    var content = document.querySelector("#content main");
+    if (!content) {
+        return;
+    }
+
+    Array.from(content.querySelectorAll("a[href]")).forEach(function (link) {
+        var href = link.getAttribute("href");
+
+        // Heading permalinks are page controls, not links to other content.
+        if (!href || link.classList.contains("header") || /^(?:javascript|data):/i.test(href)) {
+            return;
+        }
+
+        link.setAttribute("target", "_blank");
+
+        var rel = (link.getAttribute("rel") || "").split(/\s+/).filter(Boolean);
+        if (rel.indexOf("noopener") === -1) {
+            rel.push("noopener");
+        }
+        if (rel.indexOf("noreferrer") === -1) {
+            rel.push("noreferrer");
+        }
+        link.setAttribute("rel", rel.join(" "));
+    });
+})();
+
 (function codeSnippets() {
     function fetch_with_timeout(url, options, timeout = 6000) {
         return Promise.race([
@@ -625,13 +652,14 @@ function playground_text(playground, hidden = true) {
 
     // Should not be needed, but it works around an issue on macOS & iOS: https://github.com/rust-lang/mdBook/issues/628
     document.addEventListener('click', function(e) {
-        if (menubarLanguagePopup.style.display === 'block' && !menubarLanguageToggleButton.contains(e.target) && !menubarLanguagePopup.contains(e.target)) {
+        if (menubarLanguagePopup.style.display === 'flex' && !menubarLanguageToggleButton.contains(e.target) && !menubarLanguagePopup.contains(e.target)) {
             hideLanguage();
         }
     });
     
     languageButtons.forEach((btn) => {
         btn.addEventListener('click', function(e) {
+            e.preventDefault();
             const regex = /(?:(?:\/)+(?<lang>[a-z]{2}(?=\/|$)))?(?<path>(?:\/)*.*)?/g
             var match = regex.exec(window.location.pathname)
           
@@ -641,7 +669,7 @@ function playground_text(playground, hidden = true) {
             const lang = match.groups.lang
             console.log(`Lang: ${lang}`)
             
-            window.location = `/${e.target.id}${path}${window.location.hash}`
+            window.location = `/${e.currentTarget.id}${path}${window.location.hash}`
         });
     })
 })();
@@ -788,4 +816,3 @@ function playground_text(playground, hidden = true) {
         document.addEventListener('scroll', updateBorder, { passive: true });
     })();
 })();
-
