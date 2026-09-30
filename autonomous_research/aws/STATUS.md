@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.150 (2026-09-30) — Cognito replica resilience destruction
+
+- SHIPPED #145 (documented effect + live exact-resource authorization): `UpdateUserPoolReplica` can deactivate the only secondary authentication plane and `DeleteUserPoolReplica` can then remove that inactive replica. The primary directory survives, but regional authentication and future failover capacity are lost until a paid KMS-backed replica and its regional controls are rebuilt.
+- Proved the non-obvious ARN boundary with a nonexistent synthetic pool: Update authorizes the user-pool ARN in the API endpoint's Region, not the target `RegionName`. Exact local ARNs reached not-found from both endpoints; the opposite-Region ARN was denied. Delete required the primary endpoint/exact primary ARN and no list/describe permission.
+- CloudTrail recorded both writes as management events. Service-reached update failures retained pool, target Region and status; delete retained pool and Region. IAM denials omitted request/response fields but exposed the endpoint-Region ARN. Included explicit impact, Low stealth and a compact log/detection table.
+- RESEARCHED / NOT SHIPPED: `DescribeTermsByClient` only returns managed-login public terms/privacy links and unusually requires both its own action and `DescribeTerms`. The dependency was live-confirmed; it exposes no useful secret or bypass.
+- Both regional inventories remained empty. Only nonexistent-ID calls and expiring STS sessions were used; no replica, KMS, Route 53, WAF, domain, trigger, logging, or IAM resource was created. Expected functionality only; no AWS report.
+
 ## cont.149 (2026-09-30) — Cognito provisioned-limit cost boundary
 
 - SHIPPED #144 (live action-only minimum + failure controls): `cognito-idp:UpdateProvisionedLimit` on `Resource: "*"` alone performed a no-cost `UserCreation=50` no-op and returned current/free values. A user-pool-ARN policy was denied because the account-level operation authorizes against `*`; `GetProvisionedLimit` was independently confirmed with its action alone.
