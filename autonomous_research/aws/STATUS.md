@@ -51,6 +51,22 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - Both disposable Pinpoint projects were deleted; exact-ID reads returned `NotFoundException` and
   the matching-name inventory was empty. No book technique or AWS vulnerability report was added.
 
+## cont.105 (2026-09-30) — Route 53 Domains cross-account registration takeover
+
+- SHIPPED #85 (documentation-validated): exact source-account
+  `route53domains:TransferDomainToAnotherAwsAccount` plus destination-account
+  `AcceptDomainTransferFromAnotherAwsAccount` moves a domain registration into an
+  attacker-controlled account after password-backed acceptance.
+- The source permission is global `Resource: "*"`; it requires no `ListDomains`, domain detail,
+  EPP-code retrieval, transfer-lock write, or PassRole action. The hosted zone remains in the source
+  account, but the recipient becomes registration owner and can later alter delegation or transfer
+  state using its own account permissions.
+- Retrofitted both older Route 53 Domains techniques with explicit minimum prerequisites, impact and
+  stealth, and corrected domain-registration CloudTrail event names to their lowercase-first-letter
+  form.
+- Safe live inventory found zero registered domains. No transfer was attempted, no fixture was
+  created, and cleanup was vacuous. Expected functionality only; no AWS report.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
