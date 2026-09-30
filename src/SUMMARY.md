@@ -319,6 +319,7 @@
     - [GCP - Firebase Data Connect Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-firebase-data-connect-persistence.md)
     - [GCP - Cloud Healthcare Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-healthcare-persistence.md)
     - [GCP - IAM Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iam-persistence.md)
+    - [GCP - Resource IAM Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-resource-iam-persistence.md)
     - [GCP - IAM Deny Policies Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iam-deny-policies-persistence.md)
     - [GCP - IAP Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-iap-persistence.md)
     - [GCP - Liens Persistence](pentesting-cloud/gcp-security/gcp-persistence/gcp-liens-persistence.md)
