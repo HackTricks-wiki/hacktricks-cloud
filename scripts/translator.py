@@ -244,6 +244,7 @@ def get_unused_files(branch):
 
     # Find the files that are in branch2 but not in branch1
     unique_files = files_branch_lang - files_branch_master
+    unique_files.discard('.translation-source-blobs.json')
 
     return unique_files
 
@@ -354,11 +355,9 @@ Also don't add any extra stuff in your response that is not part of the translat
     except Exception as e:
         print("Python Exception: " + str(e))
         if cont > 6:
-            print(f"Page {file_path} could not be translated due to count with text: {text}\nReturning text as is.")
-            return text
+            raise RuntimeError(f"Page {file_path} could not be translated after retries") from e
         if "exceeded your current quota" in str(e).lower():
-            print("Critical error: Quota exceeded")
-            exit(1)
+            raise RuntimeError("Critical error: translation quota exceeded") from e
         
         if "is currently overloaded" in str(e).lower():
             print("Overloaded, waiting 30 seconds")
@@ -381,17 +380,15 @@ Also don't add any extra stuff in your response that is not part of the translat
             elif "generated invalid unicode output" in str(e).lower():
                 print("Invalid unicode error detected.")
 
-            if slpitted:
-                #print(f"Page {file_path} could not be translated with text: {text}")
-                print(f"Page {file_path} could not be translated.\nReturning text as is.")
-                return text
+            if slpitted or len(text.split('\n')) < 2:
+                raise RuntimeError(f"Page {file_path} could not be translated after splitting") from e
             
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True, client)
+            return translate_text(language, '\n'.join(text1), file_path, model, cont + 1, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont + 1, True, client)
 
         print("Retrying translation")
-        return translate_text(language, text, file_path, model, cont, False, client)
+        return translate_text(language, text, file_path, model, cont + 1, False, client)
 
     response_message = response.choices[0].message.content.strip()
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
@@ -400,8 +397,16 @@ Also don't add any extra stuff in your response that is not part of the translat
 
     # Restore source directives after all model-provided text normalization.
     # This preserves exact mdBook syntax while retaining translated prose.
-    response_message = preserve_mdbook_directives(text, response_message)
-    response_message = preserve_reference_markup(text, response_message)
+    restored = preserve_mdbook_directives(text, response_message)
+    if restored == text and response_message != text and MDBOOK_DIRECTIVE_RE.search(text):
+        raise RuntimeError(f"Translation changed mdBook directives in {file_path}")
+    response_message = restored
+    restored = preserve_reference_markup(text, response_message)
+    if restored == text and response_message != text and (
+        REFERENCES_HEADING_RE.search(text) or LINKED_CITATION_RE.search(text)
+    ):
+        raise RuntimeError(f"Translation changed reference markup in {file_path}")
+    response_message = restored
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
@@ -531,6 +536,23 @@ def translate_file(language, file_path, file_dest_path, model, client):
     print(f"Page {file_path} translated in {file_dest_path} in {elapsed_time:.2f} seconds")
 
 
+def translate_selected_files(language, paths, dest_folder, model, client, num_threads):
+    failures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = {
+            executor.submit(translate_file, language, path, os.path.join(dest_folder, path), model, client): path
+            for path in paths
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                failures.append((futures[future], exc))
+                print(f'Translation failed for {futures[future]}: {exc}')
+    if failures:
+        raise RuntimeError(f'{len(failures)} pages failed translation; no pages from this batch were published')
+
+
 """
 def translate_directory(language, source_path, dest_path, model, num_threads, client):
     all_markdown_files = []
@@ -581,6 +603,7 @@ if __name__ == "__main__":
     )
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
+    parser.add_argument('--file-list', help='Newline-delimited file of pages to translate.')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
     #parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
@@ -626,28 +649,26 @@ if __name__ == "__main__":
 
     current_dir = os.getcwd()
     print(f"The translated files will be copied to {current_dir}, make sure this is the expected folder.")
+    source_folder = current_dir
 
     if not args.dont_cd:
         # Change to the parent directory
         os.chdir(source_folder)
     
     translate_files = None # Need to initialize it here to avoid error
-    if args.file_paths:
-        # Translate only the indicated file
-        translate_files = list(set([f.strip() for f in args.file_paths.split(',') if f]))
+    if args.file_paths or args.file_list:
+        if args.file_paths and args.file_list:
+            parser.error('Use either --file-paths or --file-list')
+        if args.file_list:
+            with open(args.file_list, encoding='utf-8') as f:
+                translate_files = [line.strip() for line in f if line.strip()]
+        else:
+            translate_files = [f.strip() for f in args.file_paths.split(',') if f.strip()]
+        translate_files = sorted(set(translate_files))
         for file_path in translate_files:
-            #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-                futures = []                
-                future = executor.submit(translate_file, language, file_path, os.path.join(dest_folder, file_path), model, client)
-                futures.append(future)
-
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                        #pbar.update()
-                    except Exception as exc:
-                        print(f'Translation generated an exception: {exc}')
+            if not file_path.startswith('src/') or not file_path.endswith('.md') or not os.path.isfile(file_path):
+                raise ValueError(f'Invalid translation source path: {file_path}')
+        translate_selected_files(language, translate_files, dest_folder, model, client, num_threads)
             
     #elif args.directory:
         # Translate everything
