@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.159 (2026-10-01) — Amazon Q in Connect AI-agent default persistence
+
+- SHIPPED #156 (exact-resource authorization + documented runtime): `wisdom:UpdateAssistantAIAgent` alone on one Assistant ARN can persist a published custom AI-agent version as the selected use-case default for future Connect Customer contacts/Q sessions. A known version requires no Q read/list, `iam:PassRole`, Connect, Bedrock or downstream permission from the writer.
+- The safe restricted session reached `Assistant does not exist` on the allowed synthetic assistant; a different assistant and `GetAssistant` were denied. This verifies exact Assistant scoping and the single-action final stage without creating a Q resource. CloudTrail retained the complete IDs/type in both failed write-management events.
+- Published the full build-chain permission model, explicit prompt/agent version requirements, session-over-assistant-over-system precedence, service-level-not-IAM scope, bounded tool/association authority, Low installation stealth and management/runtime detection signals.
+- The allowed Region remained at zero assistants before and after testing. No prompt, agent, session, Connect association, IAM resource, log destination, or billable fixture was created; cleanup was vacuous. Expected functionality only; no AWS report.
+
 ## cont.158 (2026-10-01) — Snowball prepaid-contract renewal
 
 - SHIPPED #155 (live wildcard authorization + documented financial effect): `snowball:UpdateLongTermPricing` alone on `Resource: "*"` reached the service for a synthetic pricing ID and can enable automatic renewal on an existing one-/three-year prepaid Snowball contract. A synthetic pricing ARN was denied by IAM; no list, job, address, PassRole, S3 or KMS permission is needed when the ID is known.

@@ -560,6 +560,7 @@
     - [AWS - Systems Manager Incident Manager Persistence](pentesting-cloud/aws-security/aws-persistence/aws-systems-manager-incident-manager-persistence/README.md)
     - [AWS - Managed Grafana Persistence](pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md)
     - [AWS - Q Business Persistence](pentesting-cloud/aws-security/aws-persistence/aws-q-business-persistence/README.md)
+    - [AWS - Amazon Q in Connect Persistence](pentesting-cloud/aws-security/aws-persistence/aws-q-in-connect-persistence/README.md)
     - [AWS - CodeArtifact Persistence](pentesting-cloud/aws-security/aws-persistence/aws-codeartifact-persistence/README.md)
     - [AWS - Appconfig Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appconfig-persistence/README.md)
     - [AWS - Account Management Persistence](pentesting-cloud/aws-security/aws-persistence/aws-account-management-persistence/README.md)
