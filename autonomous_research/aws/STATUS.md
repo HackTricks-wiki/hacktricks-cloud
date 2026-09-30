@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.152 (2026-09-30) — EventBridge V2 lossy subscriber resume
+
+- SHIPPED #147 (live exact-subscriber minimum): `events:UpdateSubscriber` alone stopped a live enhanced-bus consumer, then `RUNNING + ResumePosition=LATEST` skipped the complete retained backlog and resumed only at new events. No PassRole, bus, target, publish, role, queue or subscriber-read permission was present.
+- End-to-end proof accepted a synthetic event while stopped and a control event after resume. The unchanged SQS target received only the control; the paused event never arrived. Other subscribers and retained bus data are unaffected, and a newly authorized replay subscriber could still recover the event.
+- CloudTrail recorded both writes with the exact state; the lossy resume explicitly retained `resumePosition: LATEST` and returned the final running state. Published explicit impact, Low stealth, detection, and the boundary that replay subscribers cannot use this resume position.
+- One preliminary cycle hit only a local empty-response parser error after both cloud updates; its trap cleaned fully. The corrected cycle verified behavior and also cleaned. Final matching bus/subscriber, IAM-role and SQS-queue inventories are empty. Expected functionality only; no AWS report.
+
 ## cont.151 (2026-09-30) — EventBridge V2 universal-target role execution
 
 - SHIPPED #146 (live exact-scope role execution): `events:CreateSubscriber` on one enhanced bus/future subscriber name plus exact-role `iam:PassRole` with `iam:PassedToService=events.amazonaws.com` created a universal `s3:PutObject` target. The caller session had no S3 action; one matching event caused the passed role to write the exact synthetic object.

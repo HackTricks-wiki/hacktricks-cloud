@@ -72,4 +72,18 @@ CloudTrail recorded the successful `CreateSubscriber` as a default `eventsv2.ama
 
 Final independent inventory found zero matching enhanced buses, subscribers, IAM roles, S3 buckets and SQS queues. The three universal-target cycles and the second retained-event replay cycle were completely deleted. Expected service-role delegation; no AWS vulnerability report.
 
+## Lossy resume / defense-evasion follow-up
+
+An additional exact-subscriber test confirmed that `events:UpdateSubscriber` alone can deliberately create a delivery gap:
+
+1. An ordinary `LATEST` subscriber delivered matching events to SQS through its existing role.
+2. A restricted STS session whose only action was `events:UpdateSubscriber` on the exact subscriber changed `State` to `STOPPED`. It had no PassRole, bus, publish, subscriber-read, queue or role permission.
+3. An administrator published a synthetic `lost-*` event while delivery was stopped; EventBridge accepted it into the retained bus.
+4. A second equally restricted session updated the same subscriber to `RUNNING` with `ResumePosition=LATEST`.
+5. A `live-*` event published after the resume reached SQS. Repeated receives returned only that live marker; the retained paused marker was skipped as documented.
+
+The first fixture proved both update calls but its local queue parser failed on an empty CLI response; its EXIT trap fully cleaned the resources. The second fixture used an empty-response-safe parser and proved the end-to-end delivery gap. Both cycles ended with no matching bus, subscriber, role or queue.
+
+CloudTrail recorded both updates as `readOnly:false` management events under `eventsv2.amazonaws.com`. Requests contained the exact subscriber ARN plus `state`; the resume also contained `resumePosition: LATEST`. Responses returned bus/subscriber identity, fixed starting position, final state and last-modified time. This is expected documented behavior and a useful narrow defense-evasion technique, not an AWS vulnerability.
+
 Expected functionality only; no private AWS vulnerability report.
