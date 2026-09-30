@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.130 (2026-09-30) — AWS Lambda Core network-connector audit
+
+- SHIPPED #122: added the missing Lambda Core inventory for reusable Lambda MicroVM VPC-egress connectors, including their subnets, security groups, protocol, stored operator role, ENI correlation, state/update diagnostics and management-event logging.
+- SHIPPED #123 (live exact-resource authorization): exact-connector `lambda:UpdateNetworkConnector` plus caller-side `ec2:DescribeSecurityGroups`, `DescribeSubnets` and `DescribeVpcs` replaced the complete subnet configuration and reached `LastUpdateStatus: Successful` while retaining the stored operator role. The session had no `iam:PassRole`; update-only without the EC2 describes was denied before mutation.
+- Bounded impact to MicroVM network posture: this can move workloads using the connector into another private subnet/security boundary allowed by the operator role, but does not itself run/control a MicroVM, grant its execution role, bypass TLS or prove useful private reachability. Existing-workload adoption remains a traffic-tested follow-up.
+- CloudTrail recorded create/update as `lambda.amazonaws.com` management writes with empty resources and full subnet/SG/protocol/operator-role request/response fields. Operator-role EC2 events showed both request-validation dry-run and actual managed ENI creation by `network-connectors.lambda.amazonaws.com` with connector tags and exact network resources.
+- Cleanup is complete: connector inventory and exact connector-tagged ENIs are empty; the operator managed policy was detached; the exact role returns `NoSuchEntity`. No MicroVM, image, function, workload, custom network, endpoint, NAT, database or traffic target was created. Expected functionality only; no private report.
+
 ## cont.129 (2026-09-30) — AWS Agent Registry approval and discovery audit
 
 - SHIPPED #118: added missing foundational coverage for the GA `agent-registry-control` / `agent-registry` namespaces, including registries, records, approval state, discovery authorization, synchronized descriptor sources, auto-detection/provenance and the public-preview namespace retirement date.
