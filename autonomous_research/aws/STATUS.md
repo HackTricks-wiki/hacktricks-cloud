@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.137 (2026-09-30) — Amazon Augmented AI human-review output recovery
+
+- SHIPPED #131 (live exact-resource authorization plus documented output contract): exact-loop `sagemaker:DescribeHumanLoop` resolves the completed review's timestamped S3 `output.json`; independent `s3:GetObject` and optional `kms:Decrypt` recover original loop input, upstream AI request/response context, activation conditions, human answers, submission details and private-workforce metadata.
+- Added missing A2I inventory for flow definitions, task UIs, workteams and human loops. `ListHumanLoops` is wildcard-only and flow-ARN keyed; `DescribeHumanLoop` is exact `human-loop/<name>` scoped and does not itself return the output body.
+- Live minimum-permission controls: exact loop A reached not-found, the same session was denied loop B, and a no-action control was denied A. CloudTrail indexed all three as default read-only `sagemaker.amazonaws.com` management events containing the requested name/caller; response and error-message fields were null.
+- The account is not grandfathered into A2I: the correctly encoded harmless standalone task-UI request failed with the service's closed-new-customer validation. Both Regions had zero flows, UIs and workteams; exact final checks were empty.
+- Rejected worker spam/cost, stop/delete and caller-supplied-input loops as weak DoS rather than useful attacks. Task-template injection remains a private fixture-dependent hypothesis; no flow existed to test and it was not published.
+- Cleanup is complete: the failed request created no UI, workforce, loop, role, bucket, KMS/Cognito/EventBridge/logging resource or paid task. The deletion trap ran and exact inventory stayed empty. Expected functionality only; no private report.
+
 ## cont.136 (2026-09-30) — SageMaker Job Runtime trajectory/reward poisoning
 
 - SHIPPED #130 (live exact-resource authorization plus current API contract): a compromised multi-turn RFT agent can use job-scoped `sagemaker:CompleteRollout` to prematurely seal a known active trajectory and `sagemaker:UpdateReward` to submit attacker-selected per-turn rewards, corrupting the corpus used to fine-tune or evaluate the target policy model. Optional `Sample`/streaming access can append attacker prompt/response turns.
