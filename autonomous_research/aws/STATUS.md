@@ -1,6 +1,6 @@
 # AWS audit — status
 
-Last updated: 2026-09-29
+Last updated: 2026-09-30
 
 ## Active 2026-09-27 checkpoint
 
@@ -15,6 +15,19 @@ The Application Auto Scaling custom-resource signed-request candidate is now clo
 CodeGuru Security is closed as a reasoned exclusion: the live scan API now returns the service's post-retirement `FeatureNoLongerAvailableException`; only inert default configuration and zero metrics remain readable. No public page was added and no state was changed.
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
+
+## cont.102 (2026-09-30) — Marketplace Discovery private-offer reads
+
+- SHIPPED #84: the April 2026 Marketplace Discovery API can enumerate buyer-visible private offers
+  and offer sets, then disclose pricing, payment/renewal structure, custom legal-document URLs,
+  buyer notes and replacement-agreement relationships before agreement acceptance.
+- Verified the exact minimum for `ListPurchaseOptions` on the catalog purchase-option wildcard and
+  exact-offer `GetOfferTerms`; the same constrained role was denied unrelated `SearchListings`.
+- CloudTrail recorded every read under `discovery-marketplace.amazonaws.com`, retained the private
+  visibility/product filter or exact IDs, and omitted returned terms and presigned URLs.
+- The account had zero private purchase options. Public-offer reads validated all response classes
+  without subscribing, purchasing, deploying, or redeeming legal-document URLs. The temporary IAM
+  role and inline policy were deleted and independently verified absent. No AWS defect was found.
 
 ## Active 2026-09-26 checkpoint
 
