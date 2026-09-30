@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.154 (2026-09-30) — EventBridge V2 resource-policy persistence
+
+- SHIPPED #149 (live exact-bus policy write + current cross-account contract): `events:PutResourcePolicy` alone installed a named foreign-principal `events:PutEvents` grant on one enhanced bus. The `default` policy persists beyond the writer session and can delegate injection or, with the consumer's additional subscriber/PassRole/target permissions, retrospective and continuing retained-event export.
+- Bounded the path: external callers need a matching identity allow; the available external user lacked it and remained denied after the victim-side grant. Public policies are blocked, a same-account user policy was rejected as invalid, `AWS_RAM` is RAM-only, and owner-only bus management cannot be delegated.
+- The API replaces the full customer-managed policy and can write blindly when no expected revision is supplied. The safe fixture used `NO_POLICY`; CloudTrail retained the entire external principal/action/resource document, policy name and generated revision, and deletion retained the removed revision.
+- Updated the EventBridge persistence page and cross-account service matrix with injection, subscriber replay/export, resource ownership, explicit persistence scope, Low-install/Medium-to-High-use stealth, and detection guidance.
+- Three guarded valid/negative cycles left zero matching buses, IAM users, roles or access keys. No resources were created in the external account. Expected functionality only; no AWS report.
+
 ## cont.153 (2026-09-30) — EventBridge V2 filter clearing and log suppression
 
 - SHIPPED #148 (live exact-resource minimum): `events:UpdateSubscriber` on the exact subscriber **and bus** ARNs cleared all filters with `FilterConfiguration:{}` and disabled subscriber delivery logs with `Level=OFF`. The restricted session had no PassRole, target/queue, publish, IAM or EventBridge read permission.

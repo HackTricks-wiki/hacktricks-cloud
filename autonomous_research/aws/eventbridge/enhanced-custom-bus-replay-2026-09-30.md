@@ -109,4 +109,20 @@ CloudTrail recorded the successful update as `readOnly:false` under `eventsv2.am
 
 All diagnostic, denied and successful cycles ran through exact cleanup traps. Final independent inventory found zero matching enhanced buses, subscribers, IAM roles and SQS queues. This is documented service behavior and a public post-exploitation/defense-evasion technique, not an AWS vulnerability.
 
+## Resource-policy persistence follow-up
+
+The enhanced bus's customer-managed `default` policy was validated as a distinct cross-account persistence surface:
+
+- A restricted owner-account session with only `events:PutResourcePolicy` on one exact synthetic bus successfully installed a named grant for `arn:aws:iam::418720621023:user/chack-bot` to call `events:PutEvents`. It had no policy read/list/delete, bus update/delete, publish, subscriber or RAM permission.
+- `ExpectedRevisionId=NO_POLICY` safely constrained the test to first-policy creation. `GetResourcePolicy` from the administrator returned the exact document and generated revision; cleanup deleted that same policy before deleting the bus.
+- CloudTrail recorded the successful write as a default `eventsv2.amazonaws.com` management event. `requestParameters` contained the complete JSON document, exact external principal/action/bus, `policyName:default`, and `expectedRevisionId:NO_POLICY`; the response returned the revision. `DeleteResourcePolicy` recorded the removed revision.
+
+The available external identity deliberately lacked its own `events:PutEvents` identity allow. Its call was denied both before and after the victim-side grant, confirming the documented two-sided cross-account requirement rather than an authorization bypass. No changes were made in account `418720621023`.
+
+A same-account control created a disposable IAM user with no policies and tried to name it in the enhanced-bus policy. EventBridge rejected the document as invalid, consistent with this policy system being the cross-account side of authorization. An attempted disposable-role control could not begin because the existing administrator role cannot role-chain to arbitrary roles. Neither negative produced usable access.
+
+The public technique is therefore bounded to a named foreign principal that already has the corresponding identity-side action. `PutEvents`/`PutRawEvents` enables durable injection; `CreateSubscriber` can enable retained/live data export but additionally requires the consumer's future-subscriber permission, same-account target/delivery role and PassRole. Public policies are rejected, the `AWS_RAM` document is not writable by the bus owner, and owner-only bus-management actions cannot be delegated.
+
+All three fixture cycles cleaned in traps. Final inventories contained zero matching enhanced buses, IAM users and IAM roles, and no access key survived. Expected cross-account resource-policy functionality; no AWS vulnerability report.
+
 Expected functionality only; no private AWS vulnerability report.
