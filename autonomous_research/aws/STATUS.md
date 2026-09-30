@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.148 (2026-09-30) — Cognito multi-Region authentication boundaries
+
+- SHIPPED #143 (current documented contract + safe exact-resource probe): an `ACTIVE` Cognito secondary accepts public authentication but keeps a password-failure/lockout counter independent from the primary. With one supported secondary, attackers can split guesses across two exponential-backoff schedules.
+- Bounded the path: it requires a replicated client, username and compatible password flow; confidential clients still need their secret, other challenges remain, and TOTP users must authenticate in the primary because secondary TOTP is unsupported.
+- Added multi-Region inventory and highlighted regional WAF/Lambda/log-export drift. Direct API clients select a regional endpoint independently of managed-domain health-check routing, so defenders must apply controls and aggregate failures across both Regions.
+- Exact synthetic-pool `ListUserPoolReplicas` reached not-found while a different ARN was denied and unsigned access failed. No replica was created because MRR's multi-Region KMS prerequisite cannot be immediately deleted; both regional pool inventories remain empty and no AWS/KMS/Route 53/WAF/Lambda/IAM fixture exists.
+- Included explicit impact, Low stealth and expandable CloudTrail/metrics/WAF telemetry. Expected documented limitation only; no private report.
+
 ## cont.147 (2026-09-30) — AppConfig experiment-overlay poisoning
 
 - SHIPPED #142 (live exact-resource and consumer proof): `CreateExperimentDefinition` can store attacker-selected control/treatment values for an already deployed feature flag without `CreateHostedConfigurationVersion`; experiment start/update overlays them without adding a hosted version.
