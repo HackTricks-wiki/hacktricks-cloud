@@ -16,6 +16,16 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.125 (2026-09-30) — AWS Security Agent assessment-data and action-boundary refresh
+
+- SHIPPED #110 (current API/IAM model): exact-space `GetArtifact` and `BatchGetFindings` can disclose uploaded architecture/configuration and detailed assessment material, including attack/verification scripts, script URLs/instructions, environment-variable values, code locations, reasoning and remediation repository/PR links.
+- Corrected the existing remediation claim: `StartCodeRemediation` selects existing findings and creates generated provider pull requests; the request does not accept attacker-supplied patch content, and protected-branch impact still requires a later merge/provider path.
+- Retrofitted remediation, intrusive pentest start, finding downgrade and pentest deletion with exact Agent Space minima, customer-KMS dependencies, explicit impact/stealth and expandable telemetry tables. `StartPentestJob` is now explicitly bounded to configured/verified targets rather than presented as an arbitrary scanner.
+- Expanded enumeration across memberships, integrated resources, artifacts, target domains, pentests/jobs/tasks/findings/endpoints, and documented the installed-client/current-API drift after the 2026 Agent Space migration.
+- CloudTrail confirmed empty `ListAgentSpaces` as default management reads in both Regions with null request/response elements and a wildcard regional Agent Space resource ARN.
+- Read-only live inventory succeeded in `us-east-1` and `eu-west-1`; both had zero spaces, applications and integrations. No Security Agent, IAM, KMS, S3, target, OAuth or third-party resource was created, so cleanup was empty by construction.
+- One-time login, membership persistence, integration-resource authorization, provider OAuth state binding and private-connection certificate replacement remain fixture-dependent private hypotheses. No AWS vulnerability report.
+
 ## cont.124 (2026-09-30) — AWS RTB Fabric foundational audit
 
 - SHIPPED #107 (current API/IAM model plus live responder mutation): added RTB Fabric inventory and exact-responder `UpdateResponderGateway` coverage. Replacing a managed ASG/EKS backend can redirect future OpenRTB traffic, expose bid-request data, manipulate responses or cause an outage, subject to endpoint-role, reachability and health/discovery boundaries.
