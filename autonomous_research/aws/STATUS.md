@@ -16,6 +16,23 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.135 (2026-09-30) — IAM Toolbox cross-principal denial snapshots
+
+- SHIPPED #129 (live exact-action authorization): `iam:GetRequestAuthorizationDetails` on `*` alone retrieved a different IAM principal's Access Troubleshooter snapshot from a known authorization ID. The inspector session was denied `iam:ListUsers`; a control session without the toolbox action was denied the snapshot.
+- The snapshot exposed the denied principal ARN/ID, source IP/user agent/time/Region, organization ID and root/OU path, exact action/resource/effect, matching statement ID, inline-policy attachment and every evaluated SCP identifier/type/root/OU/account attachment. It returned no policy JSON and did not grant the denied operation.
+- The first two reads returned not-found before asynchronous materialization; AWS guarantees at least 24-hour retention. After deleting the test access key, inline policy and user, a fresh exact-action session still retrieved the historical snapshot.
+- Bounded the technique to a high-entropy authorization ID from a supported denial, same-Region lookup and same account/organization. Cross-organization requests return only the reader organization's slice, and current supported service coverage is primarily IAM.
+- The default denied `GetUser` management event retained the full AccessDenied error and usable ID. A fresh session limited to `cloudtrail:LookupEvents` plus the toolbox read harvested the ID and retrieved the snapshot while remaining unable to list IAM users.
+- CloudTrail later indexed successful, not-yet-materialized and unauthorized toolbox reads as default `iam-toolbox.amazonaws.com` management events. Each retained the complete authorization ID and caller/error metadata but omitted the successful response body. Rated Medium stealth: compact and read-only, but unusual and exactly attributable.
+- Cleanup is complete: exact test user and access-key inventory return `NoSuchEntity`; no role, group, managed policy, login profile, MFA device, Organizations policy or non-IAM resource was created. Expected functionality only; no private report.
+
+## cont.134 (2026-09-30) — Agent Toolkit public-catalog exclusion
+
+- Audited the new `agent-toolkit` API and local AWS CLI skill-management surface. All six remote catalog operations are intentionally unsigned and expose the same curated skills published in AWS's public open-source repository; they reveal no account-specific state or victim identifiers.
+- Live unsigned list/metadata/file reads succeeded. The per-file SHA-256 endpoint matched the retrieved body, explicit version pinning is supported, and CloudTrail had no customer-account event for the public request.
+- SECURE NEGATIVE: raw, encoded, double-encoded and cross-skill path traversal probes against a harmless known file all failed with HTTP 403; an unlisted sibling returned 404.
+- Excluded from the public book as low-value noise: catalog access alone gives no cloud foothold or persistence, while skill installation requires existing local filesystem authority. No skill, agent configuration, AWS resource or credential was created or changed; no private report.
+
 ## cont.133 (2026-09-30) — Amazon Nova Act foundational audit
 
 - SHIPPED #128: added foundational Nova Act coverage for workflow definitions, runs, sessions, acts, compatible model discovery, trace locations, CloudWatch log groups and same-account S3 Agent Trajectory Data exports.
