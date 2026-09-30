@@ -16,6 +16,25 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.123 (2026-09-30) — Route 53 ARC readiness cross-account persistence
+
+- SHIPPED #106 (live authorization plus current API contract): wildcard-only
+  `route53-recovery-readiness:CreateCrossAccountAuthorization` stores an external account-root
+  authorization. The receiver can build readiness checks over known supported victim resource ARNs,
+  creating durable service-level configuration/state monitoring outside the victim account.
+- Live minimum-permission testing found the first-use dependency that the Service Authorization table
+  omits: if the readiness service-linked role is absent, the caller also needs narrowly scoped
+  `iam:CreateServiceLinkedRole`. The create-only action failed without it and succeeded with the
+  service name/resource constrained grant.
+- Published strict impact boundaries: no credentials, native service API access, workload data, or
+  mutation; receiver-side check creation also requires eligibility for the legacy readiness feature,
+  which is closed to new customers.
+- `cloudtrail:LookupEvents` remains SCP-denied in `us-west-2`, so the logs table uses AWS's documented
+  all-API logging contract and known request fields rather than claiming live payload serialization.
+- Cleanup was independently confirmed: empty authorization and readiness inventories, zero temporary
+  users, and no readiness service-linked role. No readiness checks or application infrastructure were
+  created. Expected functionality only; no AWS vulnerability report.
+
 ## cont.122 (2026-09-30) — Route 53 ARC routing-control takeover
 
 - SHIPPED #105 (current API/IAM contract plus live ordinary state changes): exact-routing-control
