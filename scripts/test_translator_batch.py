@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import translator
@@ -33,6 +34,66 @@ class TranslationBatchTests(unittest.TestCase):
                         "French", ["src/okay.md", "src/broken.md"], destination, "gpt-4o", None, 2
                     )
         self.assertCountEqual(calls, ["src/okay.md", "src/broken.md"])
+
+    def test_broken_directives_retry_with_exact_source_markup(self):
+        source = "Read this.\n{{#ref}}\n../README.md\n{{#endref}}\nMore details."
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**kwargs):
+                        content = kwargs["messages"][-1]["content"]
+                        if "__HTC_STRUCT_" in content:
+                            result = content.replace("Read this.", "Lee esto.").replace("More details.", "Más detalles.")
+                        else:
+                            result = "Lee esto. Más detalles."  # Model dropped the ref block.
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertIn("Lee esto.", translated)
+        self.assertIn("Más detalles.", translated)
+        self.assertIn("{{#ref}}\n../README.md\n{{#endref}}", translated)
+
+    def test_broken_references_retry_with_exact_source_citations(self):
+        source = "Read this.<sup>[[1]](#references)</sup>\n\n## References\n\n- [1] [AWS API](https://example.com/api)"
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**kwargs):
+                        content = kwargs["messages"][-1]["content"]
+                        if "__HTC_STRUCT_" in content:
+                            result = content.replace("Read this.", "Lee esto.")
+                        else:
+                            result = "Lee esto.\n\n## Referencias"  # Model dropped citations.
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertIn("Lee esto.<sup>[[1]](#references)</sup>", translated)
+        self.assertIn("## References", translated)
+        self.assertIn("- [1] [AWS API](https://example.com/api)", translated)
+
+    def test_placeholder_loss_translates_prose_around_protected_spans(self):
+        source = "Read this.\n{{#include ./banner.md}}\nMore details."
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**kwargs):
+                        content = kwargs["messages"][-1]["content"]
+                        if "__HTC_STRUCT_" in content:
+                            result = "El modelo omitió el marcador"
+                        elif "{{#include" in content:
+                            result = "El modelo omitió la directiva"
+                        else:
+                            result = content.replace("Read this.", "Lee esto.").replace("More details.", "Más detalles.")
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertIn("Lee esto.\n{{#include ./banner.md}}\nMás detalles.", translated)
 
 
 if __name__ == "__main__":
