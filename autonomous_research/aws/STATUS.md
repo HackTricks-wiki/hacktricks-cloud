@@ -16,6 +16,22 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.109 (2026-09-30) — AppStream private-image cross-account copying
+
+- SHIPPED #89: exact-image `appstream:UpdateImagePermissions` can grant a foreign account fleet use
+  or image-builder use of a private AppStream / WorkSpaces Applications golden image.
+- The image-builder branch lets the recipient obtain local-admin/root access and create an
+  independent image that survives owner-side revocation; the impact is durable disclosure of
+  proprietary applications, internal configuration, cached data, and accidentally baked secrets.
+- A live inline STS policy proved exact image-ARN scoping: the allowed synthetic image reached
+  resource-not-found, while a different image and `DescribeImages` were denied.
+- CloudTrail recorded the permitted failed probes as management writes and retained the image name,
+  recipient account, `allowFleet`, and `allowImageBuilder`. It represented the service's specific
+  failures as generic `UnknownError`, so detection should inspect the request fields.
+- Both private and shared image inventories were empty. Only impossible image names were used; no
+  image, permission, builder, fleet, IAM role, or billable resource was created. Expected
+  functionality only; no AWS report.
+
 ## cont.102 (2026-09-30) — Marketplace Discovery private-offer reads
 
 - SHIPPED #84: the April 2026 Marketplace Discovery API can enumerate buyer-visible private offers

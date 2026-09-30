@@ -473,6 +473,7 @@
     - [AWS - AppFabric Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appfabric-post-exploitation/README.md)
     - [AWS - AppFlow Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appflow-post-exploitation/README.md)
     - [AWS - Application Discovery Service Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-application-discovery-post-exploitation/README.md)
+    - [AWS - AppStream 2.0 Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appstream-post-exploitation/README.md)
     - [AWS - AppSync Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-appsync-post-exploitation/README.md)
     - [AWS - Athena Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-athena-post-exploitation/README.md)
     - [AWS - Audit Manager Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-audit-manager-post-exploitation/README.md)
