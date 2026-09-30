@@ -34,6 +34,15 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
 - CloudTrail indexed every restricted probe: `GetDatabase` was a management read and `StopApplication` a management write, both retaining the target and STS session, including denials. Stop operations also generate direct EventBridge state changes and downstream SSM/optional EC2 evidence.
 - No application, EC2/SSM node, secret, key, AWS Backup object, role or other fixture was created. Both regional inventories remain empty and `AWSServiceRoleForAWSSSMForSAP` is absent. Expected functionality only; no private report.
 
+## cont.143 (2026-09-30) — Pricing Plan Manager financial-control audit
+
+- SHIPPED #136: exact-subscription `ApprovePaidSubscription`, `UpdateSubscription`, and `CancelSubscriptionChange` can respectively activate pending paid plans, immediately raise an active plan as high as Premium L6 ($10,000/month), or undo a scheduled cancellation/downgrade. Current-period paid commitments cannot be reverted; all branches require a current ETag.
+- SHIPPED #137: exact `UpdateSubscription` can request a lower tier and AWS documents immediate loss of higher-tier-exclusive features even while old-tier billing/allowances persist to period end. Cancellation returns resources to pay-as-you-go only after the period, and optional resource disassociation removes plan coverage without deleting the underlying service object.
+- Added current enumeration for tier, usage level, state, resource ARNs, scheduled change and ETag, plus the global `us-east-1` endpoint/CloudTrail boundary and CloudFront cross-link.
+- Found a beneficial documentation mismatch: the authorization table marks no action as resource-scopable and publishes a regionless ARN template, but restricted A/B probes proved exact request-ARN scoping for Get, Update, Approve and CancelChange. `ListSubscriptions` remains wildcard-only. Public guidance uses the API-returned ARN; no security-impact report.
+- CloudTrail indexed the restricted probes in `us-east-1`, retaining ARN, ETag, tier/usage level, session, errors and `AWS::PricingPlanManager::Subscription` resources. Exact A/B controls covered Get, Update, Approve, CancelChange, Cancel and Disassociate; unsigned access failed.
+- No subscription mutation was attempted because pending plans do not expire and active paid changes cannot be reverted in-period. Final global inventory is empty; no CloudFront, WAF, Route 53, KeyValueStore, IAM or billing resource changed. Expected functionality only; no private report.
+
 ## cont.140 (2026-09-30) — Inspector Scan and Signer Data exclusions
 
 - CLOSED Inspector Scan as a reasoned exclusion. `inspector-scan:ScanSbom` is authenticated, wildcard-only and analyzes only a caller-supplied CycloneDX document; it has no victim-resource selector, persisted scan or cross-account surface. A restricted `Resource: "*"` session succeeded and a fabricated resource ARN failed.
