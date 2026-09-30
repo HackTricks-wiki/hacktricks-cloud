@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.127 (2026-09-30) — AWS Security Agent email-MFA message retrieval
+
+- SHIPPED #112 (new 2026-09-25 API): exact-space `ListActorMessages` returns an actor inbox's sender, subject, receipt time and complete plain-text body, including an email OTP or verification link, during the documented 24-hour retention window.
+- Published exact prerequisites and bounded impact: a known pentest/actor and matching application first factor or active flow are generally still needed; the action is not generic source-mailbox or authenticator-app access, while an overly broad forwarding rule can expose unrelated forwarded content.
+- The authorization table lists only the exact Agent Space action and no KMS dependency. Added Medium stealth, an expandable CloudTrail/discovery/mail-provider/application-auth evidence table, the current-client version caveat and the enumeration command.
+- The installed CLI `2.34.45` predates the operation, but a manually SigV4-signed no-resource request reached the deployed `us-east-1` API and returned the expected `ResourceNotFoundException`. No Agent Space, pentest, actor, inbox or message was accessed or created; cleanup was empty by construction.
+- CloudTrail Event History had not indexed the failed read after the first bounded propagation wait. The official service contract says every Security Agent action is logged, so exact request/resource serialization remains a follow-up check. Cross-space/pentest IDOR, over-retention and response-body logging remain unproven private hypotheses; no AWS vulnerability report.
+
 ## cont.126 (2026-09-30) — AWS Security Agent SSO membership persistence
 
 - SHIPPED #111 (current API/IAM/user-guide contract): exact-space `CreateMembership` can assign an existing controlled IAM Identity Center user to an SSO-configured Agent Space, preserving web-application access after the attacker's original AWS session is revoked.

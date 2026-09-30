@@ -17,6 +17,14 @@
 - `ListArtifacts` / `ListFindings` are optional when exact IDs are recovered from CloudTrail, exported reports, tickets, repository state or the Continuum web application.
 - Current authorization dependencies differ: `GetArtifact` lists no dependent action, while `BatchGetFindings`/`ListFindings` list `kms:Decrypt` for customer-managed space encryption.
 
+### Email MFA message disclosure
+
+- AWS released `ListActorMessages` on 2026-09-25. It returns sender, subject, receipt time and the full plain-text body of messages received by a pentest actor's AWS-generated MFA address, including an OTP or verification link.
+- The action is scoped only to the exact Agent Space ARN and lists no KMS dependency. The caller also needs a pentest ID and case-insensitive actor identifier; messages expire from the service after 24 hours.
+- Impact is bounded to the corresponding application authentication/verification flow and normally still needs the matching first factor or active session. It is not original-mailbox access or TOTP recovery. A customer who forwards more than MFA mail can accidentally expose the additional forwarded content.
+- Installed AWS CLI `2.34.45` predates the operation, while the current CLI `2.37.4` reference includes it. A manually SigV4-signed call to `https://securityagent.us-east-1.api.aws/ListActorMessages` with nonexistent UUIDs reached the deployed operation and returned `ResourceNotFoundException: The specified agent instance does not exist.` No real Agent Space, pentest, actor or message was accessed and no state was created.
+- CloudTrail Event History had not indexed that failed read after the bounded initial wait. AWS's current logging contract still states that all Security Agent actions are CloudTrail events; recheck request/resource serialization after normal propagation without claiming the response body is logged.
+
 ### Code remediation boundary correction
 
 - `StartCodeRemediation` creates pull requests for selected existing findings from a pentest or code-review job.
@@ -57,6 +65,7 @@
 - Cross-agent-space IDOR on artifact/finding/job batch getters when IDs from one space are supplied with another space.
 - Repository/integration IDOR through `UpdateIntegratedResources`, or capability enablement without authorization to both required resource ARNs.
 - Presigned verification-script URL or environment-value leakage into CloudTrail despite the documented control-plane logging boundary.
+- Cross-space/pentest actor-message IDOR, retention beyond 24 hours, or message-body leakage into CloudTrail for `ListActorMessages`.
 
 No fixture was available for safe validation, so these remain private hypotheses rather than findings. No AWS vulnerability report was created.
 
