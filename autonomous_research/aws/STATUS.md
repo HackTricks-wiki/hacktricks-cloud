@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.145 (2026-09-30) — ACM ACME external-account persistence
+
+- SHIPPED #140 (exact-resource authorization plus current service contract): exact-EAB `acm:GetAcmeExternalAccountBindingCredentials` returns the key ID and MAC secret needed to register an attacker-held ACME account. Registration survives loss of the AWS session and EAB expiry/revocation; the account must be separately revoked.
+- Bounded the impact to ACM service-level persistence: certificate issuance remains limited by endpoint `VALID` domain scopes/key algorithms and the EAB role's `acm:RequestCertificate` policy, conditions, boundary and SCP. No role credentials/general AWS API access are returned, and client-key ACME certificates cannot attach to ELB, CloudFront or API Gateway.
+- Added complete endpoint/domain-validation/EAB/account enumeration, exact resource formats, the alternative CreateEAB + exact-role PassRole path, revocation guidance, explicit impact/stealth and expandable management/data-event telemetry.
+- Restricted A/B probes proved exact EAB scoping. A disposable public-CA endpoint reached `ACTIVE`; one-day EAB creation correctly failed because the lab administrator lacks `iam:PassRole` to `acm-acme.amazonaws.com`, so no secret/account/certificate was created and the end-to-end branch is not overclaimed.
+- Cleanup is complete: endpoint deletion reached exact not-found on the third poll, endpoint inventories are empty, the temporary role is absent, and the isolated 47 MB Certbot environment was removed. Expected functionality only; no private report.
+
 ## cont.144 (2026-09-30) — Partner Central Revenue Measurement audit
 
 - SHIPPED #138: exact-parent Revenue Attribution reads plus optional wildcard discovery expose customer AWS account IDs, Marketplace offer or Partner Central opportunity identifiers/names, product metadata, percentage allocations and effective windows. This is bounded commercial/customer intelligence, not credentials, invoices or payout data.

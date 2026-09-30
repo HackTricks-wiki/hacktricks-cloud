@@ -542,6 +542,7 @@
     - [AWS - Historical Cross-Account Vulnerabilities](pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md)
     - [AWS - Cross-Account Detection and Hardening](pentesting-cloud/aws-security/aws-cross-account-attacks/detection-and-hardening.md)
   - [AWS - Persistence](pentesting-cloud/aws-security/aws-persistence/README.md)
+    - [AWS - ACM Persistence](pentesting-cloud/aws-security/aws-persistence/aws-acm-persistence/README.md)
     - [AWS - Agent Registry Persistence](pentesting-cloud/aws-security/aws-persistence/aws-agent-registry-persistence/README.md)
     - [AWS - MediaPackage v2 policy Persistence](pentesting-cloud/aws-security/aws-persistence/aws-mediapackage-v2-policy-persistence/README.md)
     - [AWS - MediaLive Persistence](pentesting-cloud/aws-security/aws-persistence/aws-medialive-output-persistence/README.md)
