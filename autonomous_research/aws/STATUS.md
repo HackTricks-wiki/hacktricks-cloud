@@ -16,6 +16,27 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.121 (2026-09-30) — Oracle Database@AWS foundational audit
+
+- SHIPPED #103 (current API/IAM model): exact-database `odb:CreateAutonomousDatabaseWallet`
+  returns a caller-password-encrypted wallet archive containing Autonomous Database connection and
+  mTLS client material. It still needs an Oracle database credential and network reach; it does not
+  itself disclose the database password.
+- SHIPPED #104: exact-database `odb:UpdateAutonomousDatabase` can reset the Oracle `ADMIN`
+  password and can also replace the IP allowlist and disable mandatory mTLS. This escalates to
+  database-administrator privileges when the private endpoint is reachable, not to AWS IAM or full
+  OCI-tenancy administration.
+- Added service enumeration for networks, Exadata/VM clusters, Autonomous Databases, wallet state,
+  AWS RAM shares, License Manager entitlements, role integrations, and expected OCI-originated STS
+  identity-validation events.
+- The live account is not onboarded (`GetOciOnboardingStatus=NOT_STARTED` in `us-east-1`), and
+  `us-west-2` is SCP-denied. Marketplace acceptance and service initialization were deliberately
+  not performed because they change subscription/legal/billing state. The exact conditional
+  PassRole boundary and sensitive CloudTrail field serialization remain explicitly unclaimed.
+- No ODB, OCI, RAM, License Manager, IAM, secret, KMS, network, or compute resource was created, so
+  cleanup inventory was empty by construction. Expected documented functionality only; no AWS
+  vulnerability report.
+
 ## cont.120 (2026-09-30) — AppStream SAML all-applications entitlement escalation
 
 - SHIPPED #101: exact-stack `appstream:CreateEntitlement` alone created an
