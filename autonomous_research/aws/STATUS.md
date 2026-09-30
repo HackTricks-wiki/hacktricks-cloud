@@ -16,6 +16,26 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.118 (2026-09-30) — AppStream AgentAccess MCP headless desktop control
+
+- SHIPPED #98 (end-to-end): exact-stack `appstream:UpdateStack` enabled vision, computer input,
+  forwarded MCP tools, and `UserControlMode=DISABLED`; converting an ordinary stack required
+  deleting incompatible user and streaming-experience settings in the same call.
+- A separate operator with only exact stack+fleet `CreateStreamingURL` and stack-conditioned
+  `agentaccess-mcp:InvokeMcp`, `CheckConnectionStatus`, and `GetScreenshot` initialized a real
+  session and received a JPEG desktop screenshot. It had no Describe, input-tool, or PassRole
+  permission; the bearer URL and screenshot content were never printed or stored.
+- Published the conditional machine-role impact honestly: headless screen/input control exposes
+  the session, but AWS privilege escalation still needs a usable shell/application surface and an
+  existing fleet role. Forwarding exposes only MCP tools already configured in the image.
+- CloudTrail retained the full agent configuration in the default `UpdateStack` event and redacted
+  user/session/URL fields in `CreateStreamingURL`. Agent tool calls are optional CloudTrail data
+  events; CloudWatch provides operational metrics.
+- The session was explicitly expired. The one-instance On-Demand fleet reached STOPPED and was
+  disassociated/deleted; the stack and temporary documented AppStream service role were deleted.
+  Independent inventories found zero matching stacks, fleets, AppStream ENIs, or AppStream roles.
+  Expected functionality; no AWS report.
+
 ## cont.117 (2026-09-30) — AppStream stack transfer-control weakening
 
 - SHIPPED #97: exact-stack `appstream:UpdateStack` enabled clipboard copy in both directions, file
