@@ -16,6 +16,28 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.120 (2026-09-30) — AppStream SAML all-applications entitlement escalation
+
+- SHIPPED #101: exact-stack `appstream:CreateEntitlement` alone created an
+  `AppVisibility=ALL` grant matching `groups=ht-controlled`; no Describe, application, IdP, STS,
+  or PassRole permission was present, and a different stack ARN was denied.
+- SHIPPED #102 variant: exact-stack `appstream:UpdateEntitlement` changed a baseline
+  `ASSOCIATED`/selected-app entitlement and attribute into the same all-current-and-future-apps
+  grant without application permissions.
+- Published strict boundaries: this escalates only an already valid SAML identity with a matching
+  PrincipalTag and configured federation path; user-pool/API, Desktop-view, and Dynamic Application
+  Framework access ignore the entitlement plane.
+- Live testing corrected an API/documentation representation trap: the SAML assertion uses the
+  full `PrincipalTag:groups` URI, while the AppStream request stores `Name=groups`; passing the full
+  URI was rejected.
+- CloudTrail retained complete stack/name, visibility, description, and attribute values in the
+  requests and returned the full resulting entitlement. The invalid URI appeared as generic
+  `UnknownError`, while wrong-stack IAM denials had null request fields.
+- Both entitlements were deleted. One immediate stack deletion raced entitlement propagation, so a
+  bounded retry removed it; independent final inventories found zero matching entitlements or
+  stacks. No fleet, app, IdP, role, session, S3, network, or compute resource was created. Expected
+  functionality; no AWS report.
+
 ## cont.119 (2026-09-30) — AppStream regional user-pool persistence
 
 - SHIPPED #99: global-scope `appstream:CreateUser` plus exact-stack
