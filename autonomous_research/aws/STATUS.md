@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.133 (2026-09-30) — Amazon Nova Act foundational audit
+
+- SHIPPED #128: added foundational Nova Act coverage for workflow definitions, runs, sessions, acts, compatible model discovery, trace locations, CloudWatch log groups and same-account S3 Agent Trajectory Data exports.
+- Kept the execution boundary explicit: the control API returns browser/tool calls to a caller-managed SDK loop, while deployed scripts execute in separately provisioned Bedrock AgentCore Runtime/ECR/S3/IAM infrastructure. Nova Act control-plane access does not itself grant the browser or execution-role credentials.
+- Documented the high-value data surface: trajectories include prompts, screenshots and agent responses; visible secrets can be captured in screenshots. `exportConfig` needs independent same-account `s3:PutObject`, and a returned trace/artifact location does not grant object read access.
+- CloudTrail records definition/run/inventory operations as default management events, but `CreateSession`, `CreateAct`, `UpdateAct` and `InvokeActStep` are opt-in data events. Live empty inventory and model discovery succeeded in `us-east-1`; `eu-west-1` had no endpoint.
+- Rejected direct act injection, forged tool results, status falsification and attacker-bucket export as standalone book attacks: each lacked automatic victim-client execution, crossed no separate data boundary, or reduced to conditional state corruption/DoS. These remain recorded in the service ledger for fixture-based re-evaluation.
+- Cleanup is complete: the prior empty metrics-only Nova Act service-linked role deletion reached `SUCCEEDED`, exact role lookup now returns `NoSuchEntity`, and no workflow, run, AgentCore runtime, ECR repository, S3 bucket, log group or IAM execution role was created. Expected functionality only; no private report.
+
 ## cont.132 (2026-09-30) — AWS Support Authorization foundational audit
 
 - SHIPPED #126: added foundational `supportauthz` coverage for customer-signed Support permits, operator requests, the per-service action catalog, regional scope, immutable permit state, KMS grants, exact-resource reads/deletion and default CloudTrail/Service Event telemetry.

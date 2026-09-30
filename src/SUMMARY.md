@@ -1043,6 +1043,7 @@
     - [AWS - Amazon FSx Enum](pentesting-cloud/aws-security/aws-services/aws-fsx-enum.md)
     - [AWS - Amazon Kendra Enum](pentesting-cloud/aws-security/aws-services/aws-kendra-enum.md)
     - [AWS - Network Firewall Enum](pentesting-cloud/aws-security/aws-services/aws-network-firewall-enum.md)
+    - [AWS - Amazon Nova Act Enum](pentesting-cloud/aws-security/aws-services/aws-nova-act-enum.md)
     - [AWS - Private CA Connector for Active Directory Enum](pentesting-cloud/aws-security/aws-services/aws-pca-connector-ad-enum.md)
     - [AWS - Amazon Pinpoint Enum](pentesting-cloud/aws-security/aws-services/aws-pinpoint-enum.md)
     - [AWS - Proton Enum](pentesting-cloud/aws-security/aws-services/aws-proton-enum.md)
