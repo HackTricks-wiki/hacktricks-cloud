@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.131 (2026-09-30) — EventBridge enhanced Custom Event Bus retained-event replay
+
+- SHIPPED #124: added foundational enumeration for the enhanced Custom Event Bus launched on 2026-09-24, separating its `eventsv2` CLI/endpoint from the shared `events:` IAM namespace and documenting buses, retention, policies/RAM shares, subscribers, event sources, target roles, replay positions, vended logs and `AWS/EventsV2` metrics.
+- SHIPPED #125 (live name-scoped creation minimum): `events:CreateSubscriber` on the exact bus and one future subscriber name pattern plus exact-role `iam:PassRole` created a `POINT_IN_TIME` / `HORIZON` subscriber. The session had no list, describe, publish, update, delete or SQS permission.
+- A synthetic canary published before any subscriber existed was delivered twice—once to the baseline subscriber and once to the restricted subscriber—with the same event ID and `SystemMetadata["aws:DeliveryType"]="REPLAY"`. Omitting an end point would leave the subscriber consuming live events after catch-up.
+- Bounded impact to retained and future bus contents: the default window is one day and the configured maximum is 365 days; the target and role must belong to the subscriber account, the passed role still needs target permission, and subscriber creation does not delete history, disrupt existing consumers, or itself grant target read access.
+- CloudTrail recorded `CreateSubscriber` as a default `eventsv2.amazonaws.com` management write with both bus/subscriber resources and the exact target, role, replay position, transformer and state. The publish call was absent from Event history; `AWS/EventsV2` publish/delivery metrics are always present, while subscriber delivery logs default to `OFF` and require separate vended-log wiring.
+- Cleanup is complete: subscriber and bus inventories are empty; the exact SQS queue and delivery role return not-found; no RAM, KMS, log-delivery, Classic EventBridge, Lambda, HTTP or external fixture was created. Expected functionality only; no private AWS report.
+
 ## cont.130 (2026-09-30) — AWS Lambda Core network-connector audit
 
 - SHIPPED #122: added the missing Lambda Core inventory for reusable Lambda MicroVM VPC-egress connectors, including their subnets, security groups, protocol, stored operator role, ENI correlation, state/update diagnostics and management-event logging.
