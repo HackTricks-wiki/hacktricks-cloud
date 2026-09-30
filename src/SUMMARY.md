@@ -388,6 +388,7 @@
     - [AWS - API Gateway Persistence](pentesting-cloud/aws-security/aws-persistence/aws-api-gateway-persistence/README.md)
     - [AWS - AppFlow Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appflow-persistence/README.md)
     - [AWS - AppIntegrations Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appintegrations-persistence/README.md)
+    - [AWS - AppStream 2.0 Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appstream-persistence/README.md)
     - [AWS - AppSync Persistence](pentesting-cloud/aws-security/aws-persistence/aws-appsync-persistence/README.md)
     - [AWS - B2B Data Interchange Persistence](pentesting-cloud/aws-security/aws-persistence/aws-b2bi-persistence/README.md)
     - [AWS - Bedrock Data Automation Persistence](pentesting-cloud/aws-security/aws-persistence/aws-bedrock-data-automation-persistence/README.md)

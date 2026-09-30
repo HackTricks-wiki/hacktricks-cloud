@@ -16,6 +16,23 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.115 (2026-09-30) — AppStream Elastic-fleet SYSTEM session-script persistence
+
+- SHIPPED #95: exact-fleet `appstream:UpdateFleet` plus exact-object `s3:GetObject` set an Elastic
+  fleet's session-script archive while preserving its existing machine role without caller-side
+  PassRole.
+- A valid ZIP can run session-start/termination hooks as local SYSTEM or the streaming user. This is
+  fleet-level recurring persistence and conditionally recovers the retained
+  `appstream_machine_role` whenever later user sessions trigger it.
+- The exact fleet alone failed the S3 object-access check. Adding only exact-object GetObject
+  succeeded; `DescribeFleets` and a different fleet ARN were denied. No session was started.
+- CloudTrail retained the exact bucket/key and returned the full fleet, including role, VPC,
+  platform and capacity. Optional S3 data events and session-script output logs provide additional
+  evidence, but payload configuration can disable the latter.
+- The stopped Elastic fleet, placeholder object/bucket, harmless machine role, and temporary
+  AppStream service role were deleted. Final checks found zero matching fleets or AppStream ENIs,
+  and the bucket/roles were absent. Expected functionality; no AWS report.
+
 ## cont.114 (2026-09-30) — AppStream Elastic-application launch poisoning
 
 - SHIPPED #94: exact-application `appstream:UpdateApplication` replaced an enabled Windows
