@@ -16,6 +16,15 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.132 (2026-09-30) — AWS Support Authorization foundational audit
+
+- SHIPPED #126: added foundational `supportauthz` coverage for customer-signed Support permits, operator requests, the per-service action catalog, regional scope, immutable permit state, KMS grants, exact-resource reads/deletion and default CloudTrail/Service Event telemetry.
+- SHIPPED #127 (documented expected functionality plus live dependency gate): a permit may select `allActions` and `allResourcesInRegion` while omitting both expiry conditions and `supportCaseDisplayId`, leaving durable regional Support-access-plane authorization until deletion. Current live RDS actions include diagnostics that can access customer content, backup data and volume data.
+- Bounded the impact: the permit creator receives no bearer credential, cannot assume the Support service-linked role and cannot directly invoke a catalog action. An AWS Support operator must retrieve and use the signed authorization; attacker-controlled case/social-engineering activity requires separate Support permissions and human interaction.
+- A restricted `supportauthz:CreateSupportPermit`-only session reached the API with a broad synthetic request but failed before mutation on `kms:DescribeKey`. Successful creation additionally needs a same-Region customer-managed ECC P-384 signing key plus tightly conditioned `kms:DescribeKey`/`kms:CreateGrant` forward-access-session authorization.
+- Both allowed Regions had zero permits, requests and compatible signing keys. Sparse empty pagination terminated normally. No KMS key was created because it could not be deleted immediately; final permit inventories stayed empty and no Support case, RDS resource, grant, role, EventBridge or notification fixture exists.
+- CloudTrail retained the complete failed broad scope, key ARN, description and KMS authorization error. List calls were default read management events with responses omitted. AWS documents per-use `RetrieveSupportPermit`, KMS `Sign` and per-action/resource `StartSupportAction` evidence. Expected functionality only; no private AWS report.
+
 ## cont.131 (2026-09-30) — EventBridge enhanced Custom Event Bus retained-event replay
 
 - SHIPPED #124: added foundational enumeration for the enhanced Custom Event Bus launched on 2026-09-24, separating its `eventsv2` CLI/endpoint from the shared `events:` IAM namespace and documenting buses, retention, policies/RAM shares, subscribers, event sources, target roles, replay positions, vended logs and `AWS/EventsV2` metrics.
