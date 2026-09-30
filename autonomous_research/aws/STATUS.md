@@ -84,6 +84,21 @@ Current next check: continue the missing-service/action sweep, prioritizing serv
   no delete API. Two preliminary IAM roles were cleaned and independently verified absent; the final
   STS-policy test created no resources. Expected functionality only; no AWS report.
 
+## cont.107 (2026-09-30) — CodeBuild sandbox interactive connection
+
+- SHIPPED #87: exact-sandbox `codebuild:StartSandboxConnection` returns a Session Manager token and
+  stream URL for an interactive shell in a running sandbox, exposing in-container source/secrets and
+  the project role without caller-side PassRole, SSM, project mutation, or command-execution rights.
+- Live least-privilege proof used an inline STS session policy: the allowed synthetic sandbox ARN
+  reached `No sandbox found`, while another ARN and `ListSandboxes` were denied.
+- The account contained zero sandboxes, so no end-to-end shell/token was created. Public coverage
+  explicitly records the SSM Agent and project-service-role prerequisites and leaves successful
+  response logging unclaimed.
+- CloudTrail recorded the failed calls as management events with `readOnly:true` despite IAM's Write
+  classification; the allowed not-found call retained the exact sandbox ARN.
+- No CodeBuild, SSM, or IAM resource was created; cleanup was vacuous. Expected functionality only;
+  no AWS report.
+
 ## Active 2026-09-26 checkpoint
 
 Research remains active. The September 24 saturation table below records that specific sweep, not completion of AWS research. Recent changes pushed to PR #413 include Account Access Manager role entitlement assignment, Sign-In account and organization console-denial paths, Lambda full-resource-policy code-update escalation, RAM share retention on organization departure, current Organizations departure controls, and stealth/CloudTrail corrections across IAM, Identity Center, Lambda, and Organizations pages. Each tested service has a per-service ledger with prerequisites, negative branches, and cleanup results.
