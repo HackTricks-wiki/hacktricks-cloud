@@ -516,7 +516,6 @@
     - [GCP - Secret Manager Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-secret-manager-unauthenticated-enum.md)
     - [GCP - Source Repositories Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-source-repositories-unauthenticated-enum.md)
     - [GCP - Storage Unauthenticated Enum](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-storage-unauthenticated-enum/README.md)
-      - [GCP - Public Buckets Privilege Escalation](pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-storage-unauthenticated-enum/gcp-public-buckets-privilege-escalation.md)
 - [GWS - Workspace Pentesting](pentesting-cloud/workspace-security/README.md)
   - [GWS - Post Exploitation](pentesting-cloud/workspace-security/gws-post-exploitation.md)
   - [GWS - Admin Console Privesc](pentesting-cloud/workspace-security/gws-admin-privesc.md)
