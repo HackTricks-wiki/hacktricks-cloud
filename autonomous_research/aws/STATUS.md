@@ -1121,3 +1121,12 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - The validation used a positive non-revoked client, a negative revoked-client baseline, an exact-endpoint import-only IAM principal, multiple propagation probes and a restored-state request. No application/VPC data traffic was sent; OpenVPN used a null device with route and interface configuration disabled.
 - The legitimate state was restored immediately after confirmation, every client session was terminated, and the target association and endpoint were deleted. Independent final inventory found no exact/tagged endpoint, service-managed ENI/public IP, tagged ACM certificate, matching IAM user, OpenVPN process or local tunnel interface.
 - The pre-existing default VPC/subnet were not changed beyond the short-lived Client VPN association. Total association/connection time stayed far below the authorized cost ceiling and there is no cleanup debt.
+
+## cont.178 (2026-10-01) — AWS Site-to-Site VPN peer takeover
+
+- SHIPPED #91 (VERIFIED exact-resource minimum): `ec2:ModifyVpnConnection` on one exact VPN ARN repointed an existing connection to a second controlled customer gateway; no describe, create, route, VPC or gateway permissions were present.
+- SHIPPED #92 (VERIFIED exact-resource minimum): `ec2:ModifyVpnTunnelOptions` on the same exact VPN ARN installed a caller-selected PSK on one known tunnel. Admin-side configuration checks confirmed the replacement public IP, preserved credential after the gateway-only change, and new credential after the tunnel update.
+- Published as network-plane takeover plus service-level persistence, not IAM/account persistence. The attacker still needs control of the replacement public IP/appliance and a usable routing/security path; certificate and Secrets Manager credential modes remain separately bounded.
+- CloudTrail recorded both actions as default EC2 management writes with `readOnly:false`; endpoint reprovisioning made the chain especially noisy and interrupted both tunnels for the gateway swap and one tunnel for the PSK change.
+- A separate unexpected security-impact issue was confirmed while auditing log-content authorization. Its exploit details remain only in a restricted local AWS report pending disclosure and were not added to the public book.
+- The unattached VGW never carried a route or traffic. The VPN, both customer gateways, VGW, two EIPs, mutation user/key/policy and separate validation principal were deleted; independent final inventories were empty and there is no cleanup debt.
