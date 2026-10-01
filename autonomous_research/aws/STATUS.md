@@ -1186,3 +1186,9 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - VERIFIED/CORRECTED: `ModifyUserGroup` requires authorization on the exact group and every user ARN in the add/remove lists. Group-only permission failed on the attacker-user ARN; adding the exact attacker/victim ARNs succeeded; a later outsider addition failed on that outsider ARN; Describe remained denied.
 - Updated the existing persistence technique's minimum permissions and telemetry rather than adding a duplicate technique. Successful CloudTrail retained exact add/remove lists and pending changes; IAM denials redacted request fields but named the missing ARN in the error.
 - Both fixtures' RBAC users/groups, IAM callers/keys/policies and auto-created ElastiCache SLRs were deleted; all final inventories were empty. No cache, network, snapshot, object or paid resource existed. Expected/correctly enforced behavior only; no private AWS report and no cleanup debt.
+
+## cont.186 (2026-10-01) — ElastiCache exact-resource Describe isolation
+
+- CLOSED SAFE: exact-A `DescribeUsers` and `DescribeUserGroups` policies with exact request filters returned only A. Filtered B requests were denied on B's ARN, while unfiltered requests were denied on `user:*`/`usergroup:*`; no cross-resource metadata was returned.
+- Added the operational boundary to enumeration: exact-resource readers must know and filter by the identifier, and account-wide inventory requires wildcard resource permission.
+- The two groups, three RBAC users, IAM key/policy/user and auto-created SLR were deleted. The SLR deletion task was polled to `SUCCEEDED`; all final inventories were empty. No cache or paid/data-plane resource existed, no private report, and no cleanup debt.

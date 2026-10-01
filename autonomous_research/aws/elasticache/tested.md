@@ -30,3 +30,8 @@ Further enum and post-exploitation ideas remain in `checklist.md`.
   the exact group failed on the added user ARN. Granting the action on the group, added user, and
   removed user succeeded; a different ungranted user failed on its own ARN. The existing persistence
   page now states the exact minimum. See `modify-user-group-authorization-2026-10-01.md`.
+
+- **Exact-resource Describe isolation** — CLOSED SAFE 2026-10-01. `DescribeUsers` and
+  `DescribeUserGroups` with exact A ARNs plus exact A filters returned only A. Filtered B requests
+  were denied on B's ARN; unfiltered requests were denied on `user:*`/`usergroup:*`. No unrelated
+  metadata leaked. See `describe-resource-isolation-2026-10-01.md`.
