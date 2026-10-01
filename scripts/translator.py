@@ -225,6 +225,20 @@ def preserve_reference_markup(source: str, translated: str) -> str:
     return REFERENCE_LINE_RE.sub(restore_reference, restored)
 
 
+def protected_markup_is_intact(source, translated):
+    """Check document structure without requiring reference titles to stay in English."""
+    source_references = [(match.group(1), match.group(3)) for match in REFERENCE_LINE_RE.finditer(source)]
+    translated_references = [
+        (match.group(1), match.group(3)) for match in REFERENCE_LINE_RE.finditer(translated)
+    ]
+    return (
+        MDBOOK_DIRECTIVE_RE.findall(source) == MDBOOK_DIRECTIVE_RE.findall(translated)
+        and LINKED_CITATION_RE.findall(source) == LINKED_CITATION_RE.findall(translated)
+        and len(REFERENCES_HEADING_RE.findall(source)) == len(REFERENCES_HEADING_RE.findall(translated))
+        and source_references == translated_references
+    )
+
+
 def translate_around_protected_markup(language, text, file_path, model, client):
     """Retry malformed Markdown with structural spans held outside model output."""
     matches = list(PROTECTED_MARKUP_RE.finditer(text))
@@ -241,12 +255,13 @@ def translate_around_protected_markup(language, text, file_path, model, client):
     translated = translate_text(language, "".join(masked), file_path, model, client=client)
 
     positions = [translated.find(marker) for marker in markers]
-    if all(translated.count(marker) == 1 for marker in markers) and positions == sorted(positions):
+    markers_preserved = all(translated.count(marker) == 1 for marker in markers) and positions == sorted(positions)
+    if markers_preserved:
         for marker, match in zip(markers, matches):
             translated = translated.replace(marker, match.group(), 1)
-    else:
-        # A model that removes placeholders cannot damage the source markup:
-        # translate only the prose between the protected spans.
+    if not markers_preserved or not protected_markup_is_intact(text, translated):
+        # The model may keep the placeholders but still duplicate a citation or
+        # reference outside them. Translate only the prose in either case.
         def prose(segment):
             if not segment.strip():
                 return segment
@@ -267,10 +282,8 @@ def translate_around_protected_markup(language, text, file_path, model, client):
         fragments.append(prose(text[cursor:]))
         translated = "".join(fragments)
 
-    if preserve_mdbook_directives(text, translated) == text and translated != text:
-        raise RuntimeError(f"Could not preserve mdBook directives in {file_path}")
-    if preserve_reference_markup(text, translated) == text and translated != text:
-        raise RuntimeError(f"Could not preserve reference markup in {file_path}")
+    if not protected_markup_is_intact(text, translated):
+        raise RuntimeError(f"Could not preserve protected markup in {file_path}")
     prose_words = re.findall(r"\b[A-Za-z]{3,}\b", PROTECTED_MARKUP_RE.sub("", text))
     if translated == text and len(prose_words) >= 30:
         raise RuntimeError(f"Protected retry left translatable prose unchanged in {file_path}")
