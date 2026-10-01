@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.171 (2026-10-01) — Amplify UI Builder codegen
+
+- SHIPPED #175: added the missing `amplifyuibuilder` inventory and exact-job recovery of the full generic data schema plus presigned generated React source. Live least-privilege testing required `GetCodegenJob` on the exact job ARN and `amplify:GetApp` on the exact parent app; no list, component/form/theme read, write, IAM, build or deployment permission was present.
+- Documented the manifest-of-presigned-files format, source/schema impact, High stealth and compact CloudTrail/download telemetry. Also added the public CVE-2025-4318 upgrade and generated-diff review warning without exposing current private research.
+- A current unexpected security-impact code-generation issue was confirmed in the managed service and upstream 2.20.7 renderer. Details remain only in the restricted local AWS report directory pending AWS review.
+- All disposable apps/forms/jobs and IAM users/policies/keys were deleted; final matching app and principal inventories were empty. No branch, backend, repository, build, deployment, role, secret, Figma token, data record or paid workload was created. See `amplify-ui-builder/audit-2026-10-01.md`.
+
 ## cont.170 (2026-10-01) — AWS Telco Network Builder retirement
 
 - Closed TNB as a current zero-coverage lead. Historical NSD packages could bundle Bash lifecycle hooks, select a CodeBuild-assumable `execution_role`, and run during network instantiation; AWS's own example hook role has `AdministratorAccess`. Package reads, lifecycle replacement and termination were additional historical candidates.

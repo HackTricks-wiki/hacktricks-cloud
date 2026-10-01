@@ -673,6 +673,7 @@
     - [AWS - WAF Persistence](pentesting-cloud/aws-security/aws-persistence/aws-waf-persistence/README.md)
     - [AWS - WorkSpaces Web Persistence](pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md)
   - [AWS - Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/README.md)
+    - [AWS - Amplify Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-amplify-post-exploitation/README.md)
     - [AWS - Agent Registry Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-agent-registry-post-exploitation/README.md)
     - [AWS - User Notifications suppression Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-user-notifications-suppression-post-exploitation/README.md)
     - [AWS - EventBridge Pipes Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-pipe-configuration-post-exploitation/README.md)
