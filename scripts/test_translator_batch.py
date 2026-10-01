@@ -95,6 +95,29 @@ class TranslationBatchTests(unittest.TestCase):
         translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
         self.assertIn("Lee esto.\n{{#include ./banner.md}}\nMás detalles.", translated)
 
+    def test_extra_citation_outside_preserved_markers_retries_prose(self):
+        source = "Read this.<sup>[[1]](#references)</sup>\n\n## References\n\n- [1] [API](https://example.com)"
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**kwargs):
+                        content = kwargs["messages"][-1]["content"]
+                        if "__HTC_STRUCT_" in content:
+                            result = content.replace("Read this.", "Lee esto.")
+                            result += "\n<sup>[[99]](#references)</sup>"
+                        elif "<sup>" in content:
+                            result = "Lee esto.\n\n## Referencias"
+                        else:
+                            result = content.replace("Read this.", "Lee esto.")
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertTrue(translator.protected_markup_is_intact(source, translated))
+        self.assertIn("Lee esto.<sup>[[1]](#references)</sup>", translated)
+        self.assertNotIn("[[99]]", translated)
+
 
 if __name__ == "__main__":
     unittest.main()
