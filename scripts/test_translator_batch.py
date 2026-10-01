@@ -55,6 +55,23 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertIn("Más detalles.", translated)
         self.assertIn("{{#ref}}\n../README.md\n{{#endref}}", translated)
 
+    def test_ref_path_is_restored_without_losing_translated_prose(self):
+        source = "Read this.\n{{#ref}}\n../gcp-cloudfunctions-privesc.md\n{{#endref}}\nMore details."
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**_kwargs):
+                        result = "Lee esto.\n{{#ref}}\n../gcp-cloud-functions-privesc.md\n{{#endref}}\nMás detalles."
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertEqual(
+            translated,
+            "Lee esto.\n{{#ref}}\n../gcp-cloudfunctions-privesc.md\n{{#endref}}\nMás detalles.",
+        )
+
     def test_broken_references_retry_with_exact_source_citations(self):
         source = "Read this.<sup>[[1]](#references)</sup>\n\n## References\n\n- [1] [AWS API](https://example.com/api)"
 
