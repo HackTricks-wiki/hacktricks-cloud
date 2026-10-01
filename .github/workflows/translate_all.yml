@@ -15,6 +15,10 @@ on:
         description: 'Optional comma-separated src/*.md paths to retry in addition to the language backlog'
         required: false
         default: ''
+      only_language:
+        description: 'Optional language branch code to resume only that language'
+        required: false
+        default: ''
 
 permissions:
   packages: write
@@ -24,8 +28,20 @@ permissions:
   pull-requests: read
 
 jobs:
+  select-languages:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: select
+        env:
+          ONLY_LANGUAGE: ${{ inputs.only_language }}
+        run: python3 scripts/translation_matrix.py --only "$ONLY_LANGUAGE" >> "$GITHUB_OUTPUT"
+
   translate:
     name: Translate → ${{ matrix.name }} (${{ matrix.branch }})
+    needs: select-languages
     runs-on: ubuntu-latest
     environment: prod
 
@@ -34,24 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 16
-      matrix:
-        include:
-          - { name: "Afrikaans", language: "Afrikaans", branch: "af" }
-          - { name: "German", language: "German", branch: "de" }
-          - { name: "Greek", language: "Greek", branch: "el" }
-          - { name: "Spanish", language: "Spanish", branch: "es" }
-          - { name: "French",  language: "French",  branch: "fr" }
-          - { name: "Hindi",  language: "Hindi",  branch: "hi" }
-          - { name: "Italian", language: "Italian", branch: "it" }
-          - { name: "Japanese", language: "Japanese", branch: "ja" }
-          - { name: "Korean", language: "Korean", branch: "ko" }
-          - { name: "Polish", language: "Polish", branch: "pl" }
-          - { name: "Portuguese", language: "Portuguese", branch: "pt" }
-          - { name: "Serbian", language: "Serbian", branch: "sr" }
-          - { name: "Swahili", language: "Swahili", branch: "sw" }
-          - { name: "Turkish", language: "Turkish", branch: "tr" }
-          - { name: "Ukrainian", language: "Ukrainian", branch: "uk" }
-          - { name: "Chinese", language: "Chinese", branch: "zh" }
+      matrix: ${{ fromJSON(needs.select-languages.outputs.matrix) }}
 
     # Ensure only one job per branch runs at a time (even across workflow runs)
     concurrency:
@@ -92,6 +91,7 @@ jobs:
           cp scripts/compare_and_fix_refs.py /tmp/compare_and_fix_refs.py
           cp scripts/translator.py /tmp/translator.py
           cp scripts/translation_backlog.py /tmp/translation_backlog.py
+          cp scripts/push_branch_with_retry.sh /tmp/push_branch_with_retry.sh
           cp scripts/seo_postprocess.py /tmp/seo_postprocess.py
           cp scripts/mark_unchanged_s3_files.py /tmp/mark_unchanged_s3_files.py
           cp scripts/upload_immutable_images.sh /tmp/upload_immutable_images.sh
@@ -131,7 +131,7 @@ jobs:
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Fix unmatched refs"
-            git push origin "$BRANCH"
+            bash /tmp/push_branch_with_retry.sh "$BRANCH"
           fi
 
       - name: Run translation script on changed files
@@ -170,7 +170,7 @@ jobs:
               git add .translation-source-blobs.json
               if ! git diff --cached --quiet; then
                 git commit -m "Record translated English source blobs for $BRANCH"
-                git push origin "$BRANCH"
+                bash /tmp/push_branch_with_retry.sh "$BRANCH"
               fi
             done
           fi
@@ -185,7 +185,7 @@ jobs:
             cp /tmp/master-summary.md src/SUMMARY.md
             git add src/SUMMARY.md
             git commit -m "Sync SUMMARY.md with master" || echo "SUMMARY already up to date"
-            git push || echo "No SUMMARY updates to push"
+            bash /tmp/push_branch_with_retry.sh "$BRANCH"
           else
             echo "master summary not exported; failing"
             exit 1
@@ -225,7 +225,7 @@ jobs:
           fi
 
           # Clone the searchindex repo
-          git clone --depth 1 https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git /tmp/searchindex-repo
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${TARGET_REPO}.git" /tmp/searchindex-repo
           
           # Compress the searchindex file
           python3 /tmp/build_compact_search_index.py "$ASSET" "$COMPACT_ASSET"
@@ -337,7 +337,7 @@ jobs:
             --source ./book \
             --manifest /tmp/s3-branch-manifest.json \
             --remote-prefix "$BRANCH/"
-          aws s3 sync ./book s3://hacktricks-cloud/$BRANCH --delete
+          aws s3 sync ./book "s3://hacktricks-cloud/$BRANCH" --delete
           bash /tmp/upload_immutable_images.sh hacktricks-cloud "$BRANCH"
           echo "Sync completed"
           echo "Cat 3 files from the book"
