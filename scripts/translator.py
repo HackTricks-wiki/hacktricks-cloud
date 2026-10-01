@@ -26,6 +26,7 @@ REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 # occasionally translate directive names or attributes (for example
 # `name` -> `naam`), which makes preprocessors abort a whole language build.
 MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
+MDBOOK_REF_BLOCK_RE = re.compile(r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}")
 MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
 LINKED_CITATION_RE = re.compile(
     r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
@@ -148,6 +149,19 @@ def _get_encoding_for_model(model: str):
         print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
         return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
 
+def preserve_ref_blocks(source: str, translated: str) -> str:
+    """Restore complete mdBook reference blocks, including their file paths."""
+    source_blocks = MDBOOK_REF_BLOCK_RE.findall(source)
+    if not source_blocks:
+        return translated
+    translated_blocks = MDBOOK_REF_BLOCK_RE.findall(translated)
+    if len(source_blocks) != len(translated_blocks):
+        print("Reference block count changed during translation; returning the source chunk unchanged.")
+        return source
+    blocks = iter(source_blocks)
+    return MDBOOK_REF_BLOCK_RE.sub(lambda _match: next(blocks), translated)
+
+
 def preserve_mdbook_directives(source: str, translated: str) -> str:
     """Restore mdBook directives exactly as they appeared in the source.
 
@@ -232,7 +246,8 @@ def protected_markup_is_intact(source, translated):
         (match.group(1), match.group(3)) for match in REFERENCE_LINE_RE.finditer(translated)
     ]
     return (
-        MDBOOK_DIRECTIVE_RE.findall(source) == MDBOOK_DIRECTIVE_RE.findall(translated)
+        MDBOOK_REF_BLOCK_RE.findall(source) == MDBOOK_REF_BLOCK_RE.findall(translated)
+        and MDBOOK_DIRECTIVE_RE.findall(source) == MDBOOK_DIRECTIVE_RE.findall(translated)
         and LINKED_CITATION_RE.findall(source) == LINKED_CITATION_RE.findall(translated)
         and len(REFERENCES_HEADING_RE.findall(source)) == len(REFERENCES_HEADING_RE.findall(translated))
         and source_references == translated_references
@@ -471,6 +486,11 @@ Also don't add any extra stuff in your response that is not part of the translat
 
     # Restore source directives after all model-provided text normalization.
     # This preserves exact mdBook syntax while retaining translated prose.
+    restored = preserve_ref_blocks(text, response_message)
+    if restored == text and response_message != text and MDBOOK_REF_BLOCK_RE.search(text):
+        print(f"Retrying {file_path} with protected reference blocks")
+        return translate_around_protected_markup(language, text, file_path, model, client)
+    response_message = restored
     restored = preserve_mdbook_directives(text, response_message)
     if restored == text and response_message != text and MDBOOK_DIRECTIVE_RE.search(text):
         print(f"Retrying {file_path} with protected mdBook markup")
