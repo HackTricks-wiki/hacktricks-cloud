@@ -16,6 +16,14 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.169 (2026-10-01) — Partner Central Selling API
+
+- SHIPPED #172: added the missing Selling inventory and exact-resource recovery of customer PII/account IDs, Partner/AWS contacts, project/sales pipeline, expected spend, associations, scores/recommendations and software commitment/discount terms from Opportunities, AWS summaries, invitations and snapshots.
+- SHIPPED #173: documented exact Opportunity workflow abuse: full replacement treats omitted fields as null, assignment/association writes can divert ownership or commercial links, submission locks edits during AWS review, and referral rejection removes receiver access.
+- SHIPPED #174: documented Partner Central Selling service-level persistence through an accepted external Engagement member plus permanent immutable snapshot access, and continued automatic publication through the account-wide passed snapshot-job role and an existing target-bound job.
+- Live probes established the `us-east-1`-only endpoint, active-Partner gate, exact Opportunity/Catalog scoping, required exact-role PassRole and functional `iam:PassedToService=resource-snapshot-job.partnercentral-selling.amazonaws.com`. Failed reads/writes were default CloudTrail events with null request/response/resource fields.
+- All three disposable IAM users/policies/keys were deleted; final `ht-pcs-*` user/role inventories were empty. No Partner record, role, setting, job, invitation or external workflow changed. Expected functionality only, no private report and no cleanup debt.
+
 ## cont.168 (2026-10-01) — Partner Central Channel API
 
 - SHIPPED #170: added the missing Channel inventory and documented PMA/relationship/handshake reads that expose reseller, customer and billing-transfer topology, account IDs, programs, sectors and service-period terms.
