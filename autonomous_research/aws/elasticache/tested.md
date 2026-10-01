@@ -35,3 +35,8 @@ Further enum and post-exploitation ideas remain in `checklist.md`.
   `DescribeUserGroups` with exact A ARNs plus exact A filters returned only A. Filtered B requests
   were denied on B's ARN; unfiltered requests were denied on `user:*`/`usergroup:*`. No unrelated
   metadata leaked. See `describe-resource-isolation-2026-10-01.md`.
+
+- **Prospective `CreateUserGroup` authorization** — VERIFIED 2026-10-01. Permission on only the
+  future group ARN failed on the initial `default` user ARN. Exact future group plus every initial
+  user succeeded; a second prospective group with an ungranted member failed on that member ARN.
+  Updated the existing persistence page; see `create-user-group-authorization-2026-10-01.md`.

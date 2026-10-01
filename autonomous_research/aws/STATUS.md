@@ -1192,3 +1192,9 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - CLOSED SAFE: exact-A `DescribeUsers` and `DescribeUserGroups` policies with exact request filters returned only A. Filtered B requests were denied on B's ARN, while unfiltered requests were denied on `user:*`/`usergroup:*`; no cross-resource metadata was returned.
 - Added the operational boundary to enumeration: exact-resource readers must know and filter by the identifier, and account-wide inventory requires wildcard resource permission.
 - The two groups, three RBAC users, IAM key/policy/user and auto-created SLR were deleted. The SLR deletion task was polled to `SUCCEEDED`; all final inventories were empty. No cache or paid/data-plane resource existed, no private report, and no cleanup debt.
+
+## cont.187 (2026-10-01) — ElastiCache prospective group authorization
+
+- VERIFIED/CORRECTED: `CreateUserGroup` authorizes the prospective exact group ARN and every initial user ARN. Future-group-only permission failed on the `default` user; adding the exact default/member users succeeded; a second future group with an ungranted outsider failed on the outsider ARN. Describe remained denied.
+- Updated the existing persistence technique's new-group minimum and telemetry. The successful event retained group ID, engine and full initial membership; denied events redacted request fields but named the missing exact user ARN.
+- The unattached group, three RBAC users, IAM key/policy/user and auto-created SLR were deleted; all final inventories were empty. No cache or paid/data-plane resource, no private report, and no cleanup debt.
