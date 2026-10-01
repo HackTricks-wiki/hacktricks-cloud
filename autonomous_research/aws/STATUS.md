@@ -1077,3 +1077,10 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - SHIPPED #83: private-connection certificate replacement gives an immediate outage path and, conditional on destination/network control, credential interception or malicious tool responses.
 - Corrected the stale IdP-swap page: `UpdateOperatorAppIdpConfig` only rotates the secret. Full IdP replacement requires noisy Disable+Enable plus PassRole to `aidevops.amazonaws.com`.
 - Both Regions had zero spaces/services/private connections; no resources or third-party requests were created. Provider credential-relay and private-connection SSRF ideas remain private, fixture-dependent hypotheses; no AWS defect or report.
+
+## cont.172 (2026-10-01) — AWS User Experience Customization defense evasion
+- SHIPPED #84 (VERIFIED minimum): wildcard-only `uxc:UpdateAccountCustomizations` changed the account color and replaced the account-wide visible-service/Region lists without any UXC read, target-service, IAM or other permission.
+- Published the result as bounded console defense evasion/operator confusion: it changes menus, search/favorites and the Region selector for every console user, but does not alter IAM, direct URLs, CLI/SDK/API access or target-service telemetry.
+- CloudTrail recorded each write as a default management event with the exact lists/color and resulting fields. `GetAccountCustomizations` is an optional UXC data event; a live `ListServices` request appeared as a management read.
+- The documented JSON-null reset was omitted by AWS CLI serialization and rejected by a raw signed request. Empty arrays restored the default behavior and are also the CloudFormation reset representation; recorded as a non-security compatibility/documentation issue.
+- Color propagation agreed immediately across both allowed Regions in a bounded retest. Final state was `none` plus empty/default lists, the disposable user/key/policy were deleted, and no `ht-uxc-*` IAM user remained. No AWS vulnerability report.
