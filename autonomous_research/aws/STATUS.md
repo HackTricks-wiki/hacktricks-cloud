@@ -1198,3 +1198,9 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - VERIFIED/CORRECTED: `CreateUserGroup` authorizes the prospective exact group ARN and every initial user ARN. Future-group-only permission failed on the `default` user; adding the exact default/member users succeeded; a second future group with an ungranted outsider failed on the outsider ARN. Describe remained denied.
 - Updated the existing persistence technique's new-group minimum and telemetry. The successful event retained group ID, engine and full initial membership; denied events redacted request fields but named the missing exact user ARN.
 - The unattached group, three RBAC users, IAM key/policy/user and auto-created SLR were deleted; all final inventories were empty. No cache or paid/data-plane resource, no private report, and no cleanup debt.
+
+## cont.188 (2026-10-01) — ElastiCache failed-token telemetry
+
+- CLOSED SAFE: exact synthetic-group `ModifyReplicationGroup` with a unique AUTH-token marker passed IAM and stopped at `ServiceLinkedRoleNotFoundFault`. The default management write contained no marker; request/response/resources were all null.
+- This complements the successful rotation event, which explicitly replaced the token with `HIDDEN_DUE_TO_SECURITY_REASONS`. Public detection guidance now notes that early precondition failures may omit all attempted group/strategy context.
+- The IAM key/policy/user was deleted and final inventory was empty. No SLR or ElastiCache resource was created, no private report, and no cleanup debt.

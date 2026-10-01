@@ -40,3 +40,8 @@ Further enum and post-exploitation ideas remain in `checklist.md`.
   future group ARN failed on the initial `default` user ARN. Exact future group plus every initial
   user succeeded; a second prospective group with an ungranted member failed on that member ARN.
   Updated the existing persistence page; see `create-user-group-authorization-2026-10-01.md`.
+
+- **Failed AUTH-token CloudTrail redaction** — CLOSED SAFE 2026-10-01. An exact synthetic-group
+  `ModifyReplicationGroup` carrying a unique marker passed IAM and stopped at the absent SLR. The
+  default write event had null request/response/resources and did not contain the marker. See
+  `failed-auth-token-redaction-2026-10-01.md`.
