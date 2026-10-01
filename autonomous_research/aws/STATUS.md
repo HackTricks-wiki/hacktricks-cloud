@@ -1130,3 +1130,11 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - CloudTrail recorded both actions as default EC2 management writes with `readOnly:false`; endpoint reprovisioning made the chain especially noisy and interrupted both tunnels for the gateway swap and one tunnel for the PSK change.
 - A separate unexpected security-impact issue was confirmed while auditing log-content authorization. Its exploit details remain only in a restricted local AWS report pending disclosure and were not added to the public book.
 - The unattached VGW never carried a route or traffic. The VPN, both customer gateways, VGW, two EIPs, mutation user/key/policy and separate validation principal were deleted; independent final inventories were empty and there is no cleanup debt.
+
+## cont.179 (2026-10-01) — AWS Client VPN network attachment and routing
+
+- SHIPPED #93 (VERIFIED exact-resource minimum): `ec2:AssociateClientVpnTargetNetwork` on one exact endpoint plus one exact subnet selected the first VPC for a previously unattached Client VPN endpoint, made it `available`, created its managed association/ENI and installed the active full-VPC local route. Endpoint-only permission correctly failed on the subnet ARN.
+- SHIPPED #94 (VERIFIED exact-resource minimum): `ec2:CreateClientVpnRoute` on that same endpoint/subnet boundary added an attacker-chosen documentation CIDR and reached `active`, while describe, route-delete and target-disassociation controls remained denied.
+- Published as network-plane access plus service-level persistence, not authentication, authorization-rule or IAM bypass. Useful traffic still needs an accepted attacker client identity, matching Client VPN authorization rule, VPC/downstream route, SG/NACL path and application access; additional subnet associations are restricted to the endpoint's selected VPC.
+- CloudTrail recorded both default EC2 management writes with full resource/destination context and `readOnly:false`. Association billing, managed ENIs, route inventory and endpoint state make the path low-stealth.
+- The route and association were removed, then the endpoint, ACM certificate, IAM key/policy/user and local CA/server material were deleted. Final endpoint/certificate/user/ENI/local-directory inventories were empty; the default VPC/subnet were unchanged and there is no cleanup debt.
