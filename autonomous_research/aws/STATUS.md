@@ -1146,3 +1146,11 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - Preserved the hard boundaries: the action changes no SG rule and does not bypass client authentication, Client VPN authorization rules/routes/association, NACL/downstream routing or application credentials. The safe fixture used an untrusted disposable SG and created no client certificate or authorization rule.
 - Both the denied and successful calls were default EC2 management writes with full endpoint/VPC/SG context and `readOnly:false`; durable endpoint/ENI inventory and data-plane logs make it low-stealth.
 - The association was removed and the endpoint, managed ENI, ACM certificate, replacement SG, IAM key/policy/user and local CA/server material were deleted. Final endpoint/certificate/user/SG/ENI/local-directory inventories were empty and there is no cleanup debt.
+
+## cont.181 (2026-10-01) — AWS Client VPN DNS/routing/logging takeover
+
+- SHIPPED #96 (VERIFIED exact-resource minimum): `ec2:ModifyClientVpnEndpoint` on one exact endpoint set a caller-chosen DNS server, changed split tunnel from enabled to disabled and disabled existing Client VPN connection logging in one accepted request. Endpoint describe remained denied and admin inventory observed all values within five seconds.
+- Published as service-level traffic-policy persistence plus defense evasion: DNS control can expose/poison queries, full-tunnel mode can force `0.0.0.0/0` client routing after reconnect, and logging disable suppresses future Client VPN session records. DNS/split changes reset active connections.
+- Preserved the hard boundaries: controlled DNS must be reachable; useful full-tunnel egress needs target association, route/authorization and VPC egress; DNS does not bypass TLS/application auth; previous logs, CloudTrail and independent network/service telemetry remain.
+- A separate unexpected audit-content completeness issue was confirmed while validating the management event. Its details remain only in a restricted local AWS report pending disclosure and were not added to the public book.
+- The endpoint, ACM certificate, empty CloudWatch log group/stream, IAM key/policy/user and local CA/server material were deleted. No association, ENI, route, client identity, session or traffic existed; final inventories were empty and there is no cleanup debt.
