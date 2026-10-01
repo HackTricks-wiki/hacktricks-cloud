@@ -750,6 +750,7 @@
     - [AWS - Bedrock Data Automation Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-data-automation-post-exploitation/README.md)
     - [AWS - Billing Conductor Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-billing-conductor-post-exploitation/README.md)
     - [AWS - Free Tier Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-free-tier-post-exploitation/README.md)
+    - [AWS - Service Catalog AppRegistry Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-service-catalog-appregistry-post-exploitation/README.md)
     - [AWS - Chime SDK Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-chime-sdk-post-exploitation/README.md)
     - [AWS - Clean Rooms Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-clean-rooms-post-exploitation/README.md)
     - [AWS - CloudFront Post Exploitation](pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md)
