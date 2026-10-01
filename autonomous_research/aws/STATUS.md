@@ -1172,3 +1172,10 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - CloudTrail recorded the exact group, `ROTATE`, `applyImmediately:true` and redacted token; the response exposed endpoint/state and `authTokenStatus:"ROTATING"`, while the top-level resources array was null.
 - The cache node/group, probe function/role, restricted key/policy/user and fixture-created ElastiCache SLR were deleted. Four detached Lambda ENIs were exact-matched and explicitly deleted after the provider wait. Independent final group/cluster/ENI/function/user/role inventories were empty and there is no cleanup debt.
 - Expected functionality only; no private AWS report.
+
+## cont.184 (2026-10-01) — ElastiCache export and enumeration corrections
+
+- Corrected an unsafe overclaim in the existing snapshot-export page: current AWS documentation requires caller-side S3 access in addition to `CopySnapshot`, the node-based API rejects a bucket not owned by the authenticated account, and the ElastiCache SLR dependency belongs to serverless export. Direct cross-account export and action-alone minimum claims were removed.
+- Kept the real impact: a caller with the required cache and same-account S3 permissions can export the whole dataset without cache network access or an AUTH/RBAC credential. Serverless S3 dependencies are now conservative pending a dedicated live authorization matrix.
+- Refreshed enumeration with serverless caches/snapshots, global datastores, correct serverless-Memcached snapshot support, and Valkey 9+ internet-reachable public endpoints whose attached users must use IAM authentication and TLS 1.3.
+- Recorded the current AWS documentation conflict where the guide includes serverless Memcached export but the export API says Valkey/Redis only. The public attack page follows the narrower API contract. Read-only correction only; no AWS resources or cleanup debt.
