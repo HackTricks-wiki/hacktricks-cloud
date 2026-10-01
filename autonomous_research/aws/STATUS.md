@@ -1154,3 +1154,12 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - Preserved the hard boundaries: controlled DNS must be reachable; useful full-tunnel egress needs target association, route/authorization and VPC egress; DNS does not bypass TLS/application auth; previous logs, CloudTrail and independent network/service telemetry remain.
 - A separate unexpected audit-content completeness issue was confirmed while validating the management event. Its details remain only in a restricted local AWS report pending disclosure and were not added to the public book.
 - The endpoint, ACM certificate, empty CloudWatch log group/stream, IAM key/policy/user and local CA/server material were deleted. No association, ENI, route, client identity, session or traffic existed; final inventories were empty and there is no cleanup debt.
+
+## cont.182 (2026-10-01) — ElastiCache exact-user RBAC escalation
+
+- SHIPPED #97 (VERIFIED exact-resource minimum): `elasticache:ModifyUser` on one exact user ARN simultaneously replaced the password and changed a disabled/narrow access string to `on ~* +@all`. The restricted caller had no Describe, group/cache, Secrets Manager/KMS, PassRole, service-linked-role, or other ElastiCache permission.
+- Published the missing privilege-escalation consequence: when the target identity is already in a cache's attached user group, the action upgrades it to all commands/all keyspaces and installs an attacker-known data-plane credential without emitting a membership change. Cache membership, endpoint knowledge, network reachability and downstream protections remain explicit prerequisites.
+- The fixture deliberately had no user group or cache, so no data-plane authentication or traffic occurred and no paid resource was created. Admin inventory observed the user return to `active` with the unrestricted ACL, password authentication and one password.
+- CloudTrail recorded the complete permissive access string and password-authentication mode while redacting the password value; the response returned the resulting ACL and password count. The exact event ID and null top-level resources behavior are retained in the service ledger.
+- The access key/policy/IAM user, ElastiCache user and auto-created `AWSServiceRoleForElastiCache` were deleted. Because ElastiCache deletion is asynchronous, final cleanup was independently polled to actual absence; user, IAM and SLR inventories were empty and there is no cleanup debt.
+- Expected functionality only; no private AWS report.
