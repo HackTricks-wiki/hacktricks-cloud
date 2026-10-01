@@ -19,3 +19,14 @@ Further enum and post-exploitation ideas remain in `checklist.md`.
   that both the original and new tokens completed `AUTH` and `PING`. No application data existed.
   The node, group, function/role/ENIs, IAM identity and fixture-created ElastiCache SLR were removed;
   see `modify-replication-group-auth-rotation-2026-10-01.md`.
+
+- **Authentication invariants** — CLOSED SAFE 2026-10-01. Exact-user `ModifyUser` calls could not
+  carry `no-password-required` from Redis into Valkey (engine-only or explicitly repeated auth mode),
+  and could not change a mismatched `UserId`/`UserName` pair to IAM authentication. All three calls
+  returned `InvalidParameterCombinationException`; administrator inventory stayed unchanged. See
+  `authentication-invariants-2026-10-01.md`.
+
+- **User-group secondary-resource authorization** — VERIFIED 2026-10-01. `ModifyUserGroup` on only
+  the exact group failed on the added user ARN. Granting the action on the group, added user, and
+  removed user succeeded; a different ungranted user failed on its own ARN. The existing persistence
+  page now states the exact minimum. See `modify-user-group-authorization-2026-10-01.md`.

@@ -1179,3 +1179,10 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - Kept the real impact: a caller with the required cache and same-account S3 permissions can export the whole dataset without cache network access or an AUTH/RBAC credential. Serverless S3 dependencies are now conservative pending a dedicated live authorization matrix.
 - Refreshed enumeration with serverless caches/snapshots, global datastores, correct serverless-Memcached snapshot support, and Valkey 9+ internet-reachable public endpoints whose attached users must use IAM authentication and TLS 1.3.
 - Recorded the current AWS documentation conflict where the guide includes serverless Memcached export but the export API says Valkey/Redis only. The public attack page follows the narrower API contract. Read-only correction only; no AWS resources or cleanup debt.
+
+## cont.185 (2026-10-01) — ElastiCache authentication and user-group boundaries
+
+- CLOSED SAFE: exact-user `ModifyUser` could not transition a Redis no-password user to Valkey, with or without an explicit no-password mode, and could not transition a mismatched user ID/name pair to IAM authentication. All failed with precise `InvalidParameterCombinationException` reasons, left state unchanged and generated default management events.
+- VERIFIED/CORRECTED: `ModifyUserGroup` requires authorization on the exact group and every user ARN in the add/remove lists. Group-only permission failed on the attacker-user ARN; adding the exact attacker/victim ARNs succeeded; a later outsider addition failed on that outsider ARN; Describe remained denied.
+- Updated the existing persistence technique's minimum permissions and telemetry rather than adding a duplicate technique. Successful CloudTrail retained exact add/remove lists and pending changes; IAM denials redacted request fields but named the missing ARN in the error.
+- Both fixtures' RBAC users/groups, IAM callers/keys/policies and auto-created ElastiCache SLRs were deleted; all final inventories were empty. No cache, network, snapshot, object or paid resource existed. Expected/correctly enforced behavior only; no private AWS report and no cleanup debt.
