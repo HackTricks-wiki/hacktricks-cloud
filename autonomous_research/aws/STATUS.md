@@ -16,6 +16,13 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.168 (2026-10-01) — Partner Central Channel API
+
+- SHIPPED #170: added the missing Channel inventory and documented PMA/relationship/handshake reads that expose reseller, customer and billing-transfer topology, account IDs, programs, sectors and service-period terms.
+- SHIPPED #171: documented benefit diversion through attacker-controlled PMAs/relationships, mutual-consent service-period manipulation, support-request changes and relationship/PMA removal, with explicit Partner enrollment, target acceptance, state and AWS-validation boundaries.
+- The global endpoint accepted three Region inputs. In the non-enrolled lab, every sender/receiver handshake inventory succeeded empty, while PMA/relationship lists and correctly shaped PMA creates in both catalogs stopped at `INCOMPATIBLE_BENEFIT_AWS_PARTNER_STATE`. No Partner resource was created.
+- A disposable principal proved `ListChannelHandshakes` needs `Resource: "*"` in an empty discovery context; `partnercentral:Catalog` and `partnercentral:ChannelHandshakeType` correctly restricted that wildcard. All test users, policies and keys were deleted; final matching principals were absent. Expected functionality only, no private report and no new cleanup debt.
+
 ## cont.167 (2026-10-01) — Partner Central Benefits API
 
 - SHIPPED #168: added the missing Benefits inventory and documented exact-allocation recovery of literal AWS promotional credit codes plus account/value/status/expiry and cash/consumable/access fulfillment data.
