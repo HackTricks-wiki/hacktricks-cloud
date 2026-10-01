@@ -16,6 +16,12 @@ CodeGuru Security is closed as a reasoned exclusion: the live scan API now retur
 
 Current next check: continue the missing-service/action sweep, prioritizing services with cross-account resource policies, credential/data export, stored service roles, mutable execution configuration, and unauthenticated identifiers. Re-test older exclusions when service capabilities or SDK models have materially changed.
 
+## cont.170 (2026-10-01) — AWS Telco Network Builder retirement
+
+- Closed TNB as a current zero-coverage lead. Historical NSD packages could bundle Bash lifecycle hooks, select a CodeBuild-assumable `execution_role`, and run during network instantiation; AWS's own example hook role has `AdministratorAccess`. Package reads, lifecycle replacement and termination were additional historical candidates.
+- The service is no longer usable: five signed September 23 writes all produced `AWS Telco Network Builder is deprecated. All API operations are blocked.` in CloudTrail, and on October 1 the documented regional endpoints no longer resolved. Current API/IAM/quota documentation remains stale and must not be mistaken for availability.
+- No public page was added because the techniques are dead and the exact caller-side hook-role PassRole checkpoint cannot be retested. No private report was opened. This pass was read-only and created no AWS resources; see `tnb/audit-2026-10-01.md`.
+
 ## cont.169 (2026-10-01) — Partner Central Selling API
 
 - SHIPPED #172: added the missing Selling inventory and exact-resource recovery of customer PII/account IDs, Partner/AWS contacts, project/sales pipeline, expected spend, associations, scores/recommendations and software commitment/discount terms from Opportunities, AWS summaries, invitations and snapshots.
