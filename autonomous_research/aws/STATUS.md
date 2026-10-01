@@ -1163,3 +1163,12 @@ See `<service>/checklist.md`. When an idea is tested it moves to `<service>/test
 - CloudTrail recorded the complete permissive access string and password-authentication mode while redacting the password value; the response returned the resulting ACL and password count. The exact event ID and null top-level resources behavior are retained in the service ledger.
 - The access key/policy/IAM user, ElastiCache user and auto-created `AWSServiceRoleForElastiCache` were deleted. Because ElastiCache deletion is asynchronous, final cleanup was independently polled to actual absence; user, IAM and SLR inventories were empty and there is no cleanup debt.
 - Expected functionality only; no private AWS report.
+
+## cont.183 (2026-10-01) — ElastiCache legacy AUTH token addition
+
+- SHIPPED #98 (VERIFIED exact-resource minimum and data plane): exact-group `elasticache:ModifyReplicationGroup` with `AuthTokenUpdateStrategy=ROTATE` added a caller-chosen legacy AUTH token while preserving the original token. The restricted caller could not describe the group and had no cluster, RBAC, secret/KMS, EC2, Lambda, IAM or PassRole permission.
+- After the one-node TLS group returned to `available`, isolated in-VPC protocol probes proved that both the original and attacker tokens independently completed `AUTH` and `PING`. This makes `ROTATE` a lower-disruption credential plant than `SET`; useful access still requires the known group/endpoint and a permitted network path, and it does not apply to RBAC-only caches.
+- Published impact as cache data-plane access plus service-level persistence, not IAM escalation. The uncommon management mutation is visible and the secret is redacted; subsequent Valkey/Redis protocol actions are outside CloudTrail.
+- CloudTrail recorded the exact group, `ROTATE`, `applyImmediately:true` and redacted token; the response exposed endpoint/state and `authTokenStatus:"ROTATING"`, while the top-level resources array was null.
+- The cache node/group, probe function/role, restricted key/policy/user and fixture-created ElastiCache SLR were deleted. Four detached Lambda ENIs were exact-matched and explicitly deleted after the provider wait. Independent final group/cluster/ENI/function/user/role inventories were empty and there is no cleanup debt.
+- Expected functionality only; no private AWS report.
