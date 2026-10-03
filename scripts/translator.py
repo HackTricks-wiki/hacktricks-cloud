@@ -516,7 +516,16 @@ Also don't add any extra stuff in your response that is not part of the translat
             break
     
     response_message = response_message[cont2:]
-        
+    # The model can *add* citations or a References heading even when the
+    # English chunk has none. The source-preservation helpers above mainly
+    # repair changed or missing source markup, so reject added markup too.
+    # Masked intermediate responses are checked by their caller after the
+    # source markers have been restored (or retried as separate prose).
+    if "__HTC_STRUCT_" not in text and not protected_markup_is_intact(text, response_message):
+        if cont >= 2:
+            raise RuntimeError(f"Page {file_path} changed protected markup after retries")
+        return translate_text(language, text, file_path, model, cont + 1, slpitted, client)
+
     return response_message
 
 
@@ -624,6 +633,11 @@ def translate_file(language, file_path, file_dest_path, model, client):
             translated_content += translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client) + '\n'
     
     elapsed_time = time.time() - start_time
+
+    # Chunk-level checks cannot detect a citation/heading added across chunk
+    # boundaries. Never write or checkpoint a structurally broken page.
+    if not protected_markup_is_intact(content, translated_content):
+        raise RuntimeError(f"Page {file_path} changed protected markup")
 
     # make sure directory exists
     os.makedirs(os.path.dirname(file_dest_path), exist_ok=True)
