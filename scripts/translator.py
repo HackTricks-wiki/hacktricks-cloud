@@ -29,7 +29,7 @@ MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
 MDBOOK_REF_BLOCK_RE = re.compile(r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}")
 MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
 LINKED_CITATION_RE = re.compile(
-    r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+    r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>|\[\[\d+\]\]\(#references\)"
 )
 REFERENCES_HEADING_RE = re.compile(r"^## References\s*$", re.MULTILINE)
 REFERENCE_LINE_RE = re.compile(
@@ -39,6 +39,7 @@ PROTECTED_MARKUP_RE = re.compile(
     r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}"
     r"|\{\{#[^{}]*\}\}"
     r"|<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+    r"|\[\[\d+\]\]\(#references\)"
     r"|^## References[ \t]*$"
     r"|^- \[\d+\] \[[^\]\n]+\]\([^\n]+\)[ \t]*$",
     re.MULTILINE,

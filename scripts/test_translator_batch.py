@@ -153,6 +153,24 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertEqual(translated, "Lee esto.")
         self.assertEqual(len(calls), 2)
 
+    def test_bare_source_citation_is_restored_after_model_wraps_it(self):
+        source = "Read this.[[1]](#references)\n\n## References\n\n- [1] [API](https://example.com)"
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**_kwargs):
+                        result = source.replace("Read this.", "Lee esto.").replace(
+                            "[[1]](#references)", "<sup>[[1]](#references)</sup>"
+                        )
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", source, "src/page.md", "gpt-4o", client=Client())
+        self.assertIn("Lee esto.[[1]](#references)", translated)
+        self.assertTrue(translator.protected_markup_is_intact(source, translated))
+        self.assertNotIn("<sup>", translated)
+
     def test_persistently_added_citation_fails_closed(self):
         class Client:
             class chat:
