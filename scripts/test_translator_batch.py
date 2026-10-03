@@ -135,6 +135,48 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertIn("Lee esto.<sup>[[1]](#references)</sup>", translated)
         self.assertNotIn("[[99]]", translated)
 
+    def test_model_added_citation_to_source_without_references_is_retried(self):
+        calls = []
+
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**_kwargs):
+                        calls.append(1)
+                        result = "Lee esto."
+                        if len(calls) == 1:
+                            result += "<sup>[[9]](#references)</sup>"
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        translated = translator.translate_text("Spanish", "Read this.", "src/page.md", "gpt-4o", client=Client())
+        self.assertEqual(translated, "Lee esto.")
+        self.assertEqual(len(calls), 2)
+
+    def test_persistently_added_citation_fails_closed(self):
+        class Client:
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**_kwargs):
+                        result = "Lee esto.<sup>[[9]](#references)</sup>"
+                        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result))])
+
+        with self.assertRaisesRegex(RuntimeError, "changed protected markup after retries"):
+            translator.translate_text("Spanish", "Read this.", "src/page.md", "gpt-4o", client=Client())
+
+    def test_page_level_validation_rejects_structural_drift_before_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = f"{tmp}/source.md"
+            target = f"{tmp}/target.md"
+            with open(source, "w") as f:
+                f.write("# Title\n\nPlain text.\n")
+            with patch.object(translator, "split_text", return_value=["# Title", "Plain text."]):
+                with patch.object(translator, "translate_text", side_effect=["# Title", "Texte.<sup>[[1]](#references)</sup>"]):
+                    with self.assertRaisesRegex(RuntimeError, "changed protected markup"):
+                        translator.translate_file("French", source, target, "gpt-4o", None)
+            self.assertFalse(__import__("os").path.exists(target))
+
 
 if __name__ == "__main__":
     unittest.main()
