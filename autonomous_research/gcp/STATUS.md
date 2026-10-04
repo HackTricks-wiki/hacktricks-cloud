@@ -2,6 +2,17 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — Cloud Tasks per-task retry and batch operations
+- Added a persistence primitive for task-level retry overrides: an enqueuer can bypass a queue's
+  bounded retry policy for selected tasks without queue-update permission, with up to 31 days of
+  retries and no Cloud Audit creation event. Batch create can scale the same permission to 100 tasks.
+- Added the lower-permission batch-delete disruption path: `cloudtasks.tasks.delete` can selectively
+  remove up to 1,000 known tasks without queue-admin/purge access; its `DATA_WRITE` audit log is off
+  by default.
+- Live-validated both boundaries on a paused queue with a reduced identity. No task dispatched.
+  Deleted both tasks, the queue, key, service account and all bindings; securely removed local
+  credentials and preserved the pre-existing enabled API baseline.
+
 ### 2026-10-04 — Datastream row-filtered partial backfill
 - Added the September 30 partial-backfill surface to Datastream enumeration and retained it as a
   bounded post-exploitation technique: `datastream.objects.startBackfillJob` can copy selected
