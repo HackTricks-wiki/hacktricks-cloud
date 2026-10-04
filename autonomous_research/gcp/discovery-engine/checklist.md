@@ -1,0 +1,15 @@
+# Discovery Engine / Gemini Enterprise — open leads
+
+- [ ] In an already licensed disposable Canvas-enabled Gemini Enterprise app, create distinct
+      documents/slides as two synthetic users. Capture the alpha web-app request contract, then test
+      `immersiveArtifacts.list|get|export` under Viewer with app/data-store resource IAM. Publish
+      only if one user can recover another user's artifact contrary to the intended scope; keep any
+      authorization defect private-first and remove exports, artifacts, conversations and grants.
+- [x] Map the September 28 granular app/data-store IAM model, resource roles, connector-entity propagation, minimum policy-write permissions, and audit classes. Shipped the useful custom-role self-grant and service-level persistence paths without presenting full Admin as an escalation.
+- [ ] In an already provisioned disposable Gemini Enterprise project, verify the full negative and positive matrix: engine only, data store only, both resources, collection only, and collection plus every entity store. Capture `v1` method names for standalone data-store policy writes, then remove every resource policy binding and fixture. Do not enable/provision the licensed service solely for this test.
+- [ ] Test policy inheritance and IAM Conditions at app/data-store scope, including whether a resource-scoped custom role containing only `setIamPolicy` can blind-replace the policy without `getIamPolicy`. Treat any missing permission check or resource-confusion result as private-first.
+
+- [ ] Live-test a periodic BigQuery connector with two synthetic principals: a source-table reader that creates the connector and a Gemini Enterprise app user explicitly denied direct BigQuery data access. Capture Discovery Engine, connector and BigQuery audit events, then delete the app, engine, connector, data stores, dataset and all IAM bindings.
+- [ ] Compare one-time `aclEnabled=true` imports with periodic imports containing synthetic document ACL fields. Verify fail-closed behavior for malformed, absent and stale identity mappings.
+- [ ] Test whether project-level `roles/discoveryengine.agentspaceUser` overrides intended app-level isolation exactly as documented, and determine which enumeration calls reveal otherwise hidden apps/data stores to a project-level user.
+- [x] Closed `SearchLite` as a periodic-BigQuery lead from current documentation. Although `SearchLite` is listed among methods that produce no audit logs, Google documents its API-key path for **public website data**. Do not generalize that unauthenticated/public-site mechanism to a private periodic BigQuery corpus without contrary reproducible evidence.

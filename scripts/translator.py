@@ -26,13 +26,23 @@ REPLACEMENT_TOKEN  = "<END_OF_TEXT>"
 # occasionally translate directive names or attributes (for example
 # `name` -> `naam`), which makes preprocessors abort a whole language build.
 MDBOOK_DIRECTIVE_RE = re.compile(r"\{\{#[^{}]*\}\}")
+MDBOOK_REF_BLOCK_RE = re.compile(r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}")
 MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
 LINKED_CITATION_RE = re.compile(
-    r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+    r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>|\[\[\d+\]\]\(#references\)"
 )
 REFERENCES_HEADING_RE = re.compile(r"^## References\s*$", re.MULTILINE)
 REFERENCE_LINE_RE = re.compile(
     r"^- \[(\d+)\] \[([^\]\n]+)\]\((.+)\)\s*$", re.MULTILINE
+)
+PROTECTED_MARKUP_RE = re.compile(
+    r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}"
+    r"|\{\{#[^{}]*\}\}"
+    r"|<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
+    r"|\[\[\d+\]\]\(#references\)"
+    r"|^## References[ \t]*$"
+    r"|^- \[\d+\] \[[^\]\n]+\]\([^\n]+\)[ \t]*$",
+    re.MULTILINE,
 )
 
 MODEL_PREFIX_ENCODINGS = [
@@ -140,6 +150,19 @@ def _get_encoding_for_model(model: str):
         print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
         return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
 
+def preserve_ref_blocks(source: str, translated: str) -> str:
+    """Restore complete mdBook reference blocks, including their file paths."""
+    source_blocks = MDBOOK_REF_BLOCK_RE.findall(source)
+    if not source_blocks:
+        return translated
+    translated_blocks = MDBOOK_REF_BLOCK_RE.findall(translated)
+    if len(source_blocks) != len(translated_blocks):
+        print("Reference block count changed during translation; returning the source chunk unchanged.")
+        return source
+    blocks = iter(source_blocks)
+    return MDBOOK_REF_BLOCK_RE.sub(lambda _match: next(blocks), translated)
+
+
 def preserve_mdbook_directives(source: str, translated: str) -> str:
     """Restore mdBook directives exactly as they appeared in the source.
 
@@ -216,6 +239,72 @@ def preserve_reference_markup(source: str, translated: str) -> str:
 
     return REFERENCE_LINE_RE.sub(restore_reference, restored)
 
+
+def protected_markup_is_intact(source, translated):
+    """Check document structure without requiring reference titles to stay in English."""
+    source_references = [(match.group(1), match.group(3)) for match in REFERENCE_LINE_RE.finditer(source)]
+    translated_references = [
+        (match.group(1), match.group(3)) for match in REFERENCE_LINE_RE.finditer(translated)
+    ]
+    return (
+        MDBOOK_REF_BLOCK_RE.findall(source) == MDBOOK_REF_BLOCK_RE.findall(translated)
+        and MDBOOK_DIRECTIVE_RE.findall(source) == MDBOOK_DIRECTIVE_RE.findall(translated)
+        and LINKED_CITATION_RE.findall(source) == LINKED_CITATION_RE.findall(translated)
+        and len(REFERENCES_HEADING_RE.findall(source)) == len(REFERENCES_HEADING_RE.findall(translated))
+        and source_references == translated_references
+    )
+
+
+def translate_around_protected_markup(language, text, file_path, model, client):
+    """Retry malformed Markdown with structural spans held outside model output."""
+    matches = list(PROTECTED_MARKUP_RE.finditer(text))
+    if not matches:
+        raise RuntimeError(f"Cannot isolate changed Markdown structure in {file_path}")
+
+    markers = [f"__HTC_STRUCT_{index:04d}__" for index in range(len(matches))]
+    masked = []
+    cursor = 0
+    for marker, match in zip(markers, matches):
+        masked.extend((text[cursor:match.start()], marker))
+        cursor = match.end()
+    masked.append(text[cursor:])
+    translated = translate_text(language, "".join(masked), file_path, model, client=client)
+
+    positions = [translated.find(marker) for marker in markers]
+    markers_preserved = all(translated.count(marker) == 1 for marker in markers) and positions == sorted(positions)
+    if markers_preserved:
+        for marker, match in zip(markers, matches):
+            translated = translated.replace(marker, match.group(), 1)
+    if not markers_preserved or not protected_markup_is_intact(text, translated):
+        # The model may keep the placeholders but still duplicate a citation or
+        # reference outside them. Translate only the prose in either case.
+        def prose(segment):
+            if not segment.strip():
+                return segment
+            leading = len(segment) - len(segment.lstrip())
+            trailing = len(segment) - len(segment.rstrip())
+            end = len(segment) - trailing if trailing else len(segment)
+            return (
+                segment[:leading]
+                + translate_text(language, segment[leading:end], file_path, model, client=client)
+                + segment[end:]
+            )
+
+        fragments = []
+        cursor = 0
+        for match in matches:
+            fragments.extend((prose(text[cursor:match.start()]), match.group()))
+            cursor = match.end()
+        fragments.append(prose(text[cursor:]))
+        translated = "".join(fragments)
+
+    if not protected_markup_is_intact(text, translated):
+        raise RuntimeError(f"Could not preserve protected markup in {file_path}")
+    prose_words = re.findall(r"\b[A-Za-z]{3,}\b", PROTECTED_MARKUP_RE.sub("", text))
+    if translated == text and len(prose_words) >= 30:
+        raise RuntimeError(f"Protected retry left translatable prose unchanged in {file_path}")
+    return translated
+
 def reportTokens(prompt, model):
     encoding = _get_encoding_for_model(model)
     # print number of tokens in light gray, with first 50 characters of prompt in green. if truncated, show that it is truncated
@@ -244,6 +333,7 @@ def get_unused_files(branch):
 
     # Find the files that are in branch2 but not in branch1
     unique_files = files_branch_lang - files_branch_master
+    unique_files.discard('.translation-source-blobs.json')
 
     return unique_files
 
@@ -341,6 +431,7 @@ Translate the relevant English text to {language} and return the translation kee
 - Keep the heading `## References` exactly in English.
 - Keep every `<sup>[[N]](#references)</sup>` citation unchanged.
 - In numbered reference bullets, translate only the source title. Do not change the number, order, or URL.
+- If placeholders like `__HTC_STRUCT_0000__` appear, preserve every one exactly once in the same order.
 
 Also don't add any extra stuff in your response that is not part of the translation and markdown syntax."""},
         {"role": "user", "content": text},
@@ -354,11 +445,9 @@ Also don't add any extra stuff in your response that is not part of the translat
     except Exception as e:
         print("Python Exception: " + str(e))
         if cont > 6:
-            print(f"Page {file_path} could not be translated due to count with text: {text}\nReturning text as is.")
-            return text
+            raise RuntimeError(f"Page {file_path} could not be translated after retries") from e
         if "exceeded your current quota" in str(e).lower():
-            print("Critical error: Quota exceeded")
-            exit(1)
+            raise RuntimeError("Critical error: translation quota exceeded") from e
         
         if "is currently overloaded" in str(e).lower():
             print("Overloaded, waiting 30 seconds")
@@ -381,17 +470,15 @@ Also don't add any extra stuff in your response that is not part of the translat
             elif "generated invalid unicode output" in str(e).lower():
                 print("Invalid unicode error detected.")
 
-            if slpitted:
-                #print(f"Page {file_path} could not be translated with text: {text}")
-                print(f"Page {file_path} could not be translated.\nReturning text as is.")
-                return text
+            if slpitted or len(text.split('\n')) < 2:
+                raise RuntimeError(f"Page {file_path} could not be translated after splitting") from e
             
             text1 = text.split('\n')[:len(text.split('\n'))//2]
             text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont, True, client)
+            return translate_text(language, '\n'.join(text1), file_path, model, cont + 1, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont + 1, True, client)
 
         print("Retrying translation")
-        return translate_text(language, text, file_path, model, cont, False, client)
+        return translate_text(language, text, file_path, model, cont + 1, False, client)
 
     response_message = response.choices[0].message.content.strip()
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
@@ -400,8 +487,25 @@ Also don't add any extra stuff in your response that is not part of the translat
 
     # Restore source directives after all model-provided text normalization.
     # This preserves exact mdBook syntax while retaining translated prose.
-    response_message = preserve_mdbook_directives(text, response_message)
-    response_message = preserve_reference_markup(text, response_message)
+    restored = preserve_ref_blocks(text, response_message)
+    if restored == text and response_message != text and MDBOOK_REF_BLOCK_RE.search(text):
+        print(f"Retrying {file_path} with protected reference blocks")
+        return translate_around_protected_markup(language, text, file_path, model, client)
+    response_message = restored
+    restored = preserve_mdbook_directives(text, response_message)
+    if restored == text and response_message != text and MDBOOK_DIRECTIVE_RE.search(text):
+        print(f"Retrying {file_path} with protected mdBook markup")
+        return translate_around_protected_markup(language, text, file_path, model, client)
+    response_message = restored
+    restored = preserve_reference_markup(text, response_message)
+    if restored == text and response_message != text and (
+        REFERENCES_HEADING_RE.search(text)
+        or LINKED_CITATION_RE.search(text)
+        or REFERENCE_LINE_RE.search(text)
+    ):
+        print(f"Retrying {file_path} with protected reference markup")
+        return translate_around_protected_markup(language, text, file_path, model, client)
+    response_message = restored
 
     # Sometimes chatgpt modified the number of "#" at the beginning of the text, so we need to fix that. This is specially important for the first line of the MD that mucst have only 1 "#"
     cont2 = 0
@@ -413,7 +517,16 @@ Also don't add any extra stuff in your response that is not part of the translat
             break
     
     response_message = response_message[cont2:]
-        
+    # The model can *add* citations or a References heading even when the
+    # English chunk has none. The source-preservation helpers above mainly
+    # repair changed or missing source markup, so reject added markup too.
+    # Masked intermediate responses are checked by their caller after the
+    # source markers have been restored (or retried as separate prose).
+    if "__HTC_STRUCT_" not in text and not protected_markup_is_intact(text, response_message):
+        if cont >= 2:
+            raise RuntimeError(f"Page {file_path} changed protected markup after retries")
+        return translate_text(language, text, file_path, model, cont + 1, slpitted, client)
+
     return response_message
 
 
@@ -522,6 +635,11 @@ def translate_file(language, file_path, file_dest_path, model, client):
     
     elapsed_time = time.time() - start_time
 
+    # Chunk-level checks cannot detect a citation/heading added across chunk
+    # boundaries. Never write or checkpoint a structurally broken page.
+    if not protected_markup_is_intact(content, translated_content):
+        raise RuntimeError(f"Page {file_path} changed protected markup")
+
     # make sure directory exists
     os.makedirs(os.path.dirname(file_dest_path), exist_ok=True)
     with open(file_dest_path, 'w', encoding='utf-8') as f:
@@ -529,6 +647,23 @@ def translate_file(language, file_path, file_dest_path, model, client):
     
     #if VERBOSE:
     print(f"Page {file_path} translated in {file_dest_path} in {elapsed_time:.2f} seconds")
+
+
+def translate_selected_files(language, paths, dest_folder, model, client, num_threads):
+    failures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = {
+            executor.submit(translate_file, language, path, os.path.join(dest_folder, path), model, client): path
+            for path in paths
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                failures.append((futures[future], exc))
+                print(f'Translation failed for {futures[future]}: {exc}')
+    if failures:
+        raise RuntimeError(f'{len(failures)} pages failed translation; no pages from this batch were published')
 
 
 """
@@ -581,6 +716,7 @@ if __name__ == "__main__":
     )
     parser.add_argument('-o', '--org-id', help='The org ID to use (if not set the default one will be used).')
     parser.add_argument('-f', '--file-paths', help='If this is set, only the indicated files will be translated (" , " separated).')
+    parser.add_argument('--file-list', help='Newline-delimited file of pages to translate.')
     parser.add_argument('-n', '--dont-cd', action='store_false', help="If this is true, the script won't change the current directory.")
     parser.add_argument('-t', '--threads', default=5, type=int, help="Number of threads to use to translate a directory.")
     #parser.add_argument('-v', '--verbose', action='store_false', help="Get the time it takes to translate each page.")
@@ -626,28 +762,26 @@ if __name__ == "__main__":
 
     current_dir = os.getcwd()
     print(f"The translated files will be copied to {current_dir}, make sure this is the expected folder.")
+    source_folder = current_dir
 
     if not args.dont_cd:
         # Change to the parent directory
         os.chdir(source_folder)
     
     translate_files = None # Need to initialize it here to avoid error
-    if args.file_paths:
-        # Translate only the indicated file
-        translate_files = list(set([f.strip() for f in args.file_paths.split(',') if f]))
+    if args.file_paths or args.file_list:
+        if args.file_paths and args.file_list:
+            parser.error('Use either --file-paths or --file-list')
+        if args.file_list:
+            with open(args.file_list, encoding='utf-8') as f:
+                translate_files = [line.strip() for line in f if line.strip()]
+        else:
+            translate_files = [f.strip() for f in args.file_paths.split(',') if f.strip()]
+        translate_files = sorted(set(translate_files))
         for file_path in translate_files:
-            #with tqdm(total=len(all_markdown_files), desc="Translating Files") as pbar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-                futures = []                
-                future = executor.submit(translate_file, language, file_path, os.path.join(dest_folder, file_path), model, client)
-                futures.append(future)
-
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                        #pbar.update()
-                    except Exception as exc:
-                        print(f'Translation generated an exception: {exc}')
+            if not file_path.startswith('src/') or not file_path.endswith('.md') or not os.path.isfile(file_path):
+                raise ValueError(f'Invalid translation source path: {file_path}')
+        translate_selected_files(language, translate_files, dest_folder, model, client, num_threads)
             
     #elif args.directory:
         # Translate everything
