@@ -2,6 +2,18 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — Compute recoverable-snapshot IAM escalation
+- Added the new snapshot recycle-bin inventory plus two retained techniques: a single
+  `compute.recoverableSnapshots.setIamPolicy` write can self-grant recovery/use/delete authority on
+  a known tombstone, and direct recover authority can restore supposedly deleted standard-snapshot
+  data during the effective retention window.
+- Live-confirmed that active-snapshot IAM does not survive deletion, while a policy newly written on
+  the tombstone does survive onto the recovered active snapshot. The recovered snapshot had a new
+  time/name and lost the tested label; ordinary snapshot inventory omitted every tombstone.
+- Captured always-on Admin Activity for tombstone IAM replacement, recovery and permanent deletion.
+  Removed both tombstones, the restored snapshot, blank source disk, identity/key, bindings, custom
+  role and local credentials; verified zero active test residue and preserved Compute's enabled baseline.
+
 ### 2026-10-04 — Cloud Healthcare targeted DICOM export
 - Updated the existing server-side export technique for GA DICOM filtering. An exact
   `healthcare.dicomStores.export` caller with no DICOMweb or Storage read access successfully
