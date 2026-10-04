@@ -20,6 +20,8 @@
 - [x] Add safe repeated-config merge, selective cleanup, and created-grant revocation examples.
 - [x] Add full `consentConfig` restore and condition/etag-safe IAM self-grant cleanup.
 - [x] Make destination readback an explicit prerequisite for dataset de-identification value.
+- [x] Validate GA filtered DICOM export with an exact export-only caller, separate service-agent filter/output grants, one synthetic instance, and default telemetry.
+- [x] Test whether a caller-selected filter URI turns service-agent Storage read access into a reflected parser/LRO content oracle; controlled invalid contents were ignored without reflection.
 
 ## Safe future validation
 

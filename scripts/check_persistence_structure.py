@@ -19,6 +19,13 @@ ROOTS = (
     ("gcp-security/gcp-persistence", "gcp-services"),
     ("azure-security/az-persistence", "az-services"),
 )
+LINKED_WALKTHROUGHS = (
+    (
+        "aws-security/aws-post-exploitation/aws-lambda-post-exploitation/"
+        "aws-warm-lambda-persistence.md",
+        "aws-services",
+    ),
+)
 BANNER = re.compile(r"^\{\{#include [^\n]+hacktricks-training\.md\}\}\s*$", re.M)
 BAD_PREFIX = re.compile(
     r"^(?:Persistence(?:\s*[:/—-]|\s+(?:via|through|in)\b)"
@@ -135,6 +142,14 @@ def main():
                 path, path.read_text(), service_directory, path == directory / "README.md"
             )
             failures.extend(f"{path}: {error}" for error in errors)
+    for relative, service_directory in LINKED_WALKTHROUGHS:
+        path = source / relative
+        if not path.is_file():
+            failures.append(f"{path}: missing linked persistence walkthrough")
+            continue
+        total += 1
+        errors = check_page(path, path.read_text(), service_directory)
+        failures.extend(f"{path}: {error}" for error in errors)
     if failures:
         print("\n".join(failures))
         return 1

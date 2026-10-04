@@ -1,5 +1,31 @@
 # Sensitive Data Protection (DLP) — tested and documentation-audited
 
+## 2026-10-04 — content-policy fail-open update
+
+- A fresh project-testable-permission delta exposed the new `dlp.contentPolicies.*` family. Current
+  official documentation defines content policies as reusable `ALLOW`/`BLOCK` gates for Gemini
+  Enterprise connector content, assistant uploads and Gemini Notebook Enterprise sources.
+- Created one synthetic global policy that inspected only `CREDIT_CARD_NUMBER`, returned `BLOCK` for
+  any finding and failed closed for unsupported, oversized or unscannable input. No Gemini app,
+  connector, notebook, source document, BigQuery log destination or billable inspection was used.
+- A disposable caller with only `dlp.contentPolicies.update` plus Service Usage Consumer could not
+  get the policy, but after IAM propagation it successfully replaced the complete rule set with an
+  unconditional `ALLOW` action using `updateMask=rules`. Owner GET confirmed the effective verdict.
+  This proves the blind-update minimum; the downstream Gemini Enterprise effect follows the explicit
+  supported integration contract and was not presented as a DLP authorization bypass.
+- `roles/dlp.admin`, basic Editor and Owner contain all content-policy management permissions.
+  `roles/dlp.user` contains `dlp.contentPolicies.apply` but no policy-definition mutation. A Gemini
+  Enterprise consumer needs that runtime role on the policy project, and cross-project use remains
+  bounded by region and VPC Service Controls requirements.
+- The rejected pre-propagation PATCH and successful PATCH both emitted
+  `google.privacy.dlp.v2.DlpService.UpdateContentPolicy` Admin Activity. The successful request
+  retained the target, `rules` update mask and replacement `ALLOW` action while omitting detector
+  detail. Policy get/list methods are off-default Data Access.
+- Deleted the policy, key, service account, bindings and active custom role; shredded the isolated
+  gcloud configuration and disabled DLP back to its original state. Final API, IAM, service-account,
+  Cloud Asset and local checks were empty. A DLP service-agent binding already present in a
+  2026-09-23 IAM snapshot was preserved unchanged.
+
 ## Previously verified live observations
 
 - A Cloud Storage inspection job with `includeQuote: true` wrote raw detected strings to the chosen BigQuery findings table through the DLP service agent.

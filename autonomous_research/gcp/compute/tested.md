@@ -1,4 +1,29 @@
 
+## 2026-10-04 — recoverable-snapshot IAM escalation and deleted-data recovery
+
+Live-tested the September 2026 Compute Engine snapshot recycle-bin Preview in `gcp-labs-eqd4ny8d` with a blank 10 GB disk, standard snapshot, disposable service account, exact custom role, and isolated gcloud configuration.
+
+Confirmed:
+
+- The system effective rule retained standard snapshots for three days. Deleting the active snapshot removed it from `gcloud compute snapshots list` and created a generated recoverable-snapshot resource visible only through the beta inventory.
+- Resource IAM on the active snapshot did not carry into the recoverable tombstone. A caller that had Storage Admin only on the active snapshot was denied recoverable get and recover after deletion.
+- A caller with only project-level `compute.recoverableSnapshots.setIamPolicy` could blindly replace the known tombstone's IAM policy and grant itself `roles/compute.storageAdmin`. It then read and recovered the tombstone without having started with recover, get, ordinary snapshot-IAM, snapshot-use, or disk-data permissions.
+- The recovered active snapshot inherited the IAM policy written on the tombstone. It received a new name/time and did not regain the synthetic `ht-test` label.
+- Repeating the tombstone self-grant after deleting the restored snapshot allowed the reduced caller to invoke `recoverableSnapshots.delete`, irreversibly removing it before expiry.
+- Successful `beta.compute.recoverableSnapshots.setIamPolicy`, `.recover`, and `.delete` calls were always-on Admin Activity. The policy body and requested recovery name were recorded; denied probes were also logged. Read/list visibility remains Data Access and off by default.
+
+Rejected/bounded hypotheses:
+
+- Deleting an attacker-readable active snapshot is not resource-IAM persistence by itself because the active policy did not survive into the tombstone.
+- The feature is not an arbitrary data-read vulnerability: recovery and permanent deletion are expected consequences of the published permissions. Reading the recovered bytes still needs snapshot use, destination resource creation/attachment or export, and any CMEK access.
+- No private report was opened. The useful result is the exact single-permission self-grant path and the inventory/detection blind spot.
+
+Cleanup:
+
+- Permanently deleted both generated recoverable snapshots, the restored/active snapshot, and the blank source disk.
+- Deleted the disposable key and service account, removed both project bindings, deleted the custom role, and securely removed `/tmp/ht-recycle-auth-1004`.
+- Verified `disk=0 snapshot=0 recoverable=0 sa=0 bindings=0 cred_dir=no`. The custom role remains only as GCP's normal soft-deleted tombstone. Compute API was enabled before testing and remains enabled.
+
 ## compute.instantSnapshots (GA 2024) — annotated (not a new technique)
 Zero prior wiki mention, but Instant Snapshots are the same disk-data-copy exfil family as the documented regular-snapshot exfil (same-region, on-disk storage; cross-project exfil still routes through a standard snapshot/disk/image conversion). Added a NOTE to the snapshot setIamPolicy exfil section on gcp-compute-post-exploitation.md flagging compute.instantSnapshots.create / .setIamPolicy as a distinct, faster/stealthier permission achieving the documented outcome — not a new exfil path, so a note not a section (no-duplicate bar).
 

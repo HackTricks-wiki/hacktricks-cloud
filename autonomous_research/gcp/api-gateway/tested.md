@@ -1,6 +1,25 @@
 # API Gateway — tested and verified
 
-Last checked: 2026-09-28
+Last checked: 2026-10-04
+
+## 2026-10-04 — API-key protection for MCP tool discovery
+
+- Re-tested the September 30 Public Preview update that allows `tools-list.security` to name an
+  OpenAPI API-key scheme. A bounded gateway exposed one harmless public GET tool and required an
+  `x-api-key` header only for `tools/list`.
+- Missing and query-string keys returned HTTP 401 and no schema. An invalid header key returned a
+  JSON-RPC error and no schema. After the generated managed service was enabled for the consumer
+  project, a valid key restricted to that exact service returned the one synthetic tool schema.
+- Duplicate JSON `method` keys followed the final parsed value: a final `tools/list` remained
+  protected, while a final `initialize` returned only the public lifecycle response. Conflicting
+  `Mcp-Method` headers did not override the body method or bypass discovery authentication.
+- The derived platform entry still used
+  `google.api.discovery.v1.McpDiscoveryService.ListMcpTools`; unsuccessful discovery attempts were
+  visible there even though the outer JSON-RPC transport could return HTTP 200 for an invalid key.
+- Deleted the restricted key, gateway, API config and API; restored API Gateway, Service Management
+  and Service Control to their initially disabled state; preserved the initially enabled API Keys
+  API; and removed the local spec. Cloud Asset retained only the expected soft-deleted key and
+  deleted/disabled managed-service tombstones, neither of which is usable.
 
 ## 2026-09-28 — model-router arbitrary-backend credential boundary
 

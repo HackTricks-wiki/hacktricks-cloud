@@ -1,5 +1,16 @@
 # Cloud Tasks — checked
 
+## 2026-10-04 — per-task retry override and batch task operations
+
+- Reconciled the 2026-09-30 GA changes. `Task.retryConfig` now overrides `Queue.retryConfig`; `BatchCreateTasks` accepts up to 100 tasks and checks `cloudtasks.tasks.create`; `BatchDeleteTasks` accepts up to 1,000 names and checks `cloudtasks.tasks.delete`.
+- Live-created a paused, disposable queue with `maxAttempts: 1`. A disposable principal holding `roles/cloudtasks.enqueuer` and no queue-update permission was denied `cloudtasks.queues.update`, then successfully batch-created two future-scheduled tasks whose returned and subsequently read state showed `maxAttempts: -1` and `maxAttempts: 7`. The queue remained at `maxAttempts: 1`, proving the task-level override is a lower-permission persistence primitive rather than queue tampering.
+- The same identity, after receiving only `roles/cloudtasks.taskDeleter`, successfully removed both tasks through `BatchDeleteTasks`. The queue stayed paused throughout and no HTTP task was dispatched.
+- The current audit catalog explicitly places `BatchCreateTasks` beside `CreateTask` in the no-audit-log list. `BatchDeleteTasks` is `DATA_WRITE`; with no Cloud Tasks Data Access audit configuration in the project, neither successful batch operation produced a Cloud Audit entry. The denied `UpdateQueue` control and queue create/pause/delete produced the expected always-on records.
+- Retained two useful techniques: per-task retry override in persistence and lower-permission selective/bulk deletion in post-exploitation. Batch create's throughput alone is supporting detail, not a standalone attack.
+- Deleted both tasks, queue, user-managed key, all three project bindings and the service account; securely removed the isolated credential/config directory. Final checks found zero matching queue and bindings and no local credential directory. Cloud Tasks was enabled before the test and remained enabled.
+- Tested the batch APIs for an outer-parent versus nested-resource authorization confusion with two paused queues and a principal bound only to queue A. `BatchCreateTasks` rejected both an inner queue-B parent and a queue-B task name with `INVALID_ARGUMENT`; using queue B as the outer parent was denied on `cloudtasks.tasks.create`. `BatchDeleteTasks` likewise preserved queue B's task: a mixed request deleted the authorized queue-A item and returned `PARTIALLY_SUCCEEDED`, with the queue-B item indexed in `failedRequests` as a queue-name mismatch. No cross-queue access or vulnerability was found.
+- Deleted the boundary-test task, both queues, key, queue/project grants and service account, then securely removed its isolated credential directory. Independent inventory found zero matching queues, account, bindings or local credentials.
+
 ## 2026-09-26 — Cloud Audit visibility correction (documentation review)
 
 - The earlier lab run saw no audit entries for `CreateTask`, `RunTask`, `GetTask`, and `ListTasks` under default settings. Rechecked the [current Cloud Tasks audit logging reference](https://docs.cloud.google.com/tasks/docs/audit-logging), updated 2026-09-18: `CreateTask` (v2, v2beta2, v2beta3) is on Google's **methods that don't produce audit logs** list. Enabling Data Access logs cannot make its creation event appear. This is a stronger result than merely “Data Access off by default.”

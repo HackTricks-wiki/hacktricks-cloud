@@ -1,6 +1,108 @@
 # GCP audit — status
 
-Last updated: 2026-09-29
+Last updated: 2026-10-04
+
+### 2026-10-04 — DLP content-policy defense evasion and permission delta
+- A fresh project-testable-permission pull found 13,720 permissions, 19 more than the 13,701
+  September baseline. The only immediately shippable control was Sensitive Data Protection content
+  policy mutation; the new Discovery Engine Canvas artifact reads remain private-first until their
+  cross-user scope can be isolated in a licensed fixture.
+- Added content-policy enumeration and a bounded post-exploitation technique: a caller with only
+  `dlp.contentPolicies.update` can blindly replace a referenced policy's blocking rules with
+  `ALLOW`, weakening later Gemini Enterprise connector, assistant-upload or notebook decisions.
+  This is expected mutable-control behavior, not a DLP authorization bypass or direct data read.
+- Live-created a synthetic fail-closed policy, confirmed the reduced caller could not read it,
+  replaced only `rules`, and observed always-on `UpdateContentPolicy` Admin Activity retaining the
+  target, mask and verdict. Deleted the entire policy/IAM/key/config fixture, restored DLP to its
+  disabled baseline and preserved the older service-agent binding confirmed in a September IAM
+  snapshot. No active residue remains.
+
+### 2026-10-04 — Backup and DR Preview auto-protection
+- Added full auto-protection enumeration and a bounded post-exploitation technique for label-driven
+  capture of current and future Compute instances or disks into a selected backup plan. Restore,
+  vault access, encryption and cross-project service-agent operator grants remain explicit separate
+  prerequisites; this is not presented as automatic IAM escalation.
+- Live-validated minimum custom-role boundaries. Policy create required both create and resource-
+  type plan use; binding create required both policy-side binding create and workload-side applied-
+  policy authorization; changing the target plan rechecked the applicable plan-use permission. No
+  authorization defect was found. The book uses the live `autoProtectionBindings.*` permission
+  family rather than the stale `autoProtectionPolicyBindings.*` spelling in the tutorial table.
+- The no-match fixture produced one active applied policy but zero matching resources, associations,
+  data sources or backups. Always-on Admin Activity captured policy/binding creation and update,
+  while inventory reads remain off-default Data Access. Waited through the documented asynchronous
+  binding removal, then deleted the policy, both plans, empty vault, identities/keys/roles/bindings,
+  generated service-agent grant and local state; disabled Backup and DR back to baseline and verified
+  zero active residue.
+
+### 2026-10-04 — Secure Source Manager authenticated webhooks
+- Updated the malicious-hook technique for the September service-account-authorization feature:
+  correctly authorized hooks mint audience-bound OIDC identity tokens for the repository service
+  account and can invoke protected HTTP endpoints that already trust that identity.
+- Live-validated delivery to an authentication-required Cloud Run service, bounded the result away
+  from generic Google API access, and replaced the unsupported arbitrary-SSRF claim. Hook create and
+  update produced no SSM audit entry; delivery exposed only IAM Credentials token-mint Data Access
+  plus receiver telemetry.
+- Deleted the hook/repository, SSM instance, Cloud Run receiver, three identities/key, bindings,
+  active custom role and local fixtures; disabled SSM back to baseline and verified zero active residue.
+
+### 2026-10-04 — Compute recoverable-snapshot IAM escalation
+- Added the new snapshot recycle-bin inventory plus two retained techniques: a single
+  `compute.recoverableSnapshots.setIamPolicy` write can self-grant recovery/use/delete authority on
+  a known tombstone, and direct recover authority can restore supposedly deleted standard-snapshot
+  data during the effective retention window.
+- Live-confirmed that active-snapshot IAM does not survive deletion, while a policy newly written on
+  the tombstone does survive onto the recovered active snapshot. The recovered snapshot had a new
+  time/name and lost the tested label; ordinary snapshot inventory omitted every tombstone.
+- Captured always-on Admin Activity for tombstone IAM replacement, recovery and permanent deletion.
+  Removed both tombstones, the restored snapshot, blank source disk, identity/key, bindings, custom
+  role and local credentials; verified zero active test residue and preserved Compute's enabled baseline.
+
+### 2026-10-04 — Cloud Healthcare targeted DICOM export
+- Updated the existing server-side export technique for GA DICOM filtering. An exact
+  `healthcare.dicomStores.export` caller with no DICOMweb or Storage read access successfully
+  exported one known synthetic instance through the Healthcare service agent and its separately
+  authorized filter/output buckets.
+- Dismissed a private-first arbitrary filter-object read oracle: opaque and invalid-path canaries
+  were not reflected in LRO state and yielded no useful content disclosure. Filtering remains a
+  precision refinement because the same permission already permits full-store export.
+- Deleted the store, dataset, DICOM instance, buckets/objects, key, reduced identity, bindings and
+  active custom role; revoked the generated service-agent grant, disabled the API back to baseline,
+  and verified that GCP removed the protected service-agent identity. No active residue remains.
+
+### 2026-10-04 — Cloud Tasks per-task retry and batch operations
+- Added a persistence primitive for task-level retry overrides: an enqueuer can bypass a queue's
+  bounded retry policy for selected tasks without queue-update permission, with up to 31 days of
+  retries and no Cloud Audit creation event. Batch create can scale the same permission to 100 tasks.
+- Added the lower-permission batch-delete disruption path: `cloudtasks.tasks.delete` can selectively
+  remove up to 1,000 known tasks without queue-admin/purge access; its `DATA_WRITE` audit log is off
+  by default.
+- Live-validated both boundaries on a paused queue with a reduced identity. No task dispatched.
+  Deleted both tasks, the queue, key, service account and all bindings; securely removed local
+  credentials and preserved the pre-existing enabled API baseline.
+- Dismissed a potential cross-queue batch authorization confusion: mismatched create parents/names
+  were rejected, and mixed batch deletion removed only the authorized queue-A task while reporting
+  the queue-B item as a per-request failure. Removed the entire second paused fixture with zero residue.
+
+### 2026-10-04 — Datastream row-filtered partial backfill
+- Added the September 30 partial-backfill surface to Datastream enumeration and retained it as a
+  bounded post-exploitation technique: `datastream.objects.startBackfillJob` can copy selected
+  historical rows through an existing SQL-source stream without stream mutation or direct source
+  access, but the attacker still needs access to the configured destination.
+- A one-permission caller reached the filtered request's object lookup; the same valid identity was
+  denied after permission removal and cache expiry. Admin Activity logged the caller and object but
+  omitted the SQL predicate, while the stream object's latest backfill state exposes the filter.
+- No Datastream object or data fixture was created. Deleted the disposable key, service account,
+  role and bindings, shredded isolated local credentials and preserved Datastream's enabled baseline.
+
+### 2026-10-04 — API Gateway MCP API-key discovery protection
+- Reconciled the September 30 release that added API-key authentication for MCP `tools/list`,
+  removing the stale claim that discovery could only be protected with JWT.
+- Live-verified missing, invalid, query-string and valid-header key cases with an exact-service-
+  restricted key. Only the valid `x-api-key` returned the synthetic schema. Duplicate JSON-RPC
+  method fields and conflicting `Mcp-Method` headers did not bypass the parsed method's check.
+- Deleted the key, gateway, config and API; restored API Gateway, Service Management and Service
+  Control to their disabled baselines; preserved the initially enabled API Keys API; and removed the
+  local fixture. Only the expected unusable deletion tombstones remain visible in Cloud Asset.
 
 ### 2026-09-29 — Application Design Center role reach and remote MCP
 - Added dedicated Application Design Center enumeration and post-exploitation pages. Mapped the resource/deployment hierarchy, all six live MCP tools, role families, downstream boundaries and separate Design Center, MCP, Storage and deployment audit layers.

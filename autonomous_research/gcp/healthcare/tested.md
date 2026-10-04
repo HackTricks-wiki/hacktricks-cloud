@@ -1,5 +1,14 @@
 # Cloud Healthcare API security research
 
+## 2026-10-04 — filtered DICOM export and Storage-read oracle check
+
+- Reconciled the GA `filterConfig.resourcePathsGcsUri` surface with the existing export technique. The filter object contains newline-delimited study/series/instance DICOMweb paths; the Healthcare service agent needs Storage Object Viewer on it and Object Admin on the output location.
+- Live-created one isolated synthetic DICOM store using Google's public sample instance, separate filter/output buckets, and a caller with exactly `healthcare.dicomStores.export` plus Service Usage Consumer. The caller was denied `healthcare.dicomStores.dicomWebRead` and direct `storage.objects.get`, yet its filtered export completed with `success: 1` and wrote exactly the selected 1 MiB instance. The store retained no broader caller data-read grant.
+- Added `healthcare.operations.get` only for a separate private-first hypothesis: whether parser/LRO errors reflect arbitrary contents read from the filter URI by the Healthcare service agent. A controlled opaque canary and an invalid `/studies/<canary>` line both completed with an empty counter and no reflected content. No useful Storage disclosure oracle or vulnerability was found.
+- The export produced no Healthcare audit entry under default settings, consistent with `ExportDicomData` being off-default `DATA_READ`. Dataset/store creation remained visible as Admin Activity; filter reads and destination writes are off-default Storage Data Access.
+- Kept filtering as a precision/stealth refinement of the existing export technique, not a new standalone heading: the same `healthcare.dicomStores.export` permission already authorizes a full-store export.
+- Deleted the DICOM instance/store/dataset, both buckets and all objects, reduced identity/key/bindings, custom role and local credentials. Revoked the newly created Healthcare service-agent binding and disabled the API; disabling removed the otherwise protected generated service-agent identity. Final inventory found zero active test resources/bindings/identities and only the normal soft-deleted custom-role tombstone.
+
 ## 2026-09-28 - official-contract and local CLI audit
 
 No Healthcare dataset/store, IAM policy, Storage object, Pub/Sub topic, BigQuery dataset, operation, or other cloud resource was created or modified. The review used current official Cloud Healthcare REST, IAM-role, audit-log, import/export, FHIR consent, Pub/Sub, BigQuery-streaming and service-agent documentation, plus local stable `gcloud healthcare` help and read-only predefined-role metadata.

@@ -27,6 +27,12 @@
 - [ ] Enumerate regional Discovery profiles in a project with profiling enabled and record exactly
       which fields basic `roles/viewer` can see for project, table, column, and file-store profiles;
       separately verify the project parent versus organization parent visibility boundary.
-- [ ] Review DLP connections, stored infoTypes, estimates, subscriptions, and content policies for
-      additional high-value secrets, delegated identities, mutable detection controls, or
-      cross-project actions before adding any new book technique.
+- [x] Review the new content-policy surface. Live-verified that `dlp.contentPolicies.update` alone
+      can blindly replace a blocking rule set with `ALLOW`; published the bounded Gemini Enterprise
+      defense-evasion impact and removed the complete fixture. See `tested.md`.
+- [ ] In an already licensed disposable Gemini Enterprise app, attach a fail-closed synthetic
+      content policy to a connector or notebook, prove a harmless test upload is blocked, perform
+      the one-permission rule update, and prove only the expected later upload is admitted. Restore
+      the original policy before deleting the app, connector/notebook, sources, grants and policy.
+- [ ] Review DLP connections, stored infoTypes, estimates and subscriptions for additional
+      high-value secrets, delegated identities, mutable detection controls or cross-project actions.
