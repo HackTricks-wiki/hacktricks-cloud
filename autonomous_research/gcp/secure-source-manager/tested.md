@@ -1,5 +1,12 @@
 # Secure Source Manager — checked
 
+## 2026-10-04 — service-account-authenticated webhook delivery
+
+- Reconciled the September 29 service-account authorization feature. A correctly authorized hook generated a Google-signed OIDC ID token for the repository's user-managed service account, with the configured target URI as audience, and successfully invoked an authentication-required Cloud Run service that granted only that account Invoker.
+- Bounded the expected technique to repository-event POSTs against receivers that already trust the account; the credential is an audience-bound ID token, not an OAuth access token for arbitrary Google APIs.
+- Live hook create/update calls produced no SSM Cloud Audit entry, consistent with their omission from the published method table. Delivery produced IAM Credentials `GenerateIdToken` Data Access as the SSM service agent, and the receiver logged the request.
+- Deleted the hook/repository, instance, Cloud Run receiver, three service accounts, key, grants, active custom role, and local credentials/Git fixture. Disabled SSM back to baseline and verified zero matching identities, bindings, receiver, service agent, or local paths.
+
 ## 2026-09-26 — audit classification review
 - Compared all five privesc sections with Google's current [Secure Source Manager audit logging table](https://docs.cloud.google.com/secure-source-manager/docs/audit-logging). Corrected `FetchRepository` to `DATA_READ`, `PushRepository` to `DATA_WRITE`, and `CreateAnySshKey` to `DATA_WRITE` — all Data Access, off by default. The prior page incorrectly said Git fetch/push had no Cloud Audit method and SSH-key creation was always-on Admin Activity.
 - Instance/repository `SetIamPolicy` remains Admin Activity, always on. `WritePullRequest` is `DATA_WRITE`, but the table does not map branch-rule edits or approve/merge to exact audit methods; hook mutations and `linkDeveloperConnect` are also absent from the published table. Changed unsupported categorical log claims to explicit unverified entries rather than treating undocumented methods as proven silent or always logged.

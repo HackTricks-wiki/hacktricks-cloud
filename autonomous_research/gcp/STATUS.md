@@ -2,6 +2,17 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — Secure Source Manager authenticated webhooks
+- Updated the malicious-hook technique for the September service-account-authorization feature:
+  correctly authorized hooks mint audience-bound OIDC identity tokens for the repository service
+  account and can invoke protected HTTP endpoints that already trust that identity.
+- Live-validated delivery to an authentication-required Cloud Run service, bounded the result away
+  from generic Google API access, and replaced the unsupported arbitrary-SSRF claim. Hook create and
+  update produced no SSM audit entry; delivery exposed only IAM Credentials token-mint Data Access
+  plus receiver telemetry.
+- Deleted the hook/repository, SSM instance, Cloud Run receiver, three identities/key, bindings,
+  active custom role and local fixtures; disabled SSM back to baseline and verified zero active residue.
+
 ### 2026-10-04 — Compute recoverable-snapshot IAM escalation
 - Added the new snapshot recycle-bin inventory plus two retained techniques: a single
   `compute.recoverableSnapshots.setIamPolicy` write can self-grant recovery/use/delete authority on
