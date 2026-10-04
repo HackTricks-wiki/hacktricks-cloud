@@ -1,6 +1,16 @@
 # GCP audit — status
 
-Last updated: 2026-09-29
+Last updated: 2026-10-04
+
+### 2026-10-04 — API Gateway MCP API-key discovery protection
+- Reconciled the September 30 release that added API-key authentication for MCP `tools/list`,
+  removing the stale claim that discovery could only be protected with JWT.
+- Live-verified missing, invalid, query-string and valid-header key cases with an exact-service-
+  restricted key. Only the valid `x-api-key` returned the synthetic schema. Duplicate JSON-RPC
+  method fields and conflicting `Mcp-Method` headers did not bypass the parsed method's check.
+- Deleted the key, gateway, config and API; restored API Gateway, Service Management and Service
+  Control to their disabled baselines; preserved the initially enabled API Keys API; and removed the
+  local fixture. Only the expected unusable deletion tombstones remain visible in Cloud Asset.
 
 ### 2026-09-29 — Application Design Center role reach and remote MCP
 - Added dedicated Application Design Center enumeration and post-exploitation pages. Mapped the resource/deployment hierarchy, all six live MCP tools, role families, downstream boundaries and separate Design Center, MCP, Storage and deployment audit layers.

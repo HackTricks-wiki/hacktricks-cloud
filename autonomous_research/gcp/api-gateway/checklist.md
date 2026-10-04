@@ -1,5 +1,9 @@
 # API Gateway — open leads
 
+- [x] Re-test the September 30 `tools/list` API-key authentication release. Missing, invalid and
+      query-string keys did not reveal schemas; an exact-service-restricted `x-api-key` did. Duplicate
+      body methods used the final parsed value and conflicting `Mcp-Method` headers did not bypass
+      the selected method's authentication.
 - [x] Test whether Preview model routing accepts an arbitrary HTTPS backend and forwards a reusable OAuth access token. The arbitrary backend was accepted, but it received a Google-signed, one-hour identity JWT whose audience was exactly the configured backend URL—not a reusable OAuth token. Keep domain-trust guidance, but do not report token exfiltration as a vulnerability.
 - [ ] Live-test MCP `tools/call` against JWT- and API-key-protected synthetic operations and verify there is no disagreement between REST-route and JSON-RPC authorization, including duplicate `params.name`, duplicate arguments, type coercion, encoded path values and conflicting header/body parameters.
 - [ ] Test caller-controlled OpenAPI header parameters through MCP. Verify reserved-header blocking, authorization-header handling, duplicate/case-variant headers and request smuggling boundaries at the MCP-to-REST transcoder and a harmless echo backend.
