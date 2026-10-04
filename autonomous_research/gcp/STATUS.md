@@ -2,6 +2,18 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — Cloud Healthcare targeted DICOM export
+- Updated the existing server-side export technique for GA DICOM filtering. An exact
+  `healthcare.dicomStores.export` caller with no DICOMweb or Storage read access successfully
+  exported one known synthetic instance through the Healthcare service agent and its separately
+  authorized filter/output buckets.
+- Dismissed a private-first arbitrary filter-object read oracle: opaque and invalid-path canaries
+  were not reflected in LRO state and yielded no useful content disclosure. Filtering remains a
+  precision refinement because the same permission already permits full-store export.
+- Deleted the store, dataset, DICOM instance, buckets/objects, key, reduced identity, bindings and
+  active custom role; revoked the generated service-agent grant, disabled the API back to baseline,
+  and verified that GCP removed the protected service-agent identity. No active residue remains.
+
 ### 2026-10-04 — Cloud Tasks per-task retry and batch operations
 - Added a persistence primitive for task-level retry overrides: an enqueuer can bypass a queue's
   bounded retry policy for selected tasks without queue-update permission, with up to 31 days of
