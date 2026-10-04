@@ -2,6 +2,17 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — Datastream row-filtered partial backfill
+- Added the September 30 partial-backfill surface to Datastream enumeration and retained it as a
+  bounded post-exploitation technique: `datastream.objects.startBackfillJob` can copy selected
+  historical rows through an existing SQL-source stream without stream mutation or direct source
+  access, but the attacker still needs access to the configured destination.
+- A one-permission caller reached the filtered request's object lookup; the same valid identity was
+  denied after permission removal and cache expiry. Admin Activity logged the caller and object but
+  omitted the SQL predicate, while the stream object's latest backfill state exposes the filter.
+- No Datastream object or data fixture was created. Deleted the disposable key, service account,
+  role and bindings, shredded isolated local credentials and preserved Datastream's enabled baseline.
+
 ### 2026-10-04 — API Gateway MCP API-key discovery protection
 - Reconciled the September 30 release that added API-key authentication for MCP `tools/list`,
   removing the stale claim that discovery could only be protected with JWT.
