@@ -19,6 +19,7 @@
 - [x] Apply reciprocal review corrections for project-versus-instance metadata `actAs`, unclassified OS Login monitoring signals, regional-disk IAM REST, helper reads, and complete command examples.
 - [x] Rebuild the dedicated custom-SSH-metadata page into one instance and one project primitive, with exact CLI helper reads/operation waits, prerequisites, bounded impact, categorical stealth, and current audit defaults; no cloud mutation was performed.
 - [x] Independently reciprocal-review the dedicated SSH-metadata page against current REST IAM requirements and Google Cloud CLI 586.0.0 source; no further page fix was required.
+- [x] Live-test the standard-snapshot recycle bin with an exact `compute.recoverableSnapshots.setIamPolicy` caller; confirm self-grant, recovery, inherited tombstone IAM, permanent deletion, audit methods, active-policy non-persistence, and complete cleanup.
 
 ## Follow-up validation ideas
 
@@ -33,5 +34,7 @@
 - [ ] Validate whether `gcloud compute project-info add-metadata` and instance `add-metadata` perform any additional authorization beyond the locally confirmed resource-get and operation-wait helper calls under minimum custom roles, separating raw REST minima from CLI minima.
 - [ ] Validate image-family resolution and exact `images.insert` request/audit fields with a stopped disposable source disk; delete the image and disk immediately after the test.
 - [ ] Capture zonal and regional MIG template changes to confirm the exact regional method-name variants and service-agent attribution for scale-out versus explicit recreation.
+- [ ] Test tag-based recycle-bin rules and IAM conditions across recovery, including whether loss of resource tags changes the effective policy or conditional access before defenders re-apply tags.
+- [ ] Validate recycle-bin inheritance and authorization at folder/organization scope in a disposable hierarchy; the project-only lab cannot exercise those rule-precedence edges.
 
 All future live tests must use minimum permissions, stay within the cost limit, record cleanup, and delete every created asset immediately after the test.

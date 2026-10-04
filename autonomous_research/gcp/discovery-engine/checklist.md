@@ -1,5 +1,10 @@
 # Discovery Engine / Gemini Enterprise — open leads
 
+- [ ] In an already licensed disposable Canvas-enabled Gemini Enterprise app, create distinct
+      documents/slides as two synthetic users. Capture the alpha web-app request contract, then test
+      `immersiveArtifacts.list|get|export` under Viewer with app/data-store resource IAM. Publish
+      only if one user can recover another user's artifact contrary to the intended scope; keep any
+      authorization defect private-first and remove exports, artifacts, conversations and grants.
 - [x] Map the September 28 granular app/data-store IAM model, resource roles, connector-entity propagation, minimum policy-write permissions, and audit classes. Shipped the useful custom-role self-grant and service-level persistence paths without presenting full Admin as an escalation.
 - [ ] In an already provisioned disposable Gemini Enterprise project, verify the full negative and positive matrix: engine only, data store only, both resources, collection only, and collection plus every entity store. Capture `v1` method names for standalone data-store policy writes, then remove every resource policy binding and fixture. Do not enable/provision the licensed service solely for this test.
 - [ ] Test policy inheritance and IAM Conditions at app/data-store scope, including whether a resource-scoped custom role containing only `setIamPolicy` can blind-replace the policy without `getIamPolicy`. Treat any missing permission check or resource-confusion result as private-first.

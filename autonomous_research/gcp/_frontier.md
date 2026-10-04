@@ -657,9 +657,14 @@ State (2026-09-29): the authenticated technique surface is at deep saturation. S
       product separately denied project write access, so no app/tool or boundary result exists.
       Keep missing actAs private-first and use Google `userinfo` instead of an external token
       receiver. See `ces/tested.md` and `ces/checklist.md`.
-- [ ] Test Backup and DR Preview auto-protection with same-organization disposable projects to bound
-      policy/binding authorization versus later restore authority. Remove policies, bindings,
-      backups, vault, operator grants and synthetic workloads after all LROs settle.
+- [ ] Complete the two-project Backup and DR Preview auto-protection arm. The 2026-10-04 same-project
+      minimum-role test confirmed separate policy-create/plan-use, binding/workload-authorize and
+      update/plan-use checks; no authorization defect exists there. A same-organization
+      cross-project fixture is still needed to attribute both service agents and operator grants,
+      and to determine whether later selector/plan expansion consumes the workload's one-time
+      binding authorization or triggers a fresh authorization check.
+      Remove policies, bindings, backups, vault, operator grants and synthetic workloads after all
+      LROs settle. See `backup-dr/tested.md` and `backup-dr/checklist.md`.
 - [x] Cloud Scheduler's partial-update arm is securely resolved: after an unauthenticated canary
       proved `jobs.update` propagation, a raw URI-only authenticated-job PATCH was denied on retained
       service-account `actAs`; the identical authorized control succeeded and preserved identity and
@@ -723,9 +728,11 @@ State (2026-09-29): the authenticated technique surface is at deep saturation. S
 - [ ] Periodically re-pull `gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/<lab>`
       (needs `gcloud config set billing/quota_project <lab>`), diff vs the prior dump, and triage any
       NEW service prefixes / resource-type tokens for attack primitives. Current baseline dump:
-      **13,701 permissions across 317 prefixes, reconfirmed unchanged 2026-09-29**; sorted SHA-256
-      `7c7ba6cf2827f94ac6199fd2c18125f589e655ccc7eba38e1e867a9a6d0ce9ab` (batch 5 was +3 vs
-      13,698; AI/analytics/preview noise, none attack-relevant).
+      **13,720 permissions as of 2026-10-04**; sorted SHA-256
+      `11892905f5a4ba03d9e0780f9b6fb2b4920b5032d9eb0ed6ebfcd34db5ad3f6a` (+19 from 13,701).
+      Shipped DLP `contentPolicies.update`; queued Discovery Engine Canvas cross-user scope. The
+      remaining additions were Compute maintenance, Dataplex entry-use and Workload Manager read
+      permissions with no distinct high-quality primitive established.
 - [ ] Watch newly-GA GCP features (release notes) for identity/traffic/exec/exfil surfaces; those are
       where the next real gaps will be (this iteration's 3 were all GA-2024/preview resources).
 
