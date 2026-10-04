@@ -2,9 +2,9 @@
 
 ## Status
 
-**High-priority hypothesis; not tested.** A safe live fixture requires an explicitly disposable AWS Organizations management account, a separate member account, an organization CloudWatch Omni domain, and a member space. The current authorized single-account lab cannot create that boundary without Organizations-level and cross-account state changes, so no AWS mutation was performed.
+**High-priority bypass hypothesis; not tested in the required account type.** A safe conclusive fixture requires an explicitly disposable AWS Organizations management account, a separate member account, an organization CloudWatch Omni domain, and a member space. The current authorized account is an ordinary member (`228478051196`, management account `418720621023`), so it cannot exercise the decisive boundary without Organizations-level and cross-account state changes.
 
-Do not add this as a verified technique or vulnerability to the public book yet.
+The documented, properly authorized credential-broker operation is now covered publicly as expected cross-account functionality. Do **not** claim or report the no-target-grant bypass unless it succeeds in the management/delegated-admin fixture below.
 
 ## Why this is high priority
 
@@ -14,7 +14,7 @@ The action has three unusual properties:
 
 1. Service Authorization exposes no resource type or condition key, so IAM can only grant it on `Resource: "*"`.
 2. It has no listed dependent action; no `iam:PassRole` is required at credential-vending time.
-3. AWS-managed `CloudWatchReadOnlyAccess` version 24 includes `cloudwatch:Get*` on `*`, automatically granting this new credential-vending API to a policy advertised as read-only.
+3. AWS-managed `CloudWatchReadOnlyAccess` current version 25 includes `cloudwatch:Get*` on `*`, automatically granting this new credential-vending API to a policy advertised as read-only. Version 25 also explicitly adds `cloudwatch:CreateOneTimeDeepLinkCode`; the credential action was already captured by the older `Get*` wildcard.
 
 The operator role is not generic administrator, but the AWS-managed `CloudWatchOmniSpaceAccessPolicy` includes meaningful CloudWatch Omni writes, account-wide IAM role/user metadata reads, Secrets Manager metadata listing, tagged-secret management, Lambda invocation for evaluator functions, AWS Config recorder management, and constrained same-account `iam:PassRole` paths.
 
@@ -37,6 +37,18 @@ Secondary boundaries:
 - `domainId + targetAccountId` before a target space exists, resolving a documentation contradiction;
 - revoke access grant or explicitly deny future vending, then measure already-issued credential lifetime;
 - confirm caller-account vending event, target-account service `AssumeRole`, session tags/context, and response redaction.
+
+## Member-account controls completed 2026-10-01
+
+No AWS resource was created. Synthetic requests used the documented `domainId + targetAccountId` form:
+
+- Administrator baseline: `AccessDenied`.
+- Restricted session with only `cloudwatch:GetSpaceCredentialsForOrganization` on `Resource: "*"`: the same `AccessDenied`.
+- Restricted statement on fabricated domain/space ARNs: the same `AccessDenied`.
+
+This is the secure expected outcome for an ordinary member account and confirms that the organization-role prerequisite is enforced before the account can obtain credentials. The deliberately terse error cannot prove the target-space grant boundary or distinguish every internal IAM/resource check.
+
+CloudTrail indexed all three as `readOnly: true` management events under `cloudwatch.amazonaws.com`; request parameters and response elements were null. No credential material was returned. `ListSpacesForOrganization` was independently denied, while local `ListDomains` and `ListSpaces` remained empty.
 
 ## Detection
 
