@@ -28,7 +28,10 @@ for (const [label, root] of Object.entries(roots)) {
   const missing = [];
 
   for (const file of markdownFiles(root)) {
-    const sections = fs.readFileSync(file, "utf8").split(/(?=^### )/m).slice(1);
+    // Persistence techniques can stand alone at H2 when no category wrapper is
+    // needed, or appear at H3 inside a category containing multiple techniques.
+    const sectionStart = label === "persistence" ? /(?=^#{2,3} )/m : /(?=^### )/m;
+    const sections = fs.readFileSync(file, "utf8").split(sectionStart).slice(1);
     for (const section of sections) {
       const hasImpact = /\*\*Potential Impact:\*\*/i.test(section);
       const hasLogs = /<summary>Logs generated<\/summary>/i.test(section);
@@ -38,7 +41,7 @@ for (const [label, root] of Object.entries(roots)) {
       if (/\*\*Stealth:\*\*/i.test(section)) {
         rated += 1;
       } else {
-        const heading = section.match(/^### (.+)$/m)?.[1] ?? "<unknown heading>";
+        const heading = section.match(/^#{2,3} (.+)$/m)?.[1] ?? "<unknown heading>";
         missing.push(`${file}: ${heading}`);
       }
     }
