@@ -1,5 +1,21 @@
 # Discovery Engine / Gemini Enterprise — tested
 
+## 2026-10-04 — Canvas immersive-artifact permission delta
+
+- The fresh 13,720-permission catalog added seven `discoveryengine.immersiveArtifacts.*`
+  permissions. Current Gemini Enterprise documentation identifies these as Canvas document/slide
+  create, edit, navigate, get/list and export controls. Canvas can use chat history, connector data
+  and explicitly supplied files as sources, so artifacts are potentially sensitive.
+- Current predefined-role inspection shows Discovery Engine Viewer and Agentspace Viewer contain
+  `get`, `list` and `export`; Discovery Engine User, Agentspace User, Editor and Admin also contain
+  create/update/navigate/delete. The static v1, v1beta and v1alpha Discovery documents dated
+  2026-09-27 expose no immersive-artifact resource or method, and the public guide documents only
+  web-app behavior.
+- No book claim was added yet. The project lacks a licensed/provisioned Gemini Enterprise Canvas
+  fixture, and the available contract does not establish whether list/get/export is project-wide,
+  app-scoped, conversation-scoped or owner-filtered. A viewer being able to export its own artifact
+  is not an attack; cross-user recovery must be demonstrated before publishing.
+
 ## 2026-09-29 — granular app and data-store IAM review
 
 - Confirmed the new resource-level model independently checks the target app (`engine`) and linked data store. Restricted users require a narrow project-level persona plus a resource-level Agentspace User, Viewer, or Admin grant on both resources.

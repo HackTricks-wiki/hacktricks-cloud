@@ -2,6 +2,38 @@
 
 Last updated: 2026-10-04
 
+### 2026-10-04 — DLP content-policy defense evasion and permission delta
+- A fresh project-testable-permission pull found 13,720 permissions, 19 more than the 13,701
+  September baseline. The only immediately shippable control was Sensitive Data Protection content
+  policy mutation; the new Discovery Engine Canvas artifact reads remain private-first until their
+  cross-user scope can be isolated in a licensed fixture.
+- Added content-policy enumeration and a bounded post-exploitation technique: a caller with only
+  `dlp.contentPolicies.update` can blindly replace a referenced policy's blocking rules with
+  `ALLOW`, weakening later Gemini Enterprise connector, assistant-upload or notebook decisions.
+  This is expected mutable-control behavior, not a DLP authorization bypass or direct data read.
+- Live-created a synthetic fail-closed policy, confirmed the reduced caller could not read it,
+  replaced only `rules`, and observed always-on `UpdateContentPolicy` Admin Activity retaining the
+  target, mask and verdict. Deleted the entire policy/IAM/key/config fixture, restored DLP to its
+  disabled baseline and preserved the older service-agent binding confirmed in a September IAM
+  snapshot. No active residue remains.
+
+### 2026-10-04 — Backup and DR Preview auto-protection
+- Added full auto-protection enumeration and a bounded post-exploitation technique for label-driven
+  capture of current and future Compute instances or disks into a selected backup plan. Restore,
+  vault access, encryption and cross-project service-agent operator grants remain explicit separate
+  prerequisites; this is not presented as automatic IAM escalation.
+- Live-validated minimum custom-role boundaries. Policy create required both create and resource-
+  type plan use; binding create required both policy-side binding create and workload-side applied-
+  policy authorization; changing the target plan rechecked the applicable plan-use permission. No
+  authorization defect was found. The book uses the live `autoProtectionBindings.*` permission
+  family rather than the stale `autoProtectionPolicyBindings.*` spelling in the tutorial table.
+- The no-match fixture produced one active applied policy but zero matching resources, associations,
+  data sources or backups. Always-on Admin Activity captured policy/binding creation and update,
+  while inventory reads remain off-default Data Access. Waited through the documented asynchronous
+  binding removal, then deleted the policy, both plans, empty vault, identities/keys/roles/bindings,
+  generated service-agent grant and local state; disabled Backup and DR back to baseline and verified
+  zero active residue.
+
 ### 2026-10-04 — Secure Source Manager authenticated webhooks
 - Updated the malicious-hook technique for the September service-account-authorization feature:
   correctly authorized hooks mint audience-bound OIDC identity tokens for the repository service

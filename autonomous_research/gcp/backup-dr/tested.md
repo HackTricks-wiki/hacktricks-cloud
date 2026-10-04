@@ -1,5 +1,72 @@
 # Backup and DR post-exploitation audit
 
+## 2026-10-04 - Preview auto-protection policy authorization
+
+### Live result
+
+- Created an empty one-day backup vault and two compatible one-day Compute Disk backup plans in
+  `us-central1`. The policy used the deliberately absent label `htautoprot=nevermatch1004`; no
+  Compute fixture was created, no resource matched, and no backup-plan association, data source or
+  recovery point was produced.
+- A reduced service account successfully created the policy with exactly
+  `backupdr.autoProtectionPolicies.create`, `backupdr.backupPlans.useForComputeDisk`, and Service
+  Usage Consumer. The active policy referenced the expected plan and label selector.
+- With `backupdr.autoProtectionBindings.create` but without
+  `backupdr.appliedAutoProtectionPolicies.authorize`, binding creation failed on the latter
+  permission in the workload project. Adding that one permission and waiting for Backup and DR's
+  authorization cache made the identical request succeed. The applied-policy view became `ACTIVE`
+  while matching-resource and association inventories remained empty.
+- Changed the caller to hold `backupdr.autoProtectionPolicies.update` but not
+  `backupdr.backupPlans.useForComputeDisk`. A `backupPlanDetails` PATCH targeting the second plan
+  failed on the missing `useForComputeDisk` permission. Restoring that permission made the same
+  PATCH succeed after propagation. This rejects both private-first missing-authorization leads.
+- Deleting the disposable caller after policy creation did not remove the policy or binding. This
+  confirms the useful expected behavior: the service-managed policy is not tied to the creator's
+  continuing credentials. It does not prove data disclosure by itself; listing/restoring completed
+  backups and all vault, encryption and restore-target boundaries remain separate prerequisites.
+
+### Permission and documentation correction
+
+- The live API, generated audit catalog and current predefined roles use
+  `backupdr.autoProtectionBindings.create|delete|get|list`. The auto-protection tutorial currently
+  prints the stale `backupdr.autoProtectionPolicyBindings.*` spelling in its granular-permission
+  table. Book examples and minimum-permission statements use the live permission names.
+- `roles/backupdr.editor`, `roles/backupdr.admin`, and basic `roles/editor` currently include policy
+  create/update/delete, binding create/delete, workload authorization and both Compute resource
+  `useFor...` permissions. `roles/backupdr.viewer` contains only the relevant read permissions.
+- Cross-project protection is still bounded by the foreign backup-vault service agent's documented
+  `roles/backupdr.computeEngineOperator` or `roles/backupdr.diskOperator` grant in the workload
+  project. The same-project control did not attempt to generalize around this prerequisite.
+
+### Telemetry
+
+- Successful policy creation emitted always-on Admin Activity under
+  `google.cloud.backupdr.v1beta.BackupDR.CreateAutoProtectionPolicy`, with authorization rows for
+  both policy create and `backupdr.backupPlans.useForComputeDisk`. The LRO produced start and
+  completion records.
+- Binding denial and success emitted the documented v1beta method plus an additional
+  `google.cloud.backupdr.v1.BackupDR.CreateAutoProtectionPolicyBinding` authorization entry. The
+  denial isolated `backupdr.appliedAutoProtectionPolicies.authorize`; the successful front-end entry
+  recorded both binding create and workload authorization.
+- The rejected and accepted plan-target changes used
+  `google.cloud.backupdr.v1beta.BackupDR.UpdateAutoProtectionPolicy`. The denied record explicitly
+  showed `autoProtectionPolicies.update` granted and `backupPlans.useForComputeDisk` denied on the
+  new plan.
+- Policy, binding, matching-resource and applied-policy reads are Data Access `ADMIN_READ` and off
+  by default. Downstream resource enrollment would create an Admin Activity
+  `CreateBackupPlanAssociation` LRO, but the guaranteed no-match fixture generated none.
+
+### Teardown state
+
+- Issued the supported binding delete and observed both the source binding and applied policy move
+  through `DELETION_INITIATED` before returning `404`. Google documents removal as normally taking
+  up to two hours and sometimes eight hours; this no-match fixture cleared in about 17 minutes.
+- After that dependency cleared, deleted the policy, both plans and empty vault. Removed the caller
+  key/account, every test binding, both active custom roles, the generated Backup and DR
+  service-agent project grant and the isolated local configuration. Disabled Backup and DR back to
+  its original state. Final API, IAM, service-account, Cloud Asset, config and named-resource checks
+  found no active test residue; Compute remained at its enabled baseline.
+
 ## 2026-09-28 - documentation, CLI, schema, role, and taxonomy review
 
 No cloud resource, IAM policy, backup, restore, VM, cluster, or directory object was created or changed. The audit used current official documentation, generated audit-method tables, Google Cloud IAM role descriptions, and local Google Cloud CLI 586.0.0 help. No cleanup was required.
