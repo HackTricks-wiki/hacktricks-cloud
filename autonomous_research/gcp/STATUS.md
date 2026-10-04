@@ -12,6 +12,9 @@ Last updated: 2026-10-04
 - Live-validated both boundaries on a paused queue with a reduced identity. No task dispatched.
   Deleted both tasks, the queue, key, service account and all bindings; securely removed local
   credentials and preserved the pre-existing enabled API baseline.
+- Dismissed a potential cross-queue batch authorization confusion: mismatched create parents/names
+  were rejected, and mixed batch deletion removed only the authorized queue-A task while reporting
+  the queue-B item as a per-request failure. Removed the entire second paused fixture with zero residue.
 
 ### 2026-10-04 — Datastream row-filtered partial backfill
 - Added the September 30 partial-backfill surface to Datastream enumeration and retained it as a
