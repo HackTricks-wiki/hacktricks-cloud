@@ -530,59 +530,72 @@ Also don't add any extra stuff in your response that is not part of the translat
     return response_message
 
 
+def fenced_code_spans(text):
+    """Locate fenced blocks without treating indented inner backticks as fences."""
+    spans = []
+    opened = None
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        logical = line.rstrip("\r\n")
+        quote = re.match(r"^[ ]{0,3}((?:> ?)+)", logical)
+        depth = quote.group(1).count(">") if quote else 0
+        if quote:
+            logical = logical[quote.end():]
+        if opened is None:
+            marker = re.match(r"^([ \t]*)(`{3,}|~{3,})(.*)$", logical)
+            if marker and not (marker.group(2)[0] == "`" and "`" in marker.group(3)):
+                indent = len(marker.group(1).expandtabs(4))
+                opened = (offset, marker.group(2)[0], len(marker.group(2)), depth, indent // 4 * 4)
+        else:
+            begin, character, length, quote_depth, base_indent = opened
+            closing = re.fullmatch(r"([ \t]*)" + re.escape(character) + "{" + str(length) + r",}[ \t]*", logical)
+            if (depth == quote_depth and closing and
+                    base_indent <= len(closing.group(1).expandtabs(4)) <= base_indent + 3):
+                spans.append((begin, offset + len(line)))
+                opened = None
+            elif quote_depth and depth < quote_depth and logical.strip():
+                # An unclosed fence in a quote ends with that blockquote.
+                spans.append((begin, offset))
+                opened = None
+        offset += len(line)
+    if opened is not None:
+        spans.append((opened[0], len(text)))
+    return spans
+
+
+def fenced_code_blocks(text):
+    return [text[start:end].rstrip("\r\n") for start, end in fenced_code_spans(text)]
+
+
 def split_text(text, model):
-    global MAX_TOKENS
-    lines = text.split('\n')
+    """Chunk prose for the model while passing complete code blocks verbatim."""
+    def prose_chunks(prose):
+        result = []
+        chunk = ""
+        in_ref = False
+        for line in prose.splitlines(keepends=True):
+            if line.startswith("{{#ref}}"):
+                in_ref = True
+            if in_ref:
+                line = line.replace("`", "")
+            if line.startswith("{{#endref}}"):
+                in_ref = False
+            if chunk and ((line.startswith("#") and reportTokens(chunk + line, model) > MAX_TOKENS * 0.8)
+                          or reportTokens(chunk + line, model) > MAX_TOKENS):
+                result.append(chunk)
+                chunk = ""
+            chunk += line
+        if chunk:
+            result.append(chunk)
+        return result
+
     chunks = []
-    chunk = ''
-    in_code_block = False
-    in_ref = False
-
-    for line in lines:
-        
-        # Keep code blocks as one chunk
-        if line.startswith('```'):
-            
-            # If we are in a code block, finish it with the "```"
-            if in_code_block:
-                chunk += line + '\n'
-            
-            in_code_block = not in_code_block
-            chunks.append(chunk.strip())
-            chunk = ''
-
-            # If a code block is started, add the "```" to the chunk
-            if in_code_block:
-                chunk += line + '\n'
-            
-            continue
-        
-        """
-        Prevent refs using `` like:
-        {{#ref}}
-        ../../generic-methodologies-and-resources/pentesting-network/`spoofing-llmnr-nbt-ns-mdns-dns-and-wpad-and-relay-attacks.md`
-        {{#endref}}
-        """
-        if line.startswith('{{#ref}}'):
-            in_ref = True
-        
-        if in_ref:
-            line = line.replace("`", "")
-        
-        if line.startswith('{{#endref}}'):
-            in_ref = False
-
-
-        # If new section, see if we should be splitting the text
-        if (line.startswith('#') and reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS*0.8) or \
-            reportTokens(chunk + "\n" + line.strip(), model) > MAX_TOKENS:
-            
-            chunks.append(chunk.strip())
-            chunk = ''
-        
-        chunk += line.strip() + '\n'
-
-    chunks.append(chunk.strip())
+    cursor = 0
+    for start, end in fenced_code_spans(text):
+        chunks.extend(prose_chunks(text[cursor:start]))
+        chunks.append(text[start:end])
+        cursor = end
+    chunks.extend(prose_chunks(text[cursor:]))
     return chunks
 
 
@@ -628,8 +641,10 @@ def translate_file(language, file_path, file_dest_path, model, client):
     start_time = time.time()
     for chunk in content_chunks:
         # Don't translate code blocks
-        if chunk.startswith('```'):
-            translated_content += chunk + '\n'
+        if not chunk.strip() or fenced_code_spans(chunk) == [(0, len(chunk))]:
+            translated_content += chunk
+            if chunk and not chunk.endswith('\n'):
+                translated_content += '\n'
         else:
             translated_content += translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client) + '\n'
     
@@ -639,6 +654,8 @@ def translate_file(language, file_path, file_dest_path, model, client):
     # boundaries. Never write or checkpoint a structurally broken page.
     if not protected_markup_is_intact(content, translated_content):
         raise RuntimeError(f"Page {file_path} changed protected markup")
+    if fenced_code_blocks(content) != fenced_code_blocks(translated_content):
+        raise RuntimeError(f"Page {file_path} changed fenced code blocks")
 
     # make sure directory exists
     os.makedirs(os.path.dirname(file_dest_path), exist_ok=True)
