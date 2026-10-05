@@ -3,6 +3,7 @@
 # 👽 Welcome!
 
 - [HackTricks Cloud](README.md)
+- [Permission Risk Categorizations](permission-categorizations/README.md)
 - [About the Author$$external:https://book.hacktricks.wiki/en/welcome/about-the-author.html$$]()
 - [HackTricks Values & faq$$external:https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html$$]()
 
@@ -64,6 +65,7 @@
   - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
 - [Environment Variable Injection to Code Execution](pentesting-cloud/environment-variable-injection.md)
 - [Kubernetes Pentesting](pentesting-cloud/kubernetes-security/README.md)
+  - [Kubernetes Permission Risk Categorizations](pentesting-cloud/kubernetes-security/permission-risk-categorizations.md)
   - [Kubernetes Basics](pentesting-cloud/kubernetes-security/kubernetes-basics.md)
   - [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
     - [Kubelet Authentication & Authorization](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/kubelet-authentication-and-authorization.md)
@@ -87,6 +89,7 @@
     - [Kubernetes Kyverno bypass](pentesting-cloud/kubernetes-security/kubernetes-kyverno/kubernetes-kyverno-bypass.md)
   - [Kubernetes ValidatingWebhookConfiguration](pentesting-cloud/kubernetes-security/kubernetes-validatingwebhookconfiguration.md)
 - [GCP Pentesting](pentesting-cloud/gcp-security/README.md)
+  - [GCP Permission Risk Categorizations](pentesting-cloud/gcp-security/permission-risk-categorizations.md)
   - [GCP - Basic Information](pentesting-cloud/gcp-security/gcp-basic-information/README.md)
     - [GCP - Federation Abuse](pentesting-cloud/gcp-security/gcp-basic-information/gcp-federation-abuse.md)
   - [GCP - Permissions for a Pentest](pentesting-cloud/gcp-security/gcp-permissions-for-a-pentest.md)
@@ -534,6 +537,7 @@
   - [GWS - Google Platforms Phishing](pentesting-cloud/workspace-security/gws-google-platforms-phishing/README.md)
     - [GWS - App Scripts](pentesting-cloud/workspace-security/gws-google-platforms-phishing/gws-app-scripts.md)
 - [AWS Pentesting](pentesting-cloud/aws-security/README.md)
+  - [AWS Permission Risk Categorizations](pentesting-cloud/aws-security/permission-risk-categorizations.md)
   - [AWS - Basic Information](pentesting-cloud/aws-security/aws-basic-information/README.md)
     - [AWS - Federation Abuse](pentesting-cloud/aws-security/aws-basic-information/aws-federation-abuse.md)
   - [AWS - Permissions for a Pentest](pentesting-cloud/aws-security/aws-permissions-for-a-pentest.md)
@@ -1336,6 +1340,7 @@
     - [AWS - Timestream for InfluxDB Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-timestream-influxdb-unauthenticated-enum/README.md)
     - [AWS - ELB Unauthenticated Access](pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elb-unauthenticated-access/README.md)
 - [Azure Pentesting](pentesting-cloud/azure-security/README.md)
+  - [Azure Permission Risk Categorizations](pentesting-cloud/azure-security/permission-risk-categorizations.md)
   - [Az - Basic Information](pentesting-cloud/azure-security/az-basic-information/README.md)
     - [Az Federation Abuse](pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md)
     - [Az - Tokens & Public Applications](pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md)
