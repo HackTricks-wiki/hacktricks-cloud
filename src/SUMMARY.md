@@ -86,6 +86,7 @@
   - [K8s - Post Exploitation](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/README.md)
     - [K8s - From inside a Pod](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/attacking-kubernetes-from-inside-a-pod.md)
     - [K8s - Node Post-Exploitation](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/node-post-exploitation.md)
+      - [K8s - etcd Post-Exploitation](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/etcd-post-exploitation.md)
       - [K8s - DoSing other nodes](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/dosing-other-nodes.md)
       - [K8s - SPIFFE/SPIRE Workload Identity Spoofing](pentesting-cloud/kubernetes-security/spiffe-spire-workload-identity-spoofing.md)
     - [K8s - Internal Network Attacks](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md)
