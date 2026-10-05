@@ -15,6 +15,12 @@ on:
         description: 'Optional comma-separated src/*.md paths to retry in addition to the language backlog'
         required: false
         default: ''
+      batch_size:
+        description: 'Pages per batch; smaller batches reduce repeated work after a failure'
+        type: choice
+        options: ['20', '40', '80']
+        required: false
+        default: '80'
       only_language:
         description: 'Optional language branch code to resume only that language'
         required: false
@@ -138,6 +144,7 @@ jobs:
         shell: bash
         env:
           INPUT_FILES: ${{ inputs.files }}
+          BATCH_SIZE: ${{ inputs.batch_size || '80' }}
         run: |
           set -euo pipefail
           git checkout master
@@ -155,7 +162,11 @@ jobs:
           echo "$(wc -l < /tmp/pending-pages.txt) pages pending for $BRANCH"
 
           if [ -s /tmp/pending-pages.txt ]; then
-            split -l 80 -d -a 3 /tmp/pending-pages.txt /tmp/translation-batch-
+            if [[ ! "$BATCH_SIZE" =~ ^(20|40|80)$ ]]; then
+              echo "Invalid batch size: $BATCH_SIZE" >&2
+              exit 1
+            fi
+            split -l "$BATCH_SIZE" -d -a 3 /tmp/pending-pages.txt /tmp/translation-batch-
             for batch in /tmp/translation-batch-*; do
               git checkout master
               python /tmp/translator.py \
