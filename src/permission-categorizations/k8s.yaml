@@ -1,0 +1,1446 @@
+# Ordered rules: the first matching rule wins. Match fields are literal data, never executable code.
+version: 1
+provider: k8s
+rules:
+- id: basic_api_discovery_access
+  match:
+    all:
+    - &id001
+      field: non_resource_url
+      op: truthy
+    - field: path
+      op: in
+      value:
+      - /api
+      - /api/*
+      - /apis
+      - /apis/*
+      - /openapi/*
+      - /version
+  description: Basic API discovery access.
+  severity: low
+- id: access_sensitive_api_server_path_non_resource_url
+  match:
+    all:
+    - *id001
+    - any:
+      - field: path
+        op: prefix
+        value:
+        - /debug
+        - /logs
+      - field: path
+        op: contains
+        value: '*'
+  description: Can access sensitive API-server path {non_resource_url}.
+  severity: high
+- id: read_api_server_metrics_and_operational_metadata
+  match:
+    all:
+    - *id001
+    - field: path
+      op: prefix
+      value: /metrics
+  description: Can read API-server metrics and operational metadata.
+  severity: medium
+- id: access_api_server_path_non_resource_url
+  match:
+    all:
+    - *id001
+  description: Can access API-server path {non_resource_url}.
+  severity: low
+- id: read_workload_logs_including_private_application_data_and
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: pods/log
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - get
+        - list
+        - watch
+  description: Can read workload logs, including private application data and logged credentials.
+  severity: high
+- id: read_every_current_and_future_api_resource_including
+  match:
+    all:
+    - &id002
+      field: resource
+      op: eq
+      value: '*'
+    - all:
+      - any:
+        - field: verb
+          op: in
+          value:
+          - get
+          - list
+          - watch
+        - field: verb
+          op: eq
+          value: '*'
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+  description: Can read every current and future API resource, including Secrets.
+  severity: high
+  severity_when:
+    match:
+      field: verb
+      op: eq
+      value: '*'
+    severity: critical
+- id: read_every_current_and_future_resource_in_api
+  match:
+    all:
+    - *id002
+    - any:
+      - field: verb
+        op: in
+        value:
+        - get
+        - list
+        - watch
+      - field: verb
+        op: eq
+        value: '*'
+  description: Can read every current and future resource in API group {group}.
+  severity: medium
+- id: change_every_current_and_future_api_resource_allowed
+  match:
+    all:
+    - *id002
+    - all:
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+        - admissionregistration.k8s.io
+        - apps
+        - batch
+        - certificates.k8s.io
+        - discovery.k8s.io
+  description: Can change every current and future API resource allowed by this scope.
+  severity: high
+- id: read_secret_objects_which_commonly_contain_credentials
+  match:
+    all:
+    - &id003
+      all:
+      - field: resource
+        op: eq
+        value: secrets
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+    - any:
+      - field: verb
+        op: in
+        value:
+        - get
+        - list
+        - watch
+      - field: verb
+        op: eq
+        value: '*'
+  description: Can read Secret objects, which commonly contain credentials.
+  severity: high
+- id: create_or_replace_credentials_and_configuration_stored_in
+  match:
+    all:
+    - *id003
+    - field: verb
+      op: in
+      value:
+      - '*'
+      - create
+      - patch
+      - update
+  description: Can create or replace credentials and configuration stored in Secrets.
+  severity: high
+- id: mint_a_token_for_a_serviceaccount_it_can
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: serviceaccounts/token
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can mint a token for a ServiceAccount it can name.
+  severity: critical
+- id: reach_kubelet_apis_through_the_api_server
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: nodes/proxy
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - get
+  description: Can reach kubelet APIs through the API server.
+  severity: critical
+- id: use_the_special_verb_capability_to_bypass_rbac
+  match:
+    all:
+    - all:
+      - field: verb
+        op: in
+        value:
+        - bind
+        - escalate
+      - field: group
+        op: in
+        value:
+        - '*'
+        - rbac.authorization.k8s.io
+      - field: resource
+        op: in
+        value:
+        - '*'
+        - clusterroles
+        - roles
+  description: Can use the special {verb} capability to bypass RBAC escalation safeguards.
+  severity: critical
+- id: perform_authorized_requests_using_another_user_or_serviceaccount
+  match:
+    all:
+    - &id004
+      all:
+      - field: verb
+        op: eq
+        value: impersonate
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+    - field: resource
+      op: in
+      value:
+      - '*'
+      - serviceaccounts
+      - users
+  description: Can perform authorized requests using another user or ServiceAccount.
+  severity: critical
+- id: add_groups_to_an_impersonated_user_when_a
+  match:
+    all:
+    - *id004
+    - field: resource
+      op: eq
+      value: groups
+  description: Can add groups to an impersonated user when a matching user-impersonation grant is also held.
+  severity: high
+- id: add_uid_or_extra_fields_only_while_a
+  match:
+    all:
+    - all:
+      - field: verb
+        op: eq
+        value: impersonate
+      - field: group
+        op: in
+        value:
+        - '*'
+        - authentication.k8s.io
+      - field: resource
+        op: in
+        value:
+        - uids
+        - userextras
+  description: Can add UID or extra fields only while a separately authorized user is impersonated.
+  severity: medium
+- id: constrained_impersonation_perform_delegated_verb_on_full_when
+  match:
+    all:
+    - field: verb
+      op: prefix
+      value: 'impersonate-on:'
+  description: Constrained impersonation can perform {delegated_verb} on {full} when the matching impersonated-identity permission
+    is also held.
+  severity: delegated
+  delegated_severities:
+    critical: high
+    high: high
+    medium: medium
+    low: medium
+- id: select_an_identity_for_constrained_mode_impersonation_when
+  match:
+    all:
+    - &id005
+      all:
+      - field: verb
+        op: prefix
+        value: 'impersonate:'
+      - field: group
+        op: in
+        value:
+        - '*'
+        - authentication.k8s.io
+    - field: mode
+      op: in
+      value:
+      - arbitrary-node
+      - serviceaccount
+      - user-info
+  description: Can select an identity for constrained {mode} impersonation when matching action grants are held.
+  severity: high
+- id: conditional_constrained_impersonation_identity_capability_verb
+  match:
+    all:
+    - *id005
+  description: Conditional constrained-impersonation identity capability {verb}.
+  severity: medium
+- id: approve_a_signer_request_in_a_certificate_minting
+  match:
+    all:
+    - all:
+      - field: verb
+        op: eq
+        value: approve
+      - field: group
+        op: in
+        value:
+        - '*'
+        - certificates.k8s.io
+      - field: resource
+        op: in
+        value:
+        - '*'
+        - signers
+  description: Can approve a signer request in a certificate-minting chain.
+  severity: high
+- id: conditional_signer_capability_verb_a_compatible_controller_and_mutation
+  match:
+    all:
+    - all:
+      - field: verb
+        op: in
+        value:
+        - attest
+        - sign
+      - field: group
+        op: in
+        value:
+        - '*'
+        - certificates.k8s.io
+      - field: resource
+        op: in
+        value:
+        - '*'
+        - signers
+  description: Conditional signer capability {verb}; a compatible controller and mutation chain are required.
+  severity: medium
+- id: submit_a_csr_for_a_user_node_or
+  match:
+    all:
+    - &id006
+      all:
+      - field: resource
+        op: eq
+        value: certificatesigningrequests
+      - field: group
+        op: in
+        value:
+        - '*'
+        - certificates.k8s.io
+    - all:
+      - not:
+          field: subresource
+          op: truthy
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can submit a CSR for a user, node, or workload identity.
+  severity: high
+- id: approve_a_csr_when_the_matching_signer_approval
+  match:
+    all:
+    - *id006
+    - all:
+      - field: subresource
+        op: eq
+        value: approval
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can approve a CSR when the matching Signer approval grant is also held.
+  severity: high
+- id: change_csr_status_only_in_a_compatible_signer
+  match:
+    all:
+    - *id006
+    - all:
+      - field: subresource
+        op: eq
+        value: status
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can change CSR status only in a compatible signer/controller chain.
+  severity: medium
+- id: access_sensitive_pod_subresource_full
+  match:
+    all:
+    - all:
+      - field: full
+        op: in
+        value:
+        - pods/attach
+        - pods/exec
+        - pods/portforward
+        - pods/proxy
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - get
+  description: Can access sensitive Pod subresource {full}.
+  severity: high
+- id: reach_a_service_backend_through_the_api_server
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: services/proxy
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - get
+  description: Can reach a Service backend through the API-server proxy.
+  severity: high
+- id: inject_an_ephemeral_container_into_an_existing_pod
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: pods/ephemeralcontainers
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can inject an ephemeral container into an existing Pod.
+  severity: high
+- id: assign_an_unscheduled_pod_directly_to_a_node
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: pods/binding
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can assign an unscheduled Pod directly to a Node.
+  severity: high
+- id: request_pod_eviction_impact_is_normally_availability_or
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: pods/eviction
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can request Pod eviction; impact is normally availability or a second-step replacement.
+  severity: medium
+- id: submit_a_direct_pod_to_node_binding_request
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: bindings
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can submit a direct Pod-to-Node binding request.
+  severity: high
+- id: alter_controller_observed_pod_state_and_metadata_including
+  match:
+    all:
+    - &id007
+      all:
+      - field: full
+        op: in
+        value:
+        - pods/status
+        - services/status
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+    - field: full
+      op: eq
+      value: pods/status
+  description: Can alter controller-observed Pod state and metadata, including labels used for traffic and policy decisions.
+  severity: high
+- id: redirect_traffic_by_changing_service_status_or_metadata
+  match:
+    all:
+    - *id007
+  description: Can redirect traffic by changing Service status or metadata.
+  severity: high
+- id: change_node_status_and_metadata_including_scheduler_visible
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: nodes/status
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can change Node status and metadata, including scheduler-visible capacity, conditions, and labels that influence
+    workload placement.
+  severity: high
+- id: mutate_owner_references_through_a_legacy_status_endpoint
+  match:
+    all:
+    - all:
+      - any:
+        - all:
+          - field: full
+            op: eq
+            value: daemonsets/status
+          - field: group
+            op: in
+            value:
+            - '*'
+            - apps
+            - extensions
+        - all:
+          - field: full
+            op: eq
+            value: poddisruptionbudgets/status
+          - field: group
+            op: in
+            value:
+            - '*'
+            - policy
+            - extensions
+        - all:
+          - field: full
+            op: eq
+            value: customresourcedefinitions/status
+          - field: group
+            op: in
+            value:
+            - '*'
+            - apiextensions.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can mutate owner references through a legacy status endpoint and cause the garbage collector to delete the
+    object and its dependents.
+  severity: medium
+- id: forge_replicaset_availability_consumed_by_a_deployment_and
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: replicasets/status
+      - field: group
+        op: in
+        value:
+        - '*'
+        - apps
+        - extensions
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can forge ReplicaSet availability consumed by a Deployment and defeat rollout availability guarantees when
+    the target belongs to an active rollout.
+  severity: medium
+- id: ask_the_api_server_about_its_own_identity
+  match:
+    all:
+    - field: resource
+      op: in
+      value:
+      - selfsubjectaccessreviews
+      - selfsubjectreviews
+      - selfsubjectrulesreviews
+  description: Can ask the API server about its own identity or permissions.
+  severity: low
+- id: query_authentication_or_authorization_data_for_supplied_subjects
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - localsubjectaccessreviews
+        - subjectaccessreviews
+        - tokenreviews
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can query authentication or authorization data for supplied subjects or tokens.
+  severity: medium
+- id: widen_a_kubelet_tokenrequest_audience_in_a_conditional
+  match:
+    all:
+    - field: verb
+      op: eq
+      value: request-serviceaccounts-token-audience
+  description: Can widen a kubelet TokenRequest audience in a conditional node-identity chain.
+  severity: medium
+- id: create_a_workload_or_change_pod_labels_used
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: pods
+      - not:
+          field: subresource
+          op: truthy
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can create a workload or change Pod labels used by Services and policies, subject to admission.
+  severity: high
+- id: create_or_change_a_workload_controller_template_impact
+  match:
+    all:
+    - all:
+      - any:
+        - all:
+          - field: resource
+            op: in
+            value:
+            - pods
+            - replicationcontrollers
+          - field: group
+            op: in
+            value:
+            - ''
+            - '*'
+        - all:
+          - field: resource
+            op: in
+            value:
+            - daemonsets
+            - deployments
+            - replicasets
+            - statefulsets
+          - field: group
+            op: in
+            value:
+            - '*'
+            - apps
+        - all:
+          - field: resource
+            op: in
+            value:
+            - cronjobs
+            - jobs
+          - field: group
+            op: in
+            value:
+            - '*'
+            - batch
+      - field: resource
+        op: ne
+        value: pods
+      - not:
+          field: subresource
+          op: truthy
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can create or change a workload controller template. Impact depends on ServiceAccounts, mounts, node settings,
+    and admission controls.
+  severity: high
+- id: change_rbac_objects_but_bind_escalate_safeguards_prevent
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - clusterrolebindings
+        - clusterroles
+        - rolebindings
+        - roles
+      - field: group
+        op: in
+        value:
+        - '*'
+        - rbac.authorization.k8s.io
+      - any:
+        - field: verb
+          op: in
+          value:
+          - '*'
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+        - field: verb
+          op: eq
+          value: unsafe-delete-ignore-read-errors
+        - field: verb
+          op: suffix
+          value:
+          - :patch
+          - :update
+  description: Can change RBAC objects, but bind/escalate safeguards prevent gaining permissions not already held.
+  severity: medium
+- id: weaken_or_remove_an_enforced_validatingadmissionpolicy_or_binding
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - validatingadmissionpolicies
+        - validatingadmissionpolicybindings
+      - field: group
+        op: in
+        value:
+        - '*'
+        - admissionregistration.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - delete
+        - deletecollection
+        - patch
+        - update
+  description: Can weaken or remove an enforced ValidatingAdmissionPolicy or binding.
+  severity: high
+- id: activate_or_change_native_admission_mutations_that_inject
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - mutatingadmissionpolicies
+        - mutatingadmissionpolicybindings
+      - field: group
+        op: in
+        value:
+        - '*'
+        - admissionregistration.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can activate or change native admission mutations that inject code into later workloads.
+  severity: high
+- id: register_redirect_weaken_or_remove_an_admission_webhook
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - mutatingwebhookconfigurations
+        - validatingwebhookconfigurations
+      - field: group
+        op: in
+        value:
+        - '*'
+        - admissionregistration.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+  description: Can register, redirect, weaken, or remove an admission webhook. A reachable attacker-controlled mutating webhook
+    can inject code into later workloads; a validating webhook receives matching objects, including Secret data.
+  severity: high
+- id: change_admission_configuration_elevate_only_after_reproducing_the
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - mutatingadmissionpolicies
+        - mutatingadmissionpolicybindings
+        - mutatingwebhookconfigurations
+        - validatingadmissionpolicies
+        - validatingadmissionpolicybindings
+        - validatingwebhookconfigurations
+      - field: group
+        op: in
+        value:
+        - '*'
+        - admissionregistration.k8s.io
+      - any:
+        - field: verb
+          op: in
+          value:
+          - '*'
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+        - field: verb
+          op: eq
+          value: unsafe-delete-ignore-read-errors
+        - field: verb
+          op: suffix
+          value:
+          - :patch
+          - :update
+  description: Can change admission configuration; elevate only after reproducing the enforced policy path.
+  severity: medium
+- id: mutate_namespace_metadata_through_the_status_endpoint_including
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: namespaces/status
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can mutate Namespace metadata through the status endpoint, including labels and owner references used by admission,
+    policy selectors, and garbage collection.
+  severity: high
+- id: choose_or_change_namespace_labels_used_by_admission
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: namespaces
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can choose or change namespace labels used by admission policy selectors.
+  severity: high
+- id: use_admission_security_profile_resource_resource_profile_impact
+  match:
+    all:
+    - all:
+      - field: verb
+        op: eq
+        value: use
+      - field: resource
+        op: in
+        value:
+        - '*'
+        - podsecuritypolicies
+        - securitycontextconstraints
+  description: Can use admission/security profile resource {resource}; profile impact must be validated on the platform.
+  severity: medium
+- id: change_policy_engine_report_or_status_data_but
+  match:
+    all:
+    - all:
+      - any:
+        - field: resource
+          op: in
+          value:
+          - admissionreports
+          - backgroundscanreports
+          - clusteradmissionreports
+          - clusterbackgroundscanreports
+          - clusterpolicyreports
+          - policyreports
+        - all:
+          - field: group
+            op: contains
+            value: gatekeeper
+          - field: subresource
+            op: eq
+            value: status
+      - any:
+        - field: verb
+          op: in
+          value:
+          - '*'
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+        - field: verb
+          op: eq
+          value: unsafe-delete-ignore-read-errors
+        - field: verb
+          op: suffix
+          value:
+          - :patch
+          - :update
+  description: Can change policy-engine report or status data, but not the enforced policy.
+  severity: medium
+- id: change_a_gatekeeper_constraint_the_live_controller_effect
+  match:
+    all:
+    - all:
+      - field: group
+        op: contains
+        value: constraints.gatekeeper.sh
+      - any:
+        - field: verb
+          op: in
+          value:
+          - '*'
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+        - field: verb
+          op: eq
+          value: unsafe-delete-ignore-read-errors
+        - field: verb
+          op: suffix
+          value:
+          - :patch
+          - :update
+  description: Can change a Gatekeeper constraint; the live controller effect must be validated.
+  severity: medium
+- id: change_a_third_party_admission_object_validate_the
+  match:
+    all:
+    - any:
+      - field: group
+        op: contains
+        value: kyverno
+      - field: group
+        op: contains
+        value: gatekeeper
+    - all:
+      - any:
+        - field: verb
+          op: in
+          value:
+          - '*'
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+        - field: verb
+          op: eq
+          value: unsafe-delete-ignore-read-errors
+        - field: verb
+          op: suffix
+          value:
+          - :patch
+          - :update
+      - any:
+        - field: resource
+          op: contains
+          value: policy
+        - field: resource
+          op: contains
+          value: constraint
+        - field: resource
+          op: contains
+          value: assign
+        - field: resource
+          op: contains
+          value: exception
+        - field: resource
+          op: contains
+          value: config
+  description: Can change a third-party admission object; validate the live controller effect.
+  severity: medium
+- id: replace_trust_anchors_projected_into_opted_in_workloads
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: clustertrustbundles
+      - field: group
+        op: in
+        value:
+        - '*'
+        - certificates.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can replace trust anchors projected into opted-in workloads.
+  severity: high
+- id: request_a_container_checkpoint_only_when_the_kubelet
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: nodes/checkpoint
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can request a container checkpoint only when the kubelet, runtime, and node authorization path support it;
+    no portable privilege path is assumed.
+  severity: medium
+- id: add_an_allow_policy_or_weaken_an_enforced
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: networkpolicies
+      - field: group
+        op: in
+        value:
+        - '*'
+        - networking.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+  description: Can add an allow policy or weaken an enforced workload network boundary.
+  severity: high
+- id: name_squat_or_redirect_cluster_traffic_through_selectors
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: services
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can name-squat or redirect cluster traffic through selectors, ports, or an ExternalName DNS alias.
+  severity: high
+- id: name_squat_or_redirect_cluster_application_traffic
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: endpoints
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can name-squat or redirect cluster application traffic.
+  severity: high
+- id: create_or_redirect_backends_for_a_selectorless_service
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: endpointslices
+      - field: group
+        op: in
+        value:
+        - '*'
+        - discovery.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can create or redirect backends for a selectorless Service.
+  severity: high
+- id: mutate_ingress_metadata_through_the_status_endpoint_active
+  match:
+    all:
+    - all:
+      - field: full
+        op: eq
+        value: ingresses/status
+      - field: group
+        op: in
+        value:
+        - '*'
+        - networking.k8s.io
+        - extensions
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can mutate Ingress metadata through the status endpoint; active controllers may consume those annotations as
+    routing configuration.
+  severity: high
+- id: expose_an_internal_service_or_redirect_a_trusted
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: ingresses
+      - field: group
+        op: in
+        value:
+        - '*'
+        - networking.k8s.io
+        - extensions
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+  description: Can expose an internal Service or redirect a trusted host/path when an active Ingress controller accepts the
+    object.
+  severity: high
+- id: expose_an_internal_service_redirect_a_trusted_route
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: httproutes
+      - field: group
+        op: in
+        value:
+        - '*'
+        - gateway.networking.k8s.io
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+  description: Can expose an internal Service, redirect a trusted route, or mirror requests when an accepted Gateway permits
+    the HTTPRoute attachment.
+  severity: high
+- id: create_a_persistentvolume_exposing_node_backed_data_to
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - persistentvolumes
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+  description: Can create a PersistentVolume exposing node-backed data to a later PVC and Pod.
+  severity: high
+- id: change_node_labels_or_taints_and_influence_workload
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: nodes
+      - not:
+          field: subresource
+          op: truthy
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - patch
+        - update
+  description: Can change Node labels or taints and influence workload placement.
+  severity: high
+- id: create_a_missing_configuration_name_or_change_configuration
+  match:
+    all:
+    - all:
+      - field: resource
+        op: eq
+        value: configmaps
+      - field: group
+        op: in
+        value:
+        - ''
+        - '*'
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - patch
+        - update
+  description: Can create a missing configuration name or change configuration consumed by workloads.
+  severity: high
+- id: read_operational_data_through_full
+  match:
+    all:
+    - field: full
+      op: in
+      value:
+      - nodes/configz
+      - nodes/log
+      - nodes/metrics
+      - nodes/pods
+      - nodes/stats
+      - pods/log
+  description: Can read operational data through {full}.
+  severity: medium
+- id: read_objects_that_commonly_reveal_identities_topology_or
+  match:
+    all:
+    - all:
+      - field: resource
+        op: in
+        value:
+        - clusterrolebindings
+        - clusterroles
+        - configmaps
+        - cronjobs
+        - daemonsets
+        - deployments
+        - endpoints
+        - endpointslices
+        - ingresses
+        - jobs
+        - nodes
+        - persistentvolumeclaims
+        - persistentvolumes
+        - pods
+        - replicasets
+        - replicationcontrollers
+        - rolebindings
+        - roles
+        - serviceaccounts
+        - services
+        - statefulsets
+      - field: verb
+        op: in
+        value:
+        - get
+        - list
+        - watch
+  description: Can read objects that commonly reveal identities, topology, or attack inputs.
+  severity: medium
+- id: read_only_api_permission
+  match:
+    all:
+    - field: verb
+      op: in
+      value:
+      - get
+      - list
+      - watch
+  description: Read-only API permission.
+  severity: low
+- id: change_this_resource_impact_is_resource_specific
+  match:
+    all:
+    - any:
+      - field: verb
+        op: in
+        value:
+        - '*'
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      - field: verb
+        op: eq
+        value: unsafe-delete-ignore-read-errors
+      - field: verb
+        op: suffix
+        value:
+        - :patch
+        - :update
+  description: Can change this resource; impact is resource-specific.
+  severity: medium
+- id: kubernetes_api_permission
+  match:
+    always: true
+  description: Kubernetes API permission.
+  severity: low
