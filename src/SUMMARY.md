@@ -74,7 +74,6 @@
   - [Kubernetes Helm Template Injection](pentesting-cloud/kubernetes-security/kubernetes-helm-template-injection.md)
   - [Pentesting Kubernetes Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
     - [Kubelet Authentication & Authorization](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/kubelet-authentication-and-authorization.md)
-  - [Exposing Services in Kubernetes](pentesting-cloud/kubernetes-security/exposing-services-in-kubernetes.md)
   - [Attacking Kubernetes from inside a Pod](pentesting-cloud/kubernetes-security/attacking-kubernetes-from-inside-a-pod.md)
     - [SPIFFE/SPIRE Workload Identity Spoofing](pentesting-cloud/kubernetes-security/spiffe-spire-workload-identity-spoofing.md)
   - [Kubernetes Enumeration](pentesting-cloud/kubernetes-security/kubernetes-enumeration.md)
