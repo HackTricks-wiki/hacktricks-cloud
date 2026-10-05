@@ -73,7 +73,7 @@
     - [K8s - Objects](pentesting-cloud/kubernetes-security/kubernetes-basic-information/kubernetes-objects.md)
     - [K8s - Access, Add-ons & Common Concepts](pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md)
   - [K8s - Helm Template Injection](pentesting-cloud/kubernetes-security/kubernetes-helm-template-injection.md)
-  - [K8s - Pentesting Services](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
+  - [K8s - Unauthenticated Access](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/README.md)
     - [K8s - Kubelet Authentication & Authorization](pentesting-cloud/kubernetes-security/pentesting-kubernetes-services/kubelet-authentication-and-authorization.md)
   - [K8s - Enumeration](pentesting-cloud/kubernetes-security/kubernetes-enumeration.md)
     - [K8s - Control-Plane & Node Services](pentesting-cloud/kubernetes-security/kubernetes-enumeration/control-plane-and-node-services.md)
