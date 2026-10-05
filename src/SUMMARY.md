@@ -65,6 +65,7 @@
   - [Luks2 Header Malleability Null Cipher Abuse](pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md)
 - [Environment Variable Injection to Code Execution](pentesting-cloud/environment-variable-injection.md)
 - [K8s - Pentesting](pentesting-cloud/kubernetes-security/README.md)
+  - [K8s - Permissions for a Pentest](pentesting-cloud/kubernetes-security/kubernetes-permissions-for-a-pentest.md)
   - [K8s - Permissions Categories](pentesting-cloud/kubernetes-security/permission-risk-categorizations.md)
   - [K8s - Basics](pentesting-cloud/kubernetes-security/kubernetes-basic-information/README.md)
     - [K8s - Control-Plane Components](pentesting-cloud/kubernetes-security/kubernetes-basic-information/control-plane-components.md)
