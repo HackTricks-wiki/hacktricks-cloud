@@ -86,7 +86,6 @@
     - [Storage & Device Objects](pentesting-cloud/kubernetes-security/kubernetes-enumeration/storage-objects.md)
     - [Cluster, Node & Resource Policy Objects](pentesting-cloud/kubernetes-security/kubernetes-enumeration/cluster-and-node-objects.md)
   - [Kubernetes API Object Operations](pentesting-cloud/kubernetes-security/kubernetes-api-object-operations.md)
-  - [Kubernetes Role-Based Access Control(RBAC)](pentesting-cloud/kubernetes-security/kubernetes-role-based-access-control-rbac.md)
   - [Abusing Roles/ClusterRoles in Kubernetes](pentesting-cloud/kubernetes-security/abusing-roles-clusterroles-in-kubernetes/README.md)
     - [Pod Escape Privileges](pentesting-cloud/kubernetes-security/abusing-roles-clusterroles-in-kubernetes/pod-escape-privileges.md)
     - [Kubernetes Roles Abuse Lab](pentesting-cloud/kubernetes-security/abusing-roles-clusterroles-in-kubernetes/kubernetes-roles-abuse-lab.md)
