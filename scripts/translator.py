@@ -646,7 +646,12 @@ def translate_file(language, file_path, file_dest_path, model, client):
             if chunk and not chunk.endswith('\n'):
                 translated_content += '\n'
         else:
-            translated_content += translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client) + '\n'
+            # Model responses are stripped. Preserve the source separators so
+            # fences following HTML summaries still start a Markdown block.
+            leading = re.match(r'\s*', chunk).group()
+            trailing = re.search(r'\s*$', chunk).group()
+            prose = translate_text(language, chunk, file_path, model, cont=0, slpitted=False, client=client)
+            translated_content += leading + prose.strip() + trailing
     
     elapsed_time = time.time() - start_time
 

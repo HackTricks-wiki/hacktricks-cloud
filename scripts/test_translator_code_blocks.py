@@ -52,6 +52,16 @@ class CodeBlockPreservationTests(unittest.TestCase):
                 chunks = translator.split_text(code, 'test-model')
         self.assertEqual(chunks, [code])
 
+    def test_stripped_model_output_preserves_html_code_separators(self):
+        source = ('# English prose\n\n<details>\n\n<summary>English prose</summary>\n\n'
+                  '```python\nexample = 1\n```\n\n</details>\n\nEnglish prose\n')
+
+        def stripped(_language, text, *_args, **_kwargs):
+            return text.replace('English prose', 'French prose').strip()
+
+        result = self.translate(source, stripped)
+        self.assertEqual(result, source.replace('English prose', 'French prose'))
+
     def test_nested_list_code_preserves_its_list_indentation(self):
         code = '    ```python\n    def example():\n        return 1\n    ```'
         source = '1. English prose\n\n'+code+'\n\n2. English prose\n'
