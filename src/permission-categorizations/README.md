@@ -7,7 +7,7 @@ HackTricks Cloud maintains the shared permission severity data consumed by [Clou
 - **Medium**: DoS/Break, operational disruption, ordinary changes, or conditional capabilities without a demonstrated sensitive-data or privilege path.
 - **Low**: ordinary discovery and metadata access.
 
-There is one canonical YAML file per platform: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml), and [Kubernetes](k8s.yaml). These are machine-readable files; the platform pages explain how to edit them.
+There is one canonical YAML file per platform: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml), and [Kubernetes](k8s.yaml). These are machine-readable files; the platform pages display their complete YAML in the browser and explain how to edit them. The inline viewer uses the book’s copy, while the PEASS workflows fetch the canonical files from GitHub.
 
 ## Cloud provider files
 
@@ -32,3 +32,5 @@ Run `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only
 Every Monday, both consumer repositories check out the current `master` of this book, validate all four files, compare SHA-256 hashes, and update their bundled YAML files and generated legacy lists. A source manifest records the book revision and each file's hash. Unrelated changes to the book produce no consumer commit. Each workflow also supports a manual run. Tests run before the workflow commits changed data to the consumer's default branch; failures leave that branch unchanged. The consumers continue using their bundled copies offline between updates.
 
 To update locally in a consumer, run `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud`. Add `--check` to detect stale copies without writing them.
+
+Source fetching in both consumers retries five times with bounded checkout deadlines and increasing delays. Incomplete downloads stay in temporary directories; exhausted retries leave the existing bundled data unchanged.
