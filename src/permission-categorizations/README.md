@@ -1,5 +1,7 @@
 # Permission risk categorizations
 
+{{#include ../banners/hacktricks-training.md}}
+
 HackTricks Cloud maintains the shared permission severity data consumed by [CloudPEASS](https://github.com/peass-ng/CloudPEASS) and [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS). Edit the canonical platform file here, rather than the generated copies in either consumer.
 
 - **Critical**: permissions that directly, or almost independently, grant powerful privileges, mint an identity, or enable privileged execution.
@@ -34,3 +36,4 @@ Every Monday, both consumer repositories check out the current `master` of this 
 To update locally in a consumer, run `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud`. Add `--check` to detect stale copies without writing them.
 
 Source fetching in both consumers retries five times with bounded checkout deadlines and increasing delays. Incomplete downloads stay in temporary directories; exhausted retries leave the existing bundled data unchanged.
+{{#include ../banners/hacktricks-training.md}}
