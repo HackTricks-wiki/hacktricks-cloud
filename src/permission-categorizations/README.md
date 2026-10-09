@@ -1,36 +1,39 @@
-# Κατηγοριοποιήσεις κινδύνου permissions
+# Κατηγοριοποιήσεις κινδύνου δικαιωμάτων
 
-Το HackTricks Cloud διατηρεί τα κοινόχρηστα δεδομένα severity των permissions που χρησιμοποιούνται από τα [CloudPEASS](https://github.com/peass-ng/CloudPEASS) και [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS). Επεξεργαστείτε εδώ το canonical αρχείο της πλατφόρμας, αντί για τα generated αντίγραφα σε οποιονδήποτε από τους δύο consumers.
+{{#include ../banners/hacktricks-training.md}}
 
-- **Critical**: permissions που παρέχουν άμεσα ή σχεδόν ανεξάρτητα ισχυρά privileges, δημιουργούν μια identity ή επιτρέπουν privileged execution.
-- **High**: πρόσβαση σε ευαίσθητες πληροφορίες, credentials ή σε conditional privilege escalation path.
-- **Medium**: DoS/Break, operational disruption, συνηθισμένες αλλαγές ή conditional capabilities χωρίς αποδεδειγμένο sensitive-data ή privilege path.
-- **Low**: συνηθισμένο discovery και πρόσβαση σε metadata.
+Το HackTricks Cloud διατηρεί τα κοινόχρηστα δεδομένα σοβαρότητας δικαιωμάτων που χρησιμοποιούν τα [CloudPEASS](https://github.com/peass-ng/CloudPEASS) και [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS). Επεξεργαστείτε εδώ το κανονικό αρχείο της πλατφόρμας, αντί για τα παραγόμενα αντίγραφα σε οποιοδήποτε από τα δύο εργαλεία.
 
-Υπάρχει ένα canonical YAML αρχείο ανά platform: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml) και [Kubernetes](k8s.yaml). Αυτά είναι machine-readable αρχεία· οι σελίδες των platforms εμφανίζουν το πλήρες YAML στον browser και εξηγούν πώς να το επεξεργαστείτε. Ο inline viewer χρησιμοποιεί το αντίγραφο του βιβλίου, ενώ τα PEASS workflows ανακτούν τα canonical αρχεία από το GitHub.
+- **Critical**: δικαιώματα που παρέχουν άμεσα ή σχεδόν ανεξάρτητα ισχυρά προνόμια, δημιουργούν ταυτότητα ή επιτρέπουν εκτέλεση με προνόμια.
+- **High**: πρόσβαση σε ευαίσθητες πληροφορίες ή διαπιστευτήρια, ή δυνατότητα κλιμάκωσης προνομίων υπό προϋποθέσεις.
+- **Medium**: DoS/Break, λειτουργική διακοπή, συνήθεις αλλαγές ή δυνατότητες υπό προϋποθέσεις χωρίς αποδεδειγμένη πρόσβαση σε ευαίσθητα δεδομένα ή διαδρομή προς προνόμια.
+- **Low**: συνήθης ανακάλυψη και πρόσβαση σε μεταδεδομένα.
 
-## Cloud provider files
+Υπάρχει ένα κανονικό αρχείο YAML ανά πλατφόρμα: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml) και [Kubernetes](k8s.yaml). Αυτά είναι αρχεία αναγνώσιμα από μηχανές· οι σελίδες των πλατφορμών εμφανίζουν ολόκληρο το YAML στο πρόγραμμα περιήγησης και εξηγούν πώς να το επεξεργαστείτε. Το ενσωματωμένο πρόγραμμα προβολής χρησιμοποιεί το αντίγραφο του βιβλίου, ενώ οι ροές εργασίας του PEASS λαμβάνουν τα κανονικά αρχεία από το GitHub.
 
-Τα `version` και `provider` προσδιορίζουν το schema. Το `permission_categories` περιέχει τις τέσσερις μεμονωμένες permission lists. Μετακινήστε ένα permission μεταξύ των lists για να αλλάξετε το rating του. Το matching σε AWS και Azure αγνοεί το case· το matching σε GCP διατηρεί το case. Τα case aliases μπορούν να επαναλαμβάνονται μέσα στο ίδιο severity, αλλά απορρίπτονται conflicting ratings.
+## Αρχεία παρόχων cloud
 
-Το `severity_overrides` περιέχει audited exceptions σε generic rules. Αν μια exception εμφανίζεται επίσης στον catalog, και οι δύο καταχωρίσεις πρέπει να συμφωνούν. Το `severity_caps` αποτρέπει την αναβάθμιση επιλεγμένων permissions από έναν συνδυασμό. Το `non_permission_identifiers` εξαιρεί τεκμηριωμένα API-method names, condition keys και άλλα strings που δεν είναι πραγματικά authorization permissions.
+Τα `version` και `provider` προσδιορίζουν το schema. Το `permission_categories` περιέχει τις τέσσερις ξεχωριστές λίστες δικαιωμάτων. Μετακινήστε ένα δικαίωμα μεταξύ των λιστών για να αλλάξετε τη βαθμολογία του. Η αντιστοίχιση των AWS και Azure αγνοεί τα πεζά/κεφαλαία, ενώ η αντιστοίχιση του GCP διατηρεί τη διάκριση πεζών/κεφαλαίων. Παραλλαγές γραφής με διαφορετικά πεζά/κεφαλαία μπορούν να επαναλαμβάνονται μέσα στην ίδια σοβαρότητα, αλλά απορρίπτονται αν έχουν αντικρουόμενες βαθμολογίες.
 
-Τα `combinations.critical` και `combinations.high` είναι lists από permission lists: κάθε στοιχείο μιας εσωτερικής list πρέπει να έχει granted ώστε να ισχύει ο συγκεκριμένος συνδυασμός. Διατηρείτε τους συνδυασμούς ενωμένους· ο διαχωρισμός τους σε μεμονωμένα grants θα υπερεκτιμούσε τον κίνδυνο. Τα υπάρχοντα exact και regular-expression fields παραμένουν το fallback για permissions που απουσιάζουν από τον catalog. Μια πλήρης επανεγγραφή του classifier ή νέα matching behavior εξακολουθεί να απαιτεί αλλαγές κώδικα στους consumers.
+Το `severity_overrides` περιέχει ελεγμένες εξαιρέσεις σε γενικούς κανόνες. Αν μια εξαίρεση υπάρχει και στον κατάλογο, οι δύο εγγραφές πρέπει να συμφωνούν. Το `severity_caps` εμποδίζει έναν συνδυασμό να αναβαθμίσει επιλεγμένα δικαιώματα. Το `non_permission_identifiers` αποκλείει τεκμηριωμένα ονόματα μεθόδων API, condition keys και άλλες συμβολοσειρές που δεν είναι πραγματικά δικαιώματα εξουσιοδότησης.
 
-## Kubernetes file
+Τα `combinations.critical` και `combinations.high` είναι λίστες από λίστες δικαιωμάτων: κάθε στοιχείο μιας εσωτερικής λίστας πρέπει να έχει παραχωρηθεί για να ισχύσει ο συνδυασμός. Διατηρήστε τους συνδυασμούς ενιαίους· αν τους διασπάσετε σε μεμονωμένες παραχωρήσεις, θα υπερεκτιμηθεί ο κίνδυνος. Τα υπάρχοντα πεδία ακριβούς αντιστοίχισης και κανονικών εκφράσεων εξακολουθούν να χρησιμοποιούνται ως εναλλακτική λύση για δικαιώματα που απουσιάζουν από τον κατάλογο. Η πλήρης επανεγγραφή του classifier ή η προσθήκη νέας συμπεριφοράς αντιστοίχισης εξακολουθεί να απαιτεί αλλαγές κώδικα στα εργαλεία που καταναλώνουν τα δεδομένα.
 
-Το `rules` είναι ordered: ισχύει ο πρώτος κανόνας που κάνει match. Κάθε rule έχει ένα μοναδικό `id`, ένα `match`, ένα `severity` και ένα `description` σε απλή γλώσσα. Προσθέστε ένα πιο συγκεκριμένο rule πριν από ένα ευρύτερο ή αλλάξτε το severity ενός υπάρχοντος rule. Διατηρήστε το τελικό unconditional fallback.
+## Αρχείο Kubernetes
 
-Τα matches χρησιμοποιούν `all`, `any` και `not` για composition ή μια σύγκριση `field`, `op` και `value`. Τα διαθέσιμα fields είναι `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (lowercase non-resource URL), `non_resource_url`, `mode` και `delegated_verb`. Οι operations είναι `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix` και `truthy` (δεν απαιτείται value). Το `always: true` κάνει match σε όλα. Οι τιμές των group, resource, subresource και verb είναι lowercase. Ένα literal wildcard γράφεται ως `'*'`· το matching ενός wildcard grant είναι explicit στα rules και όχι shell pattern expansion.
+Οι `rules` έχουν σειρά προτεραιότητας: ισχύει ο πρώτος κανόνας που ταιριάζει. Κάθε κανόνας έχει μοναδικό `id`, ένα `match`, ένα `severity` και μια περιγραφή σε απλή γλώσσα. Προσθέστε έναν πιο συγκεκριμένο κανόνα πριν από έναν ευρύτερο ή αλλάξτε τη σοβαρότητα ενός υπάρχοντος κανόνα. Διατηρήστε την τελική ανεπιφύλακτη εφεδρική συνθήκη.
 
-Το `severity_when` επιλέγει προαιρετικά ένα άλλο severity για μια matching condition. Το `severity: delegated` προορίζεται αποκλειστικά για constrained impersonation: το `delegated_severities` map του μετατρέπει το classification της delegated action σε conditional rating. Τα placeholders του description μπορούν να αναφέρονται στα διαθέσιμα fields, όπως `{full}` και `{verb}`. Τα rules είναι data και δεν αξιολογούνται ποτέ ως Python ή shell code.
+Οι συνθήκες αντιστοίχισης χρησιμοποιούν τα `all`, `any` και `not` για σύνθεση ή σύγκριση των `field`, `op` και `value`. Τα διαθέσιμα πεδία είναι τα `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (URL μη πόρου με πεζά γράμματα), `non_resource_url`, `mode` και `delegated_verb`. Οι τελεστές είναι `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix` και `truthy` (δεν απαιτείται τιμή). Το `always: true` ταιριάζει με τα πάντα. Οι τιμές των group, resource, subresource και verb γράφονται με πεζά γράμματα. Ένα κυριολεκτικό wildcard γράφεται ως `'*'`· η αντιστοίχιση με παραχώρηση wildcard δηλώνεται ρητά στους κανόνες και όχι μέσω επέκτασης μοτίβων τύπου shell.
 
-## Validation and synchronization
+Το `severity_when` επιλέγει προαιρετικά άλλη σοβαρότητα για συνθήκη που ταιριάζει. Το `severity: delegated` προορίζεται αποκλειστικά για περιορισμένο impersonation: ο χάρτης `delegated_severities` μετατρέπει την ταξινόμηση της εκχωρημένης ενέργειας σε βαθμολογία υπό προϋποθέσεις. Τα placeholders στις περιγραφές μπορούν να αναφέρονται στα διαθέσιμα πεδία, όπως τα `{full}` και `{verb}`. Οι κανόνες είναι δεδομένα και δεν εκτελούνται ως κώδικας Python ή shell.
 
-Εκτελέστε `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` με εγκατεστημένο το PyYAML πριν υποβάλετε αλλαγές. Το pull-request workflow του βιβλίου εκτελεί την ίδια validation.
+## Επικύρωση και συγχρονισμός
 
-Κάθε Δευτέρα, και τα δύο consumer repositories κάνουν checkout το τρέχον `master` αυτού του βιβλίου, κάνουν validation και των τεσσάρων αρχείων, συγκρίνουν SHA-256 hashes και ενημερώνουν τα bundled YAML αρχεία τους και τις generated legacy lists. Ένα source manifest καταγράφει το revision του βιβλίου και το hash κάθε αρχείου. Άσχετες αλλαγές στο βιβλίο δεν δημιουργούν consumer commit. Κάθε workflow υποστηρίζει επίσης manual run. Τα tests εκτελούνται πριν το workflow κάνει commit των αλλαγμένων data στο default branch του consumer· αποτυχίες αφήνουν αυτό το branch αμετάβλητο. Οι consumers συνεχίζουν να χρησιμοποιούν τα bundled αντίγραφά τους offline μεταξύ των updates.
+Εκτελέστε `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` με εγκατεστημένο το PyYAML πριν υποβάλετε αλλαγές. Η ροή εργασίας pull request του βιβλίου εκτελεί την ίδια επικύρωση.
 
-Για τοπική ενημέρωση σε έναν consumer, εκτελέστε `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud`. Προσθέστε `--check` για να εντοπίσετε stale αντίγραφα χωρίς να τα γράψετε.
+Κάθε Δευτέρα, και τα δύο αποθετήρια που καταναλώνουν τα δεδομένα κάνουν checkout το τρέχον `master` αυτού του βιβλίου, επικυρώνουν και τα τέσσερα αρχεία, συγκρίνουν τα hash SHA-256 και ενημερώνουν τα ομαδοποιημένα αρχεία YAML και τις παραγόμενες λίστες παλαιού τύπου. Ένα manifest πηγής καταγράφει την αναθεώρηση του βιβλίου και το hash κάθε αρχείου. Άσχετες αλλαγές στο βιβλίο δεν δημιουργούν commit στα αποθετήρια που καταναλώνουν τα δεδομένα. Κάθε ροή εργασίας υποστηρίζει επίσης χειροκίνητη εκτέλεση. Οι δοκιμές εκτελούνται πριν η ροή εργασίας κάνει commit των αλλαγμένων δεδομένων στον προεπιλεγμένο κλάδο του αποθετηρίου· σε περίπτωση αποτυχίας, ο κλάδος παραμένει αμετάβλητος. Τα εργαλεία συνεχίζουν να χρησιμοποιούν τα ομαδοποιημένα αντίγραφά τους εκτός σύνδεσης μεταξύ των ενημερώσεων.
 
-Το source fetching και στους δύο consumers κάνει retry πέντε φορές, με bounded checkout deadlines και αυξανόμενες καθυστερήσεις. Οι incomplete downloads παραμένουν σε προσωρινούς καταλόγους· όταν εξαντληθούν τα retries, τα υπάρχοντα bundled data παραμένουν αμετάβλητα.
+Για τοπική ενημέρωση σε ένα αποθετήριο που καταναλώνει τα δεδομένα, εκτελέστε `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud`. Προσθέστε το `--check` για να εντοπίσετε παρωχημένα αντίγραφα χωρίς να τα γράψετε.
+
+Η λήψη της πηγής και στα δύο εργαλεία επαναλαμβάνεται πέντε φορές, με περιορισμένα χρονικά όρια για το checkout και αυξανόμενες καθυστερήσεις. Οι ημιτελείς λήψεις παραμένουν σε προσωρινούς καταλόγους· αν εξαντληθούν οι επαναλήψεις, τα υπάρχοντα ομαδοποιημένα δεδομένα παραμένουν αμετάβλητα.
+{{#include ../banners/hacktricks-training.md}}
