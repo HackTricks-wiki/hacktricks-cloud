@@ -1,36 +1,39 @@
-# Permission risk categorizations
+# İzin risk kategorileri
 
-HackTricks Cloud, [CloudPEASS](https://github.com/peass-ng/CloudPEASS) ve [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS) tarafından kullanılan paylaşılan permission severity verilerini tutar. Her iki consumer'daki oluşturulmuş kopyalar yerine buradaki canonical platform dosyasını düzenleyin.
+{{#include ../banners/hacktricks-training.md}}
 
-- **Critical**: doğrudan veya neredeyse bağımsız olarak güçlü ayrıcalıklar sağlayan, bir identity oluşturan ya da privileged execution sağlayan permission'lar.
-- **High**: hassas bilgilere veya credential'lara erişim ya da koşullu bir privilege escalation yolu.
-- **Medium**: DoS/Break, operasyonel kesinti, olağan değişiklikler veya hassas veri ya da privilege yolu gösterilmemiş koşullu yetenekler.
-- **Low**: olağan discovery ve metadata erişimi.
+HackTricks Cloud, [CloudPEASS](https://github.com/peass-ng/CloudPEASS) ve [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS) tarafından kullanılan ortak izin önem derecesi verilerini yönetir. Her iki tüketicideki oluşturulmuş kopyaları değil, buradaki platformun kanonik dosyasını düzenleyin.
 
-Her platform için bir canonical YAML dosyası vardır: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml) ve [Kubernetes](k8s.yaml). Bunlar machine-readable dosyalardır; platform sayfaları tarayıcıda YAML'ın tamamını görüntüler ve nasıl düzenleneceğini açıklar. Inline viewer kitabın kopyasını kullanırken PEASS workflow'ları canonical dosyaları GitHub'dan çeker.
+- **Kritik**: Doğrudan veya neredeyse bağımsız olarak güçlü ayrıcalıklar veren, bir kimlik oluşturan ya da ayrıcalıklı yürütmeye olanak tanıyan izinler.
+- **Yüksek**: Hassas bilgilere veya kimlik bilgilerine erişim ya da koşullu bir ayrıcalık yükseltme yolu sağlayan izinler.
+- **Orta**: DoS/Break, operasyonel aksama, sıradan değişiklikler veya kanıtlanmış bir hassas veri ya da ayrıcalık yolu olmadan koşullu yetenekler.
+- **Düşük**: Sıradan keşif ve meta veri erişimi.
 
-## Cloud provider files
+Her platform için bir kanonik YAML dosyası vardır: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml) ve [Kubernetes](k8s.yaml). Bunlar makine tarafından okunabilen dosyalardır; platform sayfaları, YAML dosyalarının tamamını tarayıcıda gösterir ve nasıl düzenleneceklerini açıklar. Satır içi görüntüleyici kitabın kopyasını kullanırken PEASS iş akışları kanonik dosyaları GitHub'dan alır.
 
-`version` ve `provider` schema'yı tanımlar. `permission_categories`, dört ayrı permission listesini içerir. Rating'i değiştirmek için bir permission'ı listeler arasında taşıyın. AWS ve Azure eşleştirmelerinde büyük/küçük harf dikkate alınmaz; GCP eşleştirmelerinde büyük/küçük harf korunur. Aynı severity içinde case alias'ları tekrarlanabilir, ancak çakışan rating'ler reddedilir.
+## Cloud sağlayıcı dosyaları
 
-`severity_overrides`, generic kurallara yönelik denetlenmiş istisnaları içerir. Bir istisna catalog'da da yer alıyorsa her iki giriş aynı olmalıdır. `severity_caps`, bir combination'ın seçili permission'ları yükseltmesini engeller. `non_permission_identifiers`, belgelenmiş API-method adlarını, condition key'lerini ve gerçek authorization permission'ları olmayan diğer string'leri hariç tutar.
+`version` ve `provider` şemayı tanımlar. `permission_categories` dört ayrı izin listesini içerir. Derecelendirmesini değiştirmek için bir izni listeler arasında taşıyın. AWS ve Azure eşleştirmelerinde büyük/küçük harf duyarlılığı yoktur; GCP eşleştirmelerinde ise büyük/küçük harf duyarlılığı korunur. Aynı önem derecesi içinde harf büyüklüğü farklı takma adlar tekrarlanabilir, ancak çelişen derecelendirmeler reddedilir.
 
-`combinations.critical` ve `combinations.high`, permission listelerinden oluşan listelerdir: bir iç listenin her öğesi, combination'ın uygulanması için verilmiş olmalıdır. Combination'ları birlikte tutun; bunları ayrı grant'lere bölmek riski olduğundan yüksek gösterir. Catalog'da bulunmayan permission'lar için mevcut exact ve regular-expression alanları fallback olarak kalır. Classifier'ın tamamen yeniden yazılması veya yeni matching davranışı, consumer'larda hâlâ code değişiklikleri gerektirir.
+`severity_overrides`, genel kurallara yönelik denetlenmiş istisnaları içerir. Bir istisna katalogda da yer alıyorsa her iki girdinin de aynı olması gerekir. `severity_caps`, bir birleşimin seçili izinleri daha üst bir dereceye çıkarmasını önler. `non_permission_identifiers`, belgelenmiş API yöntemi adlarını, koşul anahtarlarını ve gerçek yetkilendirme izinleri olmayan diğer dizeleri hariç tutar.
 
-## Kubernetes file
+`combinations.critical` ve `combinations.high`, izin listelerinden oluşan listelerdir: bir birleşimin uygulanması için iç listelerdeki her öğenin verilmiş olması gerekir. Birleşimleri bir arada tutun; bunları tekil izinlere bölmek riski olduğundan yüksek gösterir. Mevcut tam eşleşme ve düzenli ifade alanları, katalogda bulunmayan izinler için yedek eşleştirme yöntemi olmaya devam eder. Sınıflandırıcıyı baştan yazmak veya yeni eşleştirme davranışları eklemek için tüketicilerde kod değişikliği gerekir.
 
-`rules` sıralıdır: ilk eşleşen rule kazanır. Her rule benzersiz bir `id`, bir `match`, bir `severity` ve plain-language bir `description` içerir. Daha specific bir rule'ı daha geniş bir rule'ın önüne ekleyin veya mevcut bir rule'ın severity'sini değiştirin. Son unconditional fallback'i koruyun.
+## Kubernetes dosyası
 
-Match'ler composition için `all`, `any` ve `not` kullanır veya bir `field`, `op` ve `value` karşılaştırması kullanır. Kullanılabilir field'lar `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (lowercase non-resource URL), `non_resource_url`, `mode` ve `delegated_verb`'dir. Operations değerleri `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix` ve (value gerektirmeyen) `truthy`'dir. `always: true` her şeyle eşleşir. Group, resource, subresource ve verb değerleri lowercase'tir. Literal wildcard `'*'` şeklinde yazılır; bir wildcard grant'ini eşleştirmek, shell pattern expansion yerine rule'larda açıkça belirtilir.
+`rules` sıralıdır: ilk eşleşen kural uygulanır. Her kuralın benzersiz bir `id`, bir `match`, bir `severity` ve sade dille yazılmış bir `description` alanı vardır. Daha genel bir kuraldan önce daha belirli bir kural ekleyin veya mevcut bir kuralın önem derecesini değiştirin. Son koşulsuz yedek kuralı koruyun.
 
-`severity_when`, eşleşen bir condition için isteğe bağlı olarak başka bir severity seçer. `severity: delegated`, constrained impersonation için ayrılmıştır: `delegated_severities` map'i delegated action'ın classification'ını conditional rating'e dönüştürür. Description placeholder'ları `{full}` ve `{verb}` gibi kullanılabilir field'lara başvurabilir. Rule'lar data'dır ve hiçbir zaman Python veya shell code olarak değerlendirilmez.
+Eşleşmeler; bileşim için `all`, `any` ve `not` kullanır veya `field`, `op` ve `value` karşılaştırması yapar. Kullanılabilir alanlar: `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (küçük harfli, kaynak olmayan URL), `non_resource_url`, `mode` ve `delegated_verb`. İşlemler: `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix` ve `truthy` (value gerektirmez). `always: true` her şeyle eşleşir. Group, resource, subresource ve verb değerleri küçük harflidir. Gerçek bir joker karakter `'*'` olarak yazılır; joker karakter içeren bir iznin eşleştirilmesi, kabukta desen genişletmesiyle değil, kurallarda açıkça belirtilir.
 
-## Validation and synchronization
+`severity_when`, eşleşen bir koşul için isteğe bağlı olarak başka bir önem derecesi seçer. `severity: delegated`, kısıtlı kimliğe bürünme için ayrılmıştır: `delegated_severities` eşlemesi, devredilen eylemin sınıflandırmasını koşullu derecelendirmeye dönüştürür. Açıklama yer tutucuları, `{full}` ve `{verb}` gibi kullanılabilir alanlara başvurabilir. Kurallar veridir; Python veya kabuk kodu olarak değerlendirilmez.
 
-Değişiklikleri göndermeden önce PyYAML kurulu olarak `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` komutunu çalıştırın. Kitabın pull-request workflow'u aynı validation'ı çalıştırır.
+## Doğrulama ve eşitleme
 
-Her pazartesi, her iki consumer repository de bu kitabın güncel `master` branch'ini checkout eder, dört dosyanın tamamını validate eder, SHA-256 hash'lerini karşılaştırır ve kendi bundled YAML dosyalarını ve oluşturulmuş legacy listelerini günceller. Bir source manifest, book revision'ını ve her dosyanın hash'ini kaydeder. Kitaptaki ilgisiz değişiklikler consumer commit'i oluşturmaz. Her workflow manual run'i de destekler. Workflow, değişen verileri consumer'ın default branch'ine commit etmeden önce testleri çalıştırır; başarısızlıklar bu branch'i değiştirmeden bırakır. Güncellemeler arasında consumer'lar offline olarak bundled kopyalarını kullanmaya devam eder.
+Değişiklikleri göndermeden önce PyYAML kurulu olacak şekilde `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` komutunu çalıştırın. Kitabın pull request iş akışı da aynı doğrulamayı çalıştırır.
 
-Bir consumer'da yerel olarak güncelleme yapmak için `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud` komutunu çalıştırın. Yazma işlemi yapmadan eski kopyaları tespit etmek için `--check` ekleyin.
+Her pazartesi, her iki tüketici deposu da bu kitabın güncel `master` dalını checkout eder, dört dosyanın tümünü doğrular, SHA-256 özetlerini karşılaştırır ve paketlenmiş YAML dosyalarıyla oluşturulmuş eski listeleri günceller. Bir kaynak manifesti kitap revizyonunu ve her dosyanın özetini kaydeder. Kitaptaki ilgisiz değişiklikler tüketici depolarında commit oluşturmaz. Her iş akışı manuel olarak da çalıştırılabilir. İş akışı, değiştirilen verileri tüketicinin varsayılan dalına commit etmeden önce testleri çalıştırır; testler başarısız olursa bu dal değişmeden kalır. Tüketiciler, güncellemeler arasında çevrimdışı çalışırken paketlenmiş kopyalarını kullanmaya devam eder.
 
-Her iki consumer'daki source fetching, beş kez retry eder; checkout deadline'ları sınırlandırılmıştır ve beklemeler giderek artırılır. Tamamlanmamış indirmeler temporary directory'lerde tutulur; retry'lar tükendiğinde mevcut bundled data değiştirilmeden bırakılır.
+Bir tüketicide yerel olarak güncelleme yapmak için `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud` komutunu çalıştırın. Kopyaların güncel olmadığını yazma işlemi yapmadan saptamak için `--check` ekleyin.
+
+Her iki tüketicideki kaynak alma işlemi, belirli sınırlar içinde tutulan checkout zaman aşımları ve giderek artan bekleme süreleriyle beş kez yeniden denenir. Tamamlanmamış indirmeler geçici dizinlerde tutulur; tüm denemeler başarısız olursa mevcut paketlenmiş veriler değiştirilmeden kalır.
+{{#include ../banners/hacktricks-training.md}}
