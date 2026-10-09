@@ -1,36 +1,39 @@
-# Permission risk categorizations
+# Toestemmingsrisikoklassifikasies
 
-HackTricks Cloud onderhou die gedeelde permission-severiteitsdata wat deur [CloudPEASS](https://github.com/peass-ng/CloudPEASS) en [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS) gebruik word. Wysig die kanonieke platformlêer hier, eerder as die gegenereerde kopieë in enige van die consumers.
+{{#include ../banners/hacktricks-training.md}}
 
-- **Critical**: permissions wat direk, of byna onafhanklik, kragtige privileges verleen, ’n identity skep, of privileged execution moontlik maak.
-- **High**: toegang tot sensitiewe inligting, credentials, of ’n voorwaardelike privilege escalation-pad.
-- **Medium**: DoS/Break, operasionele ontwrigting, gewone veranderinge, of voorwaardelike capabilities sonder ’n gedemonstreerde sensitiewe-data- of privilege-pad.
-- **Low**: gewone discovery en metadata-toegang.
+HackTricks Cloud hou die gedeelde data oor toestemmingserns by wat deur [CloudPEASS](https://github.com/peass-ng/CloudPEASS) en [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS) gebruik word. Wysig die kanonieke platformlêer hier, eerder as die gegenereerde kopieë in enige van die twee verbruikers.
 
-Daar is een kanonieke YAML-lêer per platform: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml), en [Kubernetes](k8s.yaml). Dit is masjienleesbare lêers; die platformbladsye vertoon hul volledige YAML in die browser en verduidelik hoe om dit te wysig. Die inline viewer gebruik die book se kopie, terwyl die PEASS-workflows die kanonieke lêers vanaf GitHub haal.
+- **Critical**: toestemmings wat direk, of byna onafhanklik, kragtige voorregte verleen, 'n identiteit skep of bevoorregte uitvoering moontlik maak.
+- **High**: toegang tot sensitiewe inligting, geloofsbriewe of 'n voorwaardelike pad na voorregte-eskalasie.
+- **Medium**: DoS/Break, ontwrigting van bedrywighede, gewone veranderinge of voorwaardelike vermoëns sonder 'n bewese pad na sensitiewe data of voorregte.
+- **Low**: gewone ontdekking en toegang tot metadata.
 
-## Cloud provider files
+Daar is een kanonieke YAML-lêer per platform: [AWS](aws.yaml), [GCP](gcp.yaml), [Azure](azure.yaml) en [Kubernetes](k8s.yaml). Dit is masjienleesbare lêers; die platformbladsye vertoon hul volledige YAML in die blaaier en verduidelik hoe om dit te wysig. Die ingebedde kyker gebruik die boek se kopie, terwyl die PEASS-werkvloeie die kanonieke lêers vanaf GitHub haal.
 
-`version` en `provider` identifiseer die schema. `permission_categories` bevat die vier individuele permission-lyste. Skuif ’n permission tussen lyste om sy rating te verander. AWS- en Azure-matching ignoreer hoofletters; GCP-matching behou hooflettergevoeligheid. Case aliases kan binne dieselfde severity herhaal word, maar teenstrydige ratings word verwerp.
+## Lêers van wolkverskaffers
 
-`severity_overrides` bevat geouditeerde uitsonderings op generiese reëls. Indien ’n uitsondering ook in die catalog voorkom, moet albei inskrywings ooreenstem. `severity_caps` verhoed dat ’n kombinasie geselekteerde permissions opgradeer. `non_permission_identifiers` sluit gedokumenteerde API-method-name, condition keys, en ander stringe uit wat nie werklike authorization permissions is nie.
+`version` en `provider` identifiseer die skema. `permission_categories` bevat die vier afsonderlike lyste van toestemmings. Skuif 'n toestemming tussen lyste om die gradering daarvan te verander. AWS- en Azure-passing ignoreer hooflettergebruik; GCP-passing behou hooflettergebruik. Aliasse wat verskil slegs in hooflettergebruik, mag binne dieselfde erns herhaal word, maar botsende graderings word verwerp.
 
-`combinations.critical` en `combinations.high` is lyste van permission-lyste: elke element van ’n binneste lys moet toegestaan word voordat daardie kombinasie van toepassing is. Hou kombinasies saam; om dit in individuele grants op te deel, sal die risk oorskat. Bestaande exact- en regular-expression-velde bly die fallback vir permissions wat nie in die catalog voorkom nie. ’n Volledige classifier rewrite of nuwe matching behavior vereis steeds code changes in die consumers.
+`severity_overrides` bevat geouditeerde uitsonderings op generiese reëls. As 'n uitsondering ook in die katalogus voorkom, moet albei inskrywings ooreenstem. `severity_caps` keer dat 'n kombinasie die gradering van sekere toestemmings verhoog. `non_permission_identifiers` sluit gedokumenteerde API-metodename, voorwaardesleutels en ander stringe uit wat nie werklike magtigingstoestemmings is nie.
 
-## Kubernetes file
+`combinations.critical` en `combinations.high` is lyste van toestemmingslyste: elke element in 'n binneste lys moet toegeken wees voordat daardie kombinasie geld. Hou kombinasies bymekaar; as jy hulle in individuele toestemmings opdeel, sal die risiko oorskat word. Bestaande presiese- en reguliere-uitdrukkingsvelde bly die terugval vir toestemmings wat nie in die katalogus voorkom nie. 'n Volledige herskrywing van die klassifiseerder of nuwe passingsgedrag vereis steeds kodeveranderinge in die verbruikers.
 
-`rules` is georden: die eerste matching rule wen. Elke rule het ’n unieke `id`, ’n `match`, ’n `severity`, en ’n beskrywing in gewone taal. Voeg ’n meer spesifieke rule voor ’n breër een by, of verander ’n bestaande rule se severity. Behou die finale onvoorwaardelike fallback.
+## Kubernetes-lêer
 
-Matches gebruik `all`, `any`, en `not` vir samestelling, of ’n `field`, `op`, en `value`-vergelyking. Beskikbare velde is `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (kleinletters non-resource URL), `non_resource_url`, `mode`, en `delegated_verb`. Bewerkings is `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix`, en `truthy` (geen value benodig nie). `always: true` match alles. Group-, resource-, subresource-, en verb-values is kleinletters. ’n Letterlike wildcard word as `'*'` geskryf; matching van ’n wildcard grant word eksplisiet in die rules aangedui, eerder as shell pattern expansion.
+`rules` is georden: die eerste reël wat pas, word gebruik. Elke reël het 'n unieke `id`, 'n `match`, 'n `severity` en 'n beskrywing in gewone taal. Voeg 'n meer spesifieke reël voor 'n breër een, of verander die erns van 'n bestaande reël. Behou die laaste onvoorwaardelike terugval.
 
-`severity_when` kies opsioneel ’n ander severity vir ’n matching condition. `severity: delegated` is gereserveer vir beperkte impersonation: sy `delegated_severities`-map omskep die delegated action se classification in die conditional rating. Description-placeholders kan na die beskikbare velde verwys, soos `{full}` en `{verb}`. Die rules is data en word nooit as Python- of shell-code geëvalueer nie.
+Passings gebruik `all`, `any` en `not` vir samestelling, of 'n vergelyking met `field`, `op` en `value`. Beskikbare velde is `group`, `resource`, `subresource`, `full` (resource/subresource), `verb`, `namespace`, `name`, `path` (URL vir nie-hulpbronne in kleinletters), `non_resource_url`, `mode` en `delegated_verb`. Bewerkings is `eq`, `ne`, `in`, `not_in`, `contains`, `prefix`, `suffix` en `truthy` (geen waarde word vereis nie). `always: true` pas by alles. Waardes vir group, resource, subresource en verb is in kleinletters. 'n Letterlike wildcard word as `'*'` geskryf; passing by 'n wildcard-toekenning word uitdruklik in die reëls aangedui, eerder as deur shell-patroonuitbreiding.
 
-## Validation and synchronization
+`severity_when` kies opsioneel 'n ander erns vir 'n voorwaarde wat pas. `severity: delegated` is gereserveer vir beperkte nabootsing: die `delegated_severities`-kaart koppel die klassifikasie van die gedelegeerde aksie aan die voorwaardelike gradering. Beskrywingsplekhouers kan na die beskikbare velde verwys, soos `{full}` en `{verb}`. Die reëls is data en word nooit as Python- of shell-kode uitgevoer nie.
 
-Voer `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` met PyYAML geïnstalleer uit voordat changes ingedien word. Die book se pull-request workflow voer dieselfde validation uit.
+## Validering en sinchronisering
 
-Elke Maandag check albei consumer repositories die huidige `master` van hierdie book uit, valideer al vier lêers, vergelyk SHA-256-hashes, en werk hul gebundelde YAML-lêers en gegenereerde legacy-lists op. ’n Source manifest teken die book-revisie en elke lêer se hash aan. Onverwante changes aan die book veroorsaak geen consumer commit nie. Elke workflow ondersteun ook ’n manual run. Tests loop voordat die workflow veranderde data na die consumer se default branch commit; failures laat daardie branch onveranderd. Die consumers hou aan om hul gebundelde kopieë offline tussen updates te gebruik.
+Voer `python scripts/sync_hacktricks_permissions.py --book-root . --validate-only` met PyYAML geïnstalleer uit voordat jy veranderinge indien. Die boek se pull-request-werkvloei voer dieselfde validering uit.
 
-Om plaaslik in ’n consumer op te dateer, voer `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud` uit. Voeg `--check` by om stale copies op te spoor sonder om dit te skryf.
+Elke Maandag haal albei verbruikersbewaarplekke die huidige `master` van hierdie boek uit, valideer al vier lêers, vergelyk SHA-256-hashes en werk hul saamgebondelde YAML-lêers en gegenereerde ou lyste by. 'n Bronmanifes teken die boekweergawe en die hash van elke lêer aan. Onverwante veranderinge aan die boek lei nie tot 'n commit in 'n verbruiker nie. Elke werkvloei ondersteun ook 'n handmatige uitvoering. Toetse word uitgevoer voordat die werkvloei veranderde data na die verbruiker se verstektak commit; as toetse misluk, bly daardie tak onveranderd. Die verbruikers gebruik steeds hul saamgebondelde kopieë vanlyn tussen bywerkings.
 
-Source fetching in albei consumers probeer vyf keer weer, met begrensde checkout-deadlines en toenemende vertragings. Onvolledige downloads bly in temporary directories; uitgeputte retries laat die bestaande gebundelde data onveranderd.
+Om plaaslik in 'n verbruiker by te werk, voer `python scripts/sync_hacktricks_permissions.py --book-root /path/to/hacktricks-cloud` uit. Voeg `--check` by om verouderde kopieë op te spoor sonder om dit te wysig.
+
+Die bronaflaai in albei verbruikers probeer vyf keer weer, met beperkte afhaaltydperke en toenemende vertragings. Onvolledige aflaaie bly in tydelike gidse; as alle herpogings misluk, bly die bestaande saamgebondelde data onveranderd.
+{{#include ../banners/hacktricks-training.md}}
