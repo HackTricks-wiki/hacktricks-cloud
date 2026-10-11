@@ -88,3 +88,24 @@ If `mdbook build` fails, check:
 - If changing shared theme behavior, compare and update the matching file in
   `/Users/carlospolop/git/hacktricks`.
 - Do not revert unrelated local changes.
+
+## Book Organization Notes
+
+- Document each technique in one place, alongside related techniques, and link to it from other
+  pages that need it. Do not duplicate techniques.
+- Keep pages readable as the book grows. Group related techniques, and split pages when they
+  become too long. Avoid creating a separate page for every small technique.
+
+## Content Syntax and Format Notes
+
+- Use simple English that non-native speakers can understand.
+- Be direct and remove sentences that do not add useful information.
+- Explain complex topics from the beginning, including the context, examples, and code needed
+  to understand them. Keep simple additions brief when the surrounding page already explains
+  the topic.
+- After writing an explanation, check whether someone with basic IT knowledge could understand
+  it. Add missing context when needed.
+- Start paragraphs by explaining the idea and its context before stating a conclusion or rule.
+  For example, explain why offsets vary between kernel builds before telling readers not to
+  reuse them.
+- When editing a page, correct nearby content that does not follow these guidelines.
