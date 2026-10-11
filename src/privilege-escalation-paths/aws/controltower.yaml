@@ -1,0 +1,38 @@
+# AWS Control Tower privilege escalation techniques.
+# Source: hacktricks-cloud aws-control-tower-privesc/README.md (rev 171e422299).
+
+- id: aws-controltower-accountfactory-update-sso-user
+  provider: aws
+  service: controltower
+  title: Update an Account Factory provisioned account to grant AWSAdministratorAccess to a controlled Identity Center user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-control-tower-privesc/README.md#account-factory--provision-an-account-you-control
+  source_revision: 171e422299
+  summary: A principal with end-user access to the Control Tower Account Factory portfolio can update an enrolled account's provisioned product so that an Identity Center user it controls receives AWSAdministratorAccess on that account.
+  requires:
+    all_of:
+      - action: servicecatalog:UpdateProvisionedProduct
+        resource: "arn:aws:servicecatalog:*:*:stack/*"
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+    scope: org
+    aggregate_as: "Accounts provisioned through Control Tower Account Factory"
+  conditions:
+    - id: source_in_management_account
+      description: The Account Factory product lives in the Control Tower management account; the source must be associated with the Account Factory portfolio there.
+    - id: account_factory_provisioned_product
+      description: Only accounts created or enrolled through Account Factory without a customization blueprint have an Account Factory provisioned product to update.
+    - id: controls_sso_user_email
+      description: The SSO user email parameter must identify an Identity Center user the source controls (or a mailbox it controls when Control Tower creates the user).
+  preconditions:
+    - target_in_other_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Associate only Control Tower administrators with the Account Factory portfolio and alert on Account Factory provisioned-product updates.
+  references:
+    - https://docs.aws.amazon.com/controltower/latest/userguide/account-factory.html
+    - https://docs.aws.amazon.com/controltower/latest/userguide/provision-and-manage-accounts.html
+  notes: Provisioning a brand-new account (servicecatalog:ProvisionProduct) grants admin only over that new, empty account, which is not an existing principal in the snapshot.

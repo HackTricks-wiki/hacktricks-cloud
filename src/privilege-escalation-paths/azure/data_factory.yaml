@@ -1,0 +1,130 @@
+# Azure Data Factory techniques (declarative only).
+# Source: hacktricks-cloud az-data-factory-privesc.md (rev 171e422).
+
+- id: azure-datafactory-pipeline-write-and-run
+  provider: azure
+  service: data_factory
+  title: Replace and run a Data Factory pipeline that authenticates with the factory identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#pipelineswrite--pipelinescreaterunaction--steal-the-factory-managed-identity-token
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Data Factory's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.DataFactory/factories/pipelines/write
+        scope: '{target.host_resource}'
+      - action: Microsoft.DataFactory/factories/pipelines/createRun/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DataFactory/factories
+    scope: inherited_scope
+    aggregate_as: Identities of Data Factory {target.host_resource}
+  conditions:
+    - id: user_assigned_needs_credential
+      description: User-assigned factory identities are usable by activities only through an existing factory credential object referencing them (or credentials/write to create one); the system-assigned identity needs nothing extra.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: critical
+  mitigation: Restrict pipelines/write and createRun/action; keep the factory identity least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-factory/data-factory-service-identity
+  notes: Validated for the system-assigned identity; user-assigned identities require a factory credential object referencing them.
+
+- id: azure-datafactory-parameter-redirection
+  provider: azure
+  service: data_factory
+  title: Redirect an existing pipeline's identity-authenticated call through parameters
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#redirect-factory-output-through-microsoftdatafactoryfactoriesglobalparameterswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Data Factory's managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.DataFactory/factories/globalParameters/write
+          scope: '{target.host_resource}'
+      - - action: Microsoft.DataFactory/factories/triggers/write
+          scope: '{target.host_resource}'
+        - action: Microsoft.DataFactory/factories/triggers/stop/action
+          scope: '{target.host_resource}'
+        - action: Microsoft.DataFactory/factories/triggers/start/action
+          scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DataFactory/factories
+    scope: inherited_scope
+    aggregate_as: Identities of Data Factory {target.host_resource}
+  conditions:
+    - id: pipeline_trusts_parameter
+      description: An existing pipeline must send a managed-identity-authenticated request to a URL taken from the parameter, and must run later.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict globalParameters/write and trigger write/stop/start; do not parameterize destinations of identity-authenticated activities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-factory/author-global-parameters
+  notes: The trigger write/stop/start variant (re-pointing a trigger's pipeline parameters) is documented in HackTricks' Data Factory persistence page at rev 171e422; the identity gain is the same.
+
+- id: azure-datafactory-debug-sandbox-run
+  provider: azure
+  service: data_factory
+  title: Run a debug sandbox pipeline that authenticates with the factory identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#rce-as-msi-via-a-debug-sandbox-run-no-pipelineswrite
+  source_revision: 171e422
+  summary: A debug run of a source-supplied pipeline definition executes with the factory's managed identities without saving any pipeline.
+  requires:
+    all_of:
+      - action: Microsoft.DataFactory/factories/pipelines/sandbox/create/action
+        scope: '{target.host_resource}'
+      - action: Microsoft.DataFactory/factories/pipelines/sandbox/run/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DataFactory/factories
+    scope: inherited_scope
+    aggregate_as: Identities of Data Factory {target.host_resource}
+  conditions:
+    - id: user_assigned_needs_credential
+      description: User-assigned factory identities are usable by activities only through an existing factory credential object referencing them; the system-assigned identity needs nothing extra.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: critical
+  mitigation: Restrict the pipelines/sandbox actions (debug runs) to factory authors.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-factory/iterative-development-debugging
+  notes: ""
+
+- id: azure-datafactory-dataplane-access-token
+  provider: azure
+  service: data_factory
+  title: Mint a factory data-plane access token
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#mint-a-factory-data-plane-access-token-with-factoriesgetdataplaneaccessaction
+  source_revision: 171e422
+  summary: A data-plane token from getDataPlaneAccess can drive factory authoring/debug APIs, which run activities with the factory's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.DataFactory/factories/getDataPlaneAccess/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DataFactory/factories
+    scope: inherited_scope
+    aggregate_as: Identities of Data Factory {target.host_resource}
+  conditions:
+    - id: token_permissions_allow_runs
+      description: The requested token permissions must allow debug or pipeline runs on the factory data plane.
+    - id: user_assigned_needs_credential
+      description: User-assigned factory identities are usable only through a factory credential object referencing them.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict getDataPlaneAccess/action (included in Data Factory Contributor).
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/datafactory/factories/get-data-plane-access
+  notes: ""

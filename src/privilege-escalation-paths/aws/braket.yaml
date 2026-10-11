@@ -1,0 +1,36 @@
+# Amazon Braket privilege escalation techniques.
+# Source: hacktricks-cloud aws-braket-privesc/README.md (rev 171e422299).
+
+- id: aws-braket-passrole-createjob
+  provider: aws
+  service: braket
+  title: Create a Braket hybrid job with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-braket-privesc/README.md#braketcreatejob--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting braket.amazonaws.com by running job code it controls.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: braket:CreateJob
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: braket.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting braket.amazonaws.com passable in {account}"
+  conditions:
+    - id: controlled_job_code
+      description: The job algorithm script or container image must be one the source controls (S3 object or ECR image it can write or read).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on Braket job roles with iam:PassedToService and limit braket:CreateJob.
+  references:
+    - https://docs.aws.amazon.com/braket/latest/APIReference/API_CreateJob.html
+  notes: Reach is roles trusting braket.amazonaws.com in PassRole scope.

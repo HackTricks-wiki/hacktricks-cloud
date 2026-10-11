@@ -1,0 +1,169 @@
+# Azure Batch techniques (declarative only).
+# Source: hacktricks-cloud az-batch-privesc.md (rev 171e422, re-verified).
+# Pool identities are user-assigned only; {target.host_resource} is the Batch account owning the pool.
+
+- id: azure-batch-shared-key-task-submission
+  provider: azure
+  service: batch
+  title: Batch shared key allows task submission to pools with managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#microsoftbatchbatchaccountslistkeysaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities attached to the Batch account's pools.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Batch/batchAccounts/listkeys/action
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Batch/batchAccounts/regeneratekeys/action
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Batch/batchAccounts/pools
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "Pool identities of Batch account {target.host_resource}"
+  conditions:
+    - id: shared_key_auth_mode
+      description: allowedAuthenticationModes must include SharedKey.
+    - id: pool_has_nodes
+      description: An existing pool with the identity must have (or be able to allocate) compute nodes.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove SharedKey from allowedAuthenticationModes and restrict listkeys/regeneratekeys.
+  references:
+    - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
+  notes: regeneratekeys also disrupts legitimate key users.
+
+- id: azure-batch-job-task-submission
+  provider: azure
+  service: batch
+  title: Submit Batch jobs/tasks via data actions to pools with managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#azure-batch-job-and-task-data-actions
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities attached to the Batch account's pools.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Batch/batchAccounts/jobs/write
+          data_action: true
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Batch/batchAccounts/jobSchedules/write
+          data_action: true
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Batch/batchAccounts/pools
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "Pool identities of Batch account {target.host_resource}"
+  conditions:
+    - id: pool_has_nodes
+      description: An existing pool with the identity must have (or be able to allocate) compute nodes.
+    - id: task_can_reach_imds
+      description: Task user isolation and network configuration must allow tasks to request the pool identity token.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Limit Azure Batch Job Submitter assignments and keep pool identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/batch/batch-role-based-access-control
+  notes: HackTricks cites the jobs/* and jobSchedules/* wildcards of the built-in role. Microsoft's Batch data-action list has no separate tasks action, so jobs/write (or jobSchedules/write) is the narrowest data action covering task add.
+
+- id: azure-batch-pool-write-starttask
+  provider: azure
+  service: batch
+  title: Rewrite a pool start task to run code on nodes with the pool identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#microsoftbatchbatchaccountspoolswrite--node-rce-via-pool-starttask--managed-identity-attach-control-plane-no-keys
+  source_revision: 171e422
+  summary: A pool start task the source controls runs on every node through the control plane (no account keys), exposing the user-assigned identities attached to the pool.
+  requires:
+    all_of:
+      - action: Microsoft.Batch/batchAccounts/pools/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Batch/batchAccounts/pools
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "Pool identities of Batch account {target.host_resource}"
+  conditions:
+    - id: nodes_restart_or_join
+      description: The new start task runs when nodes join or are rebooted/reimaged; existing idle nodes do not rerun it on their own.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict pools/write (included in Contributor) and keep pool identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/batchmanagement/pool/update
+    - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
+  notes: Attaching a new user-assigned identity to a pool is modelled in azure-batch-pool-write-assign-user-assigned-identity.
+
+- id: azure-batch-pool-write-assign-user-assigned-identity
+  provider: azure
+  service: batch
+  title: Attach a user-assigned identity to a Batch pool and run code on its nodes
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#microsoftbatchbatchaccountspoolswrite--node-rce-via-pool-starttask--managed-identity-attach-control-plane-no-keys
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope by attaching them to a pool whose start task it controls.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.Batch/batchAccounts/pools/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Batch/batchAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: pool_core_quota
+      description: The Batch account needs core quota to allocate nodes for the pool.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and pools/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
+  notes: ""
+
+- id: azure-batch-application-package-poisoning
+  provider: azure
+  service: batch
+  title: Replace a Batch application package version used by pools
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#microsoftbatchbatchaccountsapplicationsversionswrite--activateaction--application-package-supply-chain-poisoning
+  source_revision: 171e422
+  summary: Pools or tasks that reference and execute an application package version the source replaced run its code with the pool identities.
+  requires:
+    all_of:
+      - action: Microsoft.Batch/batchAccounts/applications/versions/write
+        scope: "{target.host_resource}"
+      - action: Microsoft.Batch/batchAccounts/applications/versions/activate/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Batch/batchAccounts/pools
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "Pool identities of Batch account {target.host_resource}"
+  conditions:
+    - id: package_referenced_and_executed
+      description: A pool or task must reference the poisoned package version (or the default version) and execute its contents; packages are deployed when nodes join or tasks start.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict application version write/activate and pin explicit package versions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/batch/batch-application-packages
+  notes: ""

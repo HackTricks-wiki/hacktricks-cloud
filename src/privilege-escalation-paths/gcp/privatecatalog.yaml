@@ -1,0 +1,37 @@
+
+# GCP Service Catalog (formerly Private Catalog) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-private-catalog-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-privatecatalog-product-version-poison
+  provider: gcp
+  service: cloudprivatecatalogproducer
+  title: Replace the template of a shared Service Catalog solution version that consumers deploy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-private-catalog-privesc.md#cloudprivatecatalogproducerproductsupdate--poison-an-existing-deployable-solution-version
+  source_revision: 171e422
+  summary: The source can make the Google APIs Service Agent of consumer projects that later deploy a shared solution version it can update create attacker-chosen resources.
+  requires:
+    all_of:
+      - action: cloudprivatecatalogproducer.products.update
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudservices_agent
+    scope: any
+    aggregate_as: "Google APIs Service Agents of projects deploying poisoned Service Catalog solutions"
+  conditions:
+    - id: consumer_deploys
+      description: A consumer must explicitly preview, deploy or update the poisoned version in their project; nothing runs at update time.
+    - id: attached_catalog
+      description: The product must already be attached to a catalog associated with the consumer hierarchy, and the modified asset must pass validation.
+    - id: terraform_solutions
+      description: Terraform-based solutions run as the configured or default Cloud Build identity instead of the cloudservices agent.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cloudprivatecatalogproducer editor/admin roles and review solution versions before consumers deploy them.
+  references:
+    - https://docs.cloud.google.com/service-catalog/docs/create-solutions
+  notes: Deployment Manager solutions run as the consumer project's Google APIs Service Agent (roles/editor by default), like gcp-deploymentmanager-deployments-create.

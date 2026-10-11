@@ -1,0 +1,171 @@
+# Azure HDInsight techniques (declarative only).
+# Source: hacktricks-cloud az-hdinsight-privesc.md (rev 171e422).
+# HDInsight supports only user-assigned managed identities. IMDS is not available on the nodes; the
+# identity credential is a certificate installed on the nodes, which root code can use to obtain
+# tokens (HackTricks flags the on-node procedure as not validated). All edges are therefore conditional.
+
+- id: azure-hdinsight-get-gateway-settings
+  provider: azure
+  service: hdinsight
+  title: Read the cleartext HDInsight gateway (Ambari) credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#dump-cluster-gateway-admin-credentials
+  source_revision: 171e422
+  summary: The source can obtain Ambari admin on the cluster and run code on its nodes, and from there the cluster's user-assigned managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.HDInsight/clusters/getGatewaySettings/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HDInsight/clusters
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "User-assigned identity of HDInsight cluster {target.host_resource}"
+  conditions:
+    - id: gateway_reachable
+      description: The cluster gateway (clustername.azurehdinsight.net) must be reachable from the source; private-link or NSG-restricted clusters need network access.
+    - id: job_code_runs_as_service_user
+      description: Jobs submitted through Ambari, Livy, Oozie or WebHCat run as cluster service users, not root; reaching the identity certificate may need a further local escalation.
+    - id: mi_token_from_node_certificate
+      description: Obtaining a token for the identity depends on using the identity certificate installed on the nodes (not documented for direct use).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict getGatewaySettings/action (HDInsight Cluster Operator, Contributor), restrict gateway network access, and keep the cluster identity scoped to its storage.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/hdinsight/clusters/get-gateway-settings
+    - https://learn.microsoft.com/en-us/azure/hdinsight/hdinsight-managed-identities
+  notes: Storage account keys in cluster configuration are a data-plane credential and are not modelled.
+
+- id: azure-hdinsight-update-gateway-settings
+  provider: azure
+  service: hdinsight
+  title: Reset the HDInsight gateway (Ambari) credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#reset-gateway-credentials-to-take-over-the-cluster
+  source_revision: 171e422
+  summary: The source can set the Ambari login to a known value, run code on the nodes and reach the cluster's user-assigned managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.HDInsight/clusters/updateGatewaySettings/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HDInsight/clusters
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "User-assigned identity of HDInsight cluster {target.host_resource}"
+  conditions:
+    - id: gateway_reachable
+      description: The cluster gateway must be reachable from the source.
+    - id: job_code_runs_as_service_user
+      description: Submitted jobs run as cluster service users, not root.
+    - id: mi_token_from_node_certificate
+      description: Obtaining a token depends on using the identity certificate installed on the nodes.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict updateGatewaySettings/action and alert on gateway credential changes.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/hdinsight/clusters/update-gateway-settings
+  notes: Disruptive (breaks persisted script actions using the old password).
+
+- id: azure-hdinsight-execute-script-actions
+  provider: azure
+  service: hdinsight
+  title: Run a script action as root on HDInsight nodes
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#arbitrary-root-rce-via-script-actions
+  source_revision: 171e422
+  summary: Script actions run as root on the chosen node roles, exposing the cluster's user-assigned managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.HDInsight/clusters/executeScriptActions/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HDInsight/clusters
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "User-assigned identity of HDInsight cluster {target.host_resource}"
+  conditions:
+    - id: mi_token_from_node_certificate
+      description: Obtaining a token depends on using the identity certificate installed on the nodes (IMDS is not available on HDInsight nodes).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict executeScriptActions/action (Contributor/Owner), review persisted script actions and keep the cluster identity least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/hdinsight/hdinsight-hadoop-customize-cluster-linux
+  notes: Persisted script actions re-run on scaled or replaced nodes without new Activity Log events.
+
+- id: azure-hdinsight-applications-write
+  provider: azure
+  service: hdinsight
+  title: Install an HDInsight application whose install script runs as root
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#root-rce--persistence-via-hdinsight-applications
+  source_revision: 171e422
+  summary: Application install scripts run as root on the cluster, exposing the cluster's user-assigned managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.HDInsight/clusters/applications/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HDInsight/clusters
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "User-assigned identity of HDInsight cluster {target.host_resource}"
+  conditions:
+    - id: attacker_authored_application
+      description: HackTricks notes that a fully attacker-authored application definition should be validated on a live cluster.
+    - id: mi_token_from_node_certificate
+      description: Obtaining a token depends on using the identity certificate installed on the nodes.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict clusters/applications/write and review installed applications and edge nodes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/hdinsight/hdinsight-apps-install-applications
+  notes: ""
+
+- id: azure-hdinsight-create-with-user-assigned-identity
+  provider: azure
+  service: hdinsight
+  title: Create an HDInsight cluster with a user-assigned identity and root script actions
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#seed-root-code--attach-an-identity-via-cluster-create-or-update
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities it may assign, by creating a cluster that carries them and runs its own provisioning scripts as root.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.HDInsight/clusters/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.Resources/resourceGroups
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: cluster_dependencies
+      description: Creation also needs a usable storage account (the identity typically needs Storage Blob Data Owner on ADLS Gen2) and a subnet/network the deployment may use.
+    - id: mi_token_from_node_certificate
+      description: Obtaining a token depends on using the identity certificate installed on the nodes.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and HDInsight clusters/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/hdinsight/hdinsight-managed-identities
+  notes: Only the create path is modelled; HDInsight does not support in-place updates of identity or script actions on an existing cluster through clusters/write.

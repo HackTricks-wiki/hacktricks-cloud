@@ -1,0 +1,41 @@
+# Azure SRE Agent privilege escalation techniques (declarative only).
+# Source: hacktricks-cloud az-sre-agent-privesc.md (rev 171e422).
+
+- id: azure-sre-agent-drive-managed-identity
+  provider: azure
+  service: sre_agent
+  title: Instruct or reconfigure an SRE Agent to act with its managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#drive-the-agents-managed-identity--instruction--tool-config-injection-agentsthreads-agentswrite-
+  source_revision: 171e422
+  summary: Opening threads, creating scheduled tasks or rewriting the agent configuration lets the source steer the agent into performing actions with its managed identity's RBAC.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.App/agents/threads/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.App/agents/scheduledtasks/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.App/agents/write
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/agents
+    scope: inherited_scope
+    aggregate_as: "Managed identities of SRE Agent {target.host_resource}"
+  conditions:
+    - id: run_mode
+      description: In Review mode write actions need approval (threads/approve/action, held by SRE Agent Administrators); without that right only Autonomous mode lets the agent act unapproved.
+    - id: tool_policies
+      description: Per-tool allow, ask or deny policies and agent hooks limit which actions the agent will perform.
+    - id: model_mediated
+      description: Actions are chosen by the agent's model from the source's instructions, so the source steers the identity but gets no token and no arbitrary code execution.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict threads/write, scheduledtasks/write and agents/write, keep agents in Review mode, scope the agent identity's RBAC narrowly, and set deny or ask policies for write tools.
+  references:
+    - https://learn.microsoft.com/en-us/azure/sre-agent/overview
+    - https://learn.microsoft.com/en-us/azure/sre-agent/run-modes
+  notes: threads/approve/action alone only approves actions the agent already proposed; dataconnectors/write (indirect injection through poisoned data) and memory/write only steer later runs. These are covered by the same conditions and not modelled as separate sources.

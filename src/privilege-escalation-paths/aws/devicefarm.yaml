@@ -1,0 +1,68 @@
+# AWS Device Farm privilege escalation techniques.
+# Source: hacktricks-cloud aws-device-farm-privesc/README.md (rev 171e422299).
+
+- id: aws-devicefarm-updateupload-test-spec
+  provider: aws
+  service: devicefarm
+  title: Replace the content of a custom test specification used by privileged runs
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#trojanize-an-existing-custom-test-specification
+  source_revision: 171e422299
+  summary: The source can obtain (at the next run that uses the specification) the privileges of the execution role of Device Farm projects or runs that use a test-spec upload it can update.
+  requires:
+    all_of:
+      - action: devicefarm:UpdateUpload
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: devicefarm.amazonaws.com
+      consumer_input_writable_via: devicefarm:UpdateUpload
+    scope: same_account
+    aggregate_as: "Device Farm execution roles of runs using updatable test specs in {account}"
+  conditions:
+    - id: delayed_run
+      description: A later run must schedule the same test-spec upload with a project or run execution role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict devicefarm:UpdateUpload on test-spec uploads to CI publishers and pin test specs per run.
+  references:
+    - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_UpdateUpload.html
+  notes: "{target.consumer_input_arn} is the *_TEST_SPEC upload ARN; the upload-to-run mapping is not collected."
+
+- id: aws-devicefarm-passrole-project-schedulerun
+  provider: aws
+  service: devicefarm
+  title: Run a custom test with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting devicefarm.amazonaws.com by scheduling a run with a test specification it controls.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: devicefarm:ScheduleRun
+        resource: "*"
+      - action: devicefarm:CreateUpload
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: devicefarm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting devicefarm.amazonaws.com passable in {account}"
+  conditions:
+    - id: project_available
+      description: A project the source can schedule runs in (existing, or devicefarm:CreateProject) and a compatible device or device pool are required.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on Device Farm execution roles with iam:PassedToService and specific role ARNs; limit run scheduling to CI.
+  references:
+    - https://docs.aws.amazon.com/devicefarm/latest/developerguide/custom-test-environment-iam-roles.html
+  notes: The role can be set on the project (CreateProject / UpdateProject) or overridden per run (ScheduleRun configuration).

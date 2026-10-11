@@ -1,0 +1,33 @@
+# Microsoft Purview techniques (declarative only).
+# Source: hacktricks-cloud az-purview-privesc.md (rev 171e422).
+# Action names checked against the Azure RBAC permissions reference (Analytics > Microsoft.Purview).
+
+- id: azure-purview-add-root-collection-admin
+  provider: azure
+  service: purview
+  title: Add a principal as Purview root collection administrator from the ARM control plane
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewaccountsaddrootcollectionadminaction--arm-contributor-to-full-data-plane-takeover
+  source_revision: 171e422
+  summary: The source can make itself (or any principal) root collection administrator of the Purview account, the top of the Purview data-plane role hierarchy.
+  requires:
+    all_of:
+      - action: Microsoft.Purview/accounts/addrootcollectionadmin/action
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Purview root collection admin of {target.scope}"
+  conditions:
+    - id: purview_dataplane_only
+      description: The gain is Purview data-plane administration (collection roles, data sources, scan credentials, access policies); it does not yield a token for the Purview account's managed identity or for scan credentials stored in Key Vault.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Remove addrootcollectionadmin/action from broad roles (it is included in Contributor) with a custom role or deny assignment, and review Purview root collection role membership.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/analytics#microsoftpurview
+    - https://learn.microsoft.com/en-us/purview/how-to-create-and-manage-collections
+  notes: Granted by Owner and Contributor without Microsoft.Authorization write. Follow-on Purview access policies into governed SQL/Storage sources are data access and are excluded separately. The resulting grant lives in the Purview role model, not in Azure RBAC.

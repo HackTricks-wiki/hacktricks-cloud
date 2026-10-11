@@ -1,0 +1,419 @@
+# Amazon SageMaker AI privilege escalation techniques.
+# Source: hacktricks-cloud aws-sagemaker-privesc/README.md (rev a53b46392c).
+# Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
+
+- id: aws-sagemaker-passrole-createnotebookinstance
+  provider: aws
+  service: sagemaker
+  title: Create a notebook instance with a passed role and open it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#iampassrole--sagemakercreatenotebookinstance-sagemakercreatepresignednotebookinstanceurl
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:CreateNotebookInstance
+        resource: "*"
+      - action: sagemaker:CreatePresignedNotebookInstanceUrl
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: presigned_url_source_ip
+      description: aws:SourceIp / VPC endpoint conditions on presigned URL use may restrict access to the notebook.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles with iam:PassedToService and limit notebook creation to data-science admins.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateNotebookInstance.html
+  notes: Reach is roles trusting sagemaker.amazonaws.com in PassRole scope.
+
+- id: aws-sagemaker-createpresignednotebookinstanceurl
+  provider: aws
+  service: sagemaker
+  title: Open an existing notebook instance via a presigned URL
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreatepresignednotebookinstanceurl
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the role of existing SageMaker notebook instances in Resource scope.
+  requires:
+    all_of:
+      - action: sagemaker:CreatePresignedNotebookInstanceUrl
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_notebook_instance
+    scope: same_account
+    aggregate_as: "Roles of existing SageMaker notebook instances in {account}"
+  conditions:
+    - id: notebook_in_service
+      description: The notebook must be InService (or the source can start it); root access/terminal may be disabled by lifecycle configuration but the role is still usable from the kernel.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Scope sagemaker:CreatePresignedNotebookInstanceUrl to the owner's notebooks (tags) and keep notebook roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreatePresignedNotebookInstanceUrl.html
+  notes: Only existing notebook instances in Resource scope.
+
+- id: aws-sagemaker-createpresigneddomainurl
+  provider: aws
+  service: sagemaker
+  title: Mint a Studio login URL for an existing user profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreatepresigneddomainurl
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of SageMaker Studio user profiles in Resource scope.
+  requires:
+    all_of:
+      - action: sagemaker:CreatePresignedDomainUrl
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_user_profile
+    scope: same_account
+    aggregate_as: "Execution roles of SageMaker Studio user profiles in {account}"
+  conditions:
+    - id: not_unified_studio
+      description: Domains created by SageMaker Unified Studio reject this flow.
+    - id: network_restriction
+      description: Domains in VPC-only mode or with aws:SourceIp / aws:sourceVpce conditions may block use of the URL.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Scope CreatePresignedDomainUrl to the caller's own profile (e.g. sagemaker:ResourceTag/owner = aws:username) and keep execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreatePresignedDomainUrl.html
+  notes: Role is the profile's UserSettings.ExecutionRole, or the domain DefaultUserSettings.ExecutionRole if the profile has none. Also covers the sagemaker:CreateApp + CreatePresignedDomainUrl variant on the page (superset).
+
+- id: aws-sagemaker-s3-putobject-job-code
+  provider: aws
+  service: sagemaker
+  title: Overwrite S3 code consumed by existing SageMaker training or processing jobs
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#s3putobject-on-configured-training-or-processing-code-job-creation-optional
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of SageMaker jobs that execute S3 code it can overwrite.
+  requires:
+    all_of:
+      - action: s3:PutObject
+        resource: "{target.artifact_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_artifact_type: s3_object
+    scope: same_account
+    aggregate_as: "SageMaker job roles loading writable S3 code in {account}"
+  conditions:
+    - id: later_job_required
+      description: A pipeline, schedule, tuning job or operator must create a job referencing the exact key after the overwrite.
+    - id: executable_consumer
+      description: Processing inputs are an execution sink only if the container entrypoint executes the file; plain data inputs are not.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Use immutable, uniquely named code artifacts, restrict writes to a dedicated publisher, and verify digests in the launcher.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/dg/amazon-sagemaker-toolkits.html
+  notes: Artifact set = sagemaker_submit_directory bundles and executed ProcessingInputs of jobs/pipelines; requires collector support for pipeline definitions.
+
+- id: aws-sagemaker-passrole-createprocessingjob
+  provider: aws
+  service: sagemaker
+  title: Create a Processing job with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreateprocessingjob-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:CreateProcessingJob
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: egress_or_role_side_effects
+      description: Credential use from inside the job needs outbound network (no network isolation) or the payload must act with the role directly.
+    - id: sagemaker_condition_keys
+      description: sagemaker:NetworkIsolation / sagemaker:VpcSubnets / image condition keys may constrain the job.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and use SageMaker condition keys (approved images, network isolation) on job creation.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateProcessingJob.html
+  notes: The role also needs ECR pull permissions for the chosen image; AWS-provided images are normally pullable by SageMaker roles.
+
+- id: aws-sagemaker-passrole-createtrainingjob
+  provider: aws
+  service: sagemaker
+  title: Create a Training job with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreatetrainingjob-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:CreateTrainingJob
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: egress_or_role_side_effects
+      description: Credential use from inside the job needs outbound network or direct role actions by the payload.
+    - id: output_bucket_writable_by_role
+      description: The passed role must be able to write the job's S3 output path.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and enforce approved images/network isolation via condition keys.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateTrainingJob.html
+  notes: ""
+
+- id: aws-sagemaker-passrole-createhyperparametertuningjob
+  provider: aws
+  service: sagemaker
+  title: Create a Hyperparameter Tuning job with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreatehyperparametertuningjob-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:CreateHyperParameterTuningJob
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: code_location_readable_by_role
+      description: The passed role must be able to read the S3 code bundle the source supplies (own public/cross-account bucket or writable bucket).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:CreateHyperParameterTuningJob.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateHyperParameterTuningJob.html
+  notes: ""
+
+- id: aws-sagemaker-updateuserprofile-passrole-createapp
+  provider: aws
+  service: sagemaker
+  title: Swap a Studio user profile's execution role and launch an app
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerupdateuserprofile-iampassrole-sagemakercreateapp-sagemakercreatepresigneddomainurl-sagemakerdeleteapp
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com via a Studio user profile.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:UpdateUserProfile
+        resource: "*"
+      - action: sagemaker:CreateApp
+        resource: "*"
+      - action: sagemaker:CreatePresignedDomainUrl
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: no_inservice_apps
+      description: UpdateUserProfile fails while the profile has InService apps; sagemaker:DeleteApp is needed if any exist.
+    - id: same_profile_scope
+      description: UpdateUserProfile, CreateApp and CreatePresignedDomainUrl must all cover the same user profile/app ARNs.
+    - id: not_unified_studio
+      description: Unified Studio domains reject presigned domain URLs.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:UpdateUserProfile to platform admins.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateUserProfile.html
+  notes: ""
+
+- id: aws-sagemaker-updatedomain-createuserprofile-passrole
+  provider: aws
+  service: sagemaker
+  title: Change a Studio domain's default execution role and create a profile inheriting it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerupdatedomain-sagemakercreateuserprofile-sagemakercreateapp-iampassrole-sagemakercreatepresigneddomainurl-sagemakerdeleteapp
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com via the Studio domain default.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:UpdateDomain
+        resource: "*"
+      - action: sagemaker:CreateUserProfile
+        resource: "*"
+      - action: sagemaker:CreateApp
+        resource: "*"
+      - action: sagemaker:CreatePresignedDomainUrl
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: no_inservice_apps_in_domain
+      description: UpdateDomain fails while any app in the domain is InService; sagemaker:DeleteApp on all of them is needed otherwise (disruptive).
+    - id: not_unified_studio
+      description: Unified Studio domains reject presigned domain URLs.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:UpdateDomain/CreateUserProfile to platform admins.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateDomain.html
+  notes: CreateUserProfile with an explicit ExecutionRole is itself a PassRole path, modelled in aws-sagemaker-createuserprofile-passrole-createapp; this entry follows the page's inherit-default variant.
+
+- id: aws-sagemaker-createuserprofile-passrole-createapp
+  provider: aws
+  service: sagemaker
+  title: Create a Studio user profile with an explicit passed execution role and launch an app
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerupdatedomain-sagemakercreateuserprofile-sagemakercreateapp-iampassrole-sagemakercreatepresigneddomainurl-sagemakerdeleteapp
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting sagemaker.amazonaws.com by setting it as the execution role of a new Studio user profile.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: sagemaker:CreateUserProfile
+        resource: "*"
+      - action: sagemaker:CreateApp
+        resource: "*"
+      - action: sagemaker:CreatePresignedDomainUrl
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
+  conditions:
+    - id: existing_domain
+      description: A Studio domain covered by CreateUserProfile must exist; CreateApp and CreatePresignedDomainUrl must cover the new profile and app ARNs.
+    - id: not_unified_studio
+      description: Unified Studio domains reject presigned domain URLs.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:CreateUserProfile to platform admins.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateUserProfile.html
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UserSettings.html
+  notes: Not a separate HackTricks section; it is the explicit-role variant of the UpdateDomain section (UserSettings.ExecutionRole on CreateUserProfile), which avoids UpdateDomain and the no-InService-apps restriction.
+
+- id: aws-sagemaker-updateclustersoftware-custom-ami
+  provider: aws
+  service: sagemaker
+  title: Replace HyperPod instance-group nodes with a custom AMI that keeps the group's execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerupdateclustersoftware--replace-hyperpod-nodes-with-a-custom-ami
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the instance-group execution roles of HyperPod clusters it can update, by booting their nodes from an image it controls.
+  requires:
+    all_of:
+      - action: sagemaker:UpdateClusterSoftware
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_cluster
+    scope: same_account
+    aggregate_as: "Execution roles of HyperPod instance groups in {account}"
+  conditions:
+    - id: controlled_custom_ami
+      description: A custom AMI with attacker-controlled startup code must already be available to the account and meet HyperPod's encryption and volume constraints; creating it needs separate EC2 permissions.
+    - id: slurm_default_ami
+      description: Slurm-orchestrated groups on the default HyperPod AMI cannot be switched to a custom AMI by this operation.
+    - id: disruptive
+      description: The update replaces node root volumes and interrupts running workloads.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sagemaker:UpdateClusterSoftware to platform administrators on specific cluster ARNs, restrict who can create or share AMIs, and keep instance-group roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateClusterSoftware.html
+  notes: No role is passed, so iam:PassRole is not required. The page nests this heading under the CreatePresignedDomainUrl section, so coverage counted it as a child of that entry; it is modelled separately here.
+
+- id: aws-sagemaker-updatenotebookinstancelifecycleconfig
+  provider: aws
+  service: sagemaker
+  title: Rewrite a notebook-instance lifecycle configuration that runs as the notebook role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#sagemakerupdatenotebookinstancelifecycleconfig--stored-code-execution-as-the-notebook-role
+  source_revision: 171e422299
+  summary: The source can obtain (on the notebook's next start) the privileges of the execution role of notebook instances that use a lifecycle configuration it can update.
+  requires:
+    all_of:
+      - action: sagemaker:UpdateNotebookInstanceLifecycleConfig
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_notebook_instance
+      consumer_input_writable_via: sagemaker:UpdateNotebookInstanceLifecycleConfig
+    scope: same_account
+    aggregate_as: "Roles of SageMaker notebook instances with updatable lifecycle configurations in {account}"
+  conditions:
+    - id: notebook_restart
+      description: The OnStart script runs as root with the execution role only at the next notebook start (by the source, an operator or automation); the payload's exfiltration channel must be reachable from the notebook.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sagemaker:UpdateNotebookInstanceLifecycleConfig to administrators and monitor UpdateNotebookInstanceLifecycleConfig events.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateNotebookInstanceLifecycleConfig.html
+  notes: "{target.consumer_input_arn} is the lifecycle configuration attached to the notebook instance; when the mapping is not collected the edge is unknown. Becomes derived with sagemaker:StopNotebookInstance + StartNotebookInstance on the notebook."

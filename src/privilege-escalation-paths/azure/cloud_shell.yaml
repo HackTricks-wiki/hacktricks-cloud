@@ -1,0 +1,45 @@
+# Azure Cloud Shell techniques (declarative only).
+# Source: hacktricks-cloud az-cloud-shell-persistence.md / az-cloud-shell-post-exploitation.md (rev 171e422).
+# Cloud Shell persists each user's $HOME image on an Azure Files share; the user<->share mapping is not
+# collected, so targets use credential_stored_in_scope (conditional).
+
+- id: azure-cloudshell-home-image-backdoor
+  provider: azure
+  service: cloud_shell
+  title: Backdoor another user's persisted Cloud Shell home image
+  source: src/pentesting-cloud/azure-security/az-persistence/az-cloud-shell-persistence.md#cloud-shell-phishing
+  source_revision: 171e422
+  summary: Write access to the storage account backing another user's Cloud Shell lets the source run code as that user, with their Azure context and cached tokens, in the user's next session.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Storage/storageAccounts/listKeys/action
+          scope: '{pivot}'
+      - - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/read
+          data_action: true
+          scope: '{pivot}'
+        - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/write
+          data_action: true
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_user
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Users whose Cloud Shell home image is stored in {pivot}
+  conditions:
+    - id: share_backs_cloud_shell
+      description: The storage account must host a persistent Cloud Shell file share of another user; this mapping is not visible from RBAC.
+    - id: victim_opens_session
+      description: Code runs only when the victim opens a new storage-backed Cloud Shell session; token-cache artifacts already present in the image can be read without waiting.
+    - id: network_reachable
+      description: Storage firewall / private endpoint must allow the source.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Keep Cloud Shell storage accounts in a dedicated, tightly scoped resource group/subscription, restrict listKeys and file data-plane roles on them, or use ephemeral Cloud Shell sessions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cloud-shell/persisting-shell-storage
+  notes: Also covers the "Azure CLI artifacts in persistent storage" post-exploitation section (token caches in the persisted image).

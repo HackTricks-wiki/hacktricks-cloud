@@ -1,0 +1,41 @@
+# Amazon S3 Files privilege escalation techniques.
+# Source: hacktricks-cloud aws-s3-files-privesc/README.md (rev 171e422299).
+# Bounded impact: the passed role is exercised by the service for S3 synchronization only (no STS credentials returned).
+
+- id: aws-s3files-passrole-createfilesystem
+  provider: aws
+  service: s3files
+  title: Create an S3 Files file system over a bucket with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-files-privesc/README.md#s3filescreatefilesystem-iampassrole--mount-any-buckets-data-as-a-chosen-role
+  source_revision: 171e422299
+  summary: The source can exercise the S3 read/write privileges of a passable role trusting the S3 Files service by creating a file system that synchronizes a bucket through that role.
+  requires:
+    all_of:
+      - action: s3files:CreateFileSystem
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: elasticfilesystem.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting elasticfilesystem.amazonaws.com passable in {account}"
+  conditions:
+    - id: mount_path
+      description: Using the data requires a mount target in a reachable subnet and a compute principal allowed to mount the file system (s3files:ClientMount/ClientWrite) with network reach on TCP 2049.
+    - id: bucket_prerequisites
+      description: The bucket must have versioning enabled and use SSE-S3 or SSE-KMS; SSE-KMS buckets also need kms permissions in the passed role and key policy.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: trust_source_arn
+      description: AWS documents an aws:SourceArn condition limited to arn:aws:s3files:<region>:<account>:file-system/*; any file system in the account satisfies it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict s3files:CreateFileSystem and iam:PassRole on S3 Files roles (iam:PassedToService), and scope each S3 Files role to the single bucket it serves.
+  references:
+    - https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files-prereq-policies.html
+  notes: Bounded impact - only the passed role's S3 (and KMS) data access is exercised. Per the S3 Files prerequisites page the role trust principal is elasticfilesystem.amazonaws.com (HackTricks says s3files.amazonaws.com); the selector follows AWS documentation.

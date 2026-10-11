@@ -1,0 +1,29 @@
+# Azure Managed Applications techniques (declarative only).
+# Source: hacktricks-cloud az-managed-applications-privesc.md (rev 171e422).
+
+- id: azure-managedapp-list-tokens
+  provider: azure
+  service: managed_applications
+  title: Export access tokens of a managed application's managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-applications-privesc.md#listtokens--cross-tenant-managed-identity-token-export-marquee
+  source_revision: 171e422
+  summary: The source can obtain bearer tokens for the managed application's managed identity and act with its privileges.
+  requires:
+    all_of:
+      - action: Microsoft.Solutions/applications/listTokens/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Solutions/applications
+    scope: inherited_scope
+    aggregate_as: "Managed identities of managed application {target.host_resource}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict applications/listTokens/action, review publisher authorizations on managed applications, and keep managed application identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/publish-managed-identity
+  notes: listTokens returns a token for an arbitrary audience (ARM, Graph, Key Vault, Storage). Publisher-tenant principals holding the action through managed-app authorizations are outside the customer snapshot; customer-tenant holders (for example Contributor on the application) are modelled.

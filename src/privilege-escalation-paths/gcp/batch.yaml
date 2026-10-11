@@ -1,0 +1,40 @@
+# GCP Batch privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-batch-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-batch-jobs-create-actas
+  provider: gcp
+  service: batch
+  title: Create a Batch job whose VMs run as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-batch-privesc.md#submit-arbitrary-code-as-a-more-privileged-job-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: batch.jobs.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Batch job SA in {project}"
+  conditions:
+    - id: default_sa_needs_actas
+      description: Omitting the SA uses the Compute Engine default SA, and actAs on it is still required (enforced at submit).
+    - id: custom_sa_agent_roles
+      description: The job SA must itself hold batch.states.report (roles/batch.agentReporter), otherwise the job's VMs never report and the job fails; roles/logging.logWriter is only needed when logs go to Cloud Logging.
+    - id: access_scopes
+      description: The usable token follows the job's VM access scopes.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant iam.serviceAccounts.actAs only on dedicated low-privilege Batch SAs and remove roles/editor from the Compute Engine default SA.
+  references:
+    - https://cloud.google.com/batch/docs/create-run-job-custom-service-account
+  notes: Container runnables also reach the metadata server, so container isolation does not prevent the token use.

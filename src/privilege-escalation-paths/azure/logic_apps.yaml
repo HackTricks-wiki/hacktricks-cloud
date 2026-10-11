@@ -1,0 +1,129 @@
+# Azure Logic Apps techniques (declarative only).
+# Source: hacktricks-cloud az-logic-apps-privesc.md (rev 171e422, re-verified).
+# Standard (single-tenant) Logic Apps are Microsoft.Web/sites and are covered by app_services.yaml.
+
+- id: azure-logicapp-workflow-write-existing-identity
+  provider: azure
+  service: logic_apps
+  title: Modify an existing Consumption workflow that runs with managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#microsoftlogicworkflowswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the workflow's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.Logic/workflows/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Logic/workflows
+    scope: inherited_scope
+    aggregate_as: Identities of Logic App {target.host_resource}
+  conditions:
+    - id: run_path
+      description: 'The modified workflow must run: a recurrence/event trigger, triggers/run/action, or a callback URL.'
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict workflows/write and keep workflow identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/logic-apps/authenticate-with-managed-identity
+  notes: HackTricks marks workflows/write as directly changing workflow code (Critical).
+
+- id: azure-logicapp-assign-user-assigned-identity
+  provider: azure
+  service: logic_apps
+  title: Create or update a workflow with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#microsoftresourcessubscriptionsresourcegroupsread-microsoftlogicworkflowsread-microsoftlogicworkflowswrite--microsoftmanagedidentityuserassignedidentitiesassignaction--microsoftlogicworkflowstriggersrunaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.Logic/workflows/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Resources/resourceGroups|Microsoft.Logic/workflows
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: run_path
+      description: 'The workflow must run: triggers/run/action, a callback URL, or a recurrence trigger.'
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and workflows/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/logic-apps/authenticate-with-managed-identity
+  notes: Covers both identity-assignment sections of the page.
+
+- id: azure-logicapp-connection-access-policy-write
+  provider: azure
+  service: logic_apps
+  title: Authorize a controlled Standard workflow to use an existing V2 API connection
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#microsoftwebconnectionsaccesspolicieswrite---grant-a-workflow-use-of-unreadable-connection-credentials
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service principal whose credentials back the API connection.
+  requires:
+    all_of:
+      - action: Microsoft.Web/connections/accessPolicies/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Web/connections
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Principals behind API connection {pivot}
+  conditions:
+    - id: v2_connection
+      description: The connection must be kind V2.
+    - id: controlled_standard_workflow
+      description: The source must control a Workflow Standard app and its identity.
+    - id: connection_principal
+      description: Only an Azure-identity escalation when the connection authenticates as an SP/user with Azure access.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Monitor Microsoft.Web/connections/accessPolicies writes and avoid broad roles including them.
+  references:
+    - https://learn.microsoft.com/en-us/azure/logic-apps/create-single-tenant-workflows-azure-portal
+  notes: ''
+
+- id: azure-logicapp-connection-list-connection-keys
+  provider: azure
+  service: logic_apps
+  title: Export an API connection's runtime connection key
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#microsoftwebconnectionslistconnectionkeysaction---steal-an-api-connections-runtime-credential
+  source_revision: 171e422
+  summary: The source can drive an already-consented API connection as the principal that authorized it, through the connector's operations.
+  requires:
+    all_of:
+      - action: Microsoft.Web/connections/listConnectionKeys/action
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Web/connections
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Principals behind API connection {pivot}
+  conditions:
+    - id: token_consented_connector
+      description: Only OAuth/token-consented connectors return a key; shared-key connectors return OperationNotAllowed.
+    - id: connector_scoped_access
+      description: The gain is limited to the connector's operations; it is an Azure-identity escalation only when the connector exposes Azure control or data plane (e.g. Azure Resource Manager or Key Vault connectors) with an SP/user that has Azure access.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.Web/connections/listConnectionKeys/action, alert on it, and prefer managed-identity connections.
+  references:
+    - https://learn.microsoft.com/en-us/azure/connectors/introduction
+  notes: Same target modelling as azure-logicapp-connection-access-policy-write. User-consented connections are the common case; the azure_service_principal kind covers only SP-backed connections, so user-backed ones are not represented.

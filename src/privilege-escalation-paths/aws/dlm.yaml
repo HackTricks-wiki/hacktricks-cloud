@@ -1,0 +1,43 @@
+# Amazon Data Lifecycle Manager privilege escalation techniques.
+# Source: hacktricks-cloud aws-dlm-privesc/README.md (rev 171e422299).
+
+- id: aws-dlm-passrole-lifecyclepolicy-scripts
+  provider: aws
+  service: dlm
+  title: Schedule SSM command documents on tagged instances through DLM pre/post scripts
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dlm-privesc/README.md#dlmcreatelifecyclepolicy-iampassrole--scheduled-commands-through-dlm-prepost-scripts
+  source_revision: 171e422299
+  summary: The source can run commands on SSM-managed EC2 instances matching a DLM policy's target tags and obtain their instance-profile roles.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "*"
+    any_of:
+      - - action: dlm:CreateLifecyclePolicy
+          resource: "*"
+      - - action: dlm:UpdateLifecyclePolicy
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+  conditions:
+    - id: dlm_role_can_send_command
+      description: The passed role must trust dlm.amazonaws.com and allow ssm:SendCommand, DescribeDocument and GetDocument on the document used.
+    - id: command_document
+      description: A usable Command document must exist (or ssm:CreateDocument, plus tagging DLMScriptsAccess:true for the managed DLM policy).
+    - id: target_tags
+      description: The instances must match the policy target tags (existing tags, or ec2:CreateTags) and be online in SSM.
+    - id: delayed_execution
+      description: The first scheduled run starts within an hour of the configured time.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on DLM roles with iam:PassedToService, avoid attaching AWSDataLifecycleManagerSSMFullAccess broadly and restrict who can tag documents with DLMScriptsAccess.
+  references:
+    - https://docs.aws.amazon.com/ebs/latest/userguide/automate-app-consistent-backups.html
+  notes: PassRole is required on "*" because the passed DLM role is a pivot, not the target; scoped PassRole grants are a false negative. Reach is bounded by the DLM role's SendCommand scope.

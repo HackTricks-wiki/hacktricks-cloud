@@ -1,0 +1,165 @@
+# AWS Elastic Beanstalk privilege escalation techniques.
+# Source: hacktricks-cloud aws-elastic-beanstalk-privesc/README.md (rev a53b46392c).
+# Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
+# Beanstalk performs environment changes with the CALLER's credentials (CloudFormation, EC2, Auto Scaling, ELB, S3),
+# so these entries are conditional on the broad supporting permissions noted in each entry.
+
+- id: aws-elasticbeanstalk-updateenvironment-env-injection
+  provider: aws
+  service: elasticbeanstalk
+  title: Inject runtime-influencing environment properties into an existing environment
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkupdateenvironment
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the EC2 instance-profile role of existing Beanstalk environments it can update.
+  requires:
+    all_of:
+      - action: elasticbeanstalk:UpdateEnvironment
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: elasticbeanstalk_environment
+    scope: same_account
+    aggregate_as: "Instance-profile roles of updatable Beanstalk environments in {account}"
+  conditions:
+    - id: runtime_supports_env_injection
+      description: Code execution via environment properties depends on the platform runtime and, for most runtimes, on attacker-controlled content already readable on the instances.
+    - id: supporting_permissions
+      description: Applying the update needs the CloudFormation/Auto Scaling/EC2 permissions Beanstalk uses with the caller's credentials.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict elasticbeanstalk:UpdateEnvironment to deployment principals on specific environments and keep instance-profile roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_UpdateEnvironment.html
+  notes: Reach is only the instance profile configured on environments in Resource scope.
+
+- id: aws-elasticbeanstalk-rebuildenvironment-s3-code
+  provider: aws
+  service: elasticbeanstalk
+  title: Replace an environment's source bundle in S3 and rebuild it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkrebuildenvironment-s3-write-permissions--many-others
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the EC2 instance-profile role of an existing environment whose deployed source bundle it can overwrite.
+  requires:
+    all_of:
+      - action: elasticbeanstalk:RebuildEnvironment
+        resource: "{target.resource_arn}"
+      - action: s3:PutObject
+        resource: "{target.artifact_arn}"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: elasticbeanstalk_environment
+      via_artifact_type: s3_object
+    scope: same_account
+    aggregate_as: "Instance-profile roles of rebuildable Beanstalk environments in {account}"
+  conditions:
+    - id: supporting_permissions
+      description: RebuildEnvironment needs the CloudFormation, EC2 and Auto Scaling permissions Beanstalk uses with the caller's credentials.
+    - id: artifact_is_deployed_bundle
+      description: The overwritten object must be the source bundle of the application version deployed to that environment (typically in elasticbeanstalk-<region>-<account>).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict write access to the elasticbeanstalk-<region>-<account> bucket to the deployment pipeline and restrict RebuildEnvironment.
+  references:
+    - https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environment-management-rebuild.html
+  notes: Both selectors must refer to the same environment (the artifact is that environment's deployed bundle).
+
+- id: aws-elasticbeanstalk-passrole-create-environment
+  provider: aws
+  service: elasticbeanstalk
+  title: Create a Beanstalk application and environment with a passed instance profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkcreateapplication-elasticbeanstalkcreateenvironment-elasticbeanstalkcreateapplicationversion-elasticbeanstalkupdateenvironment-iampassrole-and-more
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable EC2-trusting role with an instance profile, used as the instance profile of its own environment.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: elasticbeanstalk:CreateApplication
+        resource: "*"
+      - action: elasticbeanstalk:CreateEnvironment
+        resource: "*"
+      - action: elasticbeanstalk:CreateApplicationVersion
+        resource: "*"
+      - action: elasticbeanstalk:UpdateEnvironment
+        resource: "*"
+      - action: s3:PutObject
+        resource: "*"
+      - action: cloudformation:CreateStack
+        resource: "*"
+      - action: ec2:RunInstances
+        resource: "*"
+      - action: autoscaling:CreateAutoScalingGroup
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "EC2 instance-profile roles passable in {account}"
+  conditions:
+    - id: supporting_permissions
+      description: The full set of S3, EC2, CloudFormation, Auto Scaling and Elastic Load Balancing permissions Beanstalk needs (cf. AdministratorAccess-AWSElasticBeanstalk) is approximated by the listed actions.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on instance-profile roles and grant Beanstalk environment-creation rights only to deployment principals.
+  references:
+    - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess-AWSElasticBeanstalk.html
+  notes: A principal with these supporting permissions (ec2:RunInstances + PassRole) is usually already covered by the EC2 PassRole edge; this entry records the Beanstalk route.
+
+- id: aws-elasticbeanstalk-createapplicationversion-updateenvironment
+  provider: aws
+  service: elasticbeanstalk
+  title: Deploy an attacker-hosted application version to an existing environment
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkcreateapplicationversion-elasticbeanstalkupdateenvironment-cloudformationgettemplate-cloudformationdescribestackresources-cloudformationdescribestackresource-autoscalingdescribeautoscalinggroups-autoscalingsuspendprocesses
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the EC2 instance-profile role of existing environments it can deploy a new version to.
+  requires:
+    all_of:
+      - action: elasticbeanstalk:CreateApplicationVersion
+        resource: "*"
+      - action: elasticbeanstalk:UpdateEnvironment
+        resource: "{target.resource_arn}"
+      - action: cloudformation:GetTemplate
+        resource: "*"
+      - action: cloudformation:DescribeStackResources
+        resource: "*"
+      - action: cloudformation:DescribeStackResource
+        resource: "*"
+      - action: autoscaling:DescribeAutoScalingGroups
+        resource: "*"
+      - action: autoscaling:SuspendProcesses
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: elasticbeanstalk_environment
+    scope: same_account
+    aggregate_as: "Instance-profile roles of updatable Beanstalk environments in {account}"
+  conditions:
+    - id: bundle_readable_by_environment
+      description: The source bundle must be in a location the deployment can read (e.g. an attacker-owned bucket made readable to the victim account).
+    - id: deployment_policy_permissions
+      description: Depending on the environment's deployment policy, additional Auto Scaling/EC2/ELB permissions may be required.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict elasticbeanstalk:CreateApplicationVersion and UpdateEnvironment to the deployment pipeline on specific applications and environments.
+  references:
+    - https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/applications-versions.html
+  notes: Reach is the instance profile of the environments covered by UpdateEnvironment.

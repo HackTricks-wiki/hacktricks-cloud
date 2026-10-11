@@ -1,0 +1,48 @@
+# Amazon CloudWatch Synthetics privilege escalation techniques.
+# Source: hacktricks-cloud aws-synthetics-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-synthetics-startcanarydryrun-replacement-code
+  provider: aws
+  service: synthetics
+  title: Dry-run replacement canary code under the canary's execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md#dry-run-replacement-code--passrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of an existing canary.
+  requires:
+    all_of:
+      - action: synthetics:StartCanaryDryRun
+        resource: "{target.resource_arn}"
+      - action: lambda:GetFunctionConfiguration
+        resource: "*"
+      - action: lambda:PublishLayerVersion
+        resource: "*"
+      - action: lambda:GetLayerVersion
+        resource: "*"
+      - action: lambda:UpdateFunctionConfiguration
+        resource: "*"
+      - action: lambda:PublishVersion
+        resource: "*"
+      - action: lambda:AddPermission
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: lambda.amazonaws.com
+      via_resource_type: synthetics_canary
+    scope: same_account
+    aggregate_as: "Execution roles of Synthetics canaries in {account}"
+  conditions:
+    - id: generated_function_scope
+      description: The Lambda permissions must cover the canary's generated cwsyn-<canary>-<uuid> function and layer (and GetLayerVersion the AWS Synthetics runtime layer); PassRole must cover the canary's existing role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: high
+  mitigation: Restrict synthetics:StartCanaryDryRun and iam:PassRole on canary roles to monitoring administrators, and keep canary roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/AmazonSynthetics/latest/APIReference/API_StartCanaryDryRun.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_synthetics.html
+  notes: The source's Lambda UpdateFunctionConfiguration on the generated function is itself an edge (lambda.yaml) to the same role; this entry is the supported Synthetics path.

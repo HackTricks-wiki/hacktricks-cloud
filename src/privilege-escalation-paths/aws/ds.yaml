@@ -1,0 +1,34 @@
+# AWS Directory Service privilege escalation techniques.
+# Source: hacktricks-cloud aws-directory-services-privesc/README.md.
+
+- id: aws-ds-resetuserpassword
+  provider: aws
+  service: ds
+  title: Reset the password of a directory user with Management Console access
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#dsresetuserpassword
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of IAM roles that directory users/groups are mapped to for console access by resetting a mapped user's password.
+  requires:
+    all_of:
+      - action: ds:ResetUserPassword
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ds.amazonaws.com
+      attached_resource_covered_by: ds:ResetUserPassword
+    scope: same_account
+    aggregate_as: "Console-access roles of directories covered by ds:ResetUserPassword in {account}"
+  conditions:
+    - id: console_access_enabled
+      description: The directory must have AWS Management Console access enabled with the role assigned to users or groups.
+    - id: reset_supported
+      description: ResetUserPassword works on AWS Managed Microsoft AD and Simple AD, not on AD Connector; users in protected groups (e.g. Domain Admins) cannot be reset.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ds:ResetUserPassword and limit roles assigned for directory console access.
+  references:
+    - https://docs.aws.amazon.com/directoryservice/latest/devguide/ms_ad_manage_app_access_console.html
+  notes: Target set is only roles assigned in the directory's console-access configuration, not every role trusting ds.amazonaws.com.

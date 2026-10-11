@@ -1,0 +1,47 @@
+# Intune techniques (declarative only). Source: hacktricks-cloud az-intune-privesc.md (rev 171e422).
+# Only the users of managed devices are modelled as targets: SYSTEM/root on an endpoint is not a cloud
+# principal, so the device itself is not a target kind. Facts needed (not collected yet -> unknown):
+# intune_role_assignment {members[], roleDefinition.displayName, roleDefinition.rolePermissions[].resourceActions[]
+# .allowedResourceActions[]} and intune_managed_device {id, userId}.
+
+- id: azure-intune-managed-device-user-code-execution
+  provider: azure
+  service: intune
+  title: Push a SYSTEM script or app to managed devices and take over their users' sessions
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-intune-privesc.md#fleet-rce-via-platform-scripts-system-over-graph
+  source_revision: 171e422
+  summary: A principal that can create and assign Intune platform scripts, shell scripts or Win32 apps runs code as SYSTEM/root on targeted managed devices and can steal the tokens of the users signed in to them.
+  requires:
+    all_of: []
+    any_of:
+      - - intune_permission: Microsoft.Intune_DeviceConfigurations_Assign
+      - - intune_permission: Microsoft.Intune_MobileApps_Assign
+      - - entra_role: Intune Administrator
+      - - entra_role: Global Administrator
+      - - graph_app_permission: DeviceManagementScripts.ReadWrite.All
+      - - graph_app_permission: DeviceManagementConfiguration.ReadWrite.All
+      - - graph_app_permission: DeviceManagementApps.ReadWrite.All
+  target:
+    kind: azure_user
+    selector:
+      intune_managed_device_user: true
+    scope: tenant
+    aggregate_as: "Primary users of Intune-managed devices in {scope}"
+    outcome: credentials
+  conditions:
+    - id: device_session_not_verified
+      description: The user is the device's primary user; the user must actually sign in (or have a cached session / PRT) on the device while the payload runs.
+    - id: intune_scope_tags_not_evaluated
+      description: Intune RBAC scope groups and scope tags limit which devices a role assignment can target; not evaluated.
+    - id: create_and_assign_needed
+      description: The Intune RBAC alternatives assume the role also allows creating or updating the script / app (Create / Update next to Assign); modifying an existing assigned script needs Update only.
+  blockers:
+    - intune_multi_admin_approval_required
+  confidence: conditional
+  severity: high
+  mitigation: Enable Intune Multi Admin Approval for scripts, apps and RBAC, scope Intune roles with scope tags, keep privileged access workstations in a separate Intune scope, and treat DeviceManagement*.ReadWrite.All as Tier 0.
+  references:
+    - https://learn.microsoft.com/en-us/mem/intune/apps/intune-management-extension
+    - https://learn.microsoft.com/en-us/mem/intune/fundamentals/role-based-access-control
+    - https://learn.microsoft.com/en-us/mem/intune/fundamentals/multi-admin-approval
+  notes: Also covers the portal path (Cloud -> On-Prem), macOS shell scripts / Win32 apps and the Intune Administrator -> Global Administrator chain (a privileged user signing in to a managed PAW). Users who merely sign in to a device without being its primary user are not visible in the collected facts.

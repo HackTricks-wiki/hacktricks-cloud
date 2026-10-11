@@ -1,0 +1,41 @@
+# AWS Cloud Control API privilege escalation techniques.
+# Source: hacktricks-cloud aws-cloudcontrol-privesc/README.md (rev 171e422299).
+# Cloud Control API actions use the cloudformation: IAM prefix.
+
+- id: aws-cloudcontrol-passrole-createresource
+  provider: aws
+  service: cloudcontrol
+  title: Create or update a resource through Cloud Control API with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudcontrol-privesc/README.md#cloudformationcreateresource-or-updateresource--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting cloudformation.amazonaws.com, because Cloud Control performs the resource operation it requests (for example creating an IAM principal) with the passed role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: cloudformation:CreateResource
+          resource: "*"
+      - - action: cloudformation:UpdateResource
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: cloudformation.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting cloudformation.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions on the PassRole grant may exclude cloudformation.amazonaws.com.
+    - id: resource_type_supported
+      description: The useful resource type (for example AWS::IAM::Role) must support Cloud Control operations; the passed role's own permissions bound what can be created or changed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on CloudFormation service roles with iam:PassedToService and specific role ARNs; deny cloudformation:CreateResource/UpdateResource to principals that should not provision resources directly.
+  references:
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/userguide/resource-operations.html
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/APIReference/API_CreateResource.html
+  notes: Verified in the Cloud Control user guide (Specifying credentials) that a RoleArn is assumed by cloudformation.amazonaws.com, so the reachable set is the same role population as CloudFormation stack PassRole. Without RoleArn the operation uses the caller's own credentials (no edge). Operations only target the caller's own account.

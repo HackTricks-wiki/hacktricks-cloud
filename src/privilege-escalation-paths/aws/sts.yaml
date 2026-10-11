@@ -1,0 +1,209 @@
+# AWS STS / IAM Roles Anywhere privilege escalation techniques.
+# Source: hacktricks-cloud aws-sts-privesc/README.md.
+
+- id: aws-sts-assumerole-trusted
+  provider: aws
+  service: sts
+  title: Assume a role whose trust policy allows the source
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumerole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of every role whose trust policy allows the source (or its account) and that its identity policy lets it assume.
+  requires:
+    all_of:
+      - action: sts:AssumeRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_principal_of_source: true
+    scope: any
+    aggregate_as: "Roles assumable by the source"
+  conditions:
+    - id: trust_names_principal_directly
+      description: For a same-account trust that names the source principal ARN directly, the identity-policy sts:AssumeRole grant is not required. Trusts naming only the account root require it; cross-account always requires it.
+    - id: trust_conditions
+      description: Trust conditions such as sts:ExternalId, aws:MultiFactorAuthPresent, sts:SourceIdentity, aws:PrincipalOrgID or aws:SourceIp may block the assumption.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Trust specific principal ARNs (not account roots or "*"), add aws:PrincipalOrgID / ExternalId / MFA conditions, and limit sts:AssumeRole Resources.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
+  notes: Severity is critical only when an assumable role is admin-equivalent. Role chaining is handled by the evaluator through repeated edges.
+
+- id: aws-rolesanywhere-updatetrustanchor
+  provider: aws
+  service: rolesanywhere
+  title: Replace the CA of an IAM Roles Anywhere trust anchor
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#rolesanywhereupdatetrustanchor--replace-the-trusted-ca-and-mint-role-sessions
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of every role in an enabled Roles Anywhere profile that accepts certificates from a trust anchor whose CA the source can replace.
+  requires:
+    all_of:
+      - action: rolesanywhere:UpdateTrustAnchor
+        resource: "{target.trust_anchor_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: rolesanywhere.amazonaws.com
+      rolesanywhere_profile_includes_target: true
+    scope: same_account
+    aggregate_as: "Roles reachable through Roles Anywhere trust anchors covered by rolesanywhere:UpdateTrustAnchor in {account}"
+  conditions:
+    - id: trust_conditions_on_cert_attributes
+      description: Role trust conditions on aws:PrincipalTag/x509Subject/* or a specific trust-anchor ARN must be satisfiable by a certificate the source issues; usually they are.
+    - id: anchor_and_profile_enabled
+      description: The trust anchor and the profile must be enabled (enabling them needs rolesanywhere:EnableTrustAnchor / EnableProfile).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict rolesanywhere:UpdateTrustAnchor/CreateTrustAnchor to administrators and pin aws:SourceArn of the trust anchor plus certificate-subject conditions in role trusts.
+  references:
+    - https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html
+  notes: "Requires placeholder {target.trust_anchor_arn}: the trust anchor whose certificates the target role's profile accepts. Profile session policies / managed policies can further reduce the obtained permissions."
+
+- id: aws-rolesanywhere-updateprofile-remove-session-policy
+  provider: aws
+  service: rolesanywhere
+  title: Remove the session-policy restriction of an IAM Roles Anywhere profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#rolesanywhereupdateprofile--remove-the-session-policy-boundary
+  source_revision: 171e422299
+  summary: A source that holds a certificate accepted by an enabled trust anchor can obtain the full permissions of a role in a Roles Anywhere profile by removing the profile's managed session policies or replacing its restrictive inline session policy.
+  requires:
+    all_of:
+      - action: rolesanywhere:UpdateProfile
+        resource: "{target.rolesanywhere_profile_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: rolesanywhere.amazonaws.com
+      rolesanywhere_profile_includes_target: true
+    scope: same_account
+    aggregate_as: "Roles in Roles Anywhere profiles covered by rolesanywhere:UpdateProfile in {account}"
+  conditions:
+    - id: holds_trusted_certificate
+      description: The source must already hold a private key and certificate accepted by an enabled trust anchor and by the target role's trust policy; UpdateProfile alone mints no credentials.
+    - id: profile_session_policy_restricts
+      description: Only an escalation when the profile's inline or managed session policies currently reduce the role's permissions; the ceiling is the role's own effective permissions.
+    - id: role_list_unchanged
+      description: No iam:PassRole is needed as long as the role list of the profile is not changed; adding a role to the profile needs iam:PassRole on it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict rolesanywhere:UpdateProfile to administrators, scope it to exact profile ARNs and alert on profile session-policy changes.
+  references:
+    - https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_UpdateProfile.html
+  notes: "The requirement is on {target.rolesanywhere_profile_arn}: the enabled rolesanywhere_profile entries (rolesanywhere:ListProfiles roleArns) listing the role, which also decide rolesanywhere_profile_includes_target. Accounts whose profiles were not fully collected keep the profile ARN and membership unknown. Whether a session policy currently restricts the role and whether the source holds an accepted certificate are not collected, so the edge stays conditional."
+
+- id: aws-rolesanywhere-attributemapping-negative-trust-condition
+  provider: aws
+  service: rolesanywhere
+  title: Remove a certificate attribute mapping that a negative role-trust condition relies on
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#rolesanywheredeleteattributemapping--putattributemapping--exploit-missing-certificate-tags
+  source_revision: 171e422299
+  summary: A source that holds a trusted certificate can obtain a Roles Anywhere profile role whose trust denies that certificate only through a negative or IfExists condition on an x509 principal tag, by removing the attribute mapping that produces the tag.
+  requires:
+    any_of:
+      - - action: rolesanywhere:DeleteAttributeMapping
+          resource: "*"
+      - - action: rolesanywhere:PutAttributeMapping
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: rolesanywhere.amazonaws.com
+      rolesanywhere_profile_includes_target: true
+    scope: same_account
+    aggregate_as: "Roles in Roles Anywhere profiles whose attribute mappings the source can change in {account}"
+  conditions:
+    - id: holds_trusted_certificate
+      description: The source must already hold a private key and certificate accepted by an enabled trust anchor and listed profile.
+    - id: negative_trust_condition
+      description: The role trust must evaluate an aws:PrincipalTag/x509* key with a negative operator (StringNotEquals, StringNotLike) or an IfExists operator that grants access when the tag is absent; positive StringEquals conditions fail closed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Use positive StringEquals conditions on certificate attributes plus aws:SourceArn of the trust anchor in role trusts, and restrict attribute-mapping changes to administrators.
+  references:
+    - https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html
+  notes: "No iam:PassRole is needed. Trust-condition shape is not analysed by the evaluator, so the edge is conditional."
+
+- id: aws-sts-assumeroot-member-accounts
+  provider: aws
+  service: sts
+  title: Obtain a privileged root-user session in a member account with sts:AssumeRoot
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumeroot--privileged-root-sessions-into-any-member-account
+  source_revision: 171e422299
+  summary: A principal in the management account or the IAM delegated-administrator account can open short root sessions in member accounts, limited to AWS-managed task policies that can reset root credentials and unlock resource policies.
+  requires:
+    all_of:
+      - action: sts:AssumeRoot
+        resource: "arn:aws:iam::{target.account}:root"
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+      org_member_account: true
+    scope: org
+    aggregate_as: "Member accounts reachable through centralized root sessions"
+  conditions:
+    - id: source_in_management_or_delegated_admin
+      description: The source must be in the organization management account or the account registered as IAM delegated administrator; the management account itself cannot be targeted.
+    - id: root_sessions_enabled
+      description: Centralized root access (RootSessions) must be enabled for the organization; from the management account it can be enabled with organizations:EnableAWSServiceAccess, iam:EnableOrganizationsRootCredentialsManagement and iam:EnableOrganizationsRootSessions.
+    - id: task_policy_scope
+      description: Each session is scoped to one task policy (IAMAuditRootUserCredentials, IAMCreateRootUserPassword, IAMDeleteRootUserCredentials, S3UnlockBucketPolicy, SQSUnlockQueuePolicy) and lasts at most 900 seconds; full root control needs IAMCreateRootUserPassword followed by a root sign-in.
+    - id: task_policy_condition_keys
+      description: sts:TaskPolicyArn conditions on the grant can restrict which task policies the source may request.
+  preconditions:
+    - target_in_other_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict sts:AssumeRoot to break-glass roles in the management / delegated-admin account, constrain sts:TaskPolicyArn, and alert on AssumeRoot events.
+  references:
+    - https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user-privileged-task.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html
+  notes: Root password recovery for member accounts may still face root MFA when it is configured; SCPs apply to member-account root users.
+
+- id: aws-rolesanywhere-createtrustanchor-createprofile-passrole
+  provider: aws
+  service: rolesanywhere
+  title: Create an attacker-CA Roles Anywhere trust anchor and a profile listing a passed role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence/README.md#iam-roles-anywhere-trust-anchor-backdoor-rolesanywherecreatetrustanchor--createprofile
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting rolesanywhere.amazonaws.com by registering a trust anchor for a CA it controls and a profile that lists the role, then creating sessions with certificates it signs.
+  requires:
+    all_of:
+      - action: rolesanywhere:CreateTrustAnchor
+        resource: "*"
+      - action: rolesanywhere:CreateProfile
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: rolesanywhere.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Passable roles trusting IAM Roles Anywhere in {account}"
+  conditions:
+    - id: trust_conditions_satisfiable
+      description: Role trust conditions on the trust-anchor ARN (aws:SourceArn) or certificate attributes (aws:PrincipalTag/x509Subject/*) must accept the new anchor and certificates the source issues.
+    - id: anchor_and_profile_enabled
+      description: The trust anchor and profile must be enabled at creation or later (rolesanywhere:EnableTrustAnchor / EnableProfile).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict rolesanywhere:CreateTrustAnchor and CreateProfile to administrators, constrain iam:PassRole for rolesanywhere.amazonaws.com, and pin aws:SourceArn of approved trust anchors in role trust policies.
+  references:
+    - https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html
+  notes: Only roles whose trust policy already allows rolesanywhere.amazonaws.com are reached; adding that trust is a separate trust-policy edge. The profile session policy can reduce the obtained permissions.

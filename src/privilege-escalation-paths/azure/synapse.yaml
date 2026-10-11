@@ -1,0 +1,67 @@
+# Azure Synapse techniques (declarative only).
+# Source: hacktricks-cloud az-synapse-privesc.md (rev 171e422).
+
+- id: azure-synapse-entra-admin-write
+  provider: azure
+  service: synapse
+  title: Replace the Synapse workspace Entra administrator
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#replace-the-workspace-microsoft-entra-administrator
+  source_revision: 171e422
+  summary: The source can obtain SQL sysadmin on the Synapse workspace dedicated SQL endpoint.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Synapse/workspaces/administrators/write
+          scope: "{target.scope}"
+      - - action: Microsoft.Synapse/workspaces/sqlAdministrators/write
+          scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Synapse SQL admins of {target.scope}"
+  conditions:
+    - id: sql_endpoint_reachable
+      description: Workspace firewall or private networking must allow the source to reach the SQL endpoint.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Restrict administrators/write and sqlAdministrators/write and alert on Entra admin changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/synapse-analytics/security/how-to-set-up-access-control
+  notes: Tested only for the dedicated SQL endpoint; does not grant Synapse RBAC administrator or serverless SQL access.
+
+- id: azure-synapse-bigdatapools-write-spark-poisoning
+  provider: azure
+  service: synapse
+  title: Poison a Synapse Spark pool configuration to run code as the workspace identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#spark-pool-poisoning-via-workspacesbigdatapoolswrite
+  source_revision: 171e422
+  summary: Changing a Spark pool's library requirements or Spark configuration makes later sessions on that pool run attacker-chosen code, which can obtain tokens for the workspace managed identity when jobs run under it.
+  requires:
+    all_of:
+      - action: Microsoft.Synapse/workspaces/bigDataPools/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Synapse/workspaces
+    scope: inherited_scope
+    aggregate_as: "Managed identity of Synapse workspace {target.host_resource}"
+  conditions:
+    - id: later_spark_run
+      description: The code runs only when a Spark session or pipeline starts on the poisoned pool after the change; the source cannot trigger it with this action alone.
+    - id: run_identity
+      description: Pipeline-triggered notebooks and Spark job definitions run as the workspace managed identity; interactive sessions run as the signed-in user, which is not derivable.
+    - id: package_source_reachable
+      description: The pool must be able to fetch the attacker package or configuration source (data exfiltration protection and managed VNet rules can block it).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigDataPools/write, enable data exfiltration protection, review pool library and configuration changes, and keep the workspace identity least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/synapse-analytics/spark/apache-spark-manage-pool-packages
+    - https://learn.microsoft.com/en-us/azure/synapse-analytics/synapse-service-identity
+  notes: Only the workspace system-assigned identity and user-assigned identities on the workspace are modelled; user-session credentials are not.

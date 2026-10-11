@@ -1,0 +1,72 @@
+# GCP Cloud Tasks privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudtasks-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# HTTP tasks with an OAuth token make attacker-defined requests to *.googleapis.com as the SA (token minted by the Cloud
+# Tasks service agent; actAs is enforced at enqueue, also for queue-level overrides). OIDC-only paths are excluded.
+
+- id: gcp-cloudtasks-tasks-create-actas
+  provider: gcp
+  service: cloudtasks
+  title: Enqueue HTTP tasks authenticated as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudtasks-privesc.md#cloudtaskstaskscreate-iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: cloudtasks.tasks.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Tasks OAuth identity in {project}"
+  conditions:
+    - id: oauth_request_level
+      description: Full SA privileges are reached through OAuth-authenticated requests to *.googleapis.com, one predefined request per task, with no token returned to the source.
+    - id: existing_queue
+      description: Needs a queue in the project where tasks.create holds (or queue create rights).
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on specific SAs; roles/editor bundles tasks.create and actAs.
+  references:
+    - https://cloud.google.com/tasks/docs/creating-http-target-tasks
+  notes: HackTricks emphasises the OIDC path (audience-bound, exfiltratable) and states the OAuth path can only drive Google APIs directly; this entry models the OAuth path.
+
+- id: gcp-cloudtasks-queues-setiampolicy-actas
+  provider: gcp
+  service: cloudtasks
+  title: Self-grant Cloud Tasks admin on a queue and enqueue authenticated tasks
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudtasks-privesc.md#cloudtasksqueuessetiampolicy
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by self-granting task creation on a queue.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: cloudtasks.queues.setIamPolicy
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable via self-granted Cloud Tasks queues in {project}"
+  conditions:
+    - id: existing_queue
+      description: Needs an existing queue on which setIamPolicy holds.
+    - id: oauth_request_level
+      description: SA privileges are exercised through OAuth requests to *.googleapis.com.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Restrict cloudtasks.queues.setIamPolicy (roles/cloudtasks.queueAdmin, roles/cloudtasks.admin) and actAs grants.
+  notes: actAs is still enforced at enqueue, so the queue self-grant alone does not reach any SA.

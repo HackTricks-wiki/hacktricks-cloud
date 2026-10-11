@@ -1,0 +1,39 @@
+# GCP Agent Registry privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-agent-registry-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: agentregistry_skill_consumer -> runtime identity of a managed agent / environment that mounts the
+#   logical Skill in "{target.artifact_arn}" (floating defaultRevision); agent mount inventory is not collected.
+
+- id: gcp-agentregistry-skill-default-revision-replace
+  provider: gcp
+  service: agentregistry
+  title: Replace the default revision of a Skill mounted by agents
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryskillrevisionscreate--agentregistryskillsupdate--replace-an-executable-skills-default-revision
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the runtime identity of agents that mount a Skill whose revisions and default pointer it can change.
+  requires:
+    all_of:
+      - action: agentregistry.skillRevisions.create
+        resource: "{target.artifact_arn}"
+      - action: agentregistry.skills.update
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: agentregistry_skill_consumer
+    scope: any
+    aggregate_as: "Runtime identities of agents mounting Skills the source can repoint"
+  conditions:
+    - id: floating_mount
+      description: The agent must mount the logical Skill (default revision); agents pinned to an immutable revision are unaffected.
+    - id: execution_on_load
+      description: The replacement only runs when the agent loads and executes it; refresh, snapshots and caching decide timing, and the agent sandbox and egress policy bound the result.
+    - id: runtime_identity
+      description: The runtime identity can be an Agent Identity principal rather than a service account.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/agentregistry.user, editor and admin on Skills, pin agents to immutable revisions and keep security scanning enabled.
+  notes: Preview service. serviceusage.services.use on the quota project is also needed.

@@ -1,0 +1,72 @@
+# Azure Spring Apps techniques (declarative only).
+# Source: hacktricks-cloud az-spring-apps-privesc.md (rev 171e422).
+# Action names checked against Microsoft's Spring Apps custom-role permission lists (how-to-permissions).
+# App identities live on Microsoft.AppPlatform/Spring/apps; {target.host_resource} is that app.
+
+- id: azure-springapps-deployment-write-app-identity
+  provider: azure
+  service: spring_apps
+  title: Change a Spring Apps deployment to run attacker code as the app's managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#app-deploy-rce--managed-identity-theft-marquee
+  source_revision: 171e422
+  summary: The source can run code inside a Spring app and obtain the privileges of the managed identities attached to that app.
+  requires:
+    all_of:
+      - action: Microsoft.AppPlatform/Spring/apps/deployments/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.AppPlatform/Spring/apps
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Spring app {target.host_resource}"
+  conditions:
+    - id: code_source
+      description: Code reaches the app through a new artifact (upload URL from apps/getResourceUploadUrl/action, or Enterprise buildServices upload plus builds/write), a custom container image from a reachable registry, or a JVM option / environment variable on the existing deployment that loads code already present or mountable in the container.
+    - id: deployment_running
+      description: The modified deployment must be started or restarted (deployments/write normally triggers a rollout).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict apps/deployments/write to deployment pipelines, keep Spring app identities least-privileged, and alert on deployment changes to jvmOptions, environment variables or container images.
+  references:
+    - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
+    - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-enable-system-assigned-managed-identity
+  notes: Covers system- and user-assigned app identities. Updating an existing deployment needs only deployments/write; apps/write is not required. Azure Spring Apps Basic/Standard/Enterprise are in a retirement period ending 2028.
+
+- id: azure-springapps-app-write-user-assigned-identity
+  provider: azure
+  service: spring_apps
+  title: Create or update a Spring app with a user-assigned identity and deploy code to it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#app-deploy-rce--managed-identity-theft-marquee
+  source_revision: 171e422
+  summary: The source can attach a user-assigned identity it may assign to a Spring app and run code as that identity.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.AppPlatform/Spring/apps/write
+        scope: "{pivot}"
+      - action: Microsoft.AppPlatform/Spring/apps/deployments/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.AppPlatform/Spring
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: code_source
+      description: Code reaches the app through an uploaded artifact, a custom container image, or deployment JVM options / environment variables.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and Spring apps/write; keep user-assigned identities scoped to the workloads that need them.
+  references:
+    - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
+    - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-manage-user-assigned-managed-identities
+  notes: The pivot is a Spring Apps service instance; the new or updated app is its child.

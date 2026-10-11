@@ -1,0 +1,167 @@
+# GCP Artifact Registry privilege escalation techniques (supply chain into workloads that pull artifacts).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-artifact-registry-privesc.md (rev 171e422); gcr.io squat and dependency confusion now live on gcp-persistence/gcp-artifact-registry-persistence.md.
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: artifact_consumer -> run-as SA of any workload (GKE node/KSA-bound GSA, Cloud Run, Cloud Build, VM,
+# Batch, Vertex, ...) whose image/package reference resolves to the repository in "{target.artifact_arn}". The consumer
+# mapping must come from collected workload specs; pinned-digest references are not affected.
+
+- id: gcp-artifactregistry-upload-artifacts
+  provider: gcp
+  service: artifactregistry
+  title: Push a malicious image or package version consumed by a privileged workload
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriesuploadartifacts--poison-an-artifact-consumed-by-a-privileged-workload
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the run-as service accounts of workloads that pull mutable tags or unpinned versions from repositories where it holds artifactregistry.repositories.uploadArtifacts.
+  requires:
+    all_of:
+      - action: artifactregistry.repositories.uploadArtifacts
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: artifact_consumer
+    scope: any
+    aggregate_as: "Run-as SAs of workloads consuming writable Artifact Registry repositories"
+  conditions:
+    - id: mutable_reference
+      description: The consumer must reference a tag (Docker image re-tagged on push) or an unpinned package version range; digest-pinned references are unaffected. Package formats such as Python reject re-uploading an existing version.
+    - id: redeploy
+      description: Takes effect only when the consumer next pulls (new revision, scale-out, node recreation, build run).
+    - id: immutable_tags
+      description: Repositories with immutable tags enabled reject re-tagging an existing tag.
+    - id: binary_authorization
+      description: Binary Authorization / signature verification on the consumer blocks unsigned images.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/artifactregistry.writer, enable immutable tags, pin consumers to digests and enforce Binary Authorization.
+  references:
+    - https://cloud.google.com/iam/docs/roles-permissions/artifactregistry
+  notes: Replacing a stored image does NOT change already-deployed Cloud Functions or App Engine versions (HackTricks); those consumers should not be mapped.
+
+- id: gcp-artifactregistry-tags-update
+  provider: gcp
+  service: artifactregistry
+  title: Repoint a mutable tag to an attacker digest already in the package
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistrytagsupdate--repoint-a-mutable-tag-to-another-stored-version
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the run-as service accounts of workloads that pull mutable tags from repositories where it holds artifactregistry.tags.update and an attacker digest exists in the package.
+  requires:
+    all_of:
+      - action: artifactregistry.tags.update
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: artifact_consumer
+    scope: any
+    aggregate_as: "Run-as SAs of workloads consuming writable Artifact Registry repositories"
+  conditions:
+    - id: digest_present
+      description: A tag can only point to a version within the same package; an attacker-controlled or older vulnerable version must already be stored there (an attacker version normally requires uploadArtifacts).
+    - id: immutable_tags
+      description: Repositories with immutable tags enabled reject the repoint.
+    - id: redeploy
+      description: Takes effect only when the consumer next pulls the tag.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Enable immutable tags and pin consumers to digests.
+
+- id: gcp-artifactregistry-repositories-setiampolicy
+  provider: gcp
+  service: artifactregistry
+  title: Self-grant writer on a repository through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriessetiampolicy--self-grant-control-of-a-repository
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the run-as service accounts of workloads consuming repositories whose IAM policy it controls.
+  requires:
+    all_of:
+      - action: artifactregistry.repositories.setIamPolicy
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: artifact_consumer
+    scope: any
+    aggregate_as: "Run-as SAs of workloads consuming Artifact Registry repositories whose IAM the source controls"
+  conditions:
+    - id: followup_upload
+      description: The self-granted writer role is then used as in gcp-artifactregistry-upload-artifacts, with the same mutable-reference and redeploy conditions.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict artifactregistry.repositories.setIamPolicy (roles/artifactregistry.admin, roles/owner).
+  notes: Public exposure through allUsers bindings is a data-exposure outcome and not modelled.
+
+- id: gcp-artifactregistry-gcrio-namespace-squat
+  provider: gcp
+  service: artifactregistry
+  title: Create the missing gcr.io-named repository to claim a redirected legacy namespace
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md#squat-the-legacy-gcrio-namespace-as-a-permanent-backdoor---artifactregistryrepositoriescreate
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the run-as service accounts of workloads that still pull gcr.io references of projects where it holds artifactregistry.repositories.create.
+  requires:
+    all_of:
+      - action: artifactregistry.repositories.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: artifact_consumer
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Run-as SAs of workloads pulling gcr.io references of {project}"
+  conditions:
+    - id: redirection_enabled
+      description: The project must have gcr.io redirection to Artifact Registry enabled and the host-named repository (gcr.io, us.gcr.io, eu.gcr.io, asia.gcr.io) must not exist yet.
+    - id: legacy_consumers
+      description: Workloads must still reference gcr.io/<project>/... by tag and repull after the squat.
+    - id: push_after_create
+      description: Pushing into the new repository additionally needs uploadArtifacts (the creator normally holds it).
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Create the gcr.io-named repositories in every migrated project and restrict artifactregistry.repositories.create.
+  notes: roles/artifactregistry.createOnPushWriter can create the repository implicitly on first push.
+
+- id: gcp-artifactregistry-repositories-update-dependency-confusion
+  provider: gcp
+  service: artifactregistry
+  title: Reconfigure a virtual repository's upstreams to enable dependency confusion
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md#dependency-confusion
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the run-as service accounts of workloads that install packages through virtual repositories where it holds artifactregistry.repositories.update.
+  requires:
+    all_of:
+      - action: artifactregistry.repositories.update
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: artifact_consumer
+    scope: any
+    aggregate_as: "Run-as SAs of package consumers of updatable virtual repositories"
+  conditions:
+    - id: public_publish
+      description: Requires publishing a higher package version under the internal package name in the public registry the remote upstream proxies.
+    - id: install_at_build
+      description: The consumer must install unpinned versions through the virtual repository (typically CI/CD builds) after the change.
+    - id: immutable_tags_toggle
+      description: The same permission disables immutable tags, enabling gcp-artifactregistry-tags-update on Docker repositories.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict artifactregistry.repositories.update (roles/artifactregistry.admin, roles/editor) and pin package versions with hashes.
+  notes: HackTricks frames this as a persistence method; the escalation depends on a consumer installing after the change. The variant of a remote repository pointed at an attacker-controlled upstream URL (persistence page) additionally needs artifactregistry.repositories.create and only matters once a consumed virtual repository lists it as an upstream, which is this same update permission.

@@ -1,0 +1,80 @@
+# AWS Migration Hub and Migration Hub Orchestrator privilege escalation techniques.
+# Source: hacktricks-cloud aws-migration-hub-privesc/README.md and aws-migration-hub-orchestrator-privesc/README.md (rev 171e422299).
+
+- id: aws-mgh-passrole-automation-unit
+  provider: aws
+  service: mgh
+  title: Run a custom Migration Hub automation unit with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-migration-hub-privesc/README.md#migration-hub-automation-custom-unit--passrole---execute-as-a-more-privileged-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting migrationhub.amazonaws.com through an automation unit whose runtime target it controls.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: mgh:CreateAutomationUnit
+        resource: "*"
+      - action: mgh:AssociateAutomationUnitRole
+        resource: "*"
+      - action: mgh:CreateAutomationRun
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: migrationhub.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting migrationhub.amazonaws.com passable in {account}"
+  conditions:
+    - id: preview_region
+      description: The preview feature is available only in us-east-1 with a us-east-1 Migration Hub home Region.
+    - id: controlled_runtime_target
+      description: The unit must target an SSM Automation document or Lambda function the source controls; SSM targets also need the role to trust ssm.amazonaws.com.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Migration Hub service roles with iam:PassedToService and limit automation-unit creation and runs to migration administrators.
+  references:
+    - https://docs.aws.amazon.com/migrationhub/latest/ug/automation.html
+  notes: The Migration Hub Automation guide warns that a user with these four permissions can perform any action the service role allows.
+
+- id: aws-migrationhub-orchestrator-workflow-step
+  provider: aws
+  service: migrationhub-orchestrator
+  title: Add or change a workflow step that runs a script on managed nodes
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-migration-hub-orchestrator-privesc/README.md#createworkflowstep--startworkflow---execute-an-s3-script-through-the-orchestrator-service-role
+  source_revision: 171e422299
+  summary: The source can run commands on SSM-managed EC2 instances through the Orchestrator service-linked role and obtain their instance-profile roles.
+  requires:
+    any_of:
+      - - action: migrationhub-orchestrator:CreateWorkflowStep
+          resource: "*"
+        - action: migrationhub-orchestrator:StartWorkflow
+          resource: "*"
+      - - action: migrationhub-orchestrator:UpdateWorkflowStep
+          resource: "*"
+        - action: migrationhub-orchestrator:RetryWorkflowStep
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+  conditions:
+    - id: script_in_prefixed_bucket
+      description: The script must be in a migrationhub-orchestrator-* bucket (s3:PutObject there, or an existing usable script).
+    - id: workflow_state
+      description: An existing workflow in a state that can be changed and started (or a failed custom step for the retry variant), and the service-linked role, must exist.
+    - id: instance_managed
+      description: The selected EC2 target must be an online SSM-managed node.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workflow-step create/update/start/retry actions to migration administrators and restrict writes to migrationhub-orchestrator-* buckets.
+  references:
+    - https://docs.aws.amazon.com/migrationhub-orchestrator/latest/userguide/security-iam-awsmanpol.html
+  notes: No iam:PassRole or ssm:SendCommand is needed; the service-linked role runs AWS-RunRemoteScript. Covers the existing-step variant (UpdateWorkflowStep + RetryWorkflowStep).

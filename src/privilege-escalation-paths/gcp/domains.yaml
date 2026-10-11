@@ -1,0 +1,33 @@
+# GCP Cloud Domains privilege escalation techniques.
+# Source: hacktricks-cloud gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md (rev 171e422).
+# Needs the domains_registration inventory {name, domainName} (not collected yet -> unresolved placeholders).
+
+- id: gcp-domains-configuredns-workspace-admin-recovery
+  provider: gcp
+  service: domains
+  title: Repoint a Cloud Domains registration's name servers to recover the Workspace super administrator
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md#domainsregistrationsconfiguredns--redirect-authoritative-dns
+  source_revision: 171e422
+  summary: The source can obtain the privileges of Workspace super administrators of tenants whose primary domain is a Cloud Domains registration whose DNS settings it can change.
+  requires:
+    all_of:
+      - action: domains.registrations.configureDns
+        resource: "{target.domain_registration}"
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_workspace_super_admin_with_registered_domain: true
+    scope: any
+    aggregate_as: "Workspace super administrators of domains registered in Cloud Domains"
+  conditions:
+    - id: dnssec
+      description: Published DS records must be removed and aged out first, otherwise the change breaks resolution instead of redirecting it.
+    - id: recovery_process
+      description: Depends on Google's administrator-recovery process accepting the DNS domain-verification challenge for the tenant.
+    - id: attacker_name_servers
+      description: The source must operate the replacement authoritative name servers.
+  blockers: [gcp_deny_policy]
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict domains.registrations.configureDns on registrations of Workspace domains and monitor name-server changes and admin-recovery events.
+  notes: Same end state as gcp-workspace-cloud-dns-admin-recovery, with the registration (not a Cloud DNS zone) as the control point.

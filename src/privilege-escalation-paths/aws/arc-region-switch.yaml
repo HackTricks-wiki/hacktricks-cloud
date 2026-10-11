@@ -1,0 +1,43 @@
+# Amazon Application Recovery Controller (ARC) Region switch privilege escalation techniques.
+# Source: hacktricks-cloud aws-region-switch-privesc/README.md (rev 171e422299).
+
+- id: aws-arc-region-switch-passrole-createplan
+  provider: aws
+  service: arc-region-switch
+  title: Create or update a Region switch plan with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-region-switch-privesc/README.md#arc-region-switchcreateplan--updateplan--iampassrole--run-steps-as-the-execution-role
+  source_revision: 171e422299
+  summary: The source can have ARC perform the plan step types (database failover, Route 53 changes, capacity scaling, Lambda invocation, routing controls) with the privileges of a passable role trusting arc-region-switch.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: arc-region-switch:CreatePlan
+          resource: "*"
+      - - action: arc-region-switch:UpdatePlan
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: arc-region-switch.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting arc-region-switch.amazonaws.com passable in {account}"
+  conditions:
+    - id: plan_execution
+      description: The plan must run, via arc-region-switch:StartPlanExecution or an alarm trigger stored in the plan.
+    - id: step_types_bound_impact
+      description: The role is only exercised through Region switch execution blocks; impact equals what those block types let the role do. Lambda blocks invoke existing functions, which run with their own roles.
+    - id: cross_account_roles
+      description: Where the execution role can assume a configured crossAccountRole with the matching externalId, the blocks also act in that account (not modelled).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict arc-region-switch:CreatePlan/UpdatePlan and iam:PassRole on Region switch execution roles, and scope execution roles to the resources of their own plan.
+  references:
+    - https://docs.aws.amazon.com/r53recovery/latest/dg/security_iam_region_switch_trust_policy.html
+  notes: UpdatePlan always requires the executionRole field, so it is PassRole-gated like CreatePlan.

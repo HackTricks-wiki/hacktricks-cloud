@@ -1,0 +1,138 @@
+# AWS Step Functions privilege escalation techniques.
+# Source: hacktricks-cloud aws-stepfunctions-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-stepfunctions-teststate-passrole
+  provider: aws
+  service: stepfunctions
+  title: Test an arbitrary state with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statesteststate--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting states.amazonaws.com, exercised through SDK service integrations.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: states:TestState
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles with iam:PassedToService=states.amazonaws.com, and restrict states:TestState to developers on non-production roles.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/dg/test-state-isolation.html
+  notes: The Step Functions developer guide confirms TestState assumes the provided role and that iam:PassRole is required when a role is supplied (not needed when fully mocked, in which case no role privileges are used).
+
+- id: aws-stepfunctions-createstatemachine-passrole-start
+  provider: aws
+  service: stepfunctions
+  title: Create a state machine with a passed role and execute it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statescreatestatemachine--iampassrole--statesstartexecution--statesstartsyncexecution
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting states.amazonaws.com, exercised through state machine service integrations.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: states:CreateStateMachine
+        resource: "*"
+    any_of:
+      - - action: states:StartExecution
+          resource: "*"
+      - - action: states:StartSyncExecution
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: sync_requires_express
+      description: StartSyncExecution only works for Express state machines (the source chooses the type, so this does not remove the edge).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles and state machine creation to the deployment pipeline.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/apireference/API_CreateStateMachine.html
+  notes: ""
+
+- id: aws-stepfunctions-updatestatemachine-existing-role
+  provider: aws
+  service: stepfunctions
+  title: Modify the definition of an existing state machine keeping its role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statesupdatestatemachine--not-always-required-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of existing state machines it can update.
+  requires:
+    all_of:
+      - action: states:UpdateStateMachine
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: stepfunctions
+      via_resource_type: stepfunctions_state_machine
+    scope: same_account
+    aggregate_as: "Execution roles of updatable state machines in {account}"
+  conditions:
+    - id: execution_after_update
+      description: An execution must start after the update (legitimate trigger, schedule, or the source's own states:StartExecution); state machines invoked by a pinned version/alias are not affected until the alias moves.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict states:UpdateStateMachine to the deployment pipeline on specific ARNs and invoke production workflows through published versions/aliases.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/apireference/API_UpdateStateMachine.html
+  notes: Becomes derived when the source also holds states:StartExecution on the same state machine.
+
+- id: aws-stepfunctions-updatestatemachine-passrole
+  provider: aws
+  service: stepfunctions
+  title: Modify an existing state machine and swap in a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statesupdatestatemachine--not-always-required-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting states.amazonaws.com by attaching it to an existing state machine.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: states:UpdateStateMachine
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+  conditions:
+    - id: execution_after_update
+      description: An execution must start after the update (legitimate trigger or the source's own states:StartExecution).
+    - id: existing_state_machine
+      description: At least one state machine must exist within the UpdateStateMachine Resource.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles and states:UpdateStateMachine.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/apireference/API_UpdateStateMachine.html
+  notes: ""

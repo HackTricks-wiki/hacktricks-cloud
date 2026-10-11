@@ -1,0 +1,373 @@
+# Azure Container Instances, Container Apps and Container Apps Jobs techniques (declarative only).
+# Source: hacktricks-cloud az-container-instances-apps-jobs-privesc.md (rev 171e422, re-verified).
+
+- id: azure-aci-container-exec
+  provider: azure
+  service: containers
+  title: Execute commands in a running Container Instances container
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftcontainerinstancecontainergroupsread-microsoftcontainerinstancecontainergroupscontainersexecaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the container group's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.ContainerInstance/containerGroups/containers/exec/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ContainerInstance/containerGroups
+    scope: inherited_scope
+    aggregate_as: Identities of container group {target.host_resource}
+  conditions:
+    - id: group_running
+      description: The container group must be running.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict containers/exec/action and keep container group identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-instances/container-instances-exec
+  notes: containerGroups/read is normally used by clients to locate the container.
+
+- id: azure-aci-containergroup-write-existing
+  provider: azure
+  service: containers
+  title: Redeploy an existing container group with changed command, image or environment
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftcontainerinstancecontainergroupswrite-environment-update
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the container group's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.ContainerInstance/containerGroups/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ContainerInstance/containerGroups
+    scope: inherited_scope
+    aggregate_as: Identities of container group {target.host_resource}
+  conditions:
+    - id: uami_linked_access_check
+      description: Container groups are updated by a full PUT that re-submits the identity block; for groups carrying user-assigned identities ARM may also require userAssignedIdentities/assign/action on each of them (system-assigned identities are unaffected).
+    - id: interpreter_startup_hook
+      description: The environment-only variant needs a container whose entrypoint honours an attacker-set startup variable; changing image/command removes this dependency.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict containerGroups/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-instances/container-instances-update
+  notes: ''
+
+- id: azure-aci-assign-user-assigned-identity
+  provider: azure
+  service: containers
+  title: Create or update a container group with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftresourcessubscriptionsresourcegroupsread-microsoftcontainerinstancecontainergroupswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.ContainerInstance/containerGroups/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Resources/resourceGroups|Microsoft.ContainerInstance/containerGroups
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and containerGroups/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-instances/container-instances-managed-identity
+  notes: Covers both the existing-group and new-group sections of the page.
+
+- id: azure-containerapp-exec
+  provider: azure
+  service: containers
+  title: Open a console in a running Container App
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappcontainerappsread-microsoftappmanagedenvironmentsread-microsoftappcontainerappsrevisionsreplicasread-microsoftappcontainerappsrevisionsread-microsoftappcontainerappsgetauthtokenaction-microsoftappcontainerappsexecaction-microsoftappcontainerappsdebugaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Container App's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.App/containerApps/getAuthToken/action
+        scope: '{target.host_resource}'
+    any_of:
+      - - action: Microsoft.App/containerApps/exec/action
+          scope: '{target.host_resource}'
+      - - action: Microsoft.App/containerApps/debug/action
+          scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/containerApps
+    scope: inherited_scope
+    aggregate_as: Identities of Container App {target.host_resource}
+  conditions:
+    - id: replica_running
+      description: A running replica is required.
+    - id: client_reads
+      description: CLI clients also use containerApps/read, revisions/read, revisions/replicas/read and managedEnvironments/read.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict exec/debug/getAuthToken actions on Container Apps.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/container-console
+  notes: ''
+
+- id: azure-containerapp-write-existing
+  provider: azure
+  service: containers
+  title: Update an existing Container App's image, command or environment
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappcontainerappswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Container App's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.App/containerApps/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/containerApps
+    scope: inherited_scope
+    aggregate_as: Identities of Container App {target.host_resource}
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict containerApps/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/managed-identity
+  notes: ''
+
+- id: azure-containerapp-assign-user-assigned-identity
+  provider: azure
+  service: containers
+  title: Attach a user-assigned identity to an existing Container App
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappcontainerappswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.App/containerApps/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/containerApps
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and containerApps/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/managed-identity
+  notes: ''
+
+- id: azure-containerapp-create-with-user-assigned-identity
+  provider: azure
+  service: containers
+  title: Create a Container App with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappcontainerappswrite-microsoftmanagedidentityuserassignedidentitiesassignaction-microsoftappmanagedenvironmentsjoinaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.App/containerApps/write
+        scope: '{pivot}'
+      - action: Microsoft.App/managedEnvironments/join/action
+        scope: '*'
+  pivot_resource_type: Microsoft.Resources/resourceGroups
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: environment_available
+      description: A joinable managed environment must exist (or managedEnvironments/write to create one).
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict managedEnvironments/join/action and userAssignedIdentities/assign/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/managed-identity
+  notes: ''
+
+- id: azure-containerapp-sessionpool-mcp-credentials
+  provider: azure
+  service: containers
+  title: Fetch a session pool MCP API key and execute code in sessions
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappsessionpoolsfetchmcpservercredentialsaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the session pool's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.App/sessionPools/fetchMCPServerCredentials/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/sessionPools
+    scope: inherited_scope
+    aggregate_as: Identity of session pool {target.host_resource}
+  conditions:
+    - id: mcp_enabled
+      description: The platform-managed MCP server must be enabled on a Shell/Python pool.
+    - id: identity_exposed_to_sessions
+      description: The pool must deliberately enable managed-identity access during the session main lifecycle.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Disable the MCP server where unused and do not expose pool identities to sessions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/sessions
+  notes: Preview feature.
+
+- id: azure-containerapp-sessionpool-executions
+  provider: azure
+  service: containers
+  title: Execute code in a dynamic session
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappsessionpoolsexecutionsaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the session pool's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.App/sessionPools/executions/action
+        data_action: true
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/sessionPools
+    scope: inherited_scope
+    aggregate_as: Identity of session pool {target.host_resource}
+  conditions:
+    - id: identity_exposed_to_sessions
+      description: The pool must deliberately enable managed-identity access during the session main lifecycle.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Limit Session Executor assignments and do not expose pool identities to sessions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/sessions
+  notes: The page itself only claims code execution; identity reach is taken from the MCP section's statement.
+
+- id: azure-containerapp-job-start-template-override
+  provider: azure
+  service: containers
+  title: Start a Container Apps Job execution with an overridden template
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappjobsstartaction-microsoftappjobsread
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the job's managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.App/jobs/start/action
+          scope: '{target.host_resource}'
+      - - action: Microsoft.App/jobs/write
+          scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/jobs
+    scope: inherited_scope
+    aggregate_as: Identities of Container Apps Job {target.host_resource}
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict jobs/start/action and jobs/write; keep job identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/containerapps/jobs/start
+  notes: jobs/start alone authorizes an execution-level template override per HackTricks testing.
+
+- id: azure-containerapp-job-assign-user-assigned-identity
+  provider: azure
+  service: containers
+  title: Create or update a Container Apps Job with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftmanagedidentityuserassignedidentitiesassignaction-microsoftappjobswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.App/jobs/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/jobs|Microsoft.Resources/resourceGroups
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: new_job_needs_environment
+      description: Creating a new job also needs managedEnvironments/join/action on a managed environment.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and jobs/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/jobs
+  notes: Covers the existing-job and new-job sections of the page.
+
+- id: azure-containerapp-sourcecontrols-write
+  provider: azure
+  service: containers
+  title: Repoint a Container App's GitHub Actions deployment to an attacker repository
+  source: src/pentesting-cloud/azure-security/az-persistence/az-container-apps-persistence.md#microsoftappcontainerappssourcecontrolswrite--repoint-github-actions-deployment
+  source_revision: 171e422
+  summary: Rebinding the app's continuous-deployment source makes the next build deploy attacker code that runs with the app's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.App/containerApps/sourcecontrols/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/containerApps
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Container App {target.host_resource}"
+  conditions:
+    - id: build_triggered
+      description: Changing the binding does not execute code; a commit or deployment on the configured branch must trigger the GitHub Actions build, and the build must succeed.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.App/containerApps/sourcecontrols/write (Container Apps Contributor, Contributor) and alert on source-control binding changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/github-actions
+  notes: Same pattern as azure-appservice-sourcecontrols-write.

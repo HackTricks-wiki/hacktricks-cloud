@@ -1,0 +1,41 @@
+# GCP API Keys privilege escalation techniques (authorization keys bound to a service account only; standard keys are excluded).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-apikeys-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-apikeys-authorization-key-bound-sa
+  provider: gcp
+  service: apikeys
+  title: Create an authorization API key bound to a more-privileged service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apikeys-privesc.md#create-an-authorization-key-bound-to-a-more-privileged-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs and iam.serviceAccountApiKeyBindings.create, through APIs that accept authorization keys.
+  requires:
+    all_of:
+      - action: apikeys.keys.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: iam.serviceAccountApiKeyBindings.create
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts bindable to authorization API keys in {project}"
+  conditions:
+    - id: partial_api_scope
+      description: The key only works against APIs that accept authorization keys (documented for Vertex AI / aiplatform and the Gemini API), within the key's API restriction; it is not a credential for every Google Cloud API.
+    - id: organization_required
+      description: The project must belong to an organization; projects without an organization are unsupported.
+  blockers:
+    - gcp_deny_policy
+    - id: org_policy_constraint
+      constraint: iam.managed.disableServiceAccountApiKeyCreation
+  confidence: conditional
+  severity: high
+  mitigation: Keep constraints/iam.managed.disableServiceAccountApiKeyCreation enforced and restrict roles/iam.serviceAccountApiKeyBindingAdmin and actAs grants.
+  references:
+    - https://docs.cloud.google.com/docs/authentication/api-keys
+  notes: Google documents API Keys Admin, Service Usage Viewer, Service Account User and Service Account API Key Binding Admin as the required roles. The managed constraint allows Gemini-only keys by default. The CreateKey operation returns the key string (serviceusage.operations.get is only needed to poll it).

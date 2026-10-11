@@ -1,0 +1,46 @@
+# AWS CloudFront privilege escalation techniques.
+# Source: hacktricks-cloud aws-cloudfront-privesc/README.md.
+
+- id: aws-cloudfront-lambda-edge-passrole
+  provider: aws
+  service: cloudfront
+  title: Associate a new Lambda@Edge function with a passed role to a distribution
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md#lambdacreatefunction-lambdapublishversion-iampassrole--cloudfrontupdatedistribution
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting both lambda.amazonaws.com and edgelambda.amazonaws.com by running a Lambda@Edge function it controls on a distribution it can update.
+  requires:
+    all_of:
+      - action: lambda:CreateFunction
+        resource: "*"
+      - action: lambda:PublishVersion
+        resource: "*"
+      - action: lambda:GetFunction
+        resource: "*"
+      - action: lambda:EnableReplication
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: cloudfront:UpdateDistribution
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service:
+        - lambda.amazonaws.com
+        - edgelambda.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting lambda and edgelambda in {account}"
+  conditions:
+    - id: first_time_slr
+      description: The first Lambda@Edge association in an account also needs iam:CreateServiceLinkedRole.
+    - id: us_east_1
+      description: The function must be created in us-east-1.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: high
+  mitigation: Restrict iam:PassRole on Lambda@Edge roles and cloudfront:UpdateDistribution.
+  references:
+    - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-edge-permissions.html
+  notes: "trust_allows_service given as a list means every listed principal must be trusted. Roles trusting only lambda.amazonaws.com are reachable through the generic Lambda PassRole technique (lambda.yaml) instead. The Lambda@Edge permissions page writes the replication permission as lambda:EnableReplication*; the concrete action in the Service Authorization Reference is lambda:EnableReplication."

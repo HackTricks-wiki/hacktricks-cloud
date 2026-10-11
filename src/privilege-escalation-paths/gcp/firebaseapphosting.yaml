@@ -1,0 +1,107 @@
+
+# GCP Firebase App Hosting privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-firebase-app-hosting-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: firebase_apphosting_backend -> the serviceAccount configured on an existing App Hosting backend
+# ("{target.host_resource}"), used for its builds and its Cloud Run runtime.
+
+- id: gcp-firebaseapphosting-build-rollout-existing-backend
+  provider: gcp
+  service: firebaseapphosting
+  title: Deploy an image to an existing Firebase App Hosting backend and run as its service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-firebase-app-hosting-privesc.md#firebaseapphostingbuildscreate--firebaseapphostingrolloutscreate--deploy-an-image-as-an-existing-backend-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service account of every Firebase App Hosting backend on which it can create builds and rollouts, without iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: firebaseapphosting.builds.create
+        resource: "{target.host_resource}"
+      - action: firebaseapphosting.rollouts.create
+        resource: "{target.host_resource}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: firebase_apphosting_backend
+    scope: same_project
+    aggregate_as: "SAs of Firebase App Hosting backends the source can deploy to"
+  conditions:
+    - id: readable_image
+      description: The build must reference a compatible Artifact Registry image readable by the backend, and the rollout must build and actuate successfully.
+    - id: backend_change_separate
+      description: Changing the backend identity needs firebaseapphosting.backends.update plus actAs on the new SA; not required here.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/firebaseapphosting.developer and give App Hosting backends least-privilege service accounts.
+  references:
+    - https://firebase.google.com/docs/reference/apphosting/rest/v1/projects.locations.backends
+    - https://docs.cloud.google.com/iam/docs/roles-permissions/firebaseapphosting
+  notes: Both permissions are in roles/firebaseapphosting.developer. The Backend REST reference documents serviceAccount as the account used for Cloud Build and Cloud Run.
+
+- id: gcp-firebaseapphosting-backends-update-actas
+  provider: gcp
+  service: firebaseapphosting
+  title: Switch an App Hosting backend's runtime identity to a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-firebase-app-hosting-persistence.md#backend-hijack--repoint-source-or-runtime-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of service accounts on which it holds iam.serviceAccounts.actAs, by setting them as the serviceAccount of a Firebase App Hosting backend it can update and deploying code to it.
+  requires:
+    all_of:
+      - action: firebaseapphosting.backends.update
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: firebaseapphosting.builds.create
+        resource: "*"
+      - action: firebaseapphosting.rollouts.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts settable as Firebase App Hosting backend identity in {project}"
+  conditions:
+    - id: code_delivery
+      description: The build must reference attacker code/image readable by the backend. Without builds/rollouts permissions the same identity switch works only if an automatic rollout from a source-controlled repository follows (not modelled).
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict firebaseapphosting.backends.update and grant actAs only on dedicated App Hosting SAs.
+  references:
+    - https://firebase.google.com/docs/reference/apphosting/rest/v1/projects.locations.backends
+
+- id: gcp-firebaseapphosting-backends-update-source
+  provider: gcp
+  service: firebaseapphosting
+  title: Repoint an App Hosting backend's source repository to attacker-controlled code
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-firebase-app-hosting-persistence.md#backend-hijack--repoint-source-or-runtime-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the existing service account of Firebase App Hosting backends whose connected repository/branch it can change, when automatic rollouts build the new source.
+  requires:
+    all_of:
+      - action: firebaseapphosting.backends.update
+        resource: "{target.host_resource}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: firebase_apphosting_backend
+    scope: same_project
+    aggregate_as: "SAs of Firebase App Hosting backends whose source the source can repoint"
+  conditions:
+    - id: automatic_rollout
+      description: Automatic rollouts must build the newly connected repository/branch (or a later rollout must be triggered by someone else); otherwise builds/rollouts permissions are needed (gcp-firebaseapphosting-build-rollout-existing-backend).
+    - id: repository_link
+      description: The new source must be a Developer Connect repository link usable by the backend.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict firebaseapphosting.backends.update and monitor UpdateBackend changes to codebase/serviceAccount.
+  references:
+    - https://firebase.google.com/docs/reference/apphosting/rest/v1/projects.locations.backends

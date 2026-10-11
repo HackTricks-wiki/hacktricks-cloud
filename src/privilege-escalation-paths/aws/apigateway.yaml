@@ -1,0 +1,38 @@
+# AWS API Gateway privilege escalation techniques.
+# Source: hacktricks-cloud aws-apigateway-privesc/README.md.
+
+- id: aws-apigateway-integration-credentials-passrole
+  provider: aws
+  service: apigateway
+  title: Create a REST API AWS-service integration that runs with a passed credentials role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayput-apigatewaypost-and-sometimes-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting apigateway.amazonaws.com by using them as the execution credentials of an AWS-service integration it can invoke.
+  requires:
+    all_of:
+      - action: apigateway:PUT
+        resource: "*"
+      - action: apigateway:POST
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: apigateway.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting apigateway.amazonaws.com in {account}"
+  conditions:
+    - id: integration_action_limited
+      description: An AWS-service integration calls one configured service action per integration; the source can create several, but reachable actions are those exposed by AWS integrations, so effective privilege is close to but not always fully the role's.
+    - id: deployment_or_testinvoke
+      description: The integration must be invoked, which needs a deployment (POST) or apigateway test invocation; resource policies or authorizers on existing APIs do not apply to new APIs the source creates.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict iam:PassRole for apigateway.amazonaws.com roles and apigateway write actions to API administrators.
+  references:
+    - https://docs.aws.amazon.com/apigateway/latest/developerguide/integrating-api-with-aws-services-s3.html
+  notes: HackTricks demonstrates the Lambda AWS_PROXY integration, where the credentials role is only used to invoke the chosen function and does not hand the caller the function's execution role; reach beyond that relies on an AWS-service integration URI calling other service actions with the same credentials role, hence conditional and medium severity. Existing integrations already holding a role are reachable with PATCH+POST without PassRole (role attached to an integration); the evaluator may model that as attached_resource_covered_by apigateway:PATCH.

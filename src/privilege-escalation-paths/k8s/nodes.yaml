@@ -1,0 +1,590 @@
+# Kubernetes node-level techniques: reach node credentials (k8s_node) through host-privileged
+# pods, PSA/namespace manipulation, kubelet access or node client certificates, and what a node
+# identity reaches. Conventions: see header of rbac.yaml. Source: hacktricks-cloud rev a53b46392c, refreshed to 171e422.
+
+- id: k8s-nodes-privileged-pod-create
+  provider: k8s
+  service: nodes
+  title: Create a host-privileged pod (privileged container or host-root hostPath)
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-create--escape
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the nodes it can schedule a host-privileged pod onto.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        namespace: "{pivot.namespace}"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Schedulable nodes of {cluster}"
+  conditions:
+    - id: other_admission_blocks_host_access
+      description: Non-PSA admission (Kyverno, Gatekeeper, VAP, OpenShift SCC) may reject privileged/hostPath/hostPID pods.
+    - id: node_reachable_by_scheduling
+      description: The pod can pin itself with nodeName/tolerations, so tainted nodes (including self-managed control-plane nodes) are reachable unless admission strips them; managed control planes are not nodes.
+  blockers: [pivot_namespace_psa_enforce_baseline_or_restricted, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Enforce Pod Security Admission baseline or restricted on every namespace where untrusted subjects can create pods.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-standards/
+    - https://kubernetes.io/docs/concepts/security/pod-security-admission/
+  notes: The blocker reads the pod-security.kubernetes.io/enforce label of the pivot namespace (and the cluster default from the PSA AdmissionConfiguration, which is not collected; unlabeled namespaces default to privileged). A privileged container or a writable hostPath of / (or a runtime-socket mount) yields node root; hostPID, hostIPC or hostNetwork alone do not (hostNetwork reaches node metadata, see k8s-cloud-hostnetwork-pod-node-identity). Added SYS_ADMIN/SYS_MODULE without privileged mode is runtime-dependent. PSA baseline forbids all of these, so the blocker covers every variant.
+
+- id: k8s-nodes-privileged-controller-create
+  provider: k8s
+  service: nodes
+  title: Create or modify a controller with a host-privileged pod template
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#createpatch-deployment-daemonsets-statefulsets-replicationcontrollers-replicasets-jobs-and-cronjobs
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the nodes onto which a controller it controls schedules a host-privileged pod (every node for a DaemonSet).
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Schedulable nodes of {cluster}"
+  conditions:
+    - id: other_admission_blocks_host_access
+      description: Non-PSA admission may reject privileged/hostPath/hostPID pod templates.
+    - id: controller_object_exists
+      description: The update/patch groups require an existing controller covered by the grant.
+  blockers: [pivot_namespace_psa_enforce_baseline_or_restricted, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Enforce PSA baseline/restricted on namespaces where untrusted subjects manage workloads.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-admission/
+  notes: PSA evaluates pods created by controllers (and warns on templates). Separate from k8s-nodes-privileged-pod-create because the permission set differs.
+
+- id: k8s-nodes-privileged-ephemeral-container
+  provider: k8s
+  service: nodes
+  title: Add a privileged ephemeral container to an existing pod
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#ephemeralcontainers
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the nodes hosting pods in the namespace by adding a privileged ephemeral container to them.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: pods, subresource: ephemeralcontainers, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: pods, subresource: ephemeralcontainers, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_hosting_pods_in_namespace: "{pivot.namespace}"
+    scope: cluster
+    aggregate_as: "Nodes running pods of {pivot.namespace}"
+  conditions:
+    - id: host_namespaces_fixed_by_pod
+      description: hostPID/hostNetwork and volumes are fixed by the existing pod; only securityContext privileged is added by the ephemeral container, which is enough for node access.
+    - id: other_admission_blocks_host_access
+      description: Non-PSA admission may reject privileged ephemeral containers.
+  blockers: [pivot_namespace_psa_enforce_baseline_or_restricted, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Restrict pods/ephemeralcontainers and enforce PSA baseline/restricted.
+  references:
+    - https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/
+  notes: PSA checks ephemeral containers at the pods/ephemeralcontainers subresource.
+
+- id: k8s-nodes-exec-into-host-privileged-pod
+  provider: k8s
+  service: nodes
+  title: Exec into an existing pod with a privileged container or escape capability
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#privileged-pod-and-hostpid-escape
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the nodes that run pods it can exec into whose containers are privileged or carry a node-escape capability.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        subresource: exec
+        namespace: "{pivot.namespace}"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_hosting_privileged_pod_in_namespace: "{pivot.namespace}"
+    scope: cluster
+    aggregate_as: "Nodes running privileged pods of {pivot.namespace}"
+  conditions:
+    - id: cap_sys_admin_constrained_by_seccomp_apparmor
+      description: Added SYS_ADMIN (or ALL) without privileged mode is an escape only when seccomp/AppArmor/SELinux and the user namespace allow the needed mount or namespace-entry operation (cgroup v1 release_agent, a host device or a host PID to join).
+    - id: kernel_module_loading_restricted
+      description: SYS_MODULE needs the initial user namespace and a kernel without lockdown or mandatory module signing.
+    - id: open_by_handle_at_blocked_by_seccomp
+      description: DAC_READ_SEARCH reads host files through open_by_handle_at only when the syscall is allowed and a host file handle is reachable; it yields node credentials (read), not direct execution.
+    - id: ptrace_restricted_by_apparmor_or_yama
+      description: SYS_PTRACE with hostPID needs an attachable host process; the runtime AppArmor profile or Yama ptrace_scope may block it.
+    - id: target_container_selectable
+      description: The exec must target the container that holds the primitive (kubectl exec -c); init containers have usually exited, ephemeral containers stay running.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Remove pods/exec in namespaces that run privileged DaemonSets (kube-system, CNI, monitoring agents) and drop privileged mode and SYS_ADMIN/SYS_MODULE/SYS_PTRACE/DAC_READ_SEARCH from workloads that do not need them.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-standards/
+    - https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/
+    - https://man7.org/linux/man-pages/man7/capabilities.7.html
+  notes: Not blocked by PSA because the pod already exists. A privileged container (containers, initContainers or ephemeralContainers) matches as derived; added capabilities match conditionally (condition ids above). hostNetwork, hostIPC and hostPID alone do not match (hostNetwork is modelled as node cloud-identity reach in k8s-cloud-hostnetwork-pod-node-identity). Sensitive hostPath mounts are a separate entry (k8s-nodes-exec-into-host-mount-pod). Privileged DaemonSets (CNI, CSI, log agents) make this reach every node. The same applies to get pods/exec on clusters older than 1.35 (see k8s-workloads-pods-exec-get-websocket).
+
+- id: k8s-nodes-exec-into-host-mount-pod
+  provider: k8s
+  service: nodes
+  title: Exec into an existing pod that mounts a runtime socket or sensitive host path
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/attacking-kubernetes-from-inside-a-pod.md#runtime-sockets-and-kernel-helper-paths
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the nodes that run pods it can exec into which mount a container runtime socket, node credential files, or a host-executed path writable.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        subresource: exec
+        namespace: "{pivot.namespace}"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_hosting_host_mount_pod_in_namespace: "{pivot.namespace}"
+    scope: cluster
+    aggregate_as: "Nodes running host-mount pods of {pivot.namespace}"
+  conditions:
+    - id: node_credential_location_varies
+      description: A readOnly /etc or /etc/kubernetes mount exposes node or cluster credentials only where the distribution keeps them there (kubeadm kubelet.conf / control-plane admin.conf and PKI, k3s); managed node images often do not.
+    - id: host_write_needs_host_consumer
+      description: Writable /home, /var/lib/docker, /var/lib/containerd or /sys/fs/cgroup lead to host execution only if a host process later consumes the written file (SSH login, image layer, cgroup v1 release_agent).
+    - id: hostpath_subpath_narrows_mount
+      description: A subPath mount exposes only the named subdirectory of the hostPath volume.
+    - id: socket_usable_by_container_user
+      description: A runtime socket must be connectable by the container user (file mode, SELinux label); a readOnly mount does not prevent connecting.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Do not mount runtime sockets, /, /var/lib/kubelet, /etc or host binary directories into workloads; mount specific paths readOnly and restrict pods/exec in namespaces running such agents.
+  references:
+    - https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+    - https://kubernetes.io/docs/concepts/security/pod-security-standards/
+  notes: Derived matches are runtime sockets (docker, containerd, CRI-O, k3s, podman, buildkit) or any ancestor of them, readOnly mounts of / or of the kubelet credential paths (/var/lib/kubelet/pki, kubeconfig, pods), and writable mounts of host-executed paths (/etc cron/systemd/manifests/passwd, /root/.ssh, binary and library directories, /opt/cni/bin, /proc/sys/kernel/core_pattern, /sys/kernel/uevent_helper). Writable /var/log (kubelet log-symlink read) is not counted because it is kubelet-version dependent (see _excluded.yaml). Other hostPaths such as /etc/ssl/certs, /var/log or data directories do not match.
+
+- id: k8s-nodes-hostpath-persistentvolume
+  provider: k8s
+  service: nodes
+  title: Mount the node filesystem through a hostPath PersistentVolume
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#storage-control-objects
+  source_revision: 171e422
+  summary: The source can obtain the privileges of schedulable nodes by consuming a hostPath PersistentVolume it created, which Pod Security Admission does not inspect.
+  requires:
+    all_of:
+      - verb: create
+        resource: persistentvolumes
+        namespace: "*"
+      - verb: create
+        resource: persistentvolumeclaims
+        namespace: "{pivot.namespace}"
+      - verb: create
+        resource: pods
+        namespace: "{pivot.namespace}"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Schedulable nodes of {cluster}"
+  conditions:
+    - id: admission_blocks_hostpath_pv
+      description: Admission policies on PersistentVolume objects (e.g. Gatekeeper/Kyverno disallowing hostPath PVs) remove the edge.
+    - id: pv_binding_succeeds
+      description: The claim must bind to the created PV (storageClassName/selector match).
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Restrict persistentvolumes create to storage administrators and deny hostPath PersistentVolumes via admission.
+  references:
+    - https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+  notes: PSA restricted allows persistentVolumeClaim volumes regardless of backing PV type, so the PSA blocker does not apply. A writable host root mount is required for full node access (writing a root-level file such as a cron or kubelet static pod gives code exec as root); without privileged mode, node credentials are still readable from the mounted filesystem.
+
+- id: k8s-nodes-namespace-psa-relabel
+  provider: k8s
+  service: nodes
+  title: Relax a namespace's Pod Security labels and create host-privileged pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-namespace-escalation.md#escape-to-the-node
+  source_revision: 171e422
+  summary: The source can obtain the privileges of schedulable nodes by removing the PSA enforcement label of a namespace where it can create pods.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        namespace: "{pivot.namespace}"
+    any_of:
+      - - {verb: patch, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
+      - - {verb: update, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
+      - - {verb: patch, resource: namespaces, subresource: status, namespace: "*", resource_name: "{pivot.namespace}"}
+      - - {verb: update, resource: namespaces, subresource: status, namespace: "*", resource_name: "{pivot.namespace}"}
+      - - {verb: update, resource: namespaces, subresource: finalize, namespace: "*", resource_name: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Schedulable nodes of {cluster}"
+  conditions:
+    - id: other_admission_blocks_host_access
+      description: Non-PSA admission (policies protecting namespace labels or rejecting privileged pods) may remove the edge.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Do not grant namespace update/patch (or namespaces/status, namespaces/finalize) to tenants; protect pod-security.kubernetes.io labels with a ValidatingAdmissionPolicy.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-admission/
+  notes: HackTricks reproduced on v1.37 that namespaces/status and namespaces/finalize writes can change Namespace labels consumed by PSA. Namespaces are cluster-scoped, so the namespace grant must come from a ClusterRole/ClusterRoleBinding with resourceNames covering the pivot.
+
+- id: k8s-nodes-namespace-create-privileged-pod
+  provider: k8s
+  service: nodes
+  title: Create a new namespace and host-privileged pods in it
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-namespace-escalation.md#escape-to-the-node
+  source_revision: 171e422
+  summary: The source can obtain the privileges of schedulable nodes by creating a namespace without PSA enforcement and creating pods there.
+  requires:
+    all_of:
+      - verb: create
+        resource: namespaces
+        namespace: "*"
+      - verb: create
+        resource: pods
+        namespace: "*"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Schedulable nodes of {cluster}"
+  conditions:
+    - id: psa_cluster_default_level
+      description: The PSA AdmissionConfiguration default (not collected) may enforce baseline/restricted on unlabeled namespaces; an admission policy may require PSA labels on new namespaces.
+    - id: other_admission_blocks_host_access
+      description: Non-PSA admission may reject privileged pods.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Restrict namespace creation; set a cluster-wide PSA default of baseline or restricted.
+  references:
+    - https://kubernetes.io/docs/tasks/configure-pod-container/enforce-standards-admission-controller/
+  notes: Pods create must be effective in the newly created namespace, i.e. granted cluster-wide (a RoleBinding cannot pre-exist in a namespace that does not yet exist unless created by automation the source triggers).
+
+- id: k8s-nodes-nodes-proxy-pod-sas
+  provider: k8s
+  service: nodes
+  title: Use the kubelet API through nodes/proxy
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodes-proxy
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the ServiceAccounts of pods running on nodes covered by its nodes/proxy grant, by executing in those pods through the kubelet.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.node}"}
+      - - {verb: get, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.node}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+      k8s_sa_used_by_running_pod: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts of pods on proxied nodes in {cluster}"
+  conditions:
+    - id: kubelet_webhook_authorization
+      description: The kubelet must authorize via the API server (Webhook mode, default in managed clusters) so the nodes/proxy grant is honored.
+    - id: get_only_needs_direct_kubelet
+      description: With only get, execution needs direct network reach to the kubelet port (WebSocket upgrade to the kubelet); the API-server proxy path maps exec to create.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Remove nodes/proxy from monitoring and other roles; use the fine-grained kubelet subresources (nodes/metrics, nodes/stats, nodes/log) instead.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/kubelet-authn-authz/
+  notes: "{target.node} = the node hosting the target pod. Bypasses API-server audit for pods/exec. Executing into privileged pods on those nodes also reaches the node (k8s-nodes-nodes-proxy-node)."
+
+- id: k8s-nodes-nodes-proxy-node
+  provider: k8s
+  service: nodes
+  title: Use nodes/proxy to execute in privileged pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodesproxy-get---kubelet-exec-via-websocket-verb-confusion
+  source_revision: 171e422
+  summary: The source can obtain the privileges of covered nodes that run at least one pod with a privileged container or node-escape capability.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.name}"}
+      - - {verb: get, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.name}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_hosting_privileged_pod_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "Proxied nodes running privileged pods in {cluster}"
+  conditions:
+    - id: kubelet_webhook_authorization
+      description: The kubelet must authorize via the API server.
+    - id: get_only_needs_direct_kubelet
+      description: With only get, direct network reach to the kubelet port is required.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Remove nodes/proxy from non-admin roles.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/kubelet-authn-authz/
+  notes: Clusters running privileged DaemonSets (CNI, CSI, kube-proxy) make every node reachable. Uses the same pod classification as k8s-nodes-exec-into-host-privileged-pod (added capabilities are conditional); sensitive hostPath pods are covered by k8s-nodes-nodes-proxy-host-mount-node.
+
+- id: k8s-nodes-nodes-proxy-host-mount-node
+  provider: k8s
+  service: nodes
+  title: Use nodes/proxy to execute in pods mounting a runtime socket or sensitive host path
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodes-proxy
+  source_revision: 171e422
+  summary: The source can obtain the privileges of covered nodes that run at least one pod mounting a container runtime socket, node credential files, or a host-executed path writable.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.name}"}
+      - - {verb: get, resource: nodes, subresource: proxy, namespace: "*", resource_name: "{target.name}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_hosting_host_mount_pod_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "Proxied nodes running host-mount pods in {cluster}"
+  conditions:
+    - id: kubelet_webhook_authorization
+      description: The kubelet must authorize via the API server.
+    - id: get_only_needs_direct_kubelet
+      description: With only get, direct network reach to the kubelet port is required.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Remove nodes/proxy from non-admin roles and avoid runtime-socket or host-root mounts in node agents.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/kubelet-authn-authz/
+  notes: Same hostPath classification and conditions as k8s-nodes-exec-into-host-mount-pod.
+
+- id: k8s-nodes-csr-kubelet-client-signer
+  provider: k8s
+  service: certificates
+  title: Issue and approve a node client certificate
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any node identity (system:node:<name>) by self-approving a kube-apiserver-client-kubelet certificate.
+  requires:
+    all_of:
+      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+      - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client-kubelet"}
+  target:
+    kind: k8s_node
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: kubelet_client_signer_enabled
+      description: The controller-manager must sign kubernetes.io/kube-apiserver-client-kubelet with the cluster CA (managed offerings may differ).
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict CSR approval and signer approve to the controller-manager and cluster administrators.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers
+  notes: Per Kubernetes docs this signer only issues subjects with organization system:nodes and CN system:node:<name>, so the reachable identities are nodes (not users or system:masters). NodeRestriction then limits each node identity to its own node's pods and objects.
+
+- id: k8s-nodes-csr-nodeclient-autoapprove
+  provider: k8s
+  service: certificates
+  title: Obtain an auto-approved node client certificate (bootstrap nodeclient)
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any node identity by submitting a node client CSR that the controller-manager auto-approves.
+  requires:
+    all_of:
+      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - {verb: create, resource: certificatesigningrequests, subresource: nodeclient, api_group: certificates.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_node
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: csrapproving_controller_enabled
+      description: The csrapproving controller of kube-controller-manager must be enabled (default with TLS bootstrapping); managed providers may use their own approvers.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Grant certificatesigningrequests/nodeclient only to system:bootstrappers with short-lived bootstrap tokens, and remove bootstrap tokens after node join.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#approval
+  notes: Based on the official TLS bootstrapping docs (HackTricks only mentions that node bootstrap signers have different checks). The nodeclient approval does not tie the requested node name to the requester, unlike selfnodeclient, which only renews the requester's own node certificate.
+
+- id: k8s-nodes-node-mint-pod-sa-tokens
+  provider: k8s
+  service: nodes
+  title: Node identity mints tokens for ServiceAccounts of its pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#privesc-to-cluster-admin
+  source_revision: 171e422
+  summary: A node identity can obtain the privileges of the ServiceAccounts used by pods scheduled on that node.
+  source_kind: k8s_node
+  requires:
+    all_of: []
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+      k8s_node_hosting_pods_with_sa: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts of pods on {source.name}"
+  conditions: []
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Keep privileged ServiceAccounts' pods off nodes that run untrusted workloads (taints, dedicated node pools) and minimize host-privileged pods.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/node/
+  notes: The Node authorizer allows a node to create serviceaccounts/token only for ServiceAccounts referenced by pods bound to it (and to read their Secrets/ConfigMaps). With NodeRestriction this is limited to the node's own pods. HackTricks also covers reading those tokens from the node filesystem (attacking-kubernetes-from-inside-a-pod.md#steal-secrets).
+
+- id: k8s-nodes-control-plane-node
+  provider: k8s
+  service: nodes
+  title: Control-plane node compromise
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/node-post-exploitation.md#control-plane-node-artifacts
+  source_revision: 171e422
+  summary: A control-plane node identity can obtain the privileges of cluster-admin from the API-server/etcd credentials stored on that node.
+  source_kind: k8s_node
+  source_selector:
+    k8s_node_role: control-plane
+  requires:
+    all_of: []
+  target:
+    kind: k8s_cluster_admin
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "cluster-admin of {cluster}"
+  conditions:
+    - id: self_managed_control_plane
+      description: Only self-managed clusters (kubeadm, OpenShift, k3s) have control-plane nodes; EKS/GKE/AKS control planes are not reachable as nodes.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Taint control-plane nodes, block untrusted pods from tolerating the taint via admission, and protect /etc/kubernetes/pki and etcd.
+  references:
+    - https://kubernetes.io/docs/setup/best-practices/certificates/
+  notes: Control-plane nodes hold the cluster CA key, admin kubeconfig and etcd client certificates. Identify control-plane nodes by the node-role.kubernetes.io/control-plane label.
+
+- id: k8s-nodes-replacement-pod-to-controlled-node
+  provider: k8s
+  service: nodes
+  title: Force a controller-managed pod onto a controlled node
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#delete-pods--unschedulable-nodes
+  source_revision: 171e422
+  summary: A source that already controls a node can obtain the privileges of ServiceAccounts of controller-managed pods in the namespace by forcing their replacements onto that node.
+  source_selector:
+    source_reaches_kind: k8s_node
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
+        - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
+        - {verb: update, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
+        - {verb: patch, resource: nodes, namespace: "*"}
+      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
+        - {verb: update, resource: nodes, namespace: "*"}
+      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
+        - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
+        - {verb: update, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
+        - {verb: patch, resource: nodes, namespace: "*"}
+      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
+        - {verb: update, resource: nodes, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_controller_managed_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of controller-managed pods in {target.namespace}"
+  conditions:
+    - id: controlled_node_satisfies_pod_constraints
+      description: The node the source controls (enforced by source_reaches_kind k8s_node) must satisfy the replacement pod's scheduling constraints.
+    - id: not_a_node_credential
+      description: Default node credentials cannot do this (NodeRestriction limits deletes and status writes to their own node); the grants must belong to a non-node identity.
+    - id: pdb_blocks_eviction
+      description: A PodDisruptionBudget may block the eviction variant.
+    - id: every_competing_node_excluded
+      description: Every other node that satisfies the pod's constraints must be excluded (allocatable pods set to 0 via nodes/status, or NoSchedule taint / cordon via nodes patch/update); kubelets restore status quickly and tolerations or spec.nodeName defeat taints.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: conditional
+  severity: medium
+  mitigation: Do not grant nodes/status writes to non-node identities; use dedicated node pools with taints for privileged workloads.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/node/
+  notes: Taint/cordon alternatives follow HackTricks dosing-other-nodes.md#taints-cordon-and-eviction (171e422). Composite path; source_selector source_reaches_kind k8s_node keeps the edge only when the source is a node or a chain in the same run reaches one (then condition source_reaches_k8s_node_via_chain). Kubelets restore their reported capacity, so the window is timing dependent.
+
+- id: k8s-nodes-pods-binding-pending-pod-to-controlled-node
+  provider: k8s
+  service: nodes
+  title: Bind a pending pod to a controlled node with pods/binding
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodes-and-pods-status
+  source_revision: 171e422
+  summary: A source that already controls a node can obtain the privileges of the ServiceAccount of a pending (unscheduled) pod by binding that pod to its node with pods/binding or the legacy bindings resource.
+  source_selector:
+    source_reaches_kind: k8s_node
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: pods, subresource: binding, namespace: "{target.namespace}"}
+      - - {verb: create, resource: bindings, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_used_by_pending_pod: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts of pending pods in {cluster}"
+  conditions:
+    - id: pod_still_pending_at_bind_time
+      description: The pod must still be unscheduled when the Binding is created; the scheduler may place it first.
+    - id: not_a_node_credential
+      description: Default node credentials cannot bind pods (NodeRestriction); the binding grant must belong to a non-node identity.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: conditional
+  severity: high
+  mitigation: Grant pods/binding and bindings create only to the scheduler; keep privileged workloads on dedicated, tainted node pools.
+  references:
+    - https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/binding-v1/
+  notes: HackTricks (171e422) states direct scheduling with create pods/binding or core bindings assigns an unscheduled pod to a node, bypassing the scheduler's placement decision; creating or modifying the pod is a separate permission. k8s_sa_used_by_pending_pod targets ServiceAccounts of collected pods with status.phase Pending and no spec.nodeName. The pod's token is then readable from the controlled node.

@@ -1,0 +1,379 @@
+# Azure Automation account privilege escalation techniques.
+# Source: hacktricks-cloud az-automation-accounts-privesc.md (rev 171e422).
+# Placeholder conventions: see catalog/azure/authorization.yaml header.
+
+- id: azure-automation-runbook-author-and-run
+  provider: azure
+  service: automation
+  title: Create or modify a runbook and run it as the Automation account identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobswrite-microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsjobsoutputread-microsoftautomationautomationaccountsrunbookspublishaction-microsoftresourcessubscriptionsresourcegroupsread-microsoftautomationautomationaccountsrunbookswrite
+  source_revision: 171e422
+  summary: The source runs arbitrary runbook code inside the Automation account sandbox and obtains tokens for the account's system- and user-assigned managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - # edit an existing runbook draft, publish and start it
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{target.host_resource}"
+      - # create a new runbook, upload content, publish and start it
+        - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{target.host_resource}"
+      - # edit the draft and run it as a test job without publishing
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Limit runbook authoring/publish/job permissions (Automation Contributor, Automation Operator + Runbook Operator, Contributor) and give the Automation account identity only the roles its runbooks need.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-role-based-access-control
+    - https://learn.microsoft.com/en-us/azure/automation/enable-managed-identity-for-automation
+  notes: Reaches only identities attached to the Automation account whose runbook/job permissions the source holds. Output-read permissions are only needed to read results and are not required for the gain. Credential and encrypted-variable assets are modelled separately (azure-automation-runbook-credential-assets); Hybrid Worker VM identities separately (azure-automation-runbook-hybrid-worker).
+
+- id: azure-automation-runbook-credential-assets
+  provider: azure
+  service: automation
+  title: Decrypt Automation credential/variable assets from runbook code
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobswrite-microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsjobsoutputread-microsoftautomationautomationaccountsrunbookspublishaction-microsoftresourcessubscriptionsresourcegroupsread-microsoftautomationautomationaccountsrunbookswrite
+  source_revision: 171e422
+  summary: Runbook code the source controls can read credential assets and encrypted variables, which may hold passwords or client secrets of users or service principals.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: "{pivot}"
+    scope: any
+    aggregate_as: "Principals whose credentials are stored as assets in Automation account {pivot}"
+  conditions:
+    - id: credential_content_unknown
+      description: Which principals' credentials (if any) are stored in credential assets/encrypted variables is not visible from RBAC metadata; the edge is conditional on asset contents.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Do not store user or service principal secrets as Automation credentials/variables; use the account managed identity instead.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/shared-resources/credentials
+  notes: Target may also be Entra users (credential assets often hold user passwords); evaluator should render a single conditional aggregate node per account.
+
+- id: azure-automation-runbook-hybrid-worker
+  provider: azure
+  service: automation
+  title: Run runbook code on a Hybrid Runbook Worker VM and use the VM's managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#hybrid-workers-group
+  source_revision: 171e422
+  summary: Runbook jobs targeted at a Hybrid Worker group execute on the worker machine, so an Azure VM worker's managed identities become reachable through IMDS.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+      azure_host_linked_to_pivot: automation_hybrid_worker
+    scope: any
+    aggregate_as: "Managed identities of Hybrid Worker VMs of Automation account {pivot}"
+  conditions:
+    - id: worker_is_azure_vm
+      description: Only Hybrid Workers that are Azure VMs / Arc machines with managed identities expose cloud identities; on-prem workers yield OS context only.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict runbook authoring on accounts with Hybrid Worker groups and do not attach privileged managed identities to worker VMs.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-hrw-run-runbooks
+  notes: Jobs also run as SYSTEM/root on the worker. Arc-enabled servers expose the Arc machine identity similarly (selector would be Microsoft.HybridCompute/machines).
+
+- id: azure-automation-assign-user-assigned-identity
+  provider: azure
+  service: automation
+  title: Attach a user-assigned managed identity to an Automation account and run code as it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: 171e422
+  summary: The source attaches any user-assigned identity it can assign to an Automation account it controls and then uses runbook code to obtain that identity's tokens.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.Automation/automationAccounts/write
+        scope: "{pivot}"
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict Microsoft.ManagedIdentity/userAssignedIdentities/assign/action (Managed Identity Operator, Contributor, Owner) to deployment principals and scope it to individual identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/add-user-assigned-identity
+  notes: Microsoft.Automation/automationAccounts/write over a resource group also allows creating a new account there (pivot may be newly created).
+
+- id: azure-automation-trigger-existing-runbook
+  provider: azure
+  service: automation
+  title: Trigger an existing published runbook with attacker-chosen parameters
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#abuse-jobscheduleswrite-to-run-an-existing-privileged-runbook
+  source_revision: 171e422
+  summary: Starting, scheduling or webhook-binding an existing runbook makes it act with the Automation account identity on attacker-supplied parameters.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Automation/automationAccounts/jobSchedules/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Automation/automationAccounts/webhooks/write
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/webhooks/action
+          scope: "{target.host_resource}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/read
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource} (via existing runbooks)"
+  conditions:
+    - id: runbook_behaviour_abusable
+      description: Impact depends on what existing published runbooks do with their parameters; no arbitrary code execution is obtained.
+    - id: enabled_schedule_exists
+      description: The jobSchedules/write path needs an existing enabled schedule (or schedules/write to create one).
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict jobs/jobSchedules/webhooks write (Automation Operator, Automation Job Operator) and validate runbook parameters; avoid runbooks that act on caller-supplied targets with privileged identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-webhooks
+  notes: The webhook URI generation checks the hidden operation webhooks/action, which can only be granted via the webhooks/* (or broader) wildcard; evaluator wildcard matching covers it.
+
+- id: azure-automation-source-control-import
+  provider: azure
+  service: automation
+  title: Configure source control to import attacker runbooks and run them
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountssourcecontrolswrite-microsoftautomationautomationaccountssourcecontrolsread
+  source_revision: 171e422
+  summary: A source-control link to an attacker repository imports and publishes runbooks, which then run with the Automation account identities.
+  requires:
+    all_of:
+      - action: Microsoft.Automation/automationAccounts/sourceControls/write
+        scope: "{target.host_resource}"
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Automation/automationAccounts/jobSchedules/write
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource}"
+  conditions:
+    - id: source_control_identity_contributor
+      description: Source-control sync only works if the account's managed identity has Contributor on the account (user-assigned needs AUTOMATION_SC_USER_ASSIGNED_IDENTITY_ID).
+    - id: overwrite_scheduled_runbook
+      description: Overwriting a runbook name that is already scheduled or webhook-bound may make a trigger permission unnecessary.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sourceControls/write and review source-control links on Automation accounts with privileged identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/source-control-integration
+  notes: ""
+
+- id: azure-automation-poison-module-or-package
+  provider: azure
+  service: automation
+  title: Replace a runbook module or package imported by existing runbooks
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#poison-a-classic-powershell-dependency-with-moduleswrite
+  source_revision: 171e422
+  summary: A poisoned module/package executes in the runbook sandbox whenever an existing runbook imports it, exposing the Automation account (or Hybrid Worker) identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/modules/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Automation/automationAccounts/python3Packages/write
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource} (via imported modules)"
+  conditions:
+    - id: runbook_imports_module
+      description: Requires an existing runbook that later runs and imports the replaced module/package name with compatible exports.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict modules/python3Packages write, pin module sources, and monitor module imports on Automation accounts.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/shared-resources/modules
+    - https://learn.microsoft.com/en-us/azure/automation/python-3-packages
+  notes: The variant that also creates/publishes/runs a new runbook is already covered by azure-automation-runbook-author-and-run. The runtimeEnvironments packages route is not modelled (HackTricks reports the action is not grantable in custom roles).
+
+- id: azure-automation-listkeys-rogue-hybrid-worker
+  provider: azure
+  service: automation
+  title: Register a rogue Hybrid Runbook Worker with the Automation account agent keys
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountslistkeysaction
+  source_revision: 171e422
+  summary: The agent registration keys let the source enrol a machine it controls as a Hybrid Runbook Worker, so runbook jobs dispatched to it run on attacker hardware where the job's Automation identity context can be captured.
+  requires:
+    all_of:
+      - action: Microsoft.Automation/automationAccounts/listKeys/action
+        scope: "{target.host_resource}"
+    any_of: []
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource} (via a rogue Hybrid Worker)"
+  conditions:
+    - id: agent_registration_accepted
+      description: The account must still accept agent-key based worker registration (the legacy agent-based Hybrid Worker model).
+    - id: job_dispatched_to_rogue_worker
+      description: A runbook job must be dispatched to the worker group the rogue machine joins; the source does not choose the runbook code.
+    - id: identity_exposed_to_job
+      description: The Automation identity endpoint (or credential assets) must be available to the job on the worker for the token to be captured.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Treat listKeys/action as a credential read, keep it out of custom roles, rotate the agent keys, and alert on unexpected Hybrid Worker registrations.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-role-based-access-control
+    - https://learn.microsoft.com/en-us/azure/automation/automation-hybrid-runbook-worker
+  notes: The keys are also used for State Configuration node registration. Code execution on legitimate Hybrid Worker VMs is modelled by azure-automation-runbook-hybrid-worker.
+
+- id: azure-automation-variable-poisoning
+  provider: azure
+  service: automation
+  title: Poison Automation variables consumed by existing runbooks
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsvariableswrite
+  source_revision: 171e422
+  summary: Rewriting a variable that a privileged runbook uses as a target, URL, script path or command fragment makes the runbook's next run act on attacker input with the Automation account identity.
+  requires:
+    all_of:
+      - action: Microsoft.Automation/automationAccounts/variables/write
+        scope: "{target.host_resource}"
+    any_of: []
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource} (via poisoned variables)"
+  conditions:
+    - id: runbook_consumes_variable
+      description: Impact depends on an existing runbook that later runs and uses the variable in a way that changes what it executes or targets.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict variables/write (Automation Contributor, Contributor), validate variable values inside runbooks, and alert on variable changes on accounts with privileged identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/shared-resources/variables
+  notes: Same consumer-dependent class as azure-automation-trigger-existing-runbook; overwriting an encrypted variable with a known value is a side effect, not an identity gain.

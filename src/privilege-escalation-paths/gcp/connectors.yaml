@@ -1,0 +1,33 @@
+# GCP Integration Connectors privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-integration-connectors-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: connectors_agent_impersonable -> SAs on which the project's Connectors service agent
+# (service-<number>@gcp-sa-connectors) can mint tokens (Token Creator, incl. cross-project grants to that agent).
+# attached_to_service: integration_connector -> runtime SA bound to an existing connection ("{target.host_resource}").
+
+- id: gcp-connectors-connections-setiampolicy
+  provider: gcp
+  service: connectors
+  title: Self-grant use of a connection through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-integration-connectors-privesc.md#connectorsconnectionssetiampolicy--resource-level-self-grant-to-use-a-connection
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the runtime service accounts bound to connections whose IAM policy it controls.
+  requires:
+    all_of:
+      - action: connectors.connections.setIamPolicy
+        resource: "{target.host_resource}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: integration_connector
+    scope: any
+    aggregate_as: "Runtime SAs of connections whose IAM the source controls"
+  conditions:
+    - id: request_level
+      description: The identity is used only through connector actions against the connection's backend.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict connectors.connections.setIamPolicy (roles/connectors.admin).
+  notes: The stored external credentials of the connection are also usable, which is not a GCP identity. The former connections.create/update service-account attachment path (GCP-2026-059 / CVE-2026-4644) was fixed on 2025-12-11 and its entry was removed at 171e422.

@@ -1,0 +1,103 @@
+# GCP Cloud Deployment Manager privilege escalation techniques (legacy; end of support 2026-03-31).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Deployments always execute as the Google APIs Service Agent <PROJECT_NUMBER>@cloudservices.gserviceaccount.com
+# (roles/editor by default). attached_to_service: cloudservices_agent -> that project's Google APIs Service Agent.
+# The agent's roles/editor includes actAs but NOT resourcemanager.projects.setIamPolicy, so onward reach (e.g. VMs with
+# any project SA) is through the agent node's own edges, not project ownership.
+
+- id: gcp-deploymentmanager-deployments-create
+  provider: gcp
+  service: deploymentmanager
+  title: Create a Deployment Manager deployment executed by the Google APIs Service Agent
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.create.
+  requires:
+    all_of:
+      - action: deploymentmanager.deployments.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudservices_agent
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Google APIs Service Agent of {project}"
+  conditions:
+    - id: legacy_service
+      description: Deployment Manager support ended on 2026-04-01; the V2 API stays available to existing customers until 2027-06-30, and from 2026-06-30 new users cannot enable it or create a first deployment.
+    - id: agent_roles
+      description: The agent holds roles/editor only if the default grant was not removed; actual power equals its current bindings.
+    - id: indirect_use
+      description: The source uses the agent only by declaring resources (no token); every Editor-grantable resource, including VMs with any project SA and the cloud-platform scope, is creatable.
+    - id: gcloud_get
+      description: The gcloud helper also needs deploymentmanager.deployments.get to finish, but sends the insert before that read, so create alone triggers the deployment.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Disable the Deployment Manager API, remove roles/editor from the cloudservices agent where possible and restrict roles/deploymentmanager.editor.
+  references:
+    - https://cloud.google.com/deployment-manager/docs/access-control
+  notes: The per-deployment credential.serviceAccount field is ignored by the live service (HackTricks), so the identity is always the cloudservices agent. The agent may not appear in the project's SA list; evaluators need a synthetic node.
+
+- id: gcp-deploymentmanager-deployments-update
+  provider: gcp
+  service: deploymentmanager
+  title: Update an existing Deployment Manager deployment
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.update on a deployment.
+  requires:
+    all_of:
+      - action: deploymentmanager.deployments.update
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudservices_agent
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Google APIs Service Agent of {project}"
+  conditions:
+    - id: existing_deployment
+      description: Needs an existing deployment and its current fingerprint; the raw API needs no read, the gcloud helper needs deploymentmanager.deployments.get first. The replacement config must keep existing resources to avoid deleting them.
+    - id: legacy_service
+      description: Deployment Manager support ended on 2026-04-01; the V2 API stays available to existing customers until 2027-06-30.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Disable the Deployment Manager API and restrict deploymentmanager.deployments.update.
+
+- id: gcp-deploymentmanager-deployments-setiampolicy
+  provider: gcp
+  service: deploymentmanager
+  title: Self-grant update on a deployment through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentssetiampolicy--self-grant-control-of-one-existing-deployment
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.setIamPolicy on a deployment.
+  requires:
+    all_of:
+      - action: deploymentmanager.deployments.setIamPolicy
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudservices_agent
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Google APIs Service Agent of {project}"
+  conditions:
+    - id: grantable_role
+      description: The source binds roles/deploymentmanager.admin on the deployment (the API accepts deployment-level Admin bindings) and then uses deployments.update on that deployment only; project-level deployments.create is not conferred.
+    - id: existing_deployment
+      description: Needs an existing deployment.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict deploymentmanager.deployments.setIamPolicy (Owner, Deployment Manager Admin, Security Admin).
+  references:
+    - https://docs.cloud.google.com/deployment-manager/docs/access-control

@@ -1,0 +1,225 @@
+# GCP IAM / service-account impersonation privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-iam-privesc.md (rev 171e422).
+# Conventions used across catalog/gcp/*.yaml (see SCHEMA EXTENSIONS in the GCP agent report):
+#   resource "{target.email}"   -> the target service account (SA-level policy or project/folder/org inheritance).
+#   resource "*" + selector gcp_sa_in_scope_of_permission -> the permission must hold on the target SA's project (or an
+#                                  ancestor); deploy-with-actAs techniques are therefore modelled same-project only.
+#   resource "{target.host_resource}" -> (GCP use of the Azure placeholder) full resource name of the EXISTING resource
+#                                  (VM, function, Cloud Run service/job, environment, ...) that runs as the target SA; all
+#                                  requirements using it must cover that SAME resource (resource-level IAM or an ancestor).
+#   resource "{target.host_resource.content_storage}" -> the Cloud Storage bucket that the host resource loads and executes
+#                                  code from (Composer DAG bucket, function source bucket, App Engine staging bucket, ...).
+#   resource "{target.artifact_arn}" -> (GCP use) full resource name of an executable artifact (Artifact Registry repository,
+#                                  Cloud Storage object/bucket, source repository) later consumed by the target workload.
+#   selector attached_to_service: <type> -> the target SA is the run-as identity of an existing resource of <type>
+#                                  (GCP values: compute_instance, gke_nodepool, cloudfunctions_function, run_service, run_job,
+#                                  run_worker_pool, cloudbuild_trigger, composer_environment, dataflow_job, dataproc_cluster,
+#                                  cloudscheduler_job, workflows_workflow, appengine_version, notebooks_instance,
+#                                  workstations_config, workstations_workstation, dataform_repository, clouddeploy_target,
+#                                  integration_connector, sourcerepo_trigger_consumer, artifact_consumer).
+#   blocker {id: org_policy_constraint, constraint: <name>} -> edge removed when that org-policy constraint is enforced on
+#                                  the target's project (not evaluated yet; reported as not evaluated).
+#   blocker vpc_sc_perimeter     -> a VPC Service Controls perimeter around the target project may block the API calls.
+
+- id: gcp-iam-serviceaccounts-getaccesstoken
+  provider: gcp
+  service: iam
+  title: Mint OAuth access tokens for a service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountsgetaccesstoken--impersonate-a-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every service account on which it holds iam.serviceAccounts.getAccessToken.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.getAccessToken
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      resource_permission_covers_target: iam.serviceAccounts.getAccessToken
+    scope: any
+    aggregate_as: "Service accounts the source can mint tokens for"
+  conditions:
+    - id: iam_condition
+      description: An IAM Condition on the granting binding (time, resource name) may limit when or for which SA the permission applies.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts, never at project/folder/org level.
+  references:
+    - https://cloud.google.com/iam/docs/service-account-permissions
+  notes: Works across projects; the token carries the full IAM permissions of the target SA. iam.serviceAccounts.get is only needed for discovery.
+
+- id: gcp-iam-serviceaccountkeys-create
+  provider: gcp
+  service: iam
+  title: Create or upload a user-managed key for a service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountkeyscreate--create-or-upload-a-durable-private-key
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every service account on which it holds iam.serviceAccountKeys.create.
+  requires:
+    all_of:
+      - action: iam.serviceAccountKeys.create
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      resource_permission_covers_target: iam.serviceAccountKeys.create
+    scope: any
+    aggregate_as: "Service accounts the source can create keys for"
+  conditions:
+    - id: key_creation_constraint
+      description: If iam.disableServiceAccountKeyCreation (or its managed iam.managed.* successor) is enforced, only the key-upload path remains, which iam.disableServiceAccountKeyUpload blocks.
+  blockers:
+    - gcp_deny_policy
+    - {id: org_policy_constraint, constraint: iam.disableServiceAccountKeyCreation+iam.disableServiceAccountKeyUpload}
+  confidence: derived
+  severity: critical
+  mitigation: Enforce the key-creation and key-upload org policies and restrict roles/iam.serviceAccountKeyAdmin to specific SAs.
+  references:
+    - https://cloud.google.com/iam/docs/keys-create-delete
+  notes: The same permission authorizes both Google-generated key creation and public-key upload. The edge is blocked only when BOTH creation and upload are prevented by org policy; HackTricks notes the legacy boolean constraint can be superseded by the managed constraint, so evaluate the one actually enforced.
+
+- id: gcp-iam-serviceaccounts-implicitdelegation
+  provider: gcp
+  service: iam
+  title: Chain token minting through an intermediate service account via implicitDelegation
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountsimplicitdelegation--reach-a-service-account-through-a-delegation-chain
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts that a delegate chain can mint credentials for. The chain starts at a delegate SA on which the source holds iam.serviceAccounts.implicitDelegation, may continue through further implicitDelegation grants, and ends at SAs on which the last delegate holds getAccessToken, signBlob or signJwt. The delegates themselves are not reached.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.implicitDelegation
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_implicit_delegation_chain: true
+    scope: any
+    aggregate_as: "Service accounts reachable through implicitDelegation chains"
+  conditions:
+    - id: delegate_chain
+      description: Each edge records its delegate SAs as delegate:<email> conditions. The final delegate must hold iam.serviceAccounts.getAccessToken, signBlob or signJwt on the target; implicitDelegation alone does not yield a delegate's own access token.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Remove iam.serviceAccounts.implicitDelegation grants (roles/iam.serviceAccountTokenCreator) that are not strictly required, and remove token-minting grants held by service accounts that others can delegate through.
+  references:
+    - https://cloud.google.com/iam/docs/create-short-lived-credentials-delegated
+  notes: The selector follows implicitDelegation transitively (up to 10 hops) and targets only the SAs at the end of the chain. When the source also holds getAccessToken on a delegate (roles/iam.serviceAccountTokenCreator includes both permissions), the gcp-iam-serviceaccounts-getaccesstoken entry reaches the delegate itself.
+
+- id: gcp-iam-serviceaccounts-signblob
+  provider: gcp
+  service: iam
+  title: Sign arbitrary bytes (a JWT assertion) with a service account's Google-managed key
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountssignblob--iamserviceaccountssignjwt--sign-an-assertion-and-exchange-it-for-tokens
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every service account on which it holds iam.serviceAccounts.signBlob.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.signBlob
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      resource_permission_covers_target: iam.serviceAccounts.signBlob
+    scope: any
+    aggregate_as: "Service accounts the source can sign as"
+  conditions:
+    - id: iam_condition
+      description: An IAM Condition on the granting binding may limit the grant.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts.
+  references:
+    - https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signBlob
+  notes: A signed self-issued assertion is exchangeable for an access token of the SA.
+
+- id: gcp-iam-serviceaccounts-signjwt
+  provider: gcp
+  service: iam
+  title: Sign a JWT with a service account's Google-managed key
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountssignblob--iamserviceaccountssignjwt--sign-an-assertion-and-exchange-it-for-tokens
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every service account on which it holds iam.serviceAccounts.signJwt.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.signJwt
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      resource_permission_covers_target: iam.serviceAccounts.signJwt
+    scope: any
+    aggregate_as: "Service accounts the source can sign JWTs as"
+  conditions:
+    - id: iam_condition
+      description: An IAM Condition on the granting binding may limit the grant.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts.
+  references:
+    - https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signJwt
+
+- id: gcp-iam-serviceaccounts-setiampolicy
+  provider: gcp
+  service: iam
+  title: Rewrite a service account's IAM policy to self-grant impersonation
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountssetiampolicy--grant-yourself-token-creation-access
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every service account on which it holds iam.serviceAccounts.setIamPolicy.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.setIamPolicy
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      resource_permission_covers_target: iam.serviceAccounts.setIamPolicy
+    scope: any
+    aggregate_as: "Service accounts whose IAM policy the source controls"
+  conditions:
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject the new binding when the source is an external principal.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Restrict roles/iam.serviceAccountAdmin and roles/iam.securityAdmin; grant SA-level admin only to owners of that SA.
+  references:
+    - https://cloud.google.com/iam/docs/manage-access-service-accounts
+  notes: Also covers the iam.roles.create + iam.serviceAccounts.setIamPolicy variant (the custom role is unnecessary; the SA policy write is the escalation).
+
+- id: gcp-iam-roles-update-own-custom-role
+  provider: gcp
+  service: iam
+  title: Add permissions to a custom role bound to the source
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamrolesupdate--add-permissions-to-an-already-bound-custom-role
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the scope owner of every project/folder/org where a custom role it can update is bound to it.
+  requires:
+    all_of:
+      - action: iam.roles.update
+        resource: "{target.scope}"
+  target:
+    kind: gcp_scope_owner
+    selector:
+      gcp_custom_role_bound_to_source: true
+    scope: inherited_scope
+    aggregate_as: "Scopes where a source-bound custom role is editable"
+  conditions:
+    - id: add_permission_limits
+      description: The caller need not hold the added permission, but it must be supported in custom roles at that level (project-level roles cannot contain folder/org-only permissions, no wildcards), the role must be active (roles.update can also re-activate a disabled role), and any binding condition must hold.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Separate custom-role administration (roles/iam.roleAdmin) from principals bound to those roles.
+  references:
+    - https://cloud.google.com/iam/docs/creating-custom-roles
+  notes: EXTENSION selector gcp_custom_role_bound_to_source = target scope is one where the source (directly or via group) has a binding to a custom role defined in the scope covered by iam.roles.update. Adding e.g. resourcemanager.projects.setIamPolicy yields scope ownership.

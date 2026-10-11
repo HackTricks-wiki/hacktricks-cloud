@@ -1,0 +1,72 @@
+# AWS Batch privilege escalation techniques.
+# Source: hacktricks-cloud aws-batch-privesc/README.md.
+
+- id: aws-batch-submitjob-existing-definition
+  provider: aws
+  service: batch
+  title: Submit a job using an existing job definition with a job role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#batchsubmitjob
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the job role of an existing job definition by submitting a job with a container command override.
+  requires:
+    all_of:
+      - action: batch:SubmitJob
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: ecs
+      attached_resource_covered_by: batch:SubmitJob
+    scope: same_account
+    aggregate_as: "Job roles of Batch job definitions covered by batch:SubmitJob in {account}"
+  conditions:
+    - id: job_queue_covered
+      description: batch:SubmitJob must cover both the job definition and a job queue (Resource includes both ARNs).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: high
+  mitigation: Scope batch:SubmitJob to specific job definitions and queues; keep job roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/batch/latest/userguide/batch-supported-iam-actions-resources.html
+  notes: Registering a new job definition with a passed role is covered by aws-batch-registerjobdefinition-passrole-submitjob. Compute-environment instance roles may also be reachable from EC2-backed jobs. The baked jobRoleArn is an ECS task role (trusts ecs-tasks.amazonaws.com), so the selector resolves through the ECS task principal rather than batch.amazonaws.com; job definitions are not collected, so the attachment is unknown. EKS-backed jobs use a Kubernetes service account and are not covered.
+
+- id: aws-batch-registerjobdefinition-passrole-submitjob
+  provider: aws
+  service: batch
+  title: Register a Batch job definition with a passed job role and submit it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#batchregisterjobdefinition-iampassrole--batchsubmitjob--run-a-container-as-a-passed-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting ecs-tasks.amazonaws.com by registering a job definition that runs its own container with that role as the job role and submitting a job from it.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: batch:RegisterJobDefinition
+        resource: "*"
+      - action: batch:SubmitJob
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com passable in {account}"
+  conditions:
+    - id: job_queue_available
+      description: batch:SubmitJob must cover the new job definition and an existing job queue with a VALID, ENABLED compute environment.
+    - id: fargate_execution_role
+      description: On Fargate compute environments the job definition must also carry an execution role (passed with iam:PassRole); on EC2 compute environments it is optional.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on ecs-tasks roles with iam:PassedToService, restrict batch:RegisterJobDefinition to the deployment pipeline, and scope batch:SubmitJob to exact job-definition revisions.
+  references:
+    - https://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html
+    - https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsbatch.html
+  notes: The Service Authorization Reference lists iam:PassRole as a dependent action of batch:RegisterJobDefinition, and the job definition reference states jobRoleArn is an ECS task IAM role. Jobs on Amazon EKS compute environments use a Kubernetes service account instead of jobRoleArn and are not covered.

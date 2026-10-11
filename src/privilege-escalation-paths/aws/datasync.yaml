@@ -1,0 +1,78 @@
+# AWS DataSync privilege escalation techniques.
+# Source: hacktricks-cloud aws-datasync-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Bounded impact: DataSync uses the
+# location role only for S3 transfers; no STS credentials are returned.
+
+- id: aws-datasync-passrole-createlocations3-createtask
+  provider: aws
+  service: datasync
+  title: Create an S3 location with a passed role and run a transfer task
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datasync-privesc/README.md#datasynccreatelocations3-datasynccreatetask-datasyncstarttaskexecution-iampassrole
+  source_revision: 171e422299
+  summary: The source can exercise the S3 read/write privileges of a passable role trusting datasync.amazonaws.com by binding it to a new S3 location and transferring data with a task it controls.
+  requires:
+    all_of:
+      - action: datasync:CreateLocationS3
+        resource: "*"
+      - action: datasync:CreateTask
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: datasync.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting datasync.amazonaws.com passable in {account}"
+  conditions:
+    - id: task_execution
+      description: The transfer runs on datasync:StartTaskExecution or, without it, on a task schedule (minimum one-hour interval).
+    - id: destination_location
+      description: The source needs a destination location it can read (another S3 location, or a cross-account bucket whose policy admits the passed role).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict datasync:CreateLocationS3/UpdateLocationS3 and iam:PassRole on DataSync roles (iam:PassedToService), and scope each DataSync role to its own buckets/prefixes.
+  references:
+    - https://docs.aws.amazon.com/datasync/latest/userguide/create-s3-location.html
+  notes: Bounded impact - data-plane access to what the passed role can read/write in S3, not a role session.
+
+- id: aws-datasync-updatelocations3-starttaskexecution
+  provider: aws
+  service: datasync
+  title: Replace the role of an existing DataSync S3 location and run its task
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datasync-privesc/README.md#datasyncupdatelocations3-datasyncstarttaskexecution-iampassrole--replace-a-stored-location-role
+  source_revision: 171e422299
+  summary: The source can exercise the S3 privileges of a passable DataSync role against the fixed bucket of an existing location by swapping the location's bucket access role and starting a task that uses it.
+  requires:
+    all_of:
+      - action: datasync:UpdateLocationS3
+        resource: "*"
+      - action: datasync:StartTaskExecution
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: datasync.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting datasync.amazonaws.com passable in {account}"
+  conditions:
+    - id: existing_location_and_task
+      description: An S3 location and a task referencing it must exist; the bucket and the task's destination are fixed, so the gain is limited to additional objects of that bucket the passed role can access, copied to the task's existing destination.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: low
+  mitigation: Restrict datasync:UpdateLocationS3 and iam:PassRole on DataSync roles, and scope each DataSync role to its own location prefix.
+  references:
+    - https://docs.aws.amazon.com/datasync/latest/userguide/API_UpdateLocationS3.html
+  notes: Resources are required on "*" because the location and task ARNs differ and are not collected; scoped grants are missed (false negatives only).
