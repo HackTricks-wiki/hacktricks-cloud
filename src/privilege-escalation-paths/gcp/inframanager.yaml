@@ -1,0 +1,36 @@
+# GCP Infrastructure Manager privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-infra-manager-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-inframanager-deployments-create-actas
+  provider: gcp
+  service: config
+  title: Create an Infrastructure Manager deployment applied as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-infra-manager-privesc.md#configdeploymentscreate--iamserviceaccountsactas--apply-terraform-as-a-selected-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: config.deployments.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Infrastructure Manager SA in {project}"
+  conditions:
+    - id: sa_config_agent
+      description: The run-as SA must hold roles/config.agent (state backend) and read access to the deployment source/staging bucket.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Infrastructure Manager SAs; roles/config.admin lacks actAs but roles/editor has both.
+  references:
+    - https://cloud.google.com/infrastructure-manager/docs/access-control
+  notes: Updating an existing deployment (config.deployments.update) is the same class but not described by HackTricks.

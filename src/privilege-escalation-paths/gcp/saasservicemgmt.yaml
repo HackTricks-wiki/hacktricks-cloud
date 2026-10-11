@@ -1,0 +1,46 @@
+# GCP App Lifecycle Manager (SaaS Runtime, saasservicemgmt) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-app-lifecycle-manager-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: saasservicemgmt_unit -> the actuation_sa input variable of an existing provisioned Unit
+#   ("{target.host_resource}" = that Unit); Unit inventory is not collected.
+
+- id: gcp-saasservicemgmt-release-unit-actuation
+  provider: gcp
+  service: saasservicemgmt
+  title: Apply an attacker blueprint release to existing Units as their actuation service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-app-lifecycle-manager-privesc.md#saasservicemgmtreleasescreate--unitoperationscreate--rolloutscreate--apply-attacker-terraform-as-an-actuation-service-account
+  source_revision: 171e422
+  summary: The source can obtain the resource-management privileges of the actuation service account of existing App Lifecycle Manager Units it can upgrade with a release it creates.
+  requires:
+    all_of:
+      - action: saasservicemgmt.releases.create
+        resource: "*"
+    any_of:
+      - - action: saasservicemgmt.unitOperations.create
+          resource: "{target.host_resource}"
+      - - action: saasservicemgmt.rollouts.create
+          resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: saasservicemgmt_unit
+    scope: any
+    aggregate_as: "Actuation SAs of App Lifecycle Manager Units the source can upgrade"
+  conditions:
+    - id: existing_topology
+      description: Needs an existing UnitKind and provisioned Unit (and a compatible RolloutKind for the rollout branch); a rollout unit filter can narrow but not widen the RolloutKind scope.
+    - id: actuation_sa_prepared
+      description: The retained actuation SA must already be configured for the Unit and hold the permissions the blueprint's resources need; an arbitrary unprepared SA cannot be selected.
+    - id: no_token
+      description: The SA is used through Infrastructure Manager actuation of the blueprint, not as a token in hand; reaching code execution needs a blueprint resource that runs code.
+    - id: read_permissions
+      description: Server-side validation and CLI helpers may also need read permissions on the referenced Unit, Release, UnitKind or RolloutKind.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/saasservicemgmt.admin and editor-level roles in management projects and keep actuation SAs least-privileged.
+  references:
+    - https://docs.cloud.google.com/saas-runtime/docs/overview
+  notes: The page states the caller needs no iam.serviceAccounts.actAs; Google does not document a caller-side actAs check either. roles/saasservicemgmt.admin, roles/editor and roles/owner contain all three permissions.

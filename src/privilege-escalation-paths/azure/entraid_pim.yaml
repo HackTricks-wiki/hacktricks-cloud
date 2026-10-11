@@ -1,0 +1,117 @@
+# Entra ID PIM for Groups escalation through the Microsoft Graph application plane.
+# Source: hacktricks-cloud az-pim-privesc.md, az-entraid-privesc/README.md (rev 171e422).
+#
+# Target kind entra_group: obtaining membership of the group (its Entra role assignments if
+# role-assignable, Azure RBAC assignments, app-role assignments and other access).
+# Facts checked against Microsoft docs (2026-10):
+#  - privilegedAccessGroup assignmentScheduleRequests / eligibilityScheduleRequests: least
+#    privileged application permissions are PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup
+#    and PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup. The Entra-role restriction for
+#    role-assignable groups (Privileged Role Administrator) is documented for delegated access only.
+#  - Any security or Microsoft 365 group can be governed by PIM for Groups except dynamic
+#    membership groups and groups synchronised from on-premises (concept-pim-for-groups).
+#  - PIM for Groups policies have no default approvers; approvers cannot approve their own
+#    activation and service principals cannot approve (pim-approval-workflow).
+
+- id: azure-entraid-graph-pim-groups-active-assignment
+  provider: azure
+  service: entraid
+  title: Graph PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup grants active group membership
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-pim-privesc.md#pim-for-groups-the-sneaky-path
+  source_revision: 171e422
+  summary: A service principal holding PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup can create an active PIM for Groups membership assignment and obtain the privileges of assigned groups, including role-assignable groups.
+  requires:
+    all_of:
+      - graph_app_permission: PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup
+  target:
+    kind: entra_group
+    selector:
+      entra_group_membership_type: assigned
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Assigned groups (incl. role-assignable) in {scope}"
+  conditions:
+    - id: on_prem_synced_group
+      description: Groups synchronised from on-premises AD cannot be governed by PIM for Groups.
+    - id: principal_must_be_user_or_group
+      description: The assignment principal is a user or group, so the source must assign a user (or group) it controls rather than its own service principal.
+    - id: pim_assignment_policy
+      description: The group's PIM assignment policy (e.g. maximum active duration, permanent active assignment disallowed) bounds the assignment; it does not require approval for admin-created assignments.
+  blockers:
+    - restricted_management_au
+    - service_principal_conditional_access_block
+  confidence: derived
+  severity: critical
+  mitigation: Treat PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup as Tier 0, remove it from non-governance applications and alert on PIM for Groups assignments created by service principals.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/privilegedaccessgroup-post-assignmentschedulerequests?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/graph/permissions-reference#privilegedassignmentschedulereadwriteazureadgroup
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/concept-pim-for-groups
+  notes: Unlike Group.ReadWrite.All / GroupMember.ReadWrite.All this path is not limited to non-role-assignable groups, so a role-assignable group holding Global Administrator is reachable. Ownership assignments (accessId owner) reach the same target set.
+
+- id: azure-entraid-graph-pim-groups-eligibility
+  provider: azure
+  service: entraid
+  title: Graph PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup creates self-activatable group eligibility
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#other-high-impact-microsoft-graph-permissions-directoryreadwriteall-groupmemberreadwriteall-synchronizationreadwriteall-privilegedeligibilityschedulereadwriteazureadgroup
+  source_revision: 171e422
+  summary: A service principal holding PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup can make a user it controls eligible for membership of any assigned group, which that user can then activate when the group's activation policy does not require approval.
+  requires:
+    all_of:
+      - graph_app_permission: PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup
+  target:
+    kind: entra_group
+    selector:
+      entra_group_membership_type: assigned
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Assigned groups (incl. role-assignable) in {scope}"
+  conditions:
+    - id: on_prem_synced_group
+      description: Groups synchronised from on-premises AD cannot be governed by PIM for Groups.
+    - id: source_controls_user
+      description: The eligible principal is a user or group and activation is performed by a user, so the source must control a user account.
+    - id: pim_activation_requirements
+      description: Activation may require MFA, a Conditional Access authentication context, justification or ticket information.
+  blockers:
+    - pim_approval_required_by_other_principal
+    - restricted_management_au
+    - service_principal_conditional_access_block
+  confidence: conditional
+  severity: high
+  mitigation: Require approval for membership activation of privileged groups, treat PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup as Tier 0 and review PIM for Groups eligibility with access reviews.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/privilegedaccessgroup-post-eligibilityschedulerequests?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/graph/permissions-reference#privilegedeligibilityschedulereadwriteazureadgroup
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/groups-role-settings
+  notes: Severity should be raised to critical by the evaluator when the group is role-assignable and holds a privileged directory role. Holders of RoleManagementPolicy.ReadWrite.AzureADGroup can remove the approval requirement (enabler, not a separate edge).
+
+- id: azure-entraid-pim-group-eligible-activation
+  provider: azure
+  service: entraid
+  title: Activate an eligible PIM for Groups membership or ownership
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-pim-privesc.md#pim-for-groups-the-sneaky-path
+  source_revision: 171e422
+  summary: A user eligible for membership or ownership of a PIM-governed group can activate it and inherit every role and access the group holds.
+  requires:
+    all_of: []
+  source_kind: azure_user
+  target:
+    kind: entra_group
+    selector:
+      entra_pim_group_eligible_for_source: true
+    scope: tenant
+    aggregate_as: "PIM for Groups eligibilities of the source"
+  conditions:
+    - id: pim_activation_required
+      description: The eligibility must be activated (MFA, justification or ticket as the group's PIM policy requires) before the grants apply.
+    - id: owner_eligibility_adds_members
+      description: An owner eligibility gives group ownership, which lets the source add members (itself included) after activation.
+  blockers:
+    - pim_approval_required_by_other_principal
+  confidence: conditional
+  severity: critical
+  mitigation: Require approval for activation of privileged PIM-governed groups, keep eligibilities minimal, and review eligibilities on role-assignable groups.
+  references:
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/concept-pim-for-groups
+  notes: Facts needed (not collected yet -> unknown) directory_group_eligibility_schedule {principalId, groupId, accessId, status}. The PIM policy write variant (weakening the activation gate) is a separate heading.

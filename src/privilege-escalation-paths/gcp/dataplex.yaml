@@ -1,0 +1,39 @@
+# GCP Dataplex privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-dataplex-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-dataplex-tasks-create-actas
+  provider: gcp
+  service: dataplex
+  title: Create a Dataplex Spark task with a chosen execution service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataplex-privesc.md#dataplextaskscreate--iamserviceaccountsactas--execute-attacker-code-as-a-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: dataplex.tasks.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Dataplex task SA in {project}"
+  conditions:
+    - id: same_project_sa
+      description: The execution SA must belong to the task's own project.
+    - id: sa_baseline_roles
+      description: The SA needs baseline serverless Dataproc permissions (e.g. roles/dataproc.worker) for the job to start.
+    - id: lake
+      description: A Dataplex lake must exist or be creatable; Dataplex and Dataproc APIs must be enabled.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Dataplex task SAs; roles/editor contains both permissions.
+  references:
+    - https://cloud.google.com/dataplex/docs/schedule-custom-spark-tasks

@@ -1,0 +1,74 @@
+# Amazon EventBridge Pipes privilege escalation techniques.
+# Source: hacktricks-cloud aws-eventbridge-pipes-privesc/README.md and aws-eventbridge-pipe-stored-role-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-pipes-passrole-createpipe-or-updatepipe
+  provider: aws
+  service: pipes
+  title: Create or update a pipe that runs with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-pipes-privesc/README.md#pipescreatepipe-or-updatepipe--iampassrole
+  source_revision: 171e422299
+  summary: The source can use the source-read, enrichment and target-invoke permissions of any passable role trusting pipes.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: pipes:CreatePipe
+          resource: "*"
+      - - action: pipes:UpdatePipe
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: pipes.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting pipes.amazonaws.com passable in {account}"
+  conditions:
+    - id: bounded_to_pipe_operations
+      description: Pipes uses the role only to read the source, call the enrichment and invoke the target; reach is the role's read permissions on supported sources and invoke permissions on supported targets, not arbitrary API calls.
+    - id: updatepipe_existing
+      description: The UpdatePipe variant requires an existing pipe within its Resource.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict iam:PassRole on Pipes roles with iam:PassedToService=pipes.amazonaws.com and scope pipe roles to their specific source and target ARNs.
+  references:
+    - https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-pipes-permissions.html
+  notes: Typical impact is moving data from a source the role can read to a target the source controls, or invoking functions, state machines or API destinations the role can invoke.
+
+- id: aws-pipes-startpipe-stored-role
+  provider: aws
+  service: pipes
+  title: Start a stopped pipe that carries a stored role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-pipe-stored-role-privesc/README.md#pipesstartpipe--execute-a-stopped-pipe-with-its-stored-role
+  source_revision: 171e422299
+  summary: The source can make existing stopped pipes run with their stored role, limited to the pipe's fixed source, enrichment and target.
+  requires:
+    all_of:
+      - action: pipes:StartPipe
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: pipes.amazonaws.com
+      via_resource_type: pipes_pipe
+    scope: same_account
+    aggregate_as: "Stored roles of pipes startable in {account}"
+  conditions:
+    - id: pipe_stopped_with_records
+      description: The pipe must be stopped and its source must hold eligible records, or the source must be able to place records in it with a separate producer permission.
+    - id: fixed_configuration
+      description: Source, enrichment, target and role are unchanged; the source gains only what the pipe's existing configuration does with the records.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: low
+  mitigation: Scope pipes:StartPipe to pipe operators and delete pipes that are intentionally stopped.
+  references:
+    - https://docs.aws.amazon.com/eventbridge/latest/pipes-reference/API_StartPipe.html
+  notes: No iam:PassRole is involved because StartPipe does not resubmit the RoleArn.

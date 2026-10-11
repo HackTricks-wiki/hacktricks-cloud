@@ -1,0 +1,194 @@
+# AWS Transfer Family privilege escalation techniques.
+# Source: hacktricks-cloud aws-transfer-family-privesc/README.md (rev a53b46392c).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-transfer-importsshpublickey
+  provider: aws
+  service: transfer
+  title: Import an SSH key for an existing service-managed Transfer user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferimportsshpublickey--impersonate-a-service-managed-user
+  source_revision: 171e422299
+  summary: The source can obtain the S3/EFS file-access privileges of the IAM role configured on a service-managed Transfer Family user.
+  requires:
+    all_of:
+      - action: transfer:ImportSshPublicKey
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: transfer.amazonaws.com
+      via_resource_type: transfer_user
+    scope: same_account
+    aggregate_as: "Roles of service-managed Transfer Family users in {account}"
+  conditions:
+    - id: service_managed_identity
+      description: The server must use service-managed identities (custom identity providers authenticate elsewhere) with SFTP enabled.
+    - id: network_reachability
+      description: The source needs a network path to the server's public or VPC endpoint.
+    - id: session_policy_and_home_directory
+      description: Access is limited to the file operations the role allows, further narrowed by the user's session policy and logical home directory; no AWS API credentials are obtained.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict transfer:ImportSshPublicKey to Transfer administrators, scope user roles and session policies to the user's own prefix, and alert on key imports.
+  references:
+    - https://docs.aws.amazon.com/transfer/latest/APIReference/API_ImportSshPublicKey.html
+  notes: Bounded impact - the role is used by the Transfer service for file operations only, so this is data-plane access via another principal's role rather than full role assumption.
+
+- id: aws-transfer-passrole-createuser-access
+  provider: aws
+  service: transfer
+  title: Attach a passed role to a Transfer Family user or access mapping the source can log in as
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transfercreateuserupdateusercreateaccessupdateaccess--iampassrole--attach-a-chosen-role-to-an-sftp-identity
+  source_revision: 171e422299
+  summary: The source can exercise the S3/EFS file-access privileges of a passable role trusting transfer.amazonaws.com by binding it to a Transfer Family identity it can authenticate as.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: transfer:CreateUser
+          resource: "*"
+      - - action: transfer:UpdateUser
+          resource: "*"
+      - - action: transfer:CreateAccess
+          resource: "*"
+      - - action: transfer:UpdateAccess
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: transfer.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting transfer.amazonaws.com passable in {account}"
+  conditions:
+    - id: authenticate_as_identity
+      description: The source must authenticate as the identity (an SSH key it supplies for a service-managed user, or membership in the mapped AD group for an access mapping).
+    - id: network_reachability
+      description: The source needs a network path to the server's public or VPC endpoint.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict transfer:CreateUser/UpdateUser/CreateAccess/UpdateAccess and iam:PassRole on Transfer roles, and scope Transfer roles to per-user prefixes.
+  references:
+    - https://docs.aws.amazon.com/transfer/latest/APIReference/API_CreateUser.html
+  notes: Bounded impact - file operations through the role; no API credentials are returned.
+
+- id: aws-transfer-secret-backed-idp-record
+  provider: aws
+  service: transfer
+  title: Rewrite a Secrets Manager record used by a Transfer custom identity provider
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#secretsmanagerputsecretvalue--poison-a-secrets-manager-backed-custom-idp-user
+  source_revision: 171e422299
+  summary: The source can exercise the file-access privileges of any role trusting transfer.amazonaws.com by writing a custom-IdP user record that sets its credential and selects that role.
+  requires:
+    all_of:
+      - action: secretsmanager:PutSecretValue
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: transfer.amazonaws.com
+      consumer_input_writable_via: secretsmanager:PutSecretValue
+    scope: same_account
+    aggregate_as: "Roles trusting transfer.amazonaws.com selectable by writable custom-IdP records in {account}"
+  conditions:
+    - id: idp_reads_role_from_secret
+      description: Only the legacy Secrets Manager-backed custom IdP that reads Role/Policy/HomeDirectory from the same secret (aws/transfer/<server-id>/<user>) is affected; DynamoDB-backed solutions are not.
+    - id: kms_key
+      description: A customer-managed KMS key on the secret also requires kms permissions for the source.
+    - id: network_reachability
+      description: The source needs a network path to the server endpoint.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Separate credential data from authorization attributes in custom IdPs, deny PutSecretValue on aws/transfer/* secrets except to the IdP administrators, and alert on such writes.
+  references:
+    - https://docs.aws.amazon.com/transfer/latest/userguide/custom-idp-intro.html
+  notes: No iam:PassRole is involved; the IdP response chooses the role. Bounded to file operations through the role.
+
+- id: aws-transfer-custom-idp-takeover
+  provider: aws
+  service: transfer
+  title: Take over a Transfer Family custom identity provider
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferupdateserver-lambdaupdatefunctioncode-or-api-gateway-response-writes--take-over-a-custom-identity-provider
+  source_revision: 171e422299
+  summary: The source can exercise the file-access privileges of any role trusting transfer.amazonaws.com by controlling the custom identity provider response that selects the session role.
+  requires:
+    any_of:
+      - - action: transfer:UpdateServer
+          resource: "*"
+      - - action: lambda:UpdateFunctionCode
+          resource: "{target.consumer_input_arn}"
+      - - action: apigateway:PATCH
+          resource: "{target.consumer_input_arn}"
+        - action: apigateway:POST
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: transfer.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting transfer.amazonaws.com in {account} (custom IdP servers)"
+  conditions:
+    - id: custom_idp_server
+      description: The server must use a Lambda or API Gateway custom identity provider (UpdateServer can also switch it to one).
+    - id: updateserver_existing_function
+      description: The UpdateServer path needs an existing Lambda function the source controls whose resource policy allows the server to invoke it.
+    - id: lambda_code_signing
+      description: Code signing enforced on the IdP function blocks an unsigned replacement.
+    - id: network_reachability
+      description: The source needs a network path to the server endpoint.
+  blockers:
+    - scp_or_boundary_deny
+    - lambda_code_signing_enforced
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict transfer:UpdateServer to deployment roles, protect IdP functions with code signing and restricted lambda:UpdateFunctionCode, restrict API Gateway PATCH/deployment on IdP APIs, and keep Transfer roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  notes: The IdP response chooses any role trusting transfer.amazonaws.com without iam:PassRole. The IdP function/API (consumer input) mapping is not collected, so the Lambda/API Gateway groups resolve as unknown; apigateway:POST is required on "*" because the deployment resource differs from the integration response (false negatives only).
+
+- id: aws-transfer-workflow-passrole-updateserver
+  provider: aws
+  service: transfer
+  title: Attach a managed workflow with a passed execution role to a Transfer server
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#managed-workflow-role-abuse--execute-storage-actions-on-upload
+  source_revision: 171e422299
+  summary: The source can have Transfer Family run workflow steps (copy, tag, delete, decrypt, custom Lambda invoke) with the privileges of a passable role trusting transfer.amazonaws.com.
+  requires:
+    all_of:
+      - action: transfer:CreateWorkflow
+        resource: "*"
+      - action: transfer:UpdateServer
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: transfer.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting transfer.amazonaws.com passable in {account}"
+  conditions:
+    - id: upload_trigger
+      description: Workflows run on a completed or partial upload to the server; the source must be able to upload or wait for legitimate uploads (AS2 messages do not trigger server workflows).
+    - id: step_types_bound_impact
+      description: The role is only exercised through workflow step types; custom steps invoke existing Lambda functions, which run with their own roles.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict transfer:CreateWorkflow/UpdateServer and iam:PassRole on Transfer workflow roles, and scope workflow roles to the prefixes they process.
+  references:
+    - https://docs.aws.amazon.com/transfer/latest/userguide/workflow-execution-role.html
+  notes: Bounded impact - storage operations on uploaded files through the workflow role.

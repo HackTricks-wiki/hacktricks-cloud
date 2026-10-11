@@ -1,0 +1,89 @@
+# GCP App Engine privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-appengine-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Versions run as the app-level default SA (<PROJECT_ID>@appspot.gserviceaccount.com) unless a per-version SA is set.
+
+- id: gcp-appengine-versions-create-actas
+  provider: gcp
+  service: appengine
+  title: Deploy an App Engine version running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#deploy-attacker-controlled-code-as-a-version-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, including the App Engine default service account.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: appengine.versions.create
+        resource: "*"
+      - action: storage.objects.create
+        resource: "*"
+      - action: cloudbuild.builds.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as App Engine runtime SA in {project}"
+  conditions:
+    - id: app_exists
+      description: An App Engine application must already exist in the project.
+    - id: deploy_prereqs
+      description: The effective deploy permission set varies (Google recommends App Engine Deployer, Service Account User, Cloud Build Editor and Storage Object Admin); read and operation-polling permissions used by the CLI may be avoidable.
+    - id: legacy_default_sa_actas_exception
+      description: In legacy-affected organizations the auto-created appspot default SA can be deployed as without actAs until constraints/appengine.enforceServiceAccountActAsCheck is enforced; this entry conservatively still requires actAs.
+    - id: version_sa_artifact_registry
+      description: The version's SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts for flexible) or the deployment never reaches execution.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on specific SAs, remove roles/editor from the App Engine default SA and restrict roles/appengine.deployer.
+  references:
+    - https://cloud.google.com/appengine/docs/standard/configure-service-accounts
+  notes: A no-promote version is reachable without moving production traffic. Also covers replacing a named version and environment-variable startup injection in app.yaml. The SA must be in the App Engine application's project.
+
+- id: gcp-appengine-instances-enabledebug
+  provider: gcp
+  service: appengine
+  title: SSH into an App Engine flexible instance and use its service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#ssh-into-a-flexible-environment-instance-through-debug-mode-or-os-login
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service account of App Engine flexible versions on which it holds appengine.instances.enableDebug, or OS Login plus actAs on that service account.
+  requires:
+    any_of:
+      - - action: appengine.instances.enableDebug
+          resource: "{target.host_resource}"
+      - - action: compute.instances.osLogin
+          resource: "*"
+        - action: iam.serviceAccounts.actAs
+          resource: "{target.email}"
+      - - action: compute.instances.osAdminLogin
+          resource: "*"
+        - action: iam.serviceAccounts.actAs
+          resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: appengine_version
+    scope: same_project
+    aggregate_as: "SAs of App Engine flexible versions the source can debug"
+  conditions:
+    - id: flexible_only
+      description: Only App Engine flexible instances support SSH debug; standard environment versions are not reachable.
+    - id: ssh_reachability
+      description: The instance VM must be reachable over SSH from the source (external IP, or IAP TCP forwarding which adds iap.tunnelInstances.accessViaIAP and a firewall path).
+    - id: os_login_scope
+      description: The OS Login branch needs the role at project level for the CLI (or compute.projects.get); external-organization principals also need compute.osLoginExternalUser.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/appengine.appAdmin and avoid privileged SAs on flexible versions.
+  references:
+    - https://docs.cloud.google.com/appengine/docs/flexible/debugging-an-instance
+    - https://docs.cloud.google.com/compute/docs/oslogin/set-up-oslogin
+  notes: The debug branch does not require actAs or Compute setMetadata (the debug request carries the SSH key). The OS Login branch requires actAs because the VM has an attached SA. OS Login resource "*" is project-level; the VM is the version's flexible instance.

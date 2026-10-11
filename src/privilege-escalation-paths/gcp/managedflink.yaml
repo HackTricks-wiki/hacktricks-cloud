@@ -1,0 +1,42 @@
+# GCP Managed Service for Apache Flink privilege escalation techniques.
+# Source: hacktricks-cloud gcp-post-exploitation/gcp-managed-flink-post-exploitation.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-managedflink-jobs-create-actas
+  provider: gcp
+  service: managedflink
+  title: Submit an attacker-controlled Managed Flink job that runs as a chosen workload identity
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-managed-flink-post-exploitation.md#managedflinkjobscreate--execute-an-attacker-jarpython-job-as-the-workload-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of service accounts in the project on which it holds iam.serviceAccounts.actAs, by submitting an on-demand Managed Flink job whose attacker-supplied graph/JARs run as that workload identity.
+  requires:
+    all_of:
+      - action: managedflink.jobs.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: storage.objects.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Managed Flink workload identity in {project}"
+  conditions:
+    - id: service_agent_read
+      description: The Managed Flink service agent must be able to read the staged job graph/artifacts from the chosen staging bucket.
+    - id: credential_exposure
+      description: Google does not document how the workload identity's credentials are exposed to job code; the payload uses the identity through runtime connectors/credentials rather than a guaranteed metadata endpoint.
+    - id: actas_not_documented
+      description: Google does not document whether actAs is checked for the job-level workloadIdentity; it is required here conservatively. Submitting to an existing deployment (inheriting its identity) without actAs is an unverified lead that is not modelled.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict managedflink.jobs.create and grant actAs only on specific service accounts; give Managed Flink workload identities least privilege.
+  references:
+    - https://cloud.google.com/managed-flink/docs/access-control
+  notes: HackTricks @171e422 documents this on the post-exploitation page and labels deployment identity inheritance without actAs a test lead, not a confirmed primitive.

@@ -1,0 +1,289 @@
+# GCP to Google Workspace pivots and Application Integration / Agent Identity identity edges.
+# Source: hacktricks-cloud gcp-to-workspace-pivoting/*.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml. New attached_to_service values (Workspace facts,
+# not collected; see SCHEMA_EXTENSIONS.md ## GCP): workspace_dwd_delegation, workspace_super_admin_of_zone_domain,
+# workspace_addon_user, agentidentity_authorized_user. pivot_resource_type values: gcp_dwd_service_account (SA whose client ID
+# has a Workspace DWD grant), dns_managed_zone, agentidentity_auth_provider.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-workspace-dwd-keyless-signjwt
+  service: iam
+  title: Sign a delegation JWT with a domain-wide-delegated service account's Google-managed key
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#keyless-dwd-abuse-with-signjwt-or-signblob
+  summary: The source can obtain the privileges of the Workspace users that a domain-wide-delegated service account it can sign for is authorized
+    to impersonate.
+  pivot_resource_type: gcp_dwd_service_account
+  requires:
+    any_of:
+    - - action: iam.serviceAccounts.signJwt
+        resource: '{pivot}'
+    - - action: iam.serviceAccounts.signBlob
+        resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_dwd_delegation
+    scope: any
+    aggregate_as: Workspace users impersonable through domain-wide delegation of {pivot}
+  conditions:
+  - id: dwd_grant
+    description: The pivot SA's OAuth client ID must be authorized for domain-wide delegation in the Workspace tenant (Admin console facts, not
+      GCP IAM).
+  - id: scopes
+    description: Only the scopes authorized in the delegation are usable, and a valid Workspace user email must be known.
+  blockers: &id001
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Keep DWD grants minimal and scoped, and restrict signJwt/signBlob/getAccessToken/keys on DWD service accounts to their workloads.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-workspace-dwd-key-create
+  service: iam
+  title: Create a key for a domain-wide-delegated service account
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#compromise-existing-delegation
+  summary: The source can obtain the privileges of the Workspace users that a domain-wide-delegated service account it can create keys for is
+    authorized to impersonate.
+  pivot_resource_type: gcp_dwd_service_account
+  requires:
+    all_of:
+    - action: iam.serviceAccountKeys.create
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_dwd_delegation
+    scope: any
+    aggregate_as: Workspace users impersonable through domain-wide delegation of {pivot}
+  conditions:
+  - id: dwd_grant
+    description: The pivot SA's client ID must be authorized for domain-wide delegation; only the delegated scopes apply.
+  blockers:
+  - gcp_deny_policy
+  - id: org_policy_constraint
+    constraint: iam.disableServiceAccountKeyCreation+iam.disableServiceAccountKeyUpload
+  confidence: conditional
+  severity: critical
+  mitigation: Enforce iam.disableServiceAccountKeyCreation and restrict key creation on DWD service accounts.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-workspace-cloud-dns-admin-recovery
+  service: dns
+  title: Publish the administrator-recovery DNS challenge for the Workspace primary domain
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#cloud-dns-to-workspace-administrator-recovery
+  summary: The source can obtain the privileges of a Workspace super administrator of tenants whose primary domain is served by a Cloud DNS public
+    zone it can modify.
+  pivot_resource_type: dns_managed_zone
+  requires:
+    all_of:
+    - action: dns.changes.create
+      resource: '{pivot}'
+    any_of:
+    - - action: dns.resourceRecordSets.create
+        resource: '{pivot}'
+    - - action: dns.resourceRecordSets.update
+        resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_super_admin_of_zone_domain
+    scope: any
+    aggregate_as: Workspace super administrators of domains served by {pivot}
+  conditions:
+  - id: public_delegation
+    description: The zone must be the publicly delegated authoritative zone of the Workspace primary domain; private or undelegated zones are
+      not exploitable.
+  - id: recovery_process
+    description: Depends on Google's administrator-recovery process accepting the domain-verification challenge for the tenant.
+  blockers: *id001
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict DNS change permissions on zones of Workspace domains and monitor admin-recovery events.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-workspace-addons-deployment-update
+  service: gsuiteaddons
+  title: Repoint an existing HTTP Workspace add-on deployment to a source-controlled endpoint
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-workspace-addons-privesc.md#gsuiteaddonsdeploymentsupdate
+  summary: The source can obtain the privileges of Workspace users who invoke HTTP add-on deployments it can update, limited to the scopes they
+    already granted.
+  requires:
+    all_of:
+    - action: gsuiteaddons.deployments.update
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_addon_user
+    scope: any
+    aggregate_as: Workspace users of updatable HTTP add-on deployments
+  conditions:
+  - id: later_invocation
+    description: An installed and authorized user must invoke the add-on after the change; only that user's already-granted scopes are exposed.
+  - id: http_runtime
+    description: Only HTTP add-on deployments; Apps Script deployments differ.
+  blockers: *id001
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict gsuiteaddons.deployments.update and alert on deployment endpoint or scope changes.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-agentidentity-retrieve-credentials
+  service: agentidentity
+  title: Retrieve a stored OAuth token from an Agent Identity auth provider
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-agent-identity-auth-manager-privesc.md#agentidentityauthprovidersretrievecredentials
+  summary: The source can obtain the privileges of users whose OAuth tokens are stored in Agent Identity auth providers on which it holds retrieveCredentials,
+    limited to their consented scopes.
+  pivot_resource_type: agentidentity_auth_provider
+  requires:
+    all_of:
+    - action: agentidentity.authProviders.retrieveCredentials
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: agentidentity_authorized_user
+    scope: any
+    aggregate_as: Users with tokens stored in {pivot}
+  conditions:
+  - id: google_provider
+    description: Workspace impact needs a provider configured with Google's OAuth endpoints and a user who already consented to Workspace scopes.
+  - id: known_user
+    description: The per-user credential must exist for a known user ID.
+  blockers: *id001
+  confidence: conditional
+  severity: high
+  mitigation: Treat roles/agentidentity.user and custom roles with retrieveCredentials as credential-vault access.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-agentidentity-update-token-url
+  service: agentidentity
+  title: Change an Agent Identity auth provider's token endpoint to intercept future refreshes
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-agent-identity-auth-manager-privesc.md#agentidentityauthprovidersupdate-token-endpoint-interception
+  summary: The source can obtain the privileges of users whose OAuth flows run through Agent Identity auth providers it can update, limited to
+    their consented scopes.
+  pivot_resource_type: agentidentity_auth_provider
+  requires:
+    all_of:
+    - action: agentidentity.authProviders.update
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: agentidentity_authorized_user
+    scope: any
+    aggregate_as: Users with tokens stored in {pivot}
+  conditions:
+  - id: later_refresh
+    description: Takes effect only on a later token exchange or refresh through the provider.
+  blockers: *id001
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict authProviders.update (roles/agentidentity.editor) and alert on authorization/token URL changes.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-appintegration-runas-sa-actas
+  service: integrations
+  title: Publish an Application Integration version with a chosen run-as service account
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-application-integration-privesc.md#runasserviceaccount--author--publish-an-integration-that-runs-as-an-arbitrary-sa
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: integrations.integrationVersions.create
+      resource: '*'
+    - action: integrations.integrationVersions.deploy
+      resource: '*'
+    - action: integrations.integrationVersions.invoke
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Application Integration run-as SA in {project}
+  conditions:
+  - id: task_level
+    description: The SA token is used by Connector, REST caller and Cloud Function tasks of the integration (request level).
+  - id: legacy_behavior
+    description: Before Google's authorization change, publish did not enforce actAs and unset run-as fell back to the integrations service agent.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated integration SAs; roles/editor and roles/owner contain both halves.
+
+- id: gcp-workspace-super-admin-org-admin
+  provider: gcp
+  service: resourcemanager
+  title: Workspace or Cloud Identity super administrator takes over the associated Google Cloud organization
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#workspace-super-administrator-to-gcp-organization-administrator
+  source_revision: 171e422
+  summary: A super administrator of the Workspace/Cloud Identity account linked to the organization can always grant itself or a controlled principal Organization Administrator, which gives it IAM control of the whole organization.
+  source_kind: gcp_user
+  source_selector:
+    gcp_workspace_admin_role: super_admin
+  requires:
+    all_of: []
+  target:
+    kind: gcp_scope_owner
+    selector:
+      any_principal_in_scope: true
+    scope: org
+    aggregate_as: "IAM control of organization {target.scope}"
+  conditions:
+    - id: org_linked_to_customer
+      description: The organization resource must belong to the source's Workspace/Cloud Identity customer.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Keep super administrators few, dedicated, phishing-resistant and unused for daily work. Grant Organization Administrator to a separate group, and alert on organization IAM policy changes made by super administrators.
+  references:
+    - https://docs.cloud.google.com/resource-manager/docs/super-admin-best-practices
+  notes: Google documents that super administrators hold irrevocable Organization Administrator capability that does not appear in the organization IAM policy, so IAM-only analysis cannot see it.
+
+- provider: gcp
+  source_revision: 171e422
+  id: gcp-appintegration-authconfigs-get-decrypted
+  service: integrations
+  title: Read a decrypted Application Integration authentication profile
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-application-integration-privesc.md#integrationsauthconfigsget--retrieve-decrypted-credentials
+  summary: The source can obtain the privileges of the identities whose OAuth tokens or reusable credentials are stored in Application Integration authentication profiles on which it holds integrations.authConfigs.get, limited to the stored scopes.
+  pivot_resource_type: appintegration_auth_config
+  requires:
+    all_of:
+    - action: integrations.authConfigs.get
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: appintegration_authconfig_identity
+    scope: any
+    aggregate_as: Identities whose credentials are stored in {pivot}
+  conditions:
+  - id: credential_type
+    description: Only OAuth authorization-code profiles (access and refresh token plus client secret) carry a Google user's identity; token, password and JWT profiles reach the external system they authenticate to, and service-account profiles hold only the SA name and scopes, not a key.
+  - id: google_scopes
+    description: Workspace impact needs a Google OAuth profile whose user consented to Workspace scopes; the token does not expand scopes or impersonate other users.
+  - id: known_name
+    description: The auth config name (UUID) must be known; authConfigs.get does not imply list.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Treat integrations.authConfigs.get (included in roles/integrations.integrationViewer) as credential-vault access and prefer run-as service accounts over stored OAuth tokens.
+  references:
+  - https://docs.cloud.google.com/application-integration/docs/reference/rest/v1/projects.locations.authConfigs/get
+  - https://docs.cloud.google.com/application-integration/docs/configure-authentication-profiles
+  notes: Modelled like gcp-agentidentity-retrieve-credentials; the GET method returns the decrypted credential. Previously excluded as a plain secret read.

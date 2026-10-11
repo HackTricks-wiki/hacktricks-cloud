@@ -1,0 +1,82 @@
+# Azure Data Explorer (Kusto) techniques (declarative only).
+# Source: hacktricks-cloud az-data-explorer-privesc.md (rev 171e422).
+
+- id: azure-kusto-database-principal-assignment-write
+  provider: azure
+  service: data_explorer
+  title: Grant a Kusto database role through ARM principal assignments
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#microsoftkustoclustersdatabasesprincipalassignmentswrite
+  source_revision: 171e422
+  summary: The source can obtain Kusto database Admin on databases in scope.
+  requires:
+    all_of:
+      - action: Microsoft.Kusto/clusters/databases/principalAssignments/write
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Kusto database admins of {target.scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict principalAssignments/write to Kusto administrators.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-explorer/manage-database-permissions
+  notes: ""
+
+- id: azure-kusto-cluster-principal-assignment-write
+  provider: azure
+  service: data_explorer
+  title: Grant a Kusto cluster-wide role through ARM principal assignments
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#cluster-wide-variant-microsoftkustoclustersprincipalassignmentswrite
+  source_revision: 171e422
+  summary: The source can obtain AllDatabasesAdmin on the Kusto cluster.
+  requires:
+    all_of:
+      - action: Microsoft.Kusto/clusters/principalAssignments/write
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Kusto cluster admins of {target.scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict cluster principalAssignments/write.
+  references: []
+  notes: ""
+
+- id: azure-kusto-database-add-principals
+  provider: azure
+  service: data_explorer
+  title: Add a Kusto database principal with the AddPrincipals action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#microsoftkustoclustersdatabasesaddprincipalsaction--direct-principal-add-stealthier-than-principalassignments
+  source_revision: 171e422
+  summary: The source can obtain Kusto database Admin on databases in scope.
+  requires:
+    all_of:
+      - action: Microsoft.Kusto/Clusters/Databases/AddPrincipals/action
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Kusto database admins of {target.scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict Databases/AddPrincipals/action alongside principalAssignments/write.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/azurerekusto/databases/add-principals
+  notes: Microsoft operation 'Microsoft.Kusto/Clusters/Databases/AddPrincipals/action'.

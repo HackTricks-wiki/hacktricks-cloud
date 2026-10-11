@@ -1,0 +1,37 @@
+# Amazon GameLift Servers privilege escalation techniques.
+# Source: hacktricks-cloud aws-gamelift/README.md (rev 171e422299).
+
+- id: aws-gamelift-passrole-createfleet
+  provider: aws
+  service: gamelift
+  title: Create a GameLift fleet with a passed instance role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#gameliftcreatefleet--iampassrole--run-code-on-fleet-ec2-as-a-passed-instance-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting gamelift.amazonaws.com by running a server build it controls on fleet instances.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: gamelift:CreateFleet
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: gamelift.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting gamelift.amazonaws.com passable in {account}"
+  conditions:
+    - id: controlled_build
+      description: The fleet must run a build or script the source controls (an existing one, or gamelift:CreateBuild / CreateScript with an upload).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on GameLift instance roles and gamelift:CreateFleet to build pipelines.
+  references:
+    - https://docs.aws.amazon.com/gamelift/latest/developerguide/setting-up-role.html
+    - https://docs.aws.amazon.com/gamelift/latest/apireference/API_CreateFleet.html
+  notes: The InstanceRoleArn credentials are available to processes on fleet instances through the shared credentials profile.

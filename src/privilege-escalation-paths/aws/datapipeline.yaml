@@ -1,0 +1,40 @@
+# AWS Data Pipeline privilege escalation techniques.
+# Source: hacktricks-cloud aws-datapipeline-privesc/README.md.
+
+- id: aws-datapipeline-passrole-create-activate
+  provider: aws
+  service: datapipeline
+  title: Create and activate a Data Pipeline with passed roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datapipeline-privesc/README.md#iampassrole-datapipelinecreatepipeline-datapipelineputpipelinedefinition-datapipelineactivatepipeline
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable EC2 instance-profile roles used as the pipeline resource role by running commands it defines on pipeline-launched instances.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: datapipeline:CreatePipeline
+        resource: "*"
+      - action: datapipeline:PutPipelineDefinition
+        resource: "*"
+      - action: datapipeline:ActivatePipeline
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+    scope: same_account
+    aggregate_as: "EC2 instance-profile roles in {account} (Data Pipeline resource role)"
+  conditions:
+    - id: passable_pipeline_role
+      description: iam:PassRole must also cover a pipeline role trusting datapipeline.amazonaws.com (and elasticmapreduce.amazonaws.com for EMR resources) that can launch the resources.
+    - id: service_availability
+      description: AWS Data Pipeline is closed to new customers (since 2024); only accounts already using it can create pipelines.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole and Data Pipeline write actions; migrate off Data Pipeline.
+  references:
+    - https://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-iam-roles.html
+  notes: The pipeline role (datapipeline principal) itself can also be targeted if a pipeline activity runs with it, but code execution happens on the resource role; only the resource role is modelled.

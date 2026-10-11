@@ -1,0 +1,74 @@
+# Amazon GameLift Streams privilege escalation techniques.
+# Source: hacktricks-cloud aws-gamelift-streams-privesc/README.md (rev 171e422299).
+# Session roles must trust gameliftstreams.amazonaws.com and be named GameLiftStreams-* (StartStreamSession API reference).
+
+- id: aws-gameliftstreams-createstreamsessionadminshell
+  provider: aws
+  service: gameliftstreams
+  title: Open an admin shell in a live stream session that has a role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamscreatestreamsessionadminshell-on-a-session-with-a-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the role of live GameLift Streams sessions in stream groups it can open admin shells in.
+  requires:
+    all_of:
+      - action: gameliftstreams:CreateStreamSessionAdminShell
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: gameliftstreams.amazonaws.com
+      name_prefix: GameLiftStreams-
+      via_resource_type: gameliftstreams_stream_session
+    scope: same_account
+    aggregate_as: "Roles of live GameLift Streams sessions in {account}"
+  conditions:
+    - id: live_session_with_role
+      description: A stream session started with a RoleArn must be live; the role is only exposed for the session lifetime.
+    - id: stream_group_scope
+      description: The action authorizes the parent stream-group ARN; the edge is computed only for grants covering "*".
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict gameliftstreams:CreateStreamSessionAdminShell to operators and give session roles only what the application needs.
+  references:
+    - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
+  notes: Stream sessions are not collected; attachment resolves as unknown. No iam:PassRole is needed because the backend already attached the role.
+
+- id: aws-gameliftstreams-passrole-startstreamsession
+  provider: aws
+  service: gameliftstreams
+  title: Start a stream session of a controlled application with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamsstartstreamsession--iampassrole-with-attacker-controlled-application-code
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable GameLiftStreams-* roles trusting gameliftstreams.amazonaws.com when it can stream an application whose code it controls.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: gameliftstreams:StartStreamSession
+          resource: "*"
+      - - action: gameliftstreams:CreateStreamUrl
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: gameliftstreams.amazonaws.com
+      name_prefix: GameLiftStreams-
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "GameLiftStreams-* roles passable in {account}"
+  conditions:
+    - id: controlled_application
+      description: An application whose content the source controls must be associated with an active stream group with capacity (creating or associating one needs further GameLift Streams and S3 permissions).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on GameLiftStreams-* roles to the session backend and restrict who can create or update applications.
+  references:
+    - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
+  notes: gameliftstreams:CreateStreamUrl is not in aws_permissions_cat.yaml; HackTricks documents it as an alternative path that also takes a RoleArn.

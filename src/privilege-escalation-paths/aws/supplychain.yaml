@@ -1,0 +1,34 @@
+# AWS Supply Chain application-plane privilege escalation techniques (aws_service_plane_admin targets).
+# Source: hacktricks-cloud aws-supply-chain-privesc/README.md (rev 171e422299).
+# Supply Chain instances are not collected: every edge is one unresolved placeholder per account.
+
+- id: aws-supplychain-assignadmin
+  provider: aws
+  service: scn
+  title: Assign Supply Chain application administrator to a controlled Identity Center user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-supply-chain-privesc/README.md#scnassignadminpermissionstouser
+  source_revision: 171e422299
+  summary: The source can make an IAM Identity Center user it controls the application administrator of Supply Chain instances.
+  requires:
+    all_of:
+      - action: scn:AssignAdminPermissionsToUser
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: scn
+      resource_permission_covers_target: scn:AssignAdminPermissionsToUser
+    scope: same_account
+    aggregate_as: "AWS Supply Chain administrators in {account}"
+    grants: [Supply Chain application administrator]
+  conditions:
+    - id: controlled_identity_center_user
+      description: The source controls a user in the instance's connected IAM Identity Center identity source.
+    - id: identity_center_application
+      description: The instance must already have its Identity Center application (otherwise scn:CreateSSOApplication and its prerequisites are also needed).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict scn:AssignAdminPermissionsToUser to the instance owners and alert on application-administrator changes.
+  notes: Service-level administration only; it grants neither administration of the account nor an Identity Center permission set.

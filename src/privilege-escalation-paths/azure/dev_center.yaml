@@ -1,0 +1,33 @@
+# Azure Dev Center techniques (declarative only).
+# Source: hacktricks-cloud az-dev-center-privesc.md (rev 171e422).
+
+- id: azure-devcenter-ade-deployment-identity
+  provider: azure
+  service: dev_center
+  title: Deploy an ADE environment whose template runs with the project environment type identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-dev-center-privesc.md#ade-deployment-identity-template-injection-marquee-privesc
+  source_revision: 171e422
+  summary: Azure Deployment Environments deploy templates with the identity configured on the project environment type, so a controlled template runs with that identity's roles.
+  requires:
+    all_of:
+      - action: Microsoft.DevCenter/projects/users/environments/userWrite/action
+        data_action: true
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DevCenter/projects/environmentTypes
+    scope: inherited_scope
+    aggregate_as: "Deployment identity of Dev Center project {target.host_resource}"
+  conditions:
+    - id: template_control
+      description: The source must control an environment definition the project can use (write access to a catalog repository, or Microsoft.DevCenter/projects/catalogs/write or devcenters/catalogs/write to add one), or an existing definition must take attacker-influenced parameters that reach code execution.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Protect catalog repositories and catalogs/write, and keep environment type deployment identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/deployment-environments/concept-environments-key-concepts
+    - https://learn.microsoft.com/en-us/azure/deployment-environments/how-to-configure-project-environment-types
+  notes: Covers the catalog poisoning section of the page as the template-control route.

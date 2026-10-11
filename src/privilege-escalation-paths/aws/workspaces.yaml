@@ -1,0 +1,41 @@
+# Amazon WorkSpaces (WorkSpaces Instances) privilege escalation techniques.
+# Source: hacktricks-cloud aws-workspaces-privesc/README.md (rev 171e422299).
+
+- id: aws-workspaces-instances-passrole-createworkspaceinstance
+  provider: aws
+  service: workspaces-instances
+  title: Create a WorkSpaces instance with a passed instance profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workspaces-privesc/README.md#workspaces-instancescreateworkspaceinstance-iampassrole-ec2runinstances
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable instance-profile role trusting ec2.amazonaws.com by launching a WorkSpaces instance whose user data it controls.
+  requires:
+    all_of:
+      - action: workspaces-instances:CreateWorkspaceInstance
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ec2:RunInstances
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Instance-profile roles passable in {account}"
+  conditions:
+    - id: forward_access_session
+      description: ec2:RunInstances is evaluated through a forward access session; aws:CalledVia conditions must admit workspaces-instances.amazonaws.com.
+    - id: service_linked_role
+      description: The AWSServiceRoleForWorkSpacesInstances service-linked role must exist (or the source needs iam:CreateServiceLinkedRole).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on instance-profile roles and treat workspaces-instances:CreateWorkspaceInstance like ec2:RunInstances.
+  references:
+    - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
+  notes: Equivalent reach to ec2:RunInstances + iam:PassRole; the source still needs RunInstances on the AMI, network and instance resources.

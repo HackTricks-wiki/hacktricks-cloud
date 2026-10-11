@@ -1,0 +1,218 @@
+# AWS Bedrock / Bedrock AgentCore privilege escalation techniques.
+# Source: hacktricks-cloud aws-bedrock-privesc/README.md and aws-bedrock-agentcore-privesc/README.md (rev 171e422299).
+
+- id: aws-bedrock-agentcore-codeinterpreter-existing
+  provider: aws
+  service: bedrock
+  title: Run code in an existing AgentCore Code Interpreter with an execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md#bedrock-agentcorestartcodeinterpretersession--bedrock-agentcoreinvokecodeinterpreter---code-interpreter-execution-role-pivot
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of a custom AgentCore Code Interpreter it can start sessions in and invoke.
+  requires:
+    all_of:
+      - action: bedrock-agentcore:StartCodeInterpreterSession
+        resource: "{target.attached_resource_arn}"
+      - action: bedrock-agentcore:InvokeCodeInterpreter
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: bedrock-agentcore
+      attached_resource_covered_by: bedrock-agentcore:InvokeCodeInterpreter
+    scope: same_account
+    aggregate_as: "Execution roles of AgentCore Code Interpreters covered by bedrock-agentcore:InvokeCodeInterpreter in {account}"
+  conditions:
+    - id: network_mode
+      description: Credentials can be used from inside the interpreter regardless of network mode; exfiltration outside AWS depends on PUBLIC/VPC mode, but in-sandbox use of the role still grants its privileges.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: high
+  mitigation: Restrict StartCodeInterpreterSession/InvokeCodeInterpreter on custom interpreters and keep their execution roles least-privileged.
+  references: []
+  notes: The AWS-managed default interpreter has no customer execution role and is not a target.
+
+- id: aws-bedrock-agentcore-createcodeinterpreter-passrole
+  provider: aws
+  service: bedrock
+  title: Create an AgentCore Code Interpreter with a passed execution role and run code in it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcorecreatecodeinterpreter--createbrowser-iampassrole--code-execution-sandbox-as-a-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting bedrock-agentcore.amazonaws.com by creating a Code Interpreter with that execution role and invoking it.
+  requires:
+    all_of:
+      - action: bedrock-agentcore:CreateCodeInterpreter
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: bedrock-agentcore:StartCodeInterpreterSession
+        resource: "*"
+      - action: bedrock-agentcore:InvokeCodeInterpreter
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: bedrock-agentcore.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict this.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: high
+  mitigation: Restrict iam:PassRole for AgentCore execution roles and bedrock-agentcore:CreateCodeInterpreter.
+  references: []
+  notes: CreateBrowser with InvokeBrowser is an equivalent sandbox path under the same execution role; it is not modelled separately.
+
+- id: aws-bedrock-agent-lambda-actiongroup-hijack
+  provider: aws
+  service: bedrock
+  title: Modify a Lambda action-group function and trigger it through a Bedrock agent
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md#lambdaupdatefunctioncode-bedrockinvokeagent---agent-tool-hijacking-via-lambda
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of a Lambda function used as a Bedrock agent action group by changing its code and invoking the agent.
+  requires:
+    all_of:
+      - action: lambda:UpdateFunctionCode
+        resource: "{target.attached_resource_arn}"
+      - action: bedrock:InvokeAgent
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: lambda
+      attached_resource_covered_by: lambda:UpdateFunctionCode
+    scope: same_account
+    aggregate_as: "Execution roles of Lambda functions behind Bedrock agent action groups in {account}"
+  conditions:
+    - id: function_is_action_group
+      description: The covered function must be the executor of an action group of a Bedrock agent alias that the source can invoke (bedrock:InvokeAgent Resource is the agent-alias ARN).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict lambda:UpdateFunctionCode on agent tool functions and keep their execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/bedrock/latest/APIReference/API_agent_AgentActionGroup.html
+  notes: Alternative trigger to lambda:InvokeFunction; the generic UpdateFunctionCode technique is in lambda.yaml (part B).
+
+- id: aws-bedrock-agentcore-createharness-passrole
+  provider: aws
+  service: bedrock
+  title: Create an AgentCore harness with a passed execution role and run shell commands in it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcorecreateharness-iampassrole-invokeagentruntimecommand--root-shell-as-a-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting bedrock-agentcore.amazonaws.com by creating a harness with that execution role and running commands in its runtime.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: bedrock-agentcore:CreateHarness
+        resource: "*"
+      - action: bedrock-agentcore:CreateAgentRuntime
+        resource: "*"
+      - action: bedrock-agentcore:CreateAgentRuntimeEndpoint
+        resource: "*"
+      - action: bedrock-agentcore:InvokeAgentRuntimeCommand
+        resource: "*"
+      - action: bedrock-agentcore:InvokeAgentRuntime
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: bedrock-agentcore.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: composite_create_permissions
+      description: Harness creation also needs CreateWorkloadIdentity, GetAgentRuntime and related read actions; CreateMemory may be needed depending on configuration.
+    - id: runtime_identity_slr
+      description: The account must already have the AWSServiceRoleForBedrockAgentCoreRuntimeIdentity service-linked role, or the source must be able to create it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope iam:PassRole to dedicated low-privilege AgentCore roles with iam:PassedToService=bedrock-agentcore.amazonaws.com and deny bedrock-agentcore:InvokeAgentRuntimeCommand unless direct shell access is required.
+  references:
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html
+  notes: Composite operation; only the core actions are modelled and the remaining provisioning actions are a condition.
+
+- id: aws-bedrock-agentcore-createagentruntime-passrole
+  provider: aws
+  service: bedrock
+  title: Create an AgentCore agent runtime with a passed role and invoke it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcorecreateagentruntime--createagentruntimeendpoint-iampassrole--run-an-attacker-container-as-a-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting bedrock-agentcore.amazonaws.com by running a runtime artifact it controls under that role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: bedrock-agentcore:CreateAgentRuntime
+        resource: "*"
+      - action: bedrock-agentcore:CreateAgentRuntimeEndpoint
+        resource: "*"
+      - action: bedrock-agentcore:InvokeAgentRuntime
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: bedrock-agentcore.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: artifact_pullable
+      description: The container image or code package must be retrievable by the service under the passed role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope iam:PassRole for bedrock-agentcore.amazonaws.com roles, restrict runtime creation to the deployment pipeline and allow only approved registries.
+  references:
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_CreateAgentRuntime.html
+  notes: The aws-bedrock-privesc page describes the same technique; it is sourced here at the AgentCore page.
+
+- id: aws-bedrock-agentcore-updateagentruntime-passrole
+  provider: aws
+  service: bedrock
+  title: Repoint an existing AgentCore agent runtime to a passed role and invoke it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcoreupdateagentruntime--updategateway-iampassrole--repoint-an-existing-resources-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting bedrock-agentcore.amazonaws.com by updating an existing runtime's role and artifact and invoking it.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: bedrock-agentcore:UpdateAgentRuntime
+        resource: "*"
+      - action: bedrock-agentcore:InvokeAgentRuntime
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: bedrock-agentcore.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: existing_runtime
+      description: An agent runtime must exist within the UpdateAgentRuntime and InvokeAgentRuntime Resource scope.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict bedrock-agentcore:UpdateAgentRuntime to the deployment pipeline, scope iam:PassRole for AgentCore roles and alert on role or image changes.
+  references:
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_UpdateAgentRuntime.html
+  notes: UpdateGateway is not modelled because a gateway's role is only used by the service to call configured targets, not to run caller code. UpdateCodeInterpreter-style variants are covered by the create entries where they exist.

@@ -1,0 +1,463 @@
+# Entra ID (Azure AD) identity-plane privilege escalation: directory-role management,
+# PIM activation, user credential takeover (password / authentication methods) and
+# domain federation.
+# Source: hacktricks-cloud az-entraid-privesc/README.md, az-services/az-azuread.md,
+# az-basic-information/README.md, az-persistence/README.md (rev 171e422; all entries re-verified against the page text at that revision).
+# Target user sets follow Microsoft's "Who can reset passwords" / "Who can perform
+# sensitive actions" tables (privileged-roles-permissions, checked 2026-10).
+#
+# Requirement keys used here:
+#   entra_role: <built-in role display name>    (active assignment; the evaluator also
+#                                                 resolves custom roles via entra_permission)
+#   entra_permission: microsoft.directory/...   + optional scope: "{target.scope}" where
+#                                                 {target.scope} is the Entra directoryScopeId
+#                                                 that contains the target ("/",
+#                                                 "/administrativeUnits/<id>" or "/<objectId>")
+#   graph_app_permission: <Microsoft Graph application permission (appRole value)>
+#   entra_pim_eligible_role: "{target.id}"      (PIM-eligible, not active, role assignment)
+
+- id: azure-entraid-graph-rolemanagement-readwrite-directory
+  provider: azure
+  service: entraid
+  title: Graph RoleManagement.ReadWrite.Directory assigns any directory role
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#rolemanagementreadwritedirectory
+  source_revision: 171e422
+  summary: A service principal holding the Graph RoleManagement.ReadWrite.Directory application permission can obtain the privileges of any Entra directory role, including Global Administrator.
+  requires:
+    all_of:
+      - graph_app_permission: RoleManagement.ReadWrite.Directory
+  target:
+    kind: entra_role
+    selector:
+      entra_role_assignable: any
+    scope: tenant
+    aggregate_as: "Every Entra directory role (incl. Global Administrator) in {scope}"
+  conditions:
+    - id: pim_policy_on_schedule_requests
+      description: When role assignments are created through PIM schedule requests, PIM policy (approval, justification, MFA) applies; direct unifiedRoleAssignment creation is not subject to activation approval.
+  blockers:
+    - service_principal_conditional_access_block
+  confidence: derived
+  severity: critical
+  mitigation: Remove RoleManagement.ReadWrite.Directory from non-Tier-0 applications, treat holders as Global Administrator equivalents, and alert on role assignment creation by service principals.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/rbacapplication-post-roleassignments?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/groups-concept
+  notes: This permission is also the only Graph permission that can manage membership of role-assignable groups (Group.ReadWrite.All cannot). Role-assignable groups and restricted management AUs do not limit this edge because the source can simply assign itself the role directly, including at restricted-AU scope. Delegated use of the same scope is bounded by the signed-in user's own role and is covered by the role entries.
+
+- id: azure-entraid-role-assignment-manage
+  provider: azure
+  service: entraid
+  title: Manage directory role assignments (Privileged Role Administrator)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#role-privileged-role-administrator
+  source_revision: 171e422
+  summary: A principal allowed to manage tenant-scoped directory role assignments (e.g. Privileged Role Administrator) can obtain the privileges of any Entra directory role, including Global Administrator.
+  requires:
+    any_of:
+      - - entra_permission: microsoft.directory/roleAssignments/allProperties/allTasks
+          scope: "/"
+      - - entra_permission: microsoft.directory/roleAssignments/allProperties/update
+          scope: "/"
+      - - entra_role: Privileged Role Administrator
+      - - entra_role: Global Administrator
+  target:
+    kind: entra_role
+    selector:
+      entra_role_assignable: any
+    scope: tenant
+    aggregate_as: "Every Entra directory role (incl. Global Administrator) in {scope}"
+  conditions:
+    - id: pim_eligible_only
+      description: If the source's role is PIM-eligible only, it must be activated first (approval / MFA / justification policy applies).
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Treat Privileged Role Administrator as Tier 0, keep it PIM-eligible with approval, and alert on role assignments to Global Administrator or other privileged roles.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#privileged-role-administrator
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/manage-roles-portal
+  notes: Privileged Role Administrator can also manage membership of role-assignable groups and assign itself roles scoped to restricted management administrative units, so neither protection limits this edge. roleAssignments permissions are not eligible for custom roles; only built-in roles grant them in practice.
+
+- id: azure-entraid-custom-role-definition-update
+  provider: azure
+  service: entraid
+  title: Expand a custom directory role the source already holds
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#role-privileged-role-administrator
+  source_revision: 171e422
+  summary: A principal allowed to update directory role definitions can obtain the privileges of any custom-role-eligible permission set through the custom roles already assigned to it.
+  requires:
+    any_of:
+      - - entra_permission: microsoft.directory/roleDefinitions/allProperties/allTasks
+      - - entra_permission: microsoft.directory/roleDefinitions/allProperties/update
+  target:
+    kind: entra_role
+    selector:
+      entra_custom_role_assigned_to_source: true
+    scope: tenant
+    aggregate_as: "Custom roles assigned to {source} (expandable to any custom-role-eligible permission)"
+  conditions:
+    - id: custom_role_permission_eligibility
+      description: Only permissions eligible for custom roles can be added (e.g. applications/credentials/update, servicePrincipals/credentials/update, groups/members/update); users/password/update and roleAssignments permissions are not available to custom roles.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict roleDefinitions write to Privileged Role Administrator / Global Administrator and review custom role definitions for credential-update permissions.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/unifiedroledefinition-update?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
+  notes: Built-in role definitions are immutable. The gained permissions then feed other entries (e.g. application credential update) so the evaluator should chain this edge. If the source also holds roleAssignments write, azure-entraid-role-assignment-manage already dominates.
+
+- id: azure-entraid-pim-eligible-role-activation
+  provider: azure
+  service: entraid
+  title: Activate a PIM-eligible directory role
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-pim-privesc.md#activate-an-eligible-role-in-model-jit-self-elevation
+  source_revision: 171e422
+  summary: A principal with an eligible PIM assignment can obtain the privileges of the eligible Entra directory role.
+  requires:
+    all_of:
+      - entra_pim_eligible_role: "{target.id}"
+  target:
+    kind: entra_role
+    selector:
+      entra_pim_eligible_for_source: true
+    scope: tenant
+    aggregate_as: "Entra roles {source} is PIM-eligible for"
+  conditions:
+    - id: pim_activation_requirements
+      description: Activation may require MFA, a Conditional Access authentication context, justification, ticket information, or approval by designated approvers; approval-required roles are not self-activatable.
+  blockers:
+    - pim_approval_required_by_other_principal
+  confidence: conditional
+  severity: high
+  mitigation: Require approval and MFA/authentication context for activation of privileged roles and review eligible assignments with access reviews.
+  references:
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-configure
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-approval-workflow
+  notes: Eligibility can also come from membership of a role-assignable group that is eligible. Severity should be raised to critical by the evaluator when the eligible role is privileged (e.g. Global Administrator, Privileged Role Administrator). BloodHound AZRoleApprover (approver -> role) does not give the approver the role; approvers cannot approve their own activation and service principals cannot approve, so it only lifts pim_approval_required_by_other_principal when the source also controls a different eligible user. With no approvers selected for a directory role, active Privileged Role Administrators / Global Administrators approve.
+
+# ---------------------------------------------------------------------------
+# User credential takeover. Target sets follow the Microsoft "Who can reset
+# passwords" table (tenant-scoped assignments). Common rules for all entries:
+#  - Users who are members or owners of a role-assignable group, and users holding a
+#    role scoped to a restricted management AU, are only reachable by Privileged
+#    Authentication Administrator / Global Administrator.
+#  - Members of a restricted management AU are only reachable when the source's
+#    assignment is scoped to that RMAU (even Global Administrator is blocked otherwise).
+#  - With an AU-scoped assignment the source reaches only AU members, and only those
+#    without any administrator role (except Privileged Authentication Administrator).
+#  - "Admin" means an Entra directory role. Users with powerful Azure RBAC roles
+#    (e.g. subscription Owner) but no directory role are "non-admins" and reachable.
+# ---------------------------------------------------------------------------
+
+- id: azure-entraid-reset-password-password-admin
+  provider: azure
+  service: entraid
+  title: Password Administrator resets passwords of non-admins and limited roles
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryuserspasswordupdate
+  source_revision: 171e422
+  summary: A Password Administrator can obtain the privileges of users with no directory role or only Directory Readers, Guest Inviter or Password Administrator.
+  requires:
+    all_of:
+      - entra_role: Password Administrator
+        scope: "{target.scope}"
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: password_admin
+      entra_role_assignment_scope_covers_target: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Non-admin users (and Directory Readers / Guest Inviter / Password Administrator) in {scope}"
+  conditions:
+    - id: mfa_or_ca_after_reset
+      description: A new password alone does not satisfy MFA / Conditional Access requirements registered for the target user.
+    - id: federated_or_synced_user
+      description: Passwords of users in federated domains cannot be set in Entra; synced users may be overwritten by on-premises sync unless password writeback is enabled.
+  blockers:
+    - restricted_management_au
+    - role_assignable_group_member_or_owner
+  confidence: derived
+  severity: high
+  mitigation: Scope Password Administrator to administrative units, place sensitive non-admin users (e.g. Azure subscription owners) in restricted management AUs, and enforce phishing-resistant MFA.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+  notes: Allowed target roles per Microsoft table - none (non-admin), Directory Readers, Guest Inviter, Password Administrator. Reaching a non-admin user that holds Azure RBAC Owner/User Access Administrator is a common real-world path; the evaluator should raise severity in that case.
+
+- id: azure-entraid-reset-password-helpdesk-admin
+  provider: azure
+  service: entraid
+  title: Helpdesk Administrator resets passwords of non-admins and limited roles
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryuserspasswordupdate
+  source_revision: 171e422
+  summary: A Helpdesk Administrator can obtain the privileges of users with no directory role or only Helpdesk-resettable limited roles.
+  requires:
+    all_of:
+      - entra_role: Helpdesk Administrator
+        scope: "{target.scope}"
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: helpdesk_admin
+      entra_role_assignment_scope_covers_target: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Non-admin users and Helpdesk-resettable roles in {scope}"
+  conditions:
+    - id: mfa_or_ca_after_reset
+      description: A new password alone does not satisfy MFA / Conditional Access requirements registered for the target user.
+    - id: federated_or_synced_user
+      description: Passwords of users in federated domains cannot be set in Entra; synced users depend on password writeback.
+  blockers:
+    - restricted_management_au
+    - role_assignable_group_member_or_owner
+  confidence: derived
+  severity: high
+  mitigation: Scope Helpdesk Administrator to administrative units and protect sensitive users with restricted management AUs.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+  notes: Allowed target roles - none, Directory Readers, Guest Inviter, Helpdesk Administrator, Message Center Reader, Password Administrator, Reports Reader, User Experience Success Manager, Usage Summary Reports Reader.
+
+- id: azure-entraid-reset-credentials-authentication-admin
+  provider: azure
+  service: entraid
+  title: Authentication Administrator resets passwords and authentication methods of non-admins
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryuserspasswordupdate
+  source_revision: 171e422
+  summary: An Authentication Administrator can obtain the privileges of users with no directory role or only Authentication-Administrator-resettable limited roles, including through authentication-method registration.
+  requires:
+    all_of:
+      - entra_role: Authentication Administrator
+        scope: "{target.scope}"
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: authentication_admin
+      entra_role_assignment_scope_covers_target: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Non-admin users and Authentication-Admin-resettable roles in {scope}"
+  conditions:
+    - id: tap_policy
+      description: Temporary Access Pass issuance requires the TAP authentication method policy to be enabled for the target user.
+    - id: federated_or_synced_user
+      description: Passwords of users in federated domains cannot be set in Entra; synced users depend on password writeback.
+  blockers:
+    - restricted_management_au
+    - role_assignable_group_member_or_owner
+  confidence: derived
+  severity: high
+  mitigation: Scope Authentication Administrator to administrative units, restrict TAP issuance, and protect sensitive users with restricted management AUs.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+    - https://learn.microsoft.com/en-us/graph/api/authentication-post-temporaryaccesspassmethods?view=graph-rest-1.0
+  notes: Allowed target roles - none, Authentication Administrator, Directory Readers, Guest Inviter, Message Center Reader, Password Administrator, Reports Reader, User Experience Success Manager, Usage Summary Reports Reader. Unlike password-only roles, registering an authentication method (TAP) can also satisfy the target's MFA requirement.
+
+- id: azure-entraid-reset-password-user-admin
+  provider: azure
+  service: entraid
+  title: User Administrator resets passwords of non-admins and limited admins
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryuserspasswordupdate
+  source_revision: 171e422
+  summary: A User Administrator can obtain the privileges of users with no directory role and of users holding only User-Administrator-resettable roles (incl. Groups, Helpdesk, Password and User Administrators).
+  requires:
+    all_of:
+      - entra_role: User Administrator
+        scope: "{target.scope}"
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: user_admin
+      entra_role_assignment_scope_covers_target: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Non-admin users and User-Admin-resettable roles in {scope}"
+  conditions:
+    - id: mfa_or_ca_after_reset
+      description: A new password alone does not satisfy MFA / Conditional Access requirements registered for the target user.
+    - id: federated_or_synced_user
+      description: Passwords of users in federated domains cannot be set in Entra; synced users depend on password writeback.
+  blockers:
+    - restricted_management_au
+    - role_assignable_group_member_or_owner
+  confidence: derived
+  severity: high
+  mitigation: Scope User Administrator to administrative units and keep it PIM-eligible; protect sensitive users with restricted management AUs.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+  notes: Allowed target roles - none, Directory Readers, Groups Administrator, Guest Inviter, Helpdesk Administrator, Message Center Reader, Password Administrator, Reports Reader, User Administrator, User Experience Success Manager, Usage Summary Reports Reader. App-only resets additionally need User-PasswordProfile.ReadWrite.All (or higher) plus at least User Administrator assigned to the app, so service principals are covered by this role entry.
+
+- id: azure-entraid-reset-credentials-privileged-auth-admin
+  provider: azure
+  service: entraid
+  title: Privileged Authentication Administrator resets credentials of any user
+  source: src/pentesting-cloud/azure-security/az-persistence/README.md#applications-and-service-principals
+  source_revision: 171e422
+  summary: A Privileged Authentication Administrator (or Global Administrator) can obtain the privileges of any user in its scope, including Global Administrators.
+  requires:
+    any_of:
+      - - entra_role: Privileged Authentication Administrator
+          scope: "{target.scope}"
+      - - entra_role: Global Administrator
+      - - entra_role: Partner Tier2 Support
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: privileged_auth_admin
+      entra_role_assignment_scope_covers_target: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "All users (incl. Global Administrators) in {scope}"
+  conditions:
+    - id: tap_policy
+      description: Temporary Access Pass issuance requires the TAP policy to be enabled for the target; password reset does not satisfy registered MFA by itself.
+    - id: federated_or_synced_user
+      description: Passwords of users in federated domains cannot be set in Entra; synced users depend on password writeback.
+  blockers:
+    - restricted_management_au
+  confidence: derived
+  severity: critical
+  mitigation: Treat Privileged Authentication Administrator as Tier 0, never assign it to service principals, and require PIM approval.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management
+  notes: Members of a restricted management AU are blocked unless the source's assignment is scoped to that RMAU; Global Administrator can however assign itself an RMAU-scoped role (auditable), and a Global Administrator inside an RMAU cannot be reset by anyone. Partner Tier2 Support is deprecated but still resets any user. A service principal holding this role (persistence page) gives its credential holders the same edge.
+
+- id: azure-entraid-reset-password-partner-tier1
+  provider: azure
+  service: entraid
+  title: Non-admin-only password reset roles (Partner Tier1 Support, Security Operator, SOC Identity Responder)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryuserspasswordupdate
+  source_revision: 171e422
+  summary: A holder of Partner Tier1 Support, Security Operator or Entra SOC Identity Responder can obtain the privileges of users with no directory role.
+  requires:
+    any_of:
+      - - entra_role: Partner Tier1 Support
+      - - entra_role: Security Operator
+      - - entra_role: Entra SOC Identity Responder
+  target:
+    kind: azure_user
+    selector:
+      entra_reset_matrix_column: non_admin_only
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Users without directory roles in {scope}"
+  conditions:
+    - id: mfa_or_ca_after_reset
+      description: A new password alone does not satisfy MFA / Conditional Access requirements registered for the target user.
+  blockers:
+    - restricted_management_au
+    - role_assignable_group_member_or_owner
+  confidence: derived
+  severity: high
+  mitigation: Remove Partner Tier1/Tier2 Support assignments (deprecated roles), keep Security Operator / SOC Identity Responder PIM-eligible, and protect sensitive non-admin users with restricted management AUs.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/privileged-roles-permissions#who-can-reset-passwords
+  notes: Partner Tier1 Support is deprecated. Security Operator and Entra SOC Identity Responder hold microsoft.directory/users/password/update and Microsoft states they are limited to non-administrative accounts (privileged-roles-permissions, checked 2026-10).
+
+- id: azure-entraid-graph-userauthenticationmethod-tap
+  provider: azure
+  service: entraid
+  title: Graph UserAuthenticationMethod.ReadWrite.All issues a Temporary Access Pass for any user
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#userauthenticationmethodreadwriteall
+  source_revision: 171e422
+  summary: A service principal holding UserAuthenticationMethod.ReadWrite.All or UserAuthMethod-TAP.ReadWrite.All can obtain the privileges of any user covered by the Temporary Access Pass policy, including administrators.
+  requires:
+    any_of:
+      - - graph_app_permission: UserAuthenticationMethod.ReadWrite.All
+      - - graph_app_permission: UserAuthMethod-TAP.ReadWrite.All
+  target:
+    kind: azure_user
+    selector:
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "All users (incl. administrators) in {scope} covered by the TAP policy"
+  conditions:
+    - id: tap_policy
+      description: The Temporary Access Pass authentication method policy must be enabled and include the target user (and allow multi-use passes if needed).
+    - id: federated_user
+      description: Users in federated domains may be redirected to the federation provider and not be able to use a TAP.
+  blockers:
+    - restricted_management_au
+  confidence: conditional
+  severity: critical
+  mitigation: Grant authentication-method write application permissions only to Tier-0 apps, restrict the TAP policy to a small group, and alert on TAP creation by service principals.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/authentication-post-temporaryaccesspassmethods?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management#programmability
+  notes: Microsoft documents a role requirement only for delegated calls (Authentication Administrator / Privileged Authentication Administrator, covered by the role entries); app-only calls are not documented as bounded by the role hierarchy, so admins are in scope. Graph application permissions do not apply to objects in restricted management AUs.
+
+- id: azure-entraid-domain-federation-backdoor
+  provider: azure
+  service: entraid
+  title: Federate a verified domain with an attacker-trusted issuer
+  source: src/pentesting-cloud/azure-security/az-persistence/README.md#federation---trusted-domain
+  source_revision: 171e422
+  summary: A principal allowed to update domain federation settings can obtain the privileges of users whose UPN is on a verified custom domain it can federate.
+  requires:
+    any_of:
+      - - entra_permission: microsoft.directory/domains/federation/update
+      - - entra_permission: microsoft.directory/domains/federationConfiguration/create
+      - - entra_permission: microsoft.directory/domains/allProperties/allTasks
+      - - entra_role: Global Administrator
+      - - entra_role: Hybrid Identity Administrator
+      - - entra_role: External Identity Provider Administrator
+      - - entra_role: Security Administrator
+      - - entra_role: Domain Name Administrator
+      - - graph_app_permission: Domain-InternalFederation.ReadWrite.All
+      - - graph_app_permission: Domain.ReadWrite.All
+  target:
+    kind: azure_user
+    selector:
+      entra_user_upn_on_federatable_custom_domain: true
+    scope: tenant
+    aggregate_as: "Users whose UPN is on a verified custom domain of {scope}"
+  conditions:
+    - id: new_domain_requires_dns
+      description: Adding and verifying a new domain requires DNS control and domain create/verify permissions; converting an already verified managed domain only needs federation update.
+    - id: immutable_id_required
+      description: Impersonation requires the target's onPremisesImmutableId (readable by default) or the ability to set it.
+  blockers:
+    - target_upn_on_initial_onmicrosoft_domain
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict domains/federation/update (Global Administrator, Hybrid Identity Administrator, External Identity Provider Administrator, Domain Name Administrator) to Tier 0, keep break-glass and admin accounts on the *.onmicrosoft.com domain, and alert on federation setting changes.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/resources/internaldomainfederation?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference
+  notes: HackTricks frames this as persistence with GA, but any holder of the federation permission gains users of the federated domain, so it is a privilege-escalation edge. Cloud-only users on the initial onmicrosoft.com domain cannot be federated. Per Microsoft's built-in role definitions (checked 2026-10) domains/federation/update and federationConfiguration/create are held by Hybrid Identity, External Identity Provider and Security Administrator, and Domain Name Administrator / Global Administrator hold domains/allProperties/allTasks; Create internalDomainFederation lists Domain-InternalFederation.ReadWrite.All (least) or Domain.ReadWrite.All as application permissions.
+
+- id: azure-entraid-cba-rogue-certificate-authority
+  provider: azure
+  service: entraid
+  title: Trust an attacker certificate authority for certificate-based authentication
+  source: src/pentesting-cloud/azure-security/az-persistence/README.md#rogue-certificate-authority-in-the-tenant-cba-trust-store
+  source_revision: 171e422
+  summary: A service principal able to write the tenant certificate-based authentication trust store and the X.509 authentication method policy can obtain the privileges of any user whose certificate username binding it can satisfy, including Global Administrators.
+  requires:
+    any_of:
+      - - graph_app_permission: Organization.ReadWrite.All
+        - graph_app_permission: Policy.ReadWrite.AuthenticationMethod
+      - - entra_role: Global Administrator
+  target:
+    kind: azure_user
+    selector:
+      any_principal_in_scope: true
+    scope: tenant
+    aggregate_as: "All users (incl. Global Administrators) in {scope} reachable through certificate-based authentication"
+  conditions:
+    - id: x509_method_scope
+      description: The X.509 certificate authentication method must be enabled for the target (Policy.ReadWrite.AuthenticationMethod can enable it and widen its include targets); when it is already enabled for the target, trust store write alone is enough.
+    - id: username_binding
+      description: The tenant username binding (certificateUserIds or userPrincipalName mapped from a certificate field) must map a certificate the source can mint to the target; affinity-binding rules and issuer or policy OID rules can narrow this.
+    - id: mfa_strength
+      description: Whether the sign-in also satisfies MFA or Conditional Access authentication strength depends on the CBA authentication binding policy.
+  blockers:
+    - service_principal_conditional_access_block
+  confidence: conditional
+  severity: critical
+  mitigation: Treat Organization.ReadWrite.All and Policy.ReadWrite.AuthenticationMethod as Tier 0, restrict CBA trust store changes to Tier-0 administrators, require issuer and policy OID affinity bindings, and alert on certificate authority additions.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/certificatebasedauthconfiguration-post-certificatebasedauthconfiguration?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-certificate-based-authentication
+  notes: HackTricks frames this as persistence for a Global Administrator, but any holder of trust store write plus method policy write gains every user covered by the method, so it is an escalation edge. The Global Administrator option is dominated by azure-entraid-reset-credentials-privileged-auth-admin and is kept for completeness. Restricted management AUs do not block it because nothing is written on the target object. The application permissions follow the HackTricks minimum permissions. Delegated role holders other than Global Administrator (e.g. Privileged Authentication Administrator) were not verified against Microsoft documentation in this offline review and are not listed.

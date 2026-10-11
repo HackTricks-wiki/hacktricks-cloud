@@ -1,0 +1,46 @@
+# AWS Account Management privilege escalation techniques.
+# Source: hacktricks-cloud aws-account-management-privesc/README.md (rev 171e422299).
+
+- id: aws-account-startprimaryemailupdate-member-root
+  provider: aws
+  service: account
+  title: Repoint a member account's root email to an address the source controls
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-account-management-privesc/README.md#accountputcontactinformation--startprimaryemailupdate--account-recovery-and-root-email-takeover
+  source_revision: 171e422299
+  summary: A management or delegated-administrator principal can change a member account's root sign-in email to an address it controls and then reset the root password, obtaining root of that member account.
+  requires:
+    all_of:
+      - action: account:StartPrimaryEmailUpdate
+        resource: "arn:aws:account::*:account/*/{target.account}"
+      - action: account:AcceptPrimaryEmailUpdate
+        resource: "arn:aws:account::*:account/*/{target.account}"
+      - action: iam:UpdateAccountEmailAddress
+        resource: "*"
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+      org_member_account: true
+    scope: org
+    aggregate_as: "Member accounts whose root email the source can change"
+  conditions:
+    - id: source_in_management_or_delegated_admin
+      description: Member-account root email can be changed only from the management account or the Account Management delegated administrator, with all features and trusted access for Account Management enabled; the management account cannot change its own root email this way.
+    - id: otp_to_new_address
+      description: The one-time code is sent to the new address, so the source must receive mail there.
+    - id: root_mfa_barrier
+      description: A root MFA device on the member account remains a separate barrier to root sign-in and recovery.
+    - id: member_scps_apply
+      description: SCPs still restrict the member account's root user.
+  preconditions:
+    - target_in_other_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Treat account:StartPrimaryEmailUpdate / AcceptPrimaryEmailUpdate as root-equivalent; restrict them to break-glass roles, register root MFA or delete member root credentials via centralized root access, and alert on primary-email updates.
+  references:
+    - https://docs.aws.amazon.com/accounts/latest/APIReference/API_StartPrimaryEmailUpdate.html
+    - https://docs.aws.amazon.com/accounts/latest/APIReference/API_AcceptPrimaryEmailUpdate.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_account.html
+  notes: The account:PutContactInformation half of the section only enables support-driven social engineering and is not modelled as an edge.

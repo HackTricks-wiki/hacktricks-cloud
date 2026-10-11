@@ -1,0 +1,40 @@
+# AWS CodeCommit privilege escalation techniques.
+# Source: hacktricks-cloud aws-codecommit-pipeline-source-privesc/README.md (rev 171e422299).
+# Uses {target.consumer_input_arn} and consumer_input_writable_via (see codepipeline.yaml S3 source entry).
+
+- id: aws-codecommit-gitpush-pipeline-source
+  provider: aws
+  service: codecommit
+  title: Push to a CodeCommit repository branch used as a pipeline source
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codecommit-pipeline-source-privesc/README.md#codecommitgitpush-on-a-codepipeline-source-repository
+  source_revision: 171e422299
+  summary: The source can obtain (at the next execution) the privileges of the roles of downstream pipeline actions (CodeBuild projects, CloudFormation deploy roles) that build or deploy content from a CodeCommit branch it can push to.
+  requires:
+    all_of:
+      - action: codecommit:GitPush
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: codepipeline
+      consumer_input_writable_via: codecommit:GitPush
+    scope: same_account
+    aggregate_as: "Roles of downstream actions of pipelines with writable CodeCommit sources in {account}"
+  conditions:
+    - id: delayed_trigger
+      description: An execution must start afterwards (EventBridge source-change rule, schedule, operator or source-held StartPipelineExecution).
+    - id: source_executed
+      description: A downstream action must execute content from the pushed revision (buildspec, template, deploy scripts).
+    - id: branch_condition
+      description: codecommit:References conditions or approval-rule templates may block direct pushes to the source branch.
+    - id: existing_git_objects
+      description: GitPush does not include GitPull; the source needs an existing working copy or enough history to build a valid update.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict codecommit:GitPush on pipeline source branches with codecommit:References conditions, require reviewed pull requests, separate source publishers from pipeline runners and add approval gates before privileged stages.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeCommit.html
+    - https://docs.aws.amazon.com/codecommit/latest/userguide/how-to-conditional-branch.html
+  notes: "{target.consumer_input_arn} is the CodeCommit repository ARN configured as a pipeline source. attached_to_service codepipeline means roles of the executing downstream actions, not the pipeline role. A CodeBuild project whose own source is the repository is reached the same way when its build is triggered."

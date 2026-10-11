@@ -1,0 +1,180 @@
+# Amazon Redshift privilege escalation techniques.
+# Source: hacktricks-cloud aws-redshift-privesc/README.md (rev a53b46392c; partially re-pointed to rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+# Database access to a cluster/namespace lets SQL (COPY/UNLOAD, external functions/schemas, Spectrum) use the IAM roles
+# attached to it. AWS docs: "By default, IAM roles that are available to an Amazon Redshift cluster are available to all
+# users on that cluster"; access can be narrowed with ASSUMEROLE grants or an sts:ExternalId trust condition listing dbuser
+# ARNs. Privileges obtained are bounded to the services those SQL integrations call (S3, Lambda, Glue/Athena catalog, EMR,
+# DynamoDB, Kinesis), plus role chaining to roles that trust the attached role.
+
+- id: aws-redshift-modifycluster-master-password
+  provider: aws
+  service: redshift
+  title: Reset the admin password of a provisioned Redshift cluster with attached roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshift
+  source_revision: 171e422299
+  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a Redshift cluster it can modify.
+  requires:
+    all_of:
+      - action: redshift:ModifyCluster
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: redshift.amazonaws.com
+      via_resource_type: redshift_cluster
+    scope: same_account
+    aggregate_as: "IAM roles attached to modifiable Redshift clusters in {account}"
+  conditions:
+    - id: network_reachability
+      description: The source needs a network path to the cluster endpoint.
+    - id: managed_admin_password
+      description: Not applicable when the admin password is managed by Secrets Manager.
+    - id: external_id_restriction
+      description: An sts:ExternalId trust condition naming specific dbuser ARNs can exclude the admin user.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict redshift:ModifyCluster, use Secrets Manager-managed admin passwords, and keep attached roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/redshift/latest/mgmt/authorizing-redshift-service.html
+  notes: DescribeClusters is a discovery convenience, not required. The HEAD page dropped the dedicated ModifyCluster heading and calls password resets persistence; the entry is kept because a reset admin login can use the cluster's attached roles, and it is sourced at the page's Redshift section.
+
+- id: aws-redshift-getclustercredentials
+  provider: aws
+  service: redshift
+  title: Obtain temporary database credentials for a provisioned cluster with attached roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshiftgetclustercredentials
+  source_revision: 171e422299
+  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can log into as a chosen database user.
+  requires:
+    all_of:
+      - action: redshift:GetClusterCredentials
+        resource: "{target.redshift_dbuser_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: redshift.amazonaws.com
+      via_resource_type: redshift_cluster
+    scope: same_account
+    aggregate_as: "IAM roles attached to Redshift clusters in {account}"
+  conditions:
+    - id: dbuser_scope
+      description: GetClusterCredentials is authorized on dbuser/dbname ARNs; the covered database user must have the SQL privileges (and ASSUMEROLE grant if restricted) to use the role.
+    - id: network_reachability
+      description: The source needs a network path to the cluster endpoint (or use of the Data API with additional permissions).
+    - id: external_id_restriction
+      description: An sts:ExternalId trust condition naming specific dbuser ARNs restricts which database users can use the role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Scope GetClusterCredentials to specific dbuser ARNs, restrict role use with ASSUMEROLE grants, and keep attached roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentials.html
+  notes: GetClusterCredentials is authorized on dbuser ARNs (arn:aws:redshift:<region>:<account>:dbuser:<cluster>/<user>), not on the cluster ARN; {target.redshift_dbuser_arn} expands to dbuser:<cluster>/* of each cluster the role is attached to, so a policy scoped to one cluster only reaches that cluster's roles. redshift:CreateClusterUser (auto-create) and redshift:JoinGroup (db groups) are optional.
+
+- id: aws-redshift-getclustercredentialswithiam
+  provider: aws
+  service: redshift
+  title: Obtain IAM-mapped database credentials for a provisioned cluster with attached roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshiftgetclustercredentialswithiam
+  source_revision: 171e422299
+  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can log into as its IAM-mapped database user.
+  requires:
+    all_of:
+      - action: redshift:GetClusterCredentialsWithIAM
+        resource: "arn:aws:redshift:*:{target.account}:dbname:*/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: redshift.amazonaws.com
+      via_resource_type: redshift_cluster
+    scope: same_account
+    aggregate_as: "IAM roles attached to Redshift clusters in {account}"
+  conditions:
+    - id: mapped_user_privileges
+      description: The IAM-mapped database user must hold the SQL privileges needed to use the integration (and ASSUMEROLE where restricted).
+    - id: network_reachability
+      description: The source needs a network path to the cluster endpoint.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict role use with ASSUMEROLE grants or sts:ExternalId conditions and keep attached roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentialsWithIAM.html
+  notes: Default role availability to all cluster users makes this reachable unless restricted; with restriction, the edge depends on database-level grants not collected from the control plane. The action is authorized on dbname ARNs (arn:aws:redshift:<region>:<account>:dbname:<cluster>/<database>), so the requirement is an account-wide dbname pattern (over-approximation across clusters of the account).
+
+- id: aws-redshift-serverless-getcredentials
+  provider: aws
+  service: redshift-serverless
+  title: Obtain IAM-mapped database credentials for a Redshift Serverless workgroup with attached roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshift-serverlessgetcredentials
+  source_revision: 171e422299
+  summary: The source can obtain the integration-limited privileges of the IAM roles associated with the namespace of a workgroup it can log into.
+  requires:
+    all_of:
+      - action: redshift-serverless:GetCredentials
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: [redshift.amazonaws.com, redshift-serverless.amazonaws.com]
+      via_resource_type: redshift_serverless_workgroup
+    scope: same_account
+    aggregate_as: "IAM roles associated with Redshift Serverless namespaces in {account}"
+  conditions:
+    - id: mapped_user_privileges
+      description: The resolved IAM database identity must hold the SQL privileges needed to use the integration.
+    - id: network_reachability
+      description: The source needs a network path to the workgroup endpoint.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict redshift-serverless:GetCredentials to specific workgroups and keep namespace roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/redshift-serverless/latest/APIReference/API_GetCredentials.html
+  notes: Roles are associated with the namespace; the evaluator maps workgroup -> namespace -> IamRoles. Namespace roles may trust redshift.amazonaws.com or redshift-serverless.amazonaws.com; both are matched.
+
+- id: aws-redshift-passrole-attach-warehouse-role
+  provider: aws
+  service: redshift
+  title: Attach a passed IAM role to a Redshift cluster or Serverless namespace and use it from SQL
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshiftmodifyclusteriamroles-iampassrole--redshift-serverlessupdatenamespace-iampassrole---repoint-the-databases-aws-role
+  source_revision: 171e422299
+  summary: The source can obtain the integration-limited privileges of any passable role trusting redshift.amazonaws.com by attaching it to a warehouse it has SQL access to.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: redshift:ModifyClusterIamRoles
+          resource: "*"
+      - - action: redshift-serverless:UpdateNamespace
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: [redshift.amazonaws.com, redshift-serverless.amazonaws.com]
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting redshift.amazonaws.com or redshift-serverless.amazonaws.com passable in {account}"
+  conditions:
+    - id: sql_access
+      description: The source also needs a database identity on the cluster or workgroup with the SQL privileges used by the integration (for example via GetClusterCredentials, GetCredentials or a known login).
+    - id: existing_warehouse
+      description: A cluster or namespace must exist within the ModifyClusterIamRoles or UpdateNamespace Resource scope.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions (redshift.amazonaws.com or redshift-serverless.amazonaws.com) may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict iam:PassRole on Redshift roles with iam:PassedToService, restrict ModifyClusterIamRoles and UpdateNamespace to administrators, and keep warehouse roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/redshift/latest/APIReference/API_ModifyClusterIamRoles.html
+    - https://docs.aws.amazon.com/redshift-serverless/latest/APIReference/API_UpdateNamespace.html
+  notes: Privileges are bounded to the services the SQL integrations call (see file header). Roles trusting either redshift.amazonaws.com or redshift-serverless.amazonaws.com are matched (the selector ORs the list).

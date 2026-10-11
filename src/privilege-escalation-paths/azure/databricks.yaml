@@ -1,0 +1,32 @@
+# Azure Databricks techniques (declarative only).
+# Source: hacktricks-cloud az-databricks-privesc.md (rev 171e422).
+
+- id: azure-databricks-assign-workspace-admin
+  provider: azure
+  service: databricks
+  title: Self-assign Databricks workspace admin through Azure RBAC
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#become-a-workspace-admin-through-azure-rbac
+  source_revision: 171e422
+  summary: The source can obtain Databricks workspace administrator privileges.
+  requires:
+    all_of:
+      - action: Microsoft.Databricks/workspaces/assignWorkspaceAdmin/action
+        scope: "{target.scope}"
+      - action: Microsoft.Databricks/workspaces/read
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Workspace admins of Databricks workspace {target.scope}"
+  conditions:
+    - id: source_is_user
+      description: HackTricks validated the path only for tenant member users, not service principals.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict assignWorkspaceAdmin/action (Contributor/Owner on the workspace).
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/analytics
+  notes: Workspace admins may further use identities configured on workspace compute; that is workspace-dependent and not modelled.

@@ -1,0 +1,45 @@
+# AWS Chatbot (Amazon Q Developer in chat applications) privilege escalation techniques.
+# Source: hacktricks-cloud aws-chatbot-privesc/README.md (rev 171e422299).
+
+- id: aws-chatbot-passrole-create-channel-configuration
+  provider: aws
+  service: chatbot
+  title: Bind a passed role to a chat channel the source controls
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-chatbot-privesc/README.md#chatbotcreateslackchannelconfiguration--createmicrosoftteamschannelconfiguration--iampassrole
+  source_revision: 171e422299
+  summary: The source can run CLI requests from chat as any passable role trusting chatbot.amazonaws.com, bounded by the channel guardrail policies.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: chatbot:CreateSlackChannelConfiguration
+          resource: "*"
+      - - action: chatbot:CreateMicrosoftTeamsChannelConfiguration
+          resource: "*"
+      - - action: chatbot:UpdateSlackChannelConfiguration
+          resource: "*"
+      - - action: chatbot:UpdateMicrosoftTeamsChannelConfiguration
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: chatbot.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting chatbot.amazonaws.com passable in {account}"
+  conditions:
+    - id: workspace_authorized
+      description: A Slack workspace or Teams tenant must already be authorized to the account and the source must be a member of the chosen channel.
+    - id: guardrail_policies
+      description: Channel guardrail policies bound what the role can do from chat; the source can set them when creating or updating the configuration only if the API grants allow it.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on chat channel roles and channel-configuration create/update actions to chat administrators, and enforce guardrail policies.
+  references:
+    - https://docs.aws.amazon.com/chatbot/latest/adminguide/understanding-permissions.html
+  notes: The Update variants change the role of an existing configuration (also PassRole-checked).

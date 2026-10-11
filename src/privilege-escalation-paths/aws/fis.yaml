@@ -1,0 +1,44 @@
+# AWS Fault Injection Service privilege escalation techniques.
+# Source: hacktricks-cloud aws-fis-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-fis-updateexperimenttemplate-startexperiment
+  provider: aws
+  service: fis
+  title: Modify and start an FIS experiment template that stores a role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-fis-privesc/README.md#updateexperimenttemplate--startexperiment-through-the-stored-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the role stored in an existing FIS experiment template, limited to what FIS actions can do with that role.
+  requires:
+    all_of:
+      - action: fis:UpdateExperimentTemplate
+        resource: "{target.resource_arn}"
+      - action: fis:UpdateExperimentTemplate
+        resource: "arn:aws:fis:*:{account}:action/*"
+      - action: fis:StartExperiment
+        resource: "{target.resource_arn}"
+      - action: fis:StartExperiment
+        resource: "arn:aws:fis:*:{account}:experiment/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: fis.amazonaws.com
+      via_resource_type: fis_experiment_template
+    scope: same_account
+    aggregate_as: "Roles stored in FIS experiment templates in {account}"
+  conditions:
+    - id: fis_action_usefulness
+      description: The role is only exercised through FIS actions (e.g. aws:ssm:send-command, aws:ssm:start-automation-execution); impact equals what those actions let the role do, typically requiring the role to run SSM documents or pass an Automation role.
+    - id: action_arn_scope
+      description: UpdateExperimentTemplate must cover the FIS action ARN used; a Resource limited to non-execution actions removes the edge.
+    - id: fis_initialized
+      description: FIS must already be initialized in the account (service-linked role present).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict fis:UpdateExperimentTemplate and fis:StartExperiment to chaos-engineering admins on specific template ARNs, and keep FIS roles least-privileged (no SSM command or automation rights on production).
+  references:
+    - https://docs.aws.amazon.com/fis/latest/APIReference/API_UpdateExperimentTemplate.html
+    - https://docs.aws.amazon.com/fis/latest/userguide/fis-actions-reference.html#ssm-actions
+  notes: No iam:PassRole is needed when the stored role is kept. Via SSM actions the effective reach can extend to instance-profile roles of targeted instances or to Automation roles; those further hops are not modelled here.

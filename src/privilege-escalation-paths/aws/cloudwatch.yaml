@@ -1,0 +1,37 @@
+# Amazon CloudWatch privilege escalation techniques.
+# Source: hacktricks-cloud aws-cloudwatch-omni-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-cloudwatch-omni-getspacecredentialsfororganization
+  provider: aws
+  service: cloudwatch
+  title: Obtain CloudWatch Omni space credentials for a member account
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudwatch-omni-privesc/README.md#cloudwatchgetspacecredentialsfororganization--obtain-member-account-space-credentials
+  source_revision: 171e422299
+  summary: From the management or a delegated-administrator account, the source can obtain one-hour, space-scoped credentials of the operator role of existing CloudWatch Omni spaces in member accounts.
+  requires:
+    all_of:
+      - action: cloudwatch:GetSpaceCredentialsForOrganization
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: cloudwatch.amazonaws.com
+      via_resource_type: cloudwatch_space
+    scope: org
+    aggregate_as: "CloudWatch Omni operator roles of member-account spaces (from {account})"
+  conditions:
+    - id: org_admin_account
+      description: The source must be in the Organizations management account or a delegated-administrator account for the organization domain.
+    - id: space_access
+      description: The space must already exist in an active member account and the source must have access to that space.
+    - id: space_scoped_session
+      description: The vended session is bounded by the space context and the operator role's policies (default CloudWatchOmniOperatorRole); it is not generic member-account administrator access.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit cloudwatch:GetSpaceCredentialsForOrganization (note that cloudwatch:Get* grants it), restrict space access grants, and keep operator roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazoncloudwatch.html
+  notes: The action has no resource type and no dependent iam:PassRole or sts:AssumeRole. Operator roles trust cloudwatch.amazonaws.com.

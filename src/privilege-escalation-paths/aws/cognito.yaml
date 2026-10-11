@@ -1,0 +1,391 @@
+# AWS Cognito privilege escalation techniques.
+# Source: hacktricks-cloud aws-cognito-privesc/README.md.
+
+- id: aws-cognito-setidentitypoolroles-passrole
+  provider: aws
+  service: cognito
+  title: Set the roles of an identity pool the source can obtain credentials from
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitysetidentitypoolroles-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting cognito-identity.amazonaws.com by setting them as an identity pool's authenticated/unauthenticated role.
+  requires:
+    all_of:
+      - action: cognito-identity:SetIdentityPoolRoles
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting cognito-identity.amazonaws.com in {account}"
+  conditions:
+    - id: trust_aud_matches_pool
+      description: The role trust usually conditions cognito-identity.amazonaws.com:aud on a specific identity pool id; only roles whose aud condition matches a pool covered by SetIdentityPoolRoles (or have no aud condition) are reachable.
+    - id: source_can_get_pool_credentials
+      description: The source must be able to obtain an identity in the pool (unauthenticated access enabled, or a login it controls).
+    - id: amr_condition
+      description: Trust conditions on cognito-identity.amazonaws.com:amr (authenticated vs unauthenticated) must match the role slot used.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-identity:SetIdentityPoolRoles and iam:PassRole; always condition Cognito role trusts on aud and amr.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/role-trust-and-permissions.html
+  notes: "Roles whose trust does not allow cognito-identity.amazonaws.com cannot be used through the pool. Roles without an aud condition are reachable through any pool. Critical when such a role is admin-equivalent."
+
+- id: aws-cognito-updateidentitypool
+  provider: aws
+  service: cognito
+  title: Add a provider the source controls to an identity pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identityupdateidentitypool
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the authenticated role of an identity pool by adding a user pool or identity provider it controls (or enabling unauthenticated access).
+  requires:
+    all_of:
+      - action: cognito-identity:UpdateIdentityPool
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+      via_resource_type: cognito_identity_pool
+      attached_resource_covered_by: cognito-identity:UpdateIdentityPool
+    scope: same_account
+    aggregate_as: "Roles of identity pools covered by cognito-identity:UpdateIdentityPool in {account}"
+  conditions:
+    - id: controls_identity_provider
+      description: The source needs a user pool, OIDC/SAML provider or developer provider it controls (or enables unauthenticated identities).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-identity:UpdateIdentityPool to administrators.
+  references: []
+  notes: "Target set is the authenticated and unauthenticated roles of the covered pools: {target.attached_resource_arn} is arn:aws:cognito-identity:<Region>:<account>:identitypool/<IdentityPoolId> of each cognito_identity_pool whose Roles.Roles (cognito-identity:GetIdentityPoolRoles) names the role. Role-mapping (RoleMappings) roles are not included: they apply to the already configured providers, while a provider added through UpdateIdentityPool gets the default authenticated role (changing roles needs SetIdentityPoolRoles). Identity-pool roles trust the Federated principal cognito-identity.amazonaws.com, so the selector filters on federated trust; accounts whose identity-pool roles were not collected keep the pool unknown."
+
+- id: aws-cognito-adminaddusertogroup
+  provider: aws
+  service: cognito
+  title: Add a user-pool user the source controls to a group with an IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminaddusertogroup
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of IAM roles attached to user-pool groups by adding a user it controls to those groups.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminAddUserToGroup
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_group_role_covered_by: cognito-idp:AdminAddUserToGroup
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles attached to user-pool groups covered by cognito-idp:AdminAddUserToGroup in {account}"
+  conditions:
+    - id: controls_pool_user
+      description: The source must control a user in the user pool.
+    - id: token_role_mapping
+      description: The identity pool federated with the user pool must use token-based role mapping (cognito:preferred_role) for group roles to be obtainable as AWS credentials.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-idp:AdminAddUserToGroup and avoid privileged roles on user-pool groups.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/role-based-access-control.html
+  notes: ""
+
+- id: aws-cognito-creategroup-passrole
+  provider: aws
+  service: cognito
+  title: Create or update a user-pool group with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpcreategroup--cognito-idpupdategroup-iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting cognito-identity.amazonaws.com by attaching them to a user-pool group its user belongs to.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: cognito-idp:CreateGroup
+          resource: "*"
+      - - action: cognito-idp:UpdateGroup
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting cognito-identity.amazonaws.com in {account}"
+  conditions:
+    - id: controls_pool_user_in_group
+      description: The source's controlled user must be (or be addable to) the group; CreateGroup additionally needs AdminAddUserToGroup.
+    - id: token_role_mapping
+      description: The federated identity pool must use token-based role mapping.
+    - id: trust_aud_matches_pool
+      description: The role trust aud condition must match the identity pool federated with this user pool.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole to specific roles and cognito-idp group administration to administrators.
+  references: []
+  notes: ""
+
+- id: aws-cognito-adminconfirmsignup
+  provider: aws
+  service: cognito
+  title: Confirm a self-registered user-pool user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminconfirmsignup
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the authenticated identity-pool role by confirming a user it self-registered in a user pool that requires verification.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminConfirmSignUp
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:AdminConfirmSignUp
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Authenticated identity-pool roles of user pools covered by cognito-idp:AdminConfirmSignUp in {account}"
+  conditions:
+    - id: self_signup_enabled
+      description: The user pool must allow self sign-up.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cognito-idp:AdminConfirmSignUp and keep authenticated identity-pool roles least-privileged.
+  references: []
+  notes: ""
+
+- id: aws-cognito-admincreateuser
+  provider: aws
+  service: cognito
+  title: Create a user in a user pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadmincreateuser
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the authenticated identity-pool role of a user pool by creating a user it controls.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminCreateUser
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:AdminCreateUser
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Authenticated identity-pool roles of user pools covered by cognito-idp:AdminCreateUser in {account}"
+  conditions:
+    - id: rule_based_mapping
+      description: Rule-based role mapping on attributes set at creation may yield different roles.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cognito-idp:AdminCreateUser to administrators.
+  references: []
+  notes: Combined with AdminAddUserToGroup it also reaches group roles (separate entry).
+
+- id: aws-cognito-adminsetuserpassword
+  provider: aws
+  service: cognito
+  title: Set the password of an existing user-pool user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminsetuserpassword
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the identity-pool roles available to any user of a covered user pool (authenticated role and that user's group roles) by setting its password.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminSetUserPassword
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:AdminSetUserPassword
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Identity-pool roles of user pools covered by cognito-idp:AdminSetUserPassword in {account}"
+  conditions:
+    - id: user_mfa
+      description: Users with MFA enforced cannot be logged in with the password alone.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-idp:AdminSetUserPassword and enforce MFA in the user pool.
+  references: []
+  notes: Group roles are reachable when token-based mapping is used (same selector semantics as cognito_user_pool_group_role_covered_by).
+
+- id: aws-cognito-userimportjob-passrole
+  provider: aws
+  service: cognito
+  title: Import users with known passwords via a user import job
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpcreateuserimportjob--cognito-idpstartuserimportjob
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the authenticated identity-pool role of a user pool by importing users it controls.
+  requires:
+    all_of:
+      - action: cognito-idp:CreateUserImportJob
+        resource: "{target.attached_resource_arn}"
+      - action: cognito-idp:StartUserImportJob
+        resource: "{target.attached_resource_arn}"
+      - action: iam:PassRole
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:CreateUserImportJob
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Authenticated identity-pool roles of user pools covered by cognito-idp:CreateUserImportJob in {account}"
+  conditions:
+    - id: cloudwatch_logs_role
+      description: CreateUserImportJob requires passing a CloudWatch Logs role trusting cognito-idp.amazonaws.com; such a role must exist and be passable.
+    - id: imported_users_reset
+      description: Imported users get RESET_REQUIRED unless the import sets passwords through a migration path; the source must be able to complete the reset (e.g. via a mailbox it controls).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict user import actions to administrators.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-using-import-tool.html
+  notes: iam:PassRole here is for the logging role, not the target role.
+
+- id: aws-cognito-create-update-identityprovider
+  provider: aws
+  service: cognito
+  title: Add or change a federated identity provider of a user pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpcreateidentityprovider--cognito-idpupdateidentityprovider
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of identity-pool roles of a user pool by federating it with an IdP the source controls and mapping attributes to existing users.
+  requires:
+    all_of: []
+    any_of:
+      - - action: cognito-idp:CreateIdentityProvider
+          resource: "{target.attached_resource_arn}"
+      - - action: cognito-idp:UpdateIdentityProvider
+          resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:CreateIdentityProvider
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Identity-pool roles of user pools covered by IdP administration in {account}"
+  conditions:
+    - id: app_client_allows_provider
+      description: An app client must allow the new provider (CreateIdentityProvider usually also needs UpdateUserPoolClient).
+    - id: group_roles_via_linking
+      description: Group roles are only reached if federated users are linked to (or placed in) privileged groups.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict user-pool identity-provider administration to administrators.
+  references: []
+  notes: The selector applies to whichever any_of action matched.
+
+- id: aws-cognito-getopenidtokenfordeveloperidentity
+  provider: aws
+  service: cognito
+  title: Mint a developer-authenticated identity token for an identity pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the authenticated role of identity pools with a developer provider by minting an OpenID token for an arbitrary developer identity.
+  requires:
+    all_of:
+      - action: cognito-identity:GetOpenIdTokenForDeveloperIdentity
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+      attached_resource_covered_by: cognito-identity:GetOpenIdTokenForDeveloperIdentity
+    scope: same_account
+    aggregate_as: "Authenticated roles of identity pools covered by cognito-identity:GetOpenIdTokenForDeveloperIdentity in {account}"
+  conditions:
+    - id: developer_provider_configured
+      description: The identity pool must have a DeveloperProviderName configured.
+    - id: authenticated_role_only
+      description: Only the pool's authenticated role (or roles selected by its role mappings for developer identities) is reachable, not the unauthenticated role.
+    - id: trust_aud_amr
+      description: The role trust must accept the pool's aud and the authenticated amr.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Grant cognito-identity:GetOpenIdTokenForDeveloperIdentity only to the backend that authenticates end users, scoped to its identity pool.
+  references:
+    - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_GetOpenIdTokenForDeveloperIdentity.html
+  notes: The selector covers every role configured on covered pools; the unauthenticated role is a false positive when the pool has one (see authenticated_role_only). Identity-pool roles trust the Federated principal cognito-identity.amazonaws.com (not a Service principal), so the selector filters on federated trust; identity pools are not collected, so the covered pool resolves unknown.
+
+- id: aws-cognito-setprincipaltagattributemap
+  provider: aws
+  service: cognito
+  title: Remap identity-pool principal tags to attributes the source controls
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitysetprincipaltagattributemap--forge-the-session-tags-that-iam-conditions-trust
+  source_revision: 171e422299
+  summary: The source can obtain the tag-conditioned (aws:PrincipalTag) privileges of identity-pool role sessions by mapping the trusted session tags to token claims its own pool user can set.
+  requires:
+    all_of:
+      - action: cognito-identity:SetPrincipalTagAttributeMap
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+      attached_resource_covered_by: cognito-identity:SetPrincipalTagAttributeMap
+    scope: same_account
+    aggregate_as: "Roles of identity pools covered by cognito-identity:SetPrincipalTagAttributeMap in {account}"
+  conditions:
+    - id: controls_pool_user
+      description: The source must control a user of a provider of the pool with a self-writable attribute that can be mapped to the tag.
+    - id: abac_policies
+      description: Gain is limited to permissions conditioned on aws:PrincipalTag in the role's policies, trust policies or resource policies; roles without such conditions gain nothing.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cognito-identity:SetPrincipalTagAttributeMap to administrators and map principal tags only to immutable, admin-controlled attributes.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/attributes-for-access-control.html
+  notes: ABAC escalation within the same role (other tag values), not a different role. Identity-pool roles trust the Federated principal cognito-identity.amazonaws.com (not a Service principal), so the selector filters on federated trust; identity pools are not collected, so the covered pool resolves unknown.
+
+- id: aws-cognito-adminlinkproviderforuser
+  provider: aws
+  service: cognito
+  title: Link a federated identity the source controls to an existing user-pool user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminlinkproviderforuser--graft-an-attacker-identity-onto-an-existing-privileged-user
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the identity-pool roles available to any user of a covered user pool (authenticated role and that user's group roles) by linking a federated identity it controls to that user.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminLinkProviderForUser
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:AdminLinkProviderForUser
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Identity-pool roles of user pools covered by cognito-idp:AdminLinkProviderForUser in {account}"
+  conditions:
+    - id: provider_configured
+      description: The source provider must already be configured on the user pool (or added with CreateIdentityProvider) and the source must control a subject in it.
+    - id: app_client_allows_provider
+      description: An app client must allow sign-in with that provider.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-idp:AdminLinkProviderForUser to migration tooling and alert on identity links to existing users.
+  references:
+    - https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminLinkProviderForUser.html
+  notes: Group roles are reachable when token-based mapping is used (same selector semantics as cognito_user_pool_group_role_covered_by). MFA on the native user does not apply to the federated sign-in.

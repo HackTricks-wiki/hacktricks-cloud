@@ -1,0 +1,59 @@
+# Amazon QuickSight application-plane privilege escalation techniques (aws_service_plane_admin targets).
+# Source: hacktricks-cloud aws-quicksight-privesc/README.md (rev 171e422299).
+# QuickSight users are not collected: every edge is one unresolved placeholder per account.
+
+- id: aws-quicksight-updateuser-admin
+  provider: aws
+  service: quicksight
+  title: Promote a controlled QuickSight user to ADMIN
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md#quicksightupdateuser--self-promote-to-admin
+  source_revision: 171e422299
+  summary: The source can make a QuickSight user it controls an ADMIN of the account's QuickSight, gaining control of its data sources and datasets.
+  requires:
+    all_of:
+      - action: quicksight:UpdateUser
+        resource: "arn:aws:quicksight:*:{target.account}:user/*"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: quicksight
+    scope: same_account
+    aggregate_as: "QuickSight administrators in {account}"
+    grants: [QuickSight ADMIN]
+  conditions:
+    - id: controlled_quicksight_user
+      description: The source must control an existing QuickSight user in the namespace (for example its own IAM-federated user) and know its user name.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict quicksight:UpdateUser to QuickSight administrators and alert on UpdateUser setting Role=ADMIN.
+  notes: QuickSight admin actions are gated by quicksight:* IAM permissions, not by the caller's QuickSight role. Application-plane administration (including embedded data-source credentials), not IAM administrator access.
+
+- id: aws-quicksight-registeruser-admin
+  provider: aws
+  service: quicksight
+  title: Register a controlled IAM identity as a QuickSight ADMIN
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md#quicksightregisteruser--map-a-controlled-iam-identity-to-an-admin
+  source_revision: 171e422299
+  summary: The source can register an IAM identity it controls as a QuickSight ADMIN, gaining control of the account's QuickSight resources and data sources.
+  requires:
+    all_of:
+      - action: quicksight:RegisterUser
+        resource: "arn:aws:quicksight:*:{target.account}:user/*"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: quicksight
+    scope: same_account
+    aggregate_as: "QuickSight administrators in {account}"
+    grants: [QuickSight ADMIN]
+  conditions:
+    - id: quicksight_subscribed
+      description: The account must have a QuickSight subscription whose namespace accepts IAM identities.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict quicksight:RegisterUser to QuickSight administrators and alert on RegisterUser with Role=ADMIN.
+  notes: The registered identity is the source itself or an IAM principal it controls. Application-plane administration, not IAM administrator access.

@@ -1,0 +1,146 @@
+# GCP VM Manager / OS Config privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-osconfig-privesc.md and gcp-compute-privesc/README.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# The OS Config agent runs as root on the VM; no actAs on the VM's SA is needed (HackTricks).
+
+- id: gcp-osconfig-patchjobs-exec
+  provider: gcp
+  service: osconfig
+  title: Run root pre/post-patch steps on project VMs through an OS Config patch job
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-osconfig-privesc.md#osconfigpatchjobsexec-or-patch-deployment-write---execute-a-privileged-patch-step
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs of every project where it holds osconfig.patchJobs.exec or osconfig.patchDeployments.create.
+  requires:
+    any_of:
+      - - action: osconfig.patchJobs.exec
+          resource: "{target.project}"
+      - - action: osconfig.patchDeployments.create
+          resource: "{target.project}"
+      - - action: osconfig.patchDeployments.update
+          resource: "{target.project}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: compute_instance
+    scope: same_project
+    aggregate_as: "SAs of OS Config-managed VMs in {project}"
+  conditions:
+    - id: agent_enabled
+      description: The VM must be running, patch-supported, have an active OS Config agent with VM Manager enabled, an attached service account and egress to OS Config; the project service agent must hold roles/osconfig.serviceAgent. patchDeployments.update needs an existing deployment.
+    - id: executable_location
+      description: ExecStepConfig has no inline script; the pre/post-patch executable is a local path or an exact Cloud Storage object generation readable by the VM's SA.
+    - id: access_scopes
+      description: The usable token is limited by the VM's OAuth access scopes.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/osconfig.patchJobExecutor, roles/osconfig.patchDeploymentAdmin and roles/osconfig.admin; disable VM Manager where not needed.
+  references:
+    - https://cloud.google.com/compute/docs/os-patch-management/create-patch-job
+  notes: No actAs on the VM SA is required (HackTricks, current at the reference revision). patchDeployments.create is the scheduled variant; also documented on gcp-compute-privesc/README.md#osconfigpatchdeploymentscreate--osconfigpatchjobsexec (former duplicate entry gcp-compute-osconfig-patchdeployments-create removed).
+
+- id: gcp-osconfig-ospolicyassignments-create
+  provider: gcp
+  service: osconfig
+  title: Run root code on project VMs through OS policy assignments
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-osconfig-privesc.md#osconfigospolicyassignmentscreate-or-update---execute-an-inline-privileged-os-policy
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs of every project where it can create or update OS policy assignments.
+  requires:
+    any_of:
+      - - action: osconfig.osPolicyAssignments.create
+          resource: "{target.project}"
+      - - action: osconfig.osPolicyAssignments.update
+          resource: "{target.project}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: compute_instance
+    scope: same_project
+    aggregate_as: "SAs of OS Config-managed VMs in {project}"
+  conditions:
+    - id: agent_enabled
+      description: VM Manager must be enabled on the VM and the VM needs egress to the control plane; execution happens on the agent polling interval.
+    - id: update_requires_existing
+      description: The update-only path needs an existing assignment whose instance filter (or a filter the source can change) matches the VM.
+    - id: access_scopes
+      description: The usable token is limited by the VM's OAuth access scopes.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/osconfig.osPolicyAssignmentAdmin/Editor and roles/osconfig.guestPolicyAdmin.
+  references:
+    - https://docs.cloud.google.com/compute/vm-manager/docs/os-policies/working-with-os-policies
+  notes: OS policy assignments are zonal and exec resources accept inline scripts. Legacy guest policies are modelled by gcp-osconfig-guestpolicies-recipe and policy orchestrators by gcp-osconfig-policyorchestrators.
+
+- id: gcp-osconfig-guestpolicies-recipe
+  provider: gcp
+  service: osconfig
+  title: Run a root software-recipe script on project VMs through a legacy OS Config guest policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-osconfig-privesc.md#legacy-guest-policy-write---run-an-inline-software-recipe-script
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs of every project where it can create or update legacy guest policies.
+  requires:
+    any_of:
+      - - action: osconfig.guestPolicies.create
+          resource: "{target.project}"
+      - - action: osconfig.guestPolicies.update
+          resource: "{target.project}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: compute_instance
+    scope: same_project
+    aggregate_as: "SAs of OS Config-managed VMs in {project}"
+  conditions:
+    - id: legacy_feature
+      description: The Beta guest-policy feature and an OS Config agent that processes it must be active on matching VMs, with an attached SA and service connectivity.
+    - id: run_once
+      description: A recipe with a given name runs once; update-only needs an existing policy and a renamed recipe or a higher UPDATED version to re-run.
+    - id: access_scopes
+      description: The usable token is limited by the VM's OAuth access scopes.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/osconfig.guestPolicyAdmin/Editor and migrate off legacy guest policies.
+  references:
+    - https://docs.cloud.google.com/compute/vm-manager/docs/guest-policies/create-guest-policy
+  notes: No actAs, SSH or metadata permission is needed; the agent runs recipes as root/LocalSystem on standard images.
+
+- id: gcp-osconfig-policyorchestrators
+  provider: gcp
+  service: osconfig
+  title: Propagate a root OS policy to VMs across projects with an OS Config policy orchestrator
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-osconfig-privesc.md#osconfigpolicyorchestratorscreate-or-update---propagate-a-privileged-policy-across-projects-and-zones
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs in every project under the project, folder or organization where it can create policy orchestrators.
+  requires:
+    all_of:
+      - action: osconfig.policyOrchestrators.create
+        resource: "{target.project}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: compute_instance
+    scope: any
+    aggregate_as: "SAs of OS Config-managed VMs under the orchestrator parent"
+  conditions:
+    - id: service_agents
+      description: The OS Config, OS Config rollout and Progressive Rollout service agents of the parent must exist with their service-agent roles; folder/organization calls need a billing-enabled quota project and serviceusage.services.use.
+    - id: update_variant
+      description: osconfig.policyOrchestrators.update on an existing orchestrator gives the same reach within its configured selectors (not in the bundled permission list).
+    - id: agent_enabled
+      description: Each target VM still needs the GA OS-policy prerequisites (active agent, attached SA, connectivity) and must match the selectors and filters.
+    - id: access_scopes
+      description: The usable token is limited by the VM's OAuth access scopes.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict roles/osconfig.policyOrchestratorAdmin and roles/osconfig.admin at folder and organization level.
+  references:
+    - https://docs.cloud.google.com/compute/vm-manager/docs/os-policies/use-policy-orchestrator
+  notes: The permission is checked on the orchestrator parent; a folder/organization grant inherits to every descendant project, which "{target.project}" captures. Reconciliation reapplies the assignment every six hours.

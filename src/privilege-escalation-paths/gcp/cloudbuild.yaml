@@ -1,0 +1,132 @@
+# GCP Cloud Build privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudbuild-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: cloudbuild_default_identity -> the project's default Cloud Build identity (Compute default SA on newer
+#   projects or the legacy <PROJECT_NUMBER>@cloudbuild.gserviceaccount.com), not an attachment to a collected resource.
+
+- id: gcp-cloudbuild-builds-create-custom-sa-actas
+  provider: gcp
+  service: cloudbuild
+  title: Submit a build running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildbuildscreate--execute-build-steps-as-a-build-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: cloudbuild.builds.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Build identity in {project}"
+  conditions:
+    - id: logging_option
+      description: A build with a custom SA must specify a logs bucket or a CLOUD_LOGGING_ONLY/NONE logging option; this does not prevent execution.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on specific SAs; no predefined Cloud Build role carries actAs, so review roles/editor, roles/owner and roles/iam.serviceAccountUser holders.
+  references:
+    - https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts
+    - https://docs.cloud.google.com/build/docs/iam-roles-permissions
+  notes: HackTricks scopes the user-specified SA to SAs inside the build project. This entry also covers the trigger path (HackTricks cloudbuild.triggers.create / cloudbuild.triggers.run section). Google documents that triggers.create, patch, delete and run all require cloudbuild.builds.create; there are no cloudbuild.triggers.* IAM permissions, and the trigger's SA still needs actAs, so the trigger path has exactly this permission set.
+
+- id: gcp-cloudbuild-builds-create-default-identity
+  provider: gcp
+  service: cloudbuild
+  title: Submit a build running as the project's default Cloud Build identity
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildbuildscreate--execute-build-steps-as-a-build-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the default Cloud Build service account of every project where it holds cloudbuild.builds.create.
+  requires:
+    all_of:
+      - action: cloudbuild.builds.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudbuild_default_identity
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Default Cloud Build identity of {project}"
+  conditions:
+    - id: default_identity_config
+      description: The default identity is configuration-dependent (Compute default SA or legacy Cloud Build SA); the legacy SA may be absent or disabled on newer projects.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Configure builds to use a dedicated least-privilege SA, remove Editor from the Compute default SA and restrict roles/cloudbuild.builds.editor.
+  references:
+    - https://cloud.google.com/build/docs/cloud-build-service-account-updates
+  notes: HackTricks (171e422) states actAs is needed for a Compute Engine default or user-managed build identity; only the legacy Cloud Build SA (<PROJECT_NUMBER>@cloudbuild.gserviceaccount.com) is usable without actAs. When the project default is the Compute default SA this entry over-approximates (the custom-SA entry then applies), so it stays conditional.
+
+- id: gcp-cloudbuild-repositories-accessreadwritetoken
+  provider: gcp
+  service: cloudbuild
+  title: Obtain a read/write SCM token for a connected repository that feeds build triggers
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildrepositoriesaccessreadwritetoken--poison-source-consumed-by-a-privileged-trigger
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service account of build triggers that build from a connected repository on which it holds cloudbuild.repositories.accessReadWriteToken.
+  requires:
+    all_of:
+      - action: cloudbuild.repositories.accessReadWriteToken
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudbuild_trigger
+    scope: same_project
+    aggregate_as: "SAs of triggers building from writable connected repositories"
+  conditions:
+    - id: trigger_on_push
+      description: A trigger must build from that repository on a push/tag/PR event the token allows, and run a build config the pushed content controls.
+    - id: branch_protection
+      description: SCM branch protection can prevent pushing to the trigger's branch; GitHub pull-request triggers can require an owner/collaborator comment before building untrusted contributions.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cloudbuild.repositories.accessReadWriteToken (roles/cloudbuild.tokenAccessor) and protect trigger branches.
+  notes: The token itself is a short-lived repo-scoped SCM credential; the GCP identity is only reached through a trigger.
+
+- id: gcp-cloudbuild-connections-setiampolicy-token-access
+  provider: gcp
+  service: cloudbuild
+  title: Self-grant repository token access on a Cloud Build connection that feeds build triggers
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildconnectionssetiampolicy--self-grant-repository-token-access
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service account of build triggers that build from repositories under a Cloud Build connection whose IAM policy it controls.
+  requires:
+    all_of:
+      - action: cloudbuild.connections.setIamPolicy
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudbuild_trigger
+    scope: same_project
+    aggregate_as: "SAs of triggers building from repositories of connections whose IAM the source controls"
+  conditions:
+    - id: connection_parent
+      description: "{target.artifact_arn} is the linked repository; the binding is granted on its parent connection and inherited by the repository."
+    - id: followup_token
+      description: The self-granted token accessor role is then used as in gcp-cloudbuild-repositories-accessreadwritetoken, with the same trigger, branch-protection and approval conditions.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cloudbuild.connections.setIamPolicy (roles/cloudbuild.connectionAdmin) and protect trigger branches.
+  references:
+    - https://docs.cloud.google.com/build/docs/iam-roles-permissions
+  notes: Without a trigger consuming attacker-writable input the impact is SCM repository access only.

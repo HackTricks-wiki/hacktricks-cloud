@@ -1,0 +1,37 @@
+# AWS CodeDeploy privilege escalation techniques.
+# Source: hacktricks-cloud aws-codedeploy-privesc/README.md.
+
+- id: aws-codedeploy-createdeployment-instance-roles
+  provider: aws
+  service: codedeploy
+  title: Deploy a controlled revision to an existing EC2/on-premises deployment group
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codedeploy-privesc/README.md#codedeploycreatedeployment--dependent-actions
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the instance-profile roles of EC2 instances in a deployment group by deploying a revision with lifecycle hooks it controls.
+  requires:
+    all_of:
+      - action: codedeploy:CreateDeployment
+        resource: "{target.attached_resource_arn}"
+      - action: codedeploy:GetDeploymentConfig
+        resource: "*"
+      - action: codedeploy:RegisterApplicationRevision
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      codedeploy_group_instance_role_covered_by: codedeploy:CreateDeployment
+    scope: same_account
+    aggregate_as: "Instance roles of CodeDeploy deployment-group hosts covered by codedeploy:CreateDeployment in {account}"
+  conditions:
+    - id: controlled_revision
+      description: The source must control an S3 (or GitHub) revision the target hosts can download (e.g. write access to a revision object readable by the instance profile).
+    - id: agent_running
+      description: The group must contain at least one reachable host with a working CodeDeploy agent.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict codedeploy:CreateDeployment to pipelines and keep deployment-host instance profiles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awscodedeploy.html
+  notes: Lambda/ECS compute platforms are not covered (no host code execution). On-premises hosts have IAM user or session credentials instead of instance roles; those are not modelled.

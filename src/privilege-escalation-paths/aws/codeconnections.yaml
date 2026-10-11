@@ -1,0 +1,44 @@
+# AWS CodeConnections (CloudFormation Git sync) privilege escalation techniques.
+# Source: hacktricks-cloud aws-codeconnections-privesc/README.md (rev 171e422299).
+
+- id: aws-codeconnections-gitsync-passrole
+  provider: aws
+  service: codeconnections
+  title: Point a CloudFormation Git sync configuration at a controlled branch with a passed sync role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codeconnections-privesc/README.md#codeconnectionscreatesyncconfiguration--codeconnectionsupdatesyncconfiguration--codeconnectionspassrepository--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable Git sync roles, because CloudFormation Git sync deploys the template from a repository branch the source controls with the passed role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: codeconnections:PassRepository
+        resource: "*"
+    any_of:
+      - - action: codeconnections:CreateSyncConfiguration
+          resource: "*"
+      - - action: codeconnections:UpdateSyncConfiguration
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: cloudformation.sync.codeconnections.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting cloudformation.sync.codeconnections.amazonaws.com passable in {account}"
+  conditions:
+    - id: repository_write
+      description: The source must be able to write the monitored repository branch / deployment file (Git provider access, outside AWS IAM) and a usable repository link must exist.
+    - id: passrole_condition_key
+      description: iam:PassedToService and codeconnections:PassedToService conditions may restrict which roles and repository links can be passed.
+    - id: trust_confused_deputy_conditions
+      description: aws:SourceArn / aws:SourceAccount conditions in the sync role trust limit which connections can use it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Git sync roles and codeconnections:PassRepository with PassedToService conditions; treat Create/UpdateSyncConfiguration as deployment-control permissions; keep Git sync roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/git-sync-prereq.html
+    - https://docs.aws.amazon.com/codeconnections/latest/APIReference/API_CreateSyncConfiguration.html
+  notes: Trust principal verified in the CloudFormation Git sync prerequisites (cloudformation.sync.codeconnections.amazonaws.com). The role needs change-set permissions plus whatever the template creates, so the reachable privilege is the role's own permission set.

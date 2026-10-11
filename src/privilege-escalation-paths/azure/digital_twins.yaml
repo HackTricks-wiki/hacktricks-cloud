@@ -1,0 +1,70 @@
+# Azure Digital Twins techniques (declarative only).
+# Source: hacktricks-cloud az-digital-twins-privesc.md (rev 171e422).
+# Import jobs read the input blob with the instance's managed identity (confused deputy). The gain is
+# limited to blob reads of NDJSON content the import parses, not the identity's full privileges.
+
+- id: azure-digitaltwins-import-job-identity-read
+  provider: azure
+  service: digital_twins
+  title: Use an import job to read blobs with the Digital Twins instance identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md#microsoftdigitaltwinsjobsimportswrite--bulk-graph-import-mass-poisoning--mi-confused-deputy-read
+  source_revision: 171e422
+  summary: An import job pointed at a blob the source cannot read makes the instance identity fetch it, leaking parse errors or importing its content into the graph.
+  requires:
+    all_of:
+      - action: Microsoft.DigitalTwins/jobs/imports/write
+        data_action: true
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DigitalTwins/digitalTwinsInstances
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Digital Twins instance {target.host_resource}"
+  conditions:
+    - id: partial_blob_read_only
+      description: Only Storage Blob read through the instance identity is gained, and only for content readable as import NDJSON or surfaced in the job's error output.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict jobs/imports/write and grant the instance identity only the import container.
+  references:
+    - https://learn.microsoft.com/en-us/azure/digital-twins/concepts-apis-sdks#bulk-import-with-the-jobs-api
+  notes: Partial identity gain; evaluator should not propagate the identity's ARM role assignments.
+
+- id: azure-digitaltwins-assign-identity-import
+  provider: azure
+  service: digital_twins
+  title: Attach a user-assigned identity to a Digital Twins instance and import with it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md#microsoftdigitaltwinsdigitaltwinsinstanceswrite--managed-identity-attach-confused-deputy-foothold
+  source_revision: 171e422
+  summary: An identity attached to an instance the source controls is used by import jobs to read blobs on the source's behalf.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.DigitalTwins/digitalTwinsInstances/write
+        scope: '{pivot}'
+      - action: Microsoft.DigitalTwins/jobs/imports/write
+        data_action: true
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Resources/resourceGroups|Microsoft.DigitalTwins/digitalTwinsInstances
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: partial_blob_read_only
+      description: Only Storage Blob read through the identity is gained, and only for content readable as import NDJSON or surfaced in the job's error output.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict userAssignedIdentities/assign/action and digitalTwinsInstances/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/digital-twins/how-to-set-up-instance-cli#enable-managed-identity-for-the-instance
+  notes: Partial identity gain; evaluator should not propagate the identity's ARM role assignments.

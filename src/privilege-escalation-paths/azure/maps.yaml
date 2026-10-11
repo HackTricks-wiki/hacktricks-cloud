@@ -1,0 +1,31 @@
+# Azure Maps techniques (declarative only).
+# Source: hacktricks-cloud az-maps-privesc.md (re-reviewed at rev 171e422).
+
+- id: azure-maps-listsas-attached-identity
+  provider: azure
+  service: maps
+  title: Mint a Maps SAS backed by the account's user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-maps-privesc.md#microsoftmapsaccountslistsasaction
+  source_revision: 171e422
+  summary: The source can obtain the Maps data-plane privileges of the user-assigned identity attached to the Maps account.
+  requires:
+    all_of:
+      - action: Microsoft.Maps/accounts/listSas/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Maps/accounts
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: "Maps-scoped access of identities attached to Maps account {target.host_resource}"
+  conditions:
+    - id: maps_dataplane_only
+      description: The SAS is limited to the identity's Azure Maps data-plane roles; it does not yield an ARM/Graph token for the identity.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict listSas/action and give Maps-attached identities only the Maps roles they need.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-maps/azure-maps-authentication
+  notes: Partial identity gain (Maps only); evaluator should not propagate the identity's other role assignments.

@@ -1,0 +1,75 @@
+# Amazon DataZone privilege escalation techniques.
+# Source: hacktricks-cloud aws-datazone-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Custom AWS service environments carry an
+# IAM role trusting datazone.amazonaws.com whose credentials DataZone vends to project members; the vended session only
+# blocks role chaining.
+
+- id: aws-datazone-getenvironmentcredentials
+  provider: aws
+  service: datazone
+  title: Obtain the credentials of a DataZone custom environment role as a project member
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datazone-privesc/README.md#getenvironmentcredentials-as-a-custom-environment-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges (minus role chaining) of the roles associated with DataZone custom environments of projects it belongs to.
+  requires:
+    all_of:
+      - action: datazone:GetEnvironmentCredentials
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: datazone.amazonaws.com
+      via_resource_type: datazone_environment
+    scope: same_account
+    aggregate_as: "Roles of DataZone custom environments in {account}"
+  conditions:
+    - id: project_membership
+      description: The source's DataZone user profile must be a member (any designation, including catalog viewer) of the environment's project.
+    - id: active_environment
+      description: The environment must be active and have an associated IAM role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Keep custom environment roles least-privileged, limit project membership, and restrict datazone:GetEnvironmentCredentials to principals that need it.
+  references:
+    - https://docs.aws.amazon.com/datazone/latest/APIReference/API_GetEnvironmentCredentials.html
+  notes: DataZone project membership is not collected; the edge is conditional on it.
+
+- id: aws-datazone-passrole-associateenvironmentrole
+  provider: aws
+  service: datazone
+  title: Associate a passed role with a DataZone custom environment and vend its credentials
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datazone-privesc/README.md#associateenvironmentrole--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges (minus role chaining) of any passable role trusting datazone.amazonaws.com by associating it with an environment of a project it belongs to.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: datazone:AssociateEnvironmentRole
+        resource: "*"
+      - action: datazone:GetEnvironmentCredentials
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: datazone.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting datazone.amazonaws.com passable in {account}"
+  conditions:
+    - id: project_authorization
+      description: The source needs DataZone project/domain authorization to change the environment and a project membership to request credentials.
+    - id: trust_tagsession
+      description: The role trust must also allow sts:TagSession for datazone.amazonaws.com.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on DataZone roles with iam:PassedToService=datazone.amazonaws.com and restrict datazone:AssociateEnvironmentRole to administrators.
+  references:
+    - https://docs.aws.amazon.com/datazone/latest/APIReference/API_AssociateEnvironmentRole.html
+  notes: DataZone authorization is evaluated in addition to IAM and is not collected.

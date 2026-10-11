@@ -1,0 +1,341 @@
+# AWS IAM Identity Center (SSO) and Identity Store privilege escalation techniques.
+# Source: hacktricks-cloud aws-sso-and-identitystore-privesc/README.md.
+
+- id: aws-sso-directory-updatepassword
+  provider: aws
+  service: sso
+  title: Reset the password of an Identity Center user
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#sso-directoryupdatepassword
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of an Identity Center user (and every permission set assigned to it) whose password it can reset.
+  requires:
+    all_of:
+      - action: sso-directory:UpdatePassword
+        resource: "*"
+  target:
+    kind: aws_identity_center_user
+    selector:
+      any_principal_in_scope: true
+    scope: org
+    aggregate_as: "Identity Center users in the identity store of {account}"
+  conditions:
+    - id: identity_store_is_native
+      description: Only works for the built-in Identity Center directory; external IdPs (Entra ID, Okta, AD) manage passwords outside AWS.
+    - id: target_mfa
+      description: Enforced MFA on sign-in blocks use of the reset password.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict sso-directory:* to Identity Center administrators in the management or delegated-admin account and enforce MFA.
+  references: []
+  notes: sso-directory actions are not resource-scopable; every user of the directory is in scope.
+
+- id: aws-identitystore-creategroupmembership
+  provider: aws
+  service: sso
+  title: Add an Identity Center user controlled by the source to a group
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreategroupmembership
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of permission sets assigned to an Identity Center group by adding a user it controls to that group.
+  requires:
+    all_of:
+      - action: identitystore:CreateGroupMembership
+        resource: "*"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      assigned_to_identity_center_group: true
+    scope: org
+    aggregate_as: "Permission sets assigned to Identity Center groups"
+  conditions:
+    - id: controls_identity_center_user
+      description: The source must control (be, or know the credentials of) an Identity Center user.
+    - id: external_idp_sync
+      description: With SCIM provisioning from an external IdP the membership may be overwritten on the next sync.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict identitystore:CreateGroupMembership to administrators and alert on group-membership changes.
+  references: []
+  notes: identitystore:CreateGroupMembership Resource can be scoped to identity store / group ARNs; the evaluator should apply that scoping when present.
+
+- id: aws-sso-putinlinepolicytopermissionset
+  provider: aws
+  service: sso
+  title: Add an inline policy to a permission set and re-provision it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssoputinlinepolicytopermissionset-ssoprovisionpermissionset
+  source_revision: 171e422299
+  summary: The source can obtain admin of every account where a covered permission set it is assigned to is provisioned.
+  requires:
+    all_of:
+      - action: sso:PutInlinePolicyToPermissionSet
+        resource: "{target.arn}"
+      - action: sso:ProvisionPermissionSet
+        resource: "{target.arn}"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:PutInlinePolicyToPermissionSet
+    scope: org
+    aggregate_as: "Permission sets covered by sso:PutInlinePolicyToPermissionSet"
+  conditions:
+    - id: source_assigned_to_permission_set
+      description: The source (or an Identity Center user it controls) must be assigned the modified permission set in some account.
+    - id: management_account_permission_sets
+      description: Permission sets provisioned into the management account can only be edited from the management account, not from a delegated administrator.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict permission-set modification to the management account administrators; use a delegated admin with limited scope.
+  references: []
+  notes: The sso Resource covers the instance and permission-set ARNs (and account ARNs for provisioning).
+
+- id: aws-sso-attachmanagedpolicytopermissionset
+  provider: aws
+  service: sso
+  title: Attach an AWS-managed policy to a permission set and re-provision it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssoattachmanagedpolicytopermissionset-ssoprovisionpermissionset
+  source_revision: 171e422299
+  summary: The source can obtain admin of every account where a covered permission set it is assigned to is provisioned.
+  requires:
+    all_of:
+      - action: sso:AttachManagedPolicyToPermissionSet
+        resource: "{target.arn}"
+      - action: sso:ProvisionPermissionSet
+        resource: "{target.arn}"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:AttachManagedPolicyToPermissionSet
+    scope: org
+    aggregate_as: "Permission sets covered by sso:AttachManagedPolicyToPermissionSet"
+  conditions:
+    - id: source_assigned_to_permission_set
+      description: The source (or an Identity Center user it controls) must be assigned the modified permission set in some account.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict permission-set modification to Identity Center administrators.
+  references: []
+  notes: ""
+
+- id: aws-sso-attachcustomermanagedpolicyreference
+  provider: aws
+  service: sso
+  title: Attach a customer-managed policy reference to a permission set and re-provision it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssoattachcustomermanagedpolicyreferencetopermissionset-ssoprovisionpermissionset
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of a permissive customer-managed policy in every account where a covered permission set it is assigned to is provisioned.
+  requires:
+    all_of:
+      - action: sso:AttachCustomerManagedPolicyReferenceToPermissionSet
+        resource: "{target.arn}"
+      - action: sso:ProvisionPermissionSet
+        resource: "{target.arn}"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:AttachCustomerManagedPolicyReferenceToPermissionSet
+    scope: org
+    aggregate_as: "Permission sets covered by sso:AttachCustomerManagedPolicyReferenceToPermissionSet"
+  conditions:
+    - id: source_assigned_to_permission_set
+      description: The source must be assigned the modified permission set.
+    - id: policy_exists_in_target_accounts
+      description: A customer-managed policy with the referenced name must exist (or be creatable by the source) in each target account; provisioning fails otherwise.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict permission-set modification to Identity Center administrators.
+  references: []
+  notes: Critical when a permissive policy with a referencable name exists in target accounts.
+
+- id: aws-sso-createaccountassignment
+  provider: aws
+  service: sso
+  title: Assign a permission set to a controlled user in an account
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssocreateaccountassignment
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any covered permission set in any covered member account by assigning it to an Identity Center user it controls.
+  requires:
+    all_of:
+      - action: sso:CreateAccountAssignment
+        resource: "{target.arn}"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:CreateAccountAssignment
+    scope: org
+    aggregate_as: "Permission sets assignable via sso:CreateAccountAssignment"
+  conditions:
+    - id: controls_identity_center_user
+      description: The source must control an Identity Center user or group to assign.
+    - id: management_account_permission_sets
+      description: A delegated administrator cannot assign permission sets in the management account.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict sso:CreateAccountAssignment to Identity Center administrators and scope it to specific accounts and permission sets.
+  references:
+    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
+  notes: The Resource covers instance, permission-set and account ARNs.
+
+- id: aws-sso-remove-permission-set-restriction
+  provider: aws
+  service: sso
+  title: Remove a restricting policy or boundary from a permission set and re-provision it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodeletepermissionsboundaryfrompermissionset
+  source_revision: 171e422299
+  summary: The source can obtain broader privileges of a permission set it is assigned to by removing an attached restriction (deny policy or permissions boundary).
+  requires:
+    all_of:
+      - action: sso:ProvisionPermissionSet
+        resource: "{target.arn}"
+    any_of:
+      - - action: sso:DetachManagedPolicyFromPermissionSet
+          resource: "{target.arn}"
+      - - action: sso:DetachCustomerManagedPolicyReferenceFromPermissionSet
+          resource: "{target.arn}"
+      - - action: sso:DeleteInlinePolicyFromPermissionSet
+          resource: "{target.arn}"
+      - - action: sso:DeletePermissionsBoundaryFromPermissionSet
+          resource: "{target.arn}"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:ProvisionPermissionSet
+    scope: org
+    aggregate_as: "Permission sets whose restrictions the source can remove"
+  conditions:
+    - id: restriction_present
+      description: Only an escalation if the permission set currently carries a deny/restricting policy or permissions boundary whose removal increases permissions.
+    - id: source_assigned_to_permission_set
+      description: The source must be assigned the modified permission set.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict all permission-set modification actions to Identity Center administrators.
+  references: []
+  notes: Merges the four HackTricks sections (DetachManagedPolicy, DetachCustomerManagedPolicyReference, DeleteInlinePolicy, DeletePermissionsBoundary).
+
+- id: aws-sso-createpermissionset-attach-assign
+  provider: aws
+  service: sso
+  title: Create an admin permission set and assign it to a controlled user in a member account
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssocreatepermissionset--policy-attach--ssocreateaccountassignment--build-an-admin-path-from-scratch
+  source_revision: 171e422299
+  summary: The source can become administrator of accounts it can assign by creating a new permission set, attaching an administrator policy, and assigning it to an Identity Center user it controls.
+  requires:
+    all_of:
+      - action: sso:CreatePermissionSet
+        resource: "*"
+      - action: sso:CreateAccountAssignment
+        resource: "arn:aws:sso:::account/{target.account}"
+      - action: sso:ProvisionPermissionSet
+        resource: "arn:aws:sso:::account/{target.account}"
+    any_of:
+      - - action: sso:AttachManagedPolicyToPermissionSet
+          resource: "arn:aws:sso:::permissionSet/*"
+      - - action: sso:PutInlinePolicyToPermissionSet
+          resource: "arn:aws:sso:::permissionSet/*"
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+    scope: org
+    aggregate_as: "Accounts reachable with a newly created permission set"
+  conditions:
+    - id: controls_identity_center_user
+      description: The source must control an Identity Center user or group to assign.
+    - id: management_account_permission_sets
+      description: A delegated administrator cannot create assignments in the management account.
+    - id: resource_scoping
+      description: CreatePermissionSet, policy attach and CreateAccountAssignment are authorized on instance, permission-set and account ARNs; aws:ResourceTag conditions on permission sets can limit the attach step.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict sso:CreatePermissionSet and assignment permissions to Identity Center administrators; scope assignments to specific accounts and permission-set ARNs.
+  references:
+    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreatePermissionSet.html
+    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
+    - https://docs.aws.amazon.com/singlesignon/latest/userguide/delegated-admin.html
+  notes: Complements aws-sso-createaccountassignment, which only reuses existing permission sets.
+
+- id: aws-identitystore-createuser-groupmembership
+  provider: aws
+  service: sso
+  title: Create an Identity Center user and add it to a privileged group
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreateuser--sso-directorycreateuser--group-membership--assignment
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of permission sets assigned to Identity Center groups by creating its own directory user and adding it to such a group.
+  requires:
+    all_of:
+      - action: identitystore:CreateUser
+        resource: "*"
+      - action: identitystore:CreateGroupMembership
+        resource: "*"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      assigned_to_identity_center_group: true
+    scope: org
+    aggregate_as: "Permission sets assigned to Identity Center groups (via a new user)"
+  conditions:
+    - id: identity_center_directory_source
+      description: Only applies when the identity source is the Identity Center directory; with Active Directory or an external IdP, users are not created this way.
+    - id: sign_in_credential
+      description: The new user needs a password (one-time password or reset email to an address the source controls) and must satisfy the instance MFA policy.
+    - id: external_idp_sync
+      description: With SCIM provisioning the membership may be overwritten on the next sync.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict identitystore:CreateUser and CreateGroupMembership to administrators and alert on directory user creation.
+  references:
+    - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateUser.html
+    - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateGroupMembership.html
+  notes: Removes the controls_identity_center_user condition of aws-identitystore-creategroupmembership; direct assignment of the new user is covered by the sso:CreateAccountAssignment entries.
+
+- id: aws-account-access-createentitlement
+  provider: aws
+  service: sso
+  title: Assign an existing IAM role to a controlled Identity Center user through Account Access Manager
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#account-accesscreateentitlement--assign-an-existing-iam-role-to-a-controlled-identity-center-user
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any organization role that trusts account-access.amazonaws.com by entitling an Identity Center user it controls to that role.
+  requires:
+    all_of:
+      - action: account-access:CreateEntitlement
+        resource: "arn:aws:account-access:*:*:application/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: account-access.amazonaws.com
+    scope: org
+    aggregate_as: "Roles trusting Account Access Manager in the organization"
+  conditions:
+    - id: controls_identity_center_user
+      description: The source must control an Identity Center user or group.
+    - id: trust_pinned_to_application
+      description: The role trust must allow sts:AssumeRole and sts:SetContext for account-access.amazonaws.com, and its aws:SourceAccount / aws:SourceArn conditions must match the application the source can modify.
+    - id: account_access_manager_enabled
+      description: Account Access Manager and an organization Identity Center instance must be enabled; the source must be in the management or delegated administrator account.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict account-access:CreateEntitlement to Identity Center administrators and only trust account-access.amazonaws.com from roles meant to be assignable.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/aam-assign-remove-access.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/aam-prepare-roles.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_account-access.html
+  notes: An entitlement cannot make a non-trusting role assumable; no iam:PassRole is required.
