@@ -4,6 +4,7 @@
 
 - [HackTricks Cloud](README.md)
 - [Permission Risk Categorizations](permission-categorizations/README.md)
+- [Privilege Escalation Paths](privilege-escalation-paths/README.md)
 - [About the Author$$external:https://book.hacktricks.wiki/en/welcome/about-the-author.html$$]()
 - [HackTricks Values & faq$$external:https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html$$]()
 
