@@ -294,3 +294,100 @@
   severity: high
   mitigation: Restrict roles/run.sshRoot and roles/run.sshReader and the run.admin/developer/editor roles on workloads with privileged SAs.
   notes: No actAs, create or update needed.
+
+- id: gcp-run-instances-create-update-actas
+  provider: gcp
+  service: run
+  title: Deploy or update a standalone Cloud Run instance running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicesupdate--iamserviceaccountsactas
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by attaching it to a Cloud Run instance whose container it controls.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+    any_of:
+      - - action: run.instances.create
+          resource: "*"
+      - - action: run.instances.update
+          resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Run instance identity in {project}"
+  conditions:
+    - id: preview_feature
+      description: Cloud Run instances are a preview resource; the API must be available to the project.
+    - id: update_requires_existing
+      description: The update path needs an existing instance; actAs is re-checked on its service identity even for an environment-only update.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on specific SAs and restrict run.instances create/update (roles/run.editor, roles/run.admin).
+  notes: Same run-as-SA boundary as services, jobs and worker pools; HackTricks documents it inside the run.services.update section.
+
+- id: gcp-run-instances-ssh
+  provider: gcp
+  service: run
+  title: SSH into a running standalone Cloud Run instance and use its service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#cloud-run-instance-ssh--runsshread--runsshroot-exec-inside-a-running-container-as-its-sa-no-actas
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of every running Cloud Run instance on which it holds run.instances.sshRoot or run.instances.sshRead.
+  requires:
+    any_of:
+      - - action: run.instances.sshRoot
+          resource: "{target.host_resource}"
+      - - action: run.instances.sshRead
+          resource: "{target.host_resource}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: run_instance
+    scope: same_project
+    aggregate_as: "SAs of running Cloud Run instances the source can SSH into"
+  conditions:
+    - id: early_access
+      description: The interactive SSH step is early-access/allowlisted; the IAM permissions exist but the exec path may be unavailable to the project.
+    - id: sshread_capability
+      description: Whether sshRead (non-root) allows metadata-server token access is not documented.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/run.sshRoot, roles/run.sshReader and roles/run.editor on instances with privileged SAs.
+  notes: Companion of gcp-run-ssh-into-running-instance for the run.instances resource type (roles/run.sshReader and roles/run.sshRoot cover all four resource types). No actAs, create or update needed.
+
+- id: gcp-run-workerpools-setiampolicy-actas
+  provider: gcp
+  service: run
+  title: Self-grant update rights on a Cloud Run worker pool through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runworkerpoolscreate--update-iamserviceaccountsactas--a-third-run-as-sa-resource
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of every Cloud Run worker pool on which it holds run.workerpools.setIamPolicy and actAs on that SA.
+  requires:
+    all_of:
+      - action: run.workerpools.setIamPolicy
+        resource: "{target.host_resource}"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: run_worker_pool
+      gcp_actas_granted_on_target: true
+    scope: same_project
+    aggregate_as: "SAs of Cloud Run worker pools whose IAM policy the source controls"
+  conditions:
+    - id: followup_update
+      description: The self-granted run.workerpools.update still re-validates actAs on the pinned service account.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict run.workerpools.setIamPolicy (roles/run.admin, roles/owner).
+  notes: Mirrors gcp-run-services-setiampolicy-actas for the worker pool resource type.

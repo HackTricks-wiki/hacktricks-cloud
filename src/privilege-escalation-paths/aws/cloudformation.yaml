@@ -163,78 +163,97 @@
   service: cloudformation
   title: Create or update a self-managed StackSet with a passed administration role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatestackset--cloudformationupdatestackset
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the StackSet execution roles in the accounts the passed administration role can assume, by deploying a template it controls through a self-managed StackSet.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the StackSet execution roles in the accounts the passed administration
+    role can assume, by deploying a template it controls through a self-managed StackSet.
   pivot_resource_type: aws_stackset_administration_role
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{pivot}"
+    - action: iam:PassRole
+      resource: '{pivot}'
     any_of:
-      - - action: cloudformation:CreateStackSet
-          resource: "*"
-        - action: cloudformation:CreateStackInstances
-          resource: "*"
-      - - action: cloudformation:UpdateStackSet
-          resource: "*"
+    - - action: cloudformation:CreateStackSet
+        resource: '*'
+      - action: cloudformation:CreateStackInstances
+        resource: '*'
+    - - action: cloudformation:UpdateStackSet
+        resource: '*'
   target:
     kind: aws_role
     selector:
       assumable_by_pivot_role: true
     scope: org
-    aggregate_as: "StackSet execution roles assumable by passable administration roles (from {account})"
+    aggregate_as: StackSet execution roles assumable by passable administration roles (from {account})
   conditions:
-    - id: execution_role_name_chosen_by_source
-      description: The source chooses ExecutionRoleName (default AWSCloudFormationStackSetExecutionRole), so any role in a target account that the administration role can assume is reachable, not only the default name.
-    - id: target_account_reachable
-      description: CloudFormation must be able to deploy stack instances in the execution role's account and region (account and region enabled, no failure-tolerance abort).
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which administration roles can be passed.
-    - id: service_managed_stacksets
-      description: Service-managed StackSets do not use a passed role and are not covered by this entry.
+  - id: execution_role_name_chosen_by_source
+    description: The source chooses ExecutionRoleName (default AWSCloudFormationStackSetExecutionRole), so any role
+      in a target account that the administration role can assume is reachable, not only the default name.
+  - id: target_account_reachable
+    description: CloudFormation must be able to deploy stack instances in the execution role's account and region
+      (account and region enabled, no failure-tolerance abort).
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which administration roles can be passed.
+  - id: service_managed_stacksets
+    description: Service-managed StackSets do not use a passed role and are not covered by this entry. The service-managed
+      variant is covered by aws-cloudformation-service-managed-stackset-org-members.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on StackSet administration roles, scope the administration role's sts:AssumeRole to specific execution roles, and scope execution-role trust policies to the administration role ARN.
+  mitigation: Restrict iam:PassRole on StackSet administration roles, scope the administration role's sts:AssumeRole
+    to specific execution roles, and scope execution-role trust policies to the administration role ARN.
   references:
-    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
-    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awscloudformation.html
-  notes: "{pivot} is the StackSet administration role (a role trusting cloudformation.amazonaws.com that the source can pass). The target is each execution role that the pivot can assume: the execution role's trust allows the pivot role or its account, and the pivot role's identity policy allows sts:AssumeRole on it. The Service Authorization Reference lists iam:PassRole as a dependent action of CreateStackSet and UpdateStackSet and none for CreateStackInstances."
+  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awscloudformation.html
+  notes: '{pivot} is the StackSet administration role (a role trusting cloudformation.amazonaws.com that the source
+    can pass). The target is each execution role that the pivot can assume: the execution role''s trust allows the
+    pivot role or its account, and the pivot role''s identity policy allows sts:AssumeRole on it. The Service Authorization
+    Reference lists iam:PassRole as a dependent action of CreateStackSet and UpdateStackSet and none for CreateStackInstances.'
+
 
 - id: aws-cloudformation-updatestackset-attached
   provider: aws
   service: cloudformation
   title: Update an existing self-managed StackSet
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationupdatestackset
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution roles of an existing self-managed StackSet's stack instances by updating its template, which CloudFormation deploys through the StackSet's stored administration role.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution roles of an existing self-managed StackSet's stack
+    instances by updating its template, which CloudFormation deploys through the StackSet's stored administration
+    role.
   pivot_resource_type: aws_stackset_administration_role
   requires:
     all_of:
-      - action: cloudformation:UpdateStackSet
-        resource: "arn:aws:cloudformation:*:*:stackset/*"
+    - action: cloudformation:UpdateStackSet
+      resource: arn:aws:cloudformation:*:*:stackset/*
   target:
     kind: aws_role
     selector:
       assumable_by_pivot_role: true
     scope: org
-    aggregate_as: "StackSet execution roles assumable by StackSet administration roles (from {account})"
+    aggregate_as: StackSet execution roles assumable by StackSet administration roles (from {account})
   conditions:
-    - id: stackset_uses_pivot
-      description: An existing StackSet the source can update must store this administration role; StackSets are not collected, so any administration role trusting cloudformation.amazonaws.com is a candidate pivot.
-    - id: stored_execution_role
-      description: Without iam:PassRole the update keeps the StackSet's stored ExecutionRoleName, so only execution roles with that name are reached in practice.
-    - id: stackset_permission_model
-      description: Service-managed StackSets use service-created execution roles in OU accounts (updated from the management or delegated-admin account) and are not modelled by the pivot.
+  - id: stackset_uses_pivot
+    description: An existing StackSet the source can update must store this administration role; StackSets are not
+      collected, so any administration role trusting cloudformation.amazonaws.com is a candidate pivot.
+  - id: stored_execution_role
+    description: Without iam:PassRole the update keeps the StackSet's stored ExecutionRoleName, so only execution
+      roles with that name are reached in practice.
+  - id: stackset_permission_model
+    description: Service-managed StackSets use service-created execution roles in OU accounts (updated from the
+      management or delegated-admin account) and are not modelled by the pivot. The service-managed variant is covered
+      by aws-cloudformation-service-managed-stackset-org-members.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict cloudformation:UpdateStackSet to the StackSet administrators and scope execution-role trust to the administration role ARN.
+  mitigation: Restrict cloudformation:UpdateStackSet to the StackSet administrators and scope execution-role trust
+    to the administration role ARN.
   references:
-    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
-  notes: The previous selector value attached_to_service cloudformation-stackset resolved to the nonexistent principal cloudformation-stackset.amazonaws.com and matched no role. No iam:PassRole is needed when the stored administration role is kept.
+  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
+  notes: The previous selector value attached_to_service cloudformation-stackset resolved to the nonexistent principal
+    cloudformation-stackset.amazonaws.com and matched no role. No iam:PassRole is needed when the stored administration
+    role is kept.
+
 
 - id: aws-cloudformation-nested-template-s3-poisoning
   provider: aws
@@ -312,3 +331,85 @@
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html
     - https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-develop.html
   notes: Extension execution roles trust resources.cloudformation.amazonaws.com, not cloudformation.amazonaws.com, so the target set is disjoint from stack service roles. cloudformation:ActivateType of a third-party public extension with an execution role is a related path but runs code the source does not author unless it published that extension.
+
+- id: aws-cloudformation-ssm-parameter-poisoning
+  provider: aws
+  service: cloudformation
+  title: Overwrite a Parameter Store value that a stack resolves as a template parameter
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#ssmputparameter-on-a-cloudformation-supplied-parameter--delayed-policy-injection
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain (on a later legitimate stack update) the privileges of a stack's stored service role when a security-sensitive property of that stack is taken from an SSM parameter-typed template parameter whose Parameter Store value the source can overwrite.
+  requires:
+    all_of:
+      - action: ssm:PutParameter
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: cloudformation
+      consumer_input_writable_via: ssm:PutParameter
+    scope: same_account
+    aggregate_as: "Service roles of stacks resolving writable Parameter Store values in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: delayed_trigger
+      description: A later stack update must resolve the parameter again (supplied parameter kept with its previous key); the source does not control the trigger.
+    - id: consumer_semantics
+      description: Impact depends on the property consuming the value (policy ARNs, trust principals, AMI IDs, code locations, endpoints); a value used only for non-sensitive settings yields no privilege.
+    - id: kms_and_tier
+      description: SecureString parameters with a customer-managed key need kms:Encrypt on that key for the overwrite.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ssm:PutParameter on deployment-consumed parameter namespaces, pin security-sensitive values to reviewed versions or ordinary template parameters, and alert when a parameter write precedes a stack operation that resolves it.
+  references:
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-supplied-parameter-types.html
+  notes: "{target.consumer_input_arn} is the Parameter Store parameter ARN named by the stack's SSM parameter-typed template parameter; that mapping is not collected, so the edge is unknown until it is. Same modelling as aws-cloudformation-nested-template-s3-poisoning. Unversioned dynamic references are not guaranteed to refresh and are not covered."
+
+- id: aws-cloudformation-service-managed-stackset-org-members
+  provider: aws
+  service: cloudformation
+  title: Deploy a service-managed StackSet into organization member accounts
+  source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/organizations-and-central-account-pivots.md#cloudformation-stacksets
+  source_revision: 6fb9ac51fd
+  summary: A management-account (or delegated-administrator) principal that can create or update service-managed StackSets can deploy templates it controls into member accounts of the targeted OUs through the administrator execution roles StackSets creates there, gaining control of those accounts.
+  requires:
+    any_of:
+      - - action: cloudformation:CreateStackSet
+          resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
+          bind: stackset
+        - action: cloudformation:CreateStackInstances
+          resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
+          bind: stackset
+      - - action: cloudformation:UpdateStackSet
+          resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+      org_member_account: true
+    scope: org
+    aggregate_as: "Member accounts reachable through service-managed StackSets"
+    outcome: scope_control
+  conditions:
+    - id: trusted_access_enabled
+      description: Trusted access between CloudFormation StackSets and AWS Organizations must be enabled (it creates the stacksets-exec execution roles with administrator access in member accounts).
+    - id: service_managed_permission_model
+      description: The StackSet must use the SERVICE_MANAGED permission model; UpdateStackSet only applies to existing service-managed StackSets, whose targets and auto-deployment settings bound the reached accounts.
+    - id: delegated_administrator
+      description: A registered StackSets delegated administrator (CallAs DELEGATED_ADMIN) has the same reach; this entry only draws edges from the management account (see aws-organizations-registerdelegatedadministrator).
+    - id: management_account_not_targeted
+      description: Service-managed StackSets never deploy to the management account; member-account SCPs still constrain the template's resources.
+  preconditions:
+    - source_in_org_management_account
+    - target_in_other_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict cloudformation:CreateStackSet, CreateStackInstances and UpdateStackSet in the management and delegated-administrator accounts to deployment roles, keep the management account free of workloads, and review delegated StackSets administrators and auto-deployment OUs.
+  references:
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-activate-trusted-access.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
+  notes: Complements aws-cloudformation-passrole-stackset and aws-cloudformation-updatestackset-attached, which model self-managed StackSets only (their service_managed_stacksets / stackset_permission_model conditions). No iam:PassRole is involved. StackSet permission model, trusted-access state and delegated administrators are not collected, so the edge stays conditional.

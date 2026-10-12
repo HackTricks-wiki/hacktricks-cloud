@@ -46,98 +46,120 @@
   service: redshift
   title: Obtain temporary database credentials for a provisioned cluster with attached roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshiftgetclustercredentials
-  source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can log into as a chosen database user.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can
+    log into as a chosen database user.
   requires:
     all_of:
-      - action: redshift:GetClusterCredentials
-        resource: "{target.redshift_dbuser_arn}"
+    - action: redshift:GetClusterCredentials
+      resource: '{target.redshift_dbuser_arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: redshift.amazonaws.com
       via_resource_type: redshift_cluster
     scope: same_account
-    aggregate_as: "IAM roles attached to Redshift clusters in {account}"
+    aggregate_as: IAM roles attached to Redshift clusters in {account}
   conditions:
-    - id: dbuser_scope
-      description: GetClusterCredentials is authorized on dbuser/dbname ARNs; the covered database user must have the SQL privileges (and ASSUMEROLE grant if restricted) to use the role.
-    - id: network_reachability
-      description: The source needs a network path to the cluster endpoint (or use of the Data API with additional permissions).
-    - id: external_id_restriction
-      description: An sts:ExternalId trust condition naming specific dbuser ARNs restricts which database users can use the role.
+  - id: dbuser_scope
+    description: GetClusterCredentials is authorized on dbuser/dbname ARNs; the covered database user must have
+      the SQL privileges (and ASSUMEROLE grant if restricted) to use the role.
+  - id: network_reachability
+    description: The source needs a network route to the database endpoint, or redshift-data:ExecuteStatement on
+      the cluster or workgroup ARN to use the Data API without that route.
+  - id: external_id_restriction
+    description: An sts:ExternalId trust condition naming specific dbuser ARNs restricts which database users can
+      use the role.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Scope GetClusterCredentials to specific dbuser ARNs, restrict role use with ASSUMEROLE grants, and keep attached roles least-privileged.
+  mitigation: Scope GetClusterCredentials to specific dbuser ARNs, restrict role use with ASSUMEROLE grants, and
+    keep attached roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentials.html
-  notes: GetClusterCredentials is authorized on dbuser ARNs (arn:aws:redshift:<region>:<account>:dbuser:<cluster>/<user>), not on the cluster ARN; {target.redshift_dbuser_arn} expands to dbuser:<cluster>/* of each cluster the role is attached to, so a policy scoped to one cluster only reaches that cluster's roles. redshift:CreateClusterUser (auto-create) and redshift:JoinGroup (db groups) are optional.
+  - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentials.html
+  notes: GetClusterCredentials is authorized on dbuser ARNs (arn:aws:redshift:<region>:<account>:dbuser:<cluster>/<user>),
+    not on the cluster ARN; {target.redshift_dbuser_arn} expands to dbuser:<cluster>/* of each cluster the role
+    is attached to, so a policy scoped to one cluster only reaches that cluster's roles. redshift:CreateClusterUser
+    (auto-create) and redshift:JoinGroup (db groups) are optional.
+
 
 - id: aws-redshift-getclustercredentialswithiam
   provider: aws
   service: redshift
   title: Obtain IAM-mapped database credentials for a provisioned cluster with attached roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshiftgetclustercredentialswithiam
-  source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can log into as its IAM-mapped database user.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the integration-limited privileges of the IAM roles attached to a cluster it can
+    log into as its IAM-mapped database user.
   requires:
     all_of:
-      - action: redshift:GetClusterCredentialsWithIAM
-        resource: "arn:aws:redshift:*:{target.account}:dbname:*/*"
+    - action: redshift:GetClusterCredentialsWithIAM
+      resource: arn:aws:redshift:*:{target.account}:dbname:*/*
   target:
     kind: aws_role
     selector:
       trust_allows_service: redshift.amazonaws.com
       via_resource_type: redshift_cluster
     scope: same_account
-    aggregate_as: "IAM roles attached to Redshift clusters in {account}"
+    aggregate_as: IAM roles attached to Redshift clusters in {account}
   conditions:
-    - id: mapped_user_privileges
-      description: The IAM-mapped database user must hold the SQL privileges needed to use the integration (and ASSUMEROLE where restricted).
-    - id: network_reachability
-      description: The source needs a network path to the cluster endpoint.
+  - id: mapped_user_privileges
+    description: The IAM-mapped database user must hold the SQL privileges needed to use the integration (and ASSUMEROLE
+      where restricted).
+  - id: network_reachability
+    description: The source needs a network route to the database endpoint, or redshift-data:ExecuteStatement on
+      the cluster or workgroup ARN to use the Data API without that route.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
   mitigation: Restrict role use with ASSUMEROLE grants or sts:ExternalId conditions and keep attached roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentialsWithIAM.html
-  notes: Default role availability to all cluster users makes this reachable unless restricted; with restriction, the edge depends on database-level grants not collected from the control plane. The action is authorized on dbname ARNs (arn:aws:redshift:<region>:<account>:dbname:<cluster>/<database>), so the requirement is an account-wide dbname pattern (over-approximation across clusters of the account).
+  - https://docs.aws.amazon.com/redshift/latest/APIReference/API_GetClusterCredentialsWithIAM.html
+  notes: Default role availability to all cluster users makes this reachable unless restricted; with restriction,
+    the edge depends on database-level grants not collected from the control plane. The action is authorized on
+    dbname ARNs (arn:aws:redshift:<region>:<account>:dbname:<cluster>/<database>), so the requirement is an account-wide
+    dbname pattern (over-approximation across clusters of the account).
+
 
 - id: aws-redshift-serverless-getcredentials
   provider: aws
   service: redshift-serverless
   title: Obtain IAM-mapped database credentials for a Redshift Serverless workgroup with attached roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-redshift-privesc/README.md#redshift-serverlessgetcredentials
-  source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges of the IAM roles associated with the namespace of a workgroup it can log into.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the integration-limited privileges of the IAM roles associated with the namespace
+    of a workgroup it can log into.
   requires:
     all_of:
-      - action: redshift-serverless:GetCredentials
-        resource: "{target.resource_arn}"
+    - action: redshift-serverless:GetCredentials
+      resource: '{target.resource_arn}'
   target:
     kind: aws_role
     selector:
-      trust_allows_service: [redshift.amazonaws.com, redshift-serverless.amazonaws.com]
+      trust_allows_service:
+      - redshift.amazonaws.com
+      - redshift-serverless.amazonaws.com
       via_resource_type: redshift_serverless_workgroup
     scope: same_account
-    aggregate_as: "IAM roles associated with Redshift Serverless namespaces in {account}"
+    aggregate_as: IAM roles associated with Redshift Serverless namespaces in {account}
   conditions:
-    - id: mapped_user_privileges
-      description: The resolved IAM database identity must hold the SQL privileges needed to use the integration.
-    - id: network_reachability
-      description: The source needs a network path to the workgroup endpoint.
+  - id: mapped_user_privileges
+    description: The resolved IAM database identity must hold the SQL privileges needed to use the integration.
+  - id: network_reachability
+    description: The source needs a network route to the database endpoint, or redshift-data:ExecuteStatement on
+      the cluster or workgroup ARN to use the Data API without that route.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
   mitigation: Restrict redshift-serverless:GetCredentials to specific workgroups and keep namespace roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/redshift-serverless/latest/APIReference/API_GetCredentials.html
-  notes: Roles are associated with the namespace; the evaluator maps workgroup -> namespace -> IamRoles. Namespace roles may trust redshift.amazonaws.com or redshift-serverless.amazonaws.com; both are matched.
+  - https://docs.aws.amazon.com/redshift-serverless/latest/APIReference/API_GetCredentials.html
+  notes: Roles are associated with the namespace; the evaluator maps workgroup -> namespace -> IamRoles. Namespace
+    roles may trust redshift.amazonaws.com or redshift-serverless.amazonaws.com; both are matched.
+
 
 - id: aws-redshift-passrole-attach-warehouse-role
   provider: aws

@@ -32,3 +32,37 @@
   references:
     - https://docs.aws.amazon.com/directoryservice/latest/devguide/ms_ad_manage_app_access_console.html
   notes: Target set is only roles assigned in the directory's console-access configuration, not every role trusting ds.amazonaws.com.
+
+- id: aws-ds-resetuserpassword-directory-admin
+  provider: aws
+  service: ds
+  title: Reset the password of the built-in directory administrator
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#dsresetuserpassword
+  source_revision: 6fb9ac51fd
+  summary: The source can take over the administrator of a Managed Microsoft AD (the built-in Admin account) or Simple AD directory in the account by resetting its password.
+  requires:
+    all_of:
+      - action: ds:ResetUserPassword
+        resource: "arn:aws:ds:*:{target.account}:directory/*"
+  target:
+    kind: aws_directory_domain_admin
+    selector:
+      any_principal_in_scope: true
+    scope: same_account
+    aggregate_as: "AWS Managed Microsoft AD / Simple AD directories in {account}"
+  conditions:
+    - id: directory_exists
+      description: An AWS Managed Microsoft AD or Simple AD directory must exist in the account; AD Connector directories do not support the reset.
+    - id: admin_not_protected
+      description: Users in protected groups cannot be reset; the AWS Managed Microsoft AD Admin is a delegated administrator (not Domain Admins), so the reset applies unless it was added to a protected group.
+    - id: network_reach
+      description: Using the account needs network reach to the domain controllers or a directory-integrated application.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ds:ResetUserPassword (conditioned on directory and user), alert on resets of the Admin account and keep directory administration in a separate account.
+  references:
+    - https://docs.aws.amazon.com/directoryservice/latest/devguide/API_ResetUserPassword.html
+    - https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_getting_started.html
+  notes: Complements aws-ds-resetuserpassword, which only models the IAM roles mapped for console access. Directories are entity targets per account, as for the PCA Connector for AD entries. In Managed Microsoft AD, Admin holds the delegated-administrator rights of the managed OU, not the AWS-reserved Domain Admins.

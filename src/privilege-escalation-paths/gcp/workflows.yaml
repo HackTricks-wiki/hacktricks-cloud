@@ -101,3 +101,32 @@
   severity: critical
   mitigation: Treat workflows.workflows.update on a workflow as equivalent to use of its SA; restrict roles/workflows.editor/admin.
   notes: The retained SA can belong to another project when the workflow was configured for cross-project execution (scope any).
+
+- id: gcp-workflows-update-source-await-execution
+  provider: gcp
+  service: workflows
+  title: Replace a workflow's source and let an existing trigger execute it as its service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowsupdate--replace-code-while-retaining-the-attached-identity
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account attached to every workflow on which it holds workflows.workflows.update, when another principal or trigger starts the replaced revision.
+  requires:
+    all_of:
+      - action: workflows.workflows.update
+        resource: "{target.host_resource}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: workflows_workflow
+    scope: any
+    aggregate_as: "SAs attached to triggered workflows whose source the source can replace"
+  conditions:
+    - id: external_execution
+      description: A Scheduler job, Eventarc trigger, application or other principal must start a new execution after the update (already-running executions keep the old revision); with workflows.executions.create the source can start it itself (gcp-workflows-update-source-retain-sa).
+    - id: source_only_update
+      description: Only a source-only update keeps the identity; changing or restating the SA requires actAs.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Treat workflows.workflows.update as equivalent to use of the workflow SA; restrict roles/workflows.editor/admin.
+  notes: HackTricks states that if another principal starts the new revision the attacker needs only the update permission.

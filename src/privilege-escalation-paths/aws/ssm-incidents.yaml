@@ -1,0 +1,44 @@
+# AWS ssm-incidents privilege escalation techniques.
+# Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
+
+- id: aws-ssm-incidents-response-plan-automation-passrole
+  provider: aws
+  service: ssm-incidents
+  title: Run controlled incident automation with a passed role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-systems-manager-incident-manager-persistence/README.md#hijack-response-plan-actions-chat-channel-and-contacts
+  source_revision: 6fb9ac51fd
+  summary: The source can execute a controlled SSM Automation document with a passable role when a response plan starts an incident.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ssm:CreateDocument
+        resource: "arn:aws:ssm:*:{source.account}:document/*"
+    any_of:
+      - - action: ssm-incidents:CreateResponsePlan
+          resource: "*"
+      - - action: ssm-incidents:UpdateResponsePlan
+          resource: "arn:aws:ssm-incidents::{source.account}:response-plan/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Passable SSM Automation roles in {account}
+    outcome: workload_execution
+  conditions:
+    - id: incident_trigger
+      description: The response plan must be used for a later incident before its automation executes.
+    - id: automation_document
+      description: The source must be able to create an automation document whose steps use the passed role's authority.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict passing the execution role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict response-plan mutation and iam:PassRole to approved incident automation roles and review automation documents referenced by plans.
+  references:
+    - https://docs.aws.amazon.com/incident-manager/latest/userguide/response-plans.html
+  notes: The create and update alternatives reach the same role set; updating an existing plan additionally requires access to that plan, and the plan's future use is conditional.

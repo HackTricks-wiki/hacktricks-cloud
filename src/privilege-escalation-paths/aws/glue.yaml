@@ -78,35 +78,42 @@
 - id: aws-glue-startjobrun-override-script
   provider: aws
   service: glue
-  title: Start an existing Glue job overriding its script or dependency arguments
+  title: Run an existing Glue job overriding its script or dependency arguments
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-or-modify-and-run-a-glue-job
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of existing Glue jobs it can start.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of existing Glue jobs it can start directly or through a trigger it creates with overriding arguments.
   requires:
-    all_of:
-      - action: glue:StartJobRun
-        resource: "{target.resource_arn}"
+    any_of:
+      - - action: glue:StartJobRun
+          resource: "{target.resource_arn}"
+      - - action: glue:CreateTrigger
+          resource: "arn:aws:glue:*:{target.account}:trigger/*"
   target:
     kind: aws_role
     selector:
       attached_to_service: glue
       via_resource_type: glue_job
     scope: same_account
-    aggregate_as: "Execution roles of Glue jobs startable in {account}"
+    aggregate_as: Execution roles of Glue jobs startable in {account}
+    outcome: workload_execution
   conditions:
     - id: job_role_reads_attacker_object
       description: The job role must be able to read an S3 location whose content the source controls (its own public/cross-account bucket or a writable bucket the role can read).
     - id: runtime_packaging
       description: Dependency override format depends on job type/runtime.
+    - id: trigger_fires
+      description: The CreateTrigger variant needs a scheduled or conditional trigger created as started, or glue:StartTrigger for an on-demand trigger; trigger actions carry the overriding job arguments.
   blockers:
     - glue_nonoverridable_arguments
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Pin --scriptLocation, --extra-py-files, --extra-jars and --additional-python-modules in NonOverridableArguments and restrict glue:StartJobRun to orchestrators.
+  mitigation: Pin --scriptLocation, --extra-py-files, --extra-jars and --additional-python-modules in NonOverridableArguments and restrict glue:StartJobRun and glue:CreateTrigger to orchestrators.
   references:
     - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
-  notes: glue_nonoverridable_arguments blocks only when ALL loader arguments are pinned; pinning just --scriptLocation leaves the dependency path. The HEAD page no longer has a dedicated heading for this variant; it is sourced at the job heading.
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateTrigger.html
+  notes: glue_nonoverridable_arguments blocks only when ALL loader arguments are pinned; pinning just --scriptLocation leaves the dependency path. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
+
 
 - id: aws-glue-s3-putobject-job-script
   provider: aws

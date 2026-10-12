@@ -67,12 +67,15 @@
   service: api_management
   title: Read APIM Named Value secrets
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicenamedvaluesread--microsoftapimanagementservicenamedvalueslistvalueaction
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of service principals whose credentials are stored as Named Values.
   requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/namedValues/listValue/action
-        scope: '{pivot}'
+    all_of: []
+    any_of:
+      - - action: Microsoft.ApiManagement/service/namedValues/listValue/action
+          scope: '{pivot}'
+      - - action: Microsoft.ApiManagement/service/backends/write
+          scope: '{pivot}'
   pivot_resource_type: Microsoft.ApiManagement/service
   target:
     kind: azure_service_principal
@@ -83,13 +86,15 @@
   conditions:
     - id: value_is_sp_credential
       description: Only when a Named Value holds a service-principal credential; content is unknown.
+    - id: backend_capture_traffic
+      description: For the backends/write path, an API using the rewritten backend must receive a request after the change so the gateway sends the Named Value header to the source-controlled URL.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Restrict namedValues/listValue/action; prefer managed-identity backend auth.
   references:
     - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-properties
-  notes: Key Vault-backed values are resolved through the APIM identity and also returned.
+  notes: Key Vault-backed values are resolved through the APIM identity and also returned. The backends/write alternative is the backend header-credential capture documented in the backends/write section of the same page.
 
 - id: azure-apim-policy-write-managed-identity-token
   provider: azure
@@ -162,3 +167,103 @@
   references:
     - https://learn.microsoft.com/en-us/azure/api-management/api-management-configuration-repository-git
   notes: Identity outcome is the same as azure-apim-policy-write-managed-identity-token; listSecrets returns the Git access credentials.
+
+- id: azure-apim-restore-backup-managed-identity-token
+  provider: azure
+  service: api_management
+  title: Restore a crafted backup over an APIM service to install identity-using policies
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicebackupaction--full-service-exfiltration-to-attacker-storage
+  source_revision: a66f094ede
+  summary: Restoring a tampered backup overwrites the live configuration, including policies, so the restored policies can use the instance's managed identities as with a direct policy write.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/restore/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ApiManagement/service
+    scope: inherited_scope
+    aggregate_as: "Managed identities of API Management service {target.host_resource}"
+  conditions:
+    - id: restorable_backup
+      description: The source needs a restorable backup with its policies in storage it can point the restore at, and the restored policy must run on a request.
+    - id: identities_kept
+      description: The service's attached identities must remain usable by the restored policies after the restore.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict service/restore/action (API Management Service Contributor) and alert on restore operations.
+  references:
+    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-disaster-recovery-backup-restore
+  notes: HackTricks documents restore/action as the sibling of backup/action that re-imports a tampered backup over the live configuration. Identity outcome as azure-apim-policy-write-managed-identity-token.
+
+- id: azure-apim-gateway-trace-managed-identity-token
+  provider: azure
+  service: api_management
+  title: Capture backend managed-identity tokens from APIM gateway request traces
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewayslistdebugcredentialsaction--servicegatewayslisttraceaction--live-requestresponse-wiretap
+  source_revision: a66f094ede
+  summary: A gateway debug trace returns the backend request, so when an existing policy authenticates the backend call with the instance's managed identity the trace can expose that access token.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/gateways/listDebugCredentials/action
+        scope: "{target.host_resource}"
+      - action: Microsoft.ApiManagement/service/gateways/listTrace/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ApiManagement/service
+    scope: inherited_scope
+    aggregate_as: "Managed identities of API Management service {target.host_resource} (backend tokens)"
+  conditions:
+    - id: existing_identity_policy
+      description: An existing policy must use authentication-managed-identity for the traced operation; the token is limited to that policy's audience and lifetime.
+    - id: traced_request
+      description: The source must be able to send a traced request to that API (subscription key or open product).
+    - id: header_not_masked
+      description: The trace must include the backend Authorization header unmasked.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict gateways/listDebugCredentials/action and listTrace/action, and keep APIM identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-api-inspector
+  notes: HackTricks lists policy-injected backend credentials and Authorization bearer tokens among the trace contents.
+
+- id: azure-apim-diagnostics-logger-managed-identity-token
+  provider: azure
+  service: api_management
+  title: Ship backend request headers to an attacker logger through APIM diagnostics
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementserviceloggerswrite--servicediagnosticswrite--persistent-traffic-exfil-to-attacker-event-hub
+  source_revision: a66f094ede
+  summary: A logger pointing at source-controlled storage plus a diagnostic capturing backend request headers can send the managed-identity tokens that existing policies attach to backend calls.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/loggers/write
+        scope: "{target.host_resource}"
+    any_of:
+      - - action: Microsoft.ApiManagement/service/diagnostics/write
+          scope: "{target.host_resource}"
+      - - action: Microsoft.ApiManagement/service/apis/diagnostics/write
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ApiManagement/service
+    scope: inherited_scope
+    aggregate_as: "Managed identities of API Management service {target.host_resource} (backend tokens)"
+  conditions:
+    - id: existing_identity_policy
+      description: An existing policy must use authentication-managed-identity on a logged API; tokens are limited to that policy's audience and lifetime.
+    - id: backend_headers_logged
+      description: The diagnostic must log backend request headers (including Authorization) without masking, and the API must receive traffic.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict loggers/write and diagnostics/write, review logger destinations, and keep APIM identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/api-management/diagnostic-logs-reference
+  notes: Captured caller tokens of end users are not modelled; only the APIM identity tokens attached by existing policies.

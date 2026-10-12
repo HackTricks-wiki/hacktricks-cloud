@@ -44,30 +44,36 @@
   service: airflow
   title: Mint an Airflow CLI token for an MWAA environment and run code as its execution role
   source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md#classic-mwaa-airflowcreateweblogintoken--airflowcreateclitoken--code-execution-as-the-environment-execution-role
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of MWAA environments in Resource scope by minting an Airflow CLI token and triggering DAG code that runs on the workers as that role.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of MWAA environments in Resource scope by
+    minting an Airflow CLI token and triggering DAG code that runs on the workers as that role.
   requires:
     all_of:
-      - action: airflow:CreateCliToken
-        resource: "{target.attached_resource_arn}"
+    - action: airflow:CreateCliToken
+      resource: '{target.attached_resource_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: airflow-env.amazonaws.com
       attached_resource_covered_by: airflow:CreateCliToken
     scope: same_account
-    aggregate_as: "MWAA environment execution roles in {account}"
+    aggregate_as: MWAA environment execution roles in {account}
   conditions:
-    - id: dag_code_path
-      description: A triggerable DAG that runs caller-influenced code must exist, or the caller must be able to add a DAG (DAG-bucket s3:PutObject); the Airflow RBAC role mapped to the token must allow the action.
+  - id: dag_code_path
+    description: A triggerable DAG that runs caller-influenced code must exist, or the caller must be able to add
+      a DAG (DAG-bucket s3:PutObject); the Airflow RBAC role mapped to the token must allow the action.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict airflow:CreateCliToken and airflow:CreateWebLoginToken to Airflow operators and keep MWAA execution roles least-privileged.
+  mitigation: Restrict airflow:CreateCliToken and airflow:CreateWebLoginToken to Airflow operators and keep MWAA
+    execution roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/mwaa/latest/API/API_CreateCliToken.html
-  notes: MWAA environments are not collected, so the attachment resolves through roles trusting airflow-env.amazonaws.com and is unknown. The web-login variant is aws-mwaa-createweblogintoken-execution-role.
+  - https://docs.aws.amazon.com/mwaa/latest/API/API_CreateCliToken.html
+  notes: MWAA environments are not collected, so the attachment resolves through roles trusting airflow-env.amazonaws.com
+    and is unknown. The web-login variant is aws-mwaa-createweblogintoken-execution-role. DAG-bucket s3:PutObject
+    without an Airflow permission is covered by aws-mwaa-s3-putobject-dag.
+
 
 - id: aws-mwaa-createweblogintoken-execution-role
   provider: aws
@@ -132,3 +138,36 @@
   references:
     - https://docs.aws.amazon.com/mwaa/latest/API/API_UpdateEnvironment.html
   notes: The same UpdateEnvironment call can set code paths that run as the current execution role without PassRole.
+
+- id: aws-mwaa-s3-putobject-dag
+  provider: aws
+  service: airflow
+  title: Write a DAG file into an MWAA environment's DAG bucket and run code as its execution role
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md#exploitation
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of MWAA environments whose DAG folder it can write, because the workers load and execute every DAG file synchronized from that S3 location.
+  requires:
+    all_of:
+      - action: s3:PutObject
+        resource: "{target.artifact_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: airflow-env.amazonaws.com
+      via_artifact_type: s3_object
+    scope: same_account
+    aggregate_as: "MWAA execution roles loading writable DAG objects in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: dag_parsed_or_scheduled
+      description: The DAG file must be synchronized and parsed by the environment, and run on a schedule or trigger; DAG parsing itself executes top-level code.
+    - id: object_lock_or_kms
+      description: Bucket policies, Object Lock or SSE-KMS keys the source cannot use may prevent the write.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Make the DAG, plugins and requirements prefixes writable only by the deployment pipeline, enable versioning and S3 data-event logging on them, and keep execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/mwaa/latest/userguide/working-dags.html
+  notes: The artifact set is the environment's SourceBucketArn plus DagS3Path (and plugins/requirements/startup-script paths). No airflow, mwaa or iam:PassRole permission is needed.

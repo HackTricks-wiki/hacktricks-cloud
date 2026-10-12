@@ -218,32 +218,35 @@
   service: ecs
   title: Register a controlled instance into a cluster and steer tasks onto it
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsregistercontainerinstance-ecsderegistercontainerinstance-ecsstarttask-iampassrole
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of task roles of tasks it places (or that get placed) on an instance it controls after registering it into the cluster.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of task roles of tasks it places (or that get placed) on an instance
+    it controls after registering it into the cluster.
   requires:
     all_of:
-      - action: ecs:RegisterContainerInstance
-        resource: "*"
-      - action: ecs:StartTask
-        resource: "*"
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    - action: ecs:RegisterContainerInstance
+      resource: '*'
+    - action: ecs:StartTask
+      resource: '*'
+    - action: iam:PassRole
+      resource: '{target.arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: ecs-tasks.amazonaws.com
     scope: same_account
-    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    aggregate_as: Roles trusting ecs-tasks.amazonaws.com in {account}
   conditions:
-    - id: controls_instance
-      description: The source must control a host that can act as a container instance.
+  - id: controls_instance
+    description: The source must control a host that can act as a container instance.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict ecs:RegisterContainerInstance to ECS instance roles only and use placement constraints.
   references: []
-  notes: DeregisterContainerInstance is only needed to evict legitimate capacity.
+  notes: DeregisterContainerInstance is only needed to evict legitimate capacity. Draining or deregistering instances
+    to steer existing service tasks is covered by aws-ecs-drain-container-instances-steer-service-tasks.
+
 
 - id: aws-ecs-taskset-primary
   provider: aws
@@ -355,3 +358,76 @@
     - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/security-iam-roles.html
     - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
   notes: Sources are restricted to EC2 container-instance roles (instance profile, trusting ec2.amazonaws.com) and targets to task roles of EC2/EXTERNAL-capable task definitions in the same account whose clusters have registered container instances. Co-location is proven only with ECS container-instance and task placement inventory (ec2InstanceId of the source's instances, containerInstanceArn of the target's tasks); without it the target is an unresolved placeholder (unknown), never a FAIL.
+
+- id: aws-ecs-registercontainerinstance-scheduled-tasks
+  provider: aws
+  service: ecs
+  title: Register a controlled instance into a cluster and let the scheduler place tasks on it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsregistercontainerinstance-ecsderegistercontainerinstance-ecsstarttask-iampassrole
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of ECS task roles of tasks that the ECS scheduler places on a host it controls after registering that host as a container instance of an EC2-backed cluster.
+  requires:
+    all_of:
+    - action: ecs:RegisterContainerInstance
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      ecs_task_role_on_ec2_capacity: true
+    scope: same_account
+    aggregate_as: ECS task roles of tasks on EC2 capacity in {account}
+    outcome: credentials
+  conditions:
+  - id: controls_instance
+    description: The source must control an EC2 instance in the account whose instance identity document and signature it can present when registering.
+  - id: tasks_scheduled_on_instance
+    description: Existing services or later task launches must be placed on the registered host (scaling, rescheduling, or ecs:DeregisterContainerInstance used to evict legitimate capacity); placement constraints
+      must be satisfiable with the attributes the source sets.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Grant ecs:RegisterContainerInstance only to ECS container-instance roles, alert on registrations by user or non-instance principals, and use placement constraints or Fargate for privileged
+    tasks.
+  references:
+  - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_RegisterContainerInstance.html
+  notes: No iam:PassRole or task-launch permission is needed because the scheduler places tasks whose task roles were already passed by their owners; aws-ecs-registercontainerinstance-starttask covers the
+    variant where the source launches its own task with a passed role.
+
+- id: aws-ecs-drain-container-instances-steer-service-tasks
+  provider: aws
+  service: ecs
+  title: Drain or deregister legitimate container instances so service tasks are replaced onto a controlled instance
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ecs-post-exploitation/README.md#steer-replacement-service-tasks-to-an-attacker-controlled-container-instance
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the task-role credentials of ECS service tasks on EC2 capacity by removing legitimate capacity so the service scheduler places replacement tasks on a container instance it registered and controls.
+  requires:
+    all_of:
+      - action: ecs:RegisterContainerInstance
+        resource: "arn:aws:ecs:*:{target.account}:cluster/*"
+    any_of:
+      - - action: ecs:UpdateContainerInstancesState
+          resource: "arn:aws:ecs:*:{target.account}:container-instance/*"
+      - - action: ecs:DeregisterContainerInstance
+          resource: "arn:aws:ecs:*:{target.account}:cluster/*"
+  target:
+    kind: aws_role
+    selector:
+      ecs_task_role_on_ec2_capacity: true
+    scope: same_account
+    aggregate_as: "ECS service task roles on EC2 capacity in {account}"
+    outcome: credentials
+  conditions:
+    - id: controls_connected_instance
+      description: The source must control a host running a connected ECS agent registered into the target cluster, with matching architecture, attributes, capacity provider, resources and placement constraints.
+    - id: replica_service_tasks_only
+      description: Only replica tasks managed by an ECS service are rescheduled; standalone and daemon tasks are not moved, and replacement may still land on another legitimate host.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ecs:RegisterContainerInstance to ECS instance roles, restrict ecs:UpdateContainerInstancesState and ecs:DeregisterContainerInstance to operators, and alert on unexpected container-instance registration or draining.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/container-instance-draining.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_UpdateContainerInstancesState.html
+  notes: Unlike aws-ecs-registercontainerinstance-starttask this path needs no ecs:StartTask or iam:PassRole; it reaches the task roles of existing services. ecs:DeregisterContainerInstance is authorized on the cluster ARN.

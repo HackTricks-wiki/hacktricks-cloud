@@ -46,3 +46,39 @@
     - https://docs.aws.amazon.com/appsync/latest/devguide/resolver-reference-http-js.html
     - https://docs.aws.amazon.com/appsync/latest/APIReference/API_CreateDataSource.html
   notes: The section for appsync:UpdateDataSource + appsync:UpdateResolver + iam:PassRole is the same primitive on an existing data source (third any_of group). Responses are returned through the resolver, so the role is usable for reads and writes; raw STS credentials are not returned.
+
+- id: aws-appsync-updateresolver-existing-datasource-role
+  provider: aws
+  service: appsync
+  title: Rewrite a resolver or function to drive an existing data source's service role
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-appsync-post-exploitation/README.md#hijack-resolver-function-or-data-source-behavior
+  source_revision: 6fb9ac51fd
+  summary: The source can act with the service role stored on an existing AppSync data source, without iam:PassRole, by replacing the request logic of a resolver or pipeline function bound to that data source.
+  requires:
+    any_of:
+      - - action: appsync:UpdateResolver
+          resource: "*"
+      - - action: appsync:UpdateFunction
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: appsync
+      via_resource_type: appsync_datasource
+    scope: same_account
+    aggregate_as: "Service roles of AppSync data sources in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: callable_field
+      description: The source needs a separate way to invoke the modified field (appsync:GraphQL for IAM auth, an API key, Cognito/OIDC tokens or a Lambda authorizer it satisfies) and the API, type, field and data-source names.
+    - id: backend_bounded
+      description: The role is exercised only through the data source's backend - arbitrary SigV4-signed calls for an HTTP data source with IAM authorization to an AWS endpoint, otherwise the operations of that DynamoDB, OpenSearch, RDS, EventBridge, Lambda or Bedrock backend that the role allows. Raw STS credentials are not returned.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict appsync:UpdateResolver and UpdateFunction (not resource-scopable) to API owners, scope every data source role to the exact backend resources and operations the resolvers need, and alert on resolver changes.
+  references:
+    - https://docs.aws.amazon.com/appsync/latest/APIReference/API_UpdateResolver.html
+    - https://docs.aws.amazon.com/appsync/latest/devguide/resolver-reference-http-js.html
+  notes: No-PassRole variant of aws-appsync-passrole-datasource-sigv4 (which reaches passable roles); this one reaches only roles already stored on data sources. AppSync data sources are not collected, so roles trusting appsync.amazonaws.com are the fallback target set (unknown).

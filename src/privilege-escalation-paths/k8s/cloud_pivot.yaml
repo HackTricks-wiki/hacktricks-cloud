@@ -37,7 +37,7 @@
   service: eks
   title: Create a ServiceAccount matching a wildcard IRSA trust
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#iam-role-for-k8s-service-accounts-via-oidc
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of IAM roles whose IRSA trust uses a wildcard subject by creating a ServiceAccount whose name matches and running a pod as it.
   requires:
     all_of:
@@ -45,7 +45,15 @@
         resource: serviceaccounts
         namespace: "{pivot.namespace}"
     any_of:
-      - - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
       - - {verb: create, resource: serviceaccounts, subresource: token, namespace: "{pivot.namespace}"}
   target:
     kind: cloud_identity
@@ -69,12 +77,20 @@
   service: eks
   title: Use an existing ServiceAccount that matches a wildcard IRSA trust
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#iam-role-for-k8s-service-accounts-via-oidc
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of IAM roles whose IRSA trust uses a wildcard subject covering the namespace by obtaining an sts.amazonaws.com-audience token for any existing ServiceAccount there (for example default).
   requires:
     all_of: []
     any_of:
-      - - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
       - - {verb: create, resource: serviceaccounts, subresource: token, namespace: "{pivot.namespace}"}
   target:
     kind: cloud_identity
@@ -134,13 +150,19 @@
   service: eks
   title: Request a permitted IAM role via kiam/kube2iam pod annotation
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#kiam--kube2iam-iam-role-for-pods
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the IAM roles permitted by the namespace's kiam/kube2iam annotation by creating annotated pods in it.
   requires:
     all_of:
-      - verb: create
-        resource: pods
-        namespace: "{pivot.namespace}"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
   target:
     kind: cloud_identity
     selector:
@@ -167,7 +189,7 @@
   service: eks
   title: Edit the aws-auth ConfigMap to map an IAM principal to system:masters
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#aws-eks-aws-auth-configmaps
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of cluster-admin by mapping an IAM principal it controls to system:masters in aws-auth.
   requires:
     all_of: []
@@ -184,6 +206,8 @@
   conditions:
     - id: eks_auth_mode_includes_config_map
       description: The cluster authentication mode must be CONFIG_MAP or API_AND_CONFIG_MAP; in API mode aws-auth is ignored.
+    - id: access_entry_precedence
+      description: In API_AND_CONFIG_MAP mode an access entry for the same IAM principal takes precedence over aws-auth, so the new mapping grants no additional access for that principal.
     - id: create_only_if_absent
       description: The create group only applies when no aws-auth ConfigMap exists yet.
     - id: source_controls_iam_principal
@@ -323,13 +347,19 @@
   service: nodes
   title: Ordinary pod reaches the node metadata service
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#node-iam-role-to-cluster-admin
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the node cloud identity by creating any pod when pods can reach the instance metadata service.
   requires:
     all_of:
-      - verb: create
-        resource: pods
-        namespace: "{pivot.namespace}"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
   target:
     kind: cloud_identity
     selector:
@@ -354,13 +384,19 @@
   service: nodes
   title: hostNetwork pod reaches the node metadata service (not node root)
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-create---move-to-cloud
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the node cloud identity by creating a hostNetwork pod, which bypasses pod-level IMDS hop restrictions.
   requires:
     all_of:
-      - verb: create
-        resource: pods
-        namespace: "{pivot.namespace}"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
   target:
     kind: cloud_identity
     selector:
@@ -414,7 +450,7 @@
   service: gke
   title: Read a static Google service-account key stored in a Secret
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#static-google-service-account-key-mounted-as-a-secret
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of a Google service account by reading its static JSON key from a Kubernetes Secret, directly or by mounting the Secret in a pod.
   requires:
     all_of: []
@@ -422,7 +458,16 @@
       - - {verb: get, resource: secrets, namespace: "{target.namespace}", resource_name: "{target.name}"}
       - - {verb: list, resource: secrets, namespace: "{target.namespace}"}
       - - {verb: watch, resource: secrets, namespace: "{target.namespace}"}
-      - - {verb: create, resource: pods, namespace: "{target.namespace}"}
+      # Mount the Secret in a pod the source creates directly or through a controller.
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{target.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{target.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{target.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
   target:
     kind: cloud_identity
     selector:
@@ -440,4 +485,4 @@
   mitigation: Replace static service-account keys with GKE Workload Identity Federation and disable key creation by organization policy.
   references:
     - https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity
-  notes: Also maps kubernetes-pivoting-to-clouds.md#mounting-gcp-sa-keys-as-secret (same technique). pods create in the namespace lets the source mount the Secret as a volume and read the key.
+  notes: Also maps kubernetes-pivoting-to-clouds.md#mounting-gcp-sa-keys-as-secret (same technique). pods (or controller) create in the namespace lets the source mount the Secret as a volume and read the key (a66f094ede).

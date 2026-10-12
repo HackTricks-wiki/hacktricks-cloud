@@ -2,6 +2,42 @@
 # Source: hacktricks-cloud aws-stepfunctions-privesc/README.md (rev 171e422299).
 # Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
 
+- id: aws-stepfunctions-activity-callback-output-injection
+  provider: aws
+  service: stepfunctions
+  title: Poll an Activity and inject a forged callback result into a privileged workflow
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statessendtasksuccess--inject-callback-output-into-a-privileged-next-state
+  source_revision: a66f094ede
+  summary: The source can exercise a state machine's execution role through an attacker-controlled callback result when a following state uses that result in a sensitive action.
+  requires:
+    all_of:
+      - action: states:GetActivityTask
+        resource: "arn:aws:states:*:{source.account}:activity:*"
+        bind: callback_activity
+      - action: states:SendTaskSuccess
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: stepfunctions
+      via_resource_type: stepfunctions_state_machine
+    scope: same_account
+    aggregate_as: "Execution roles of state machines with callback Activities in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: live_activity_task
+      description: GetActivityTask must cover an Activity with a waiting execution and return its unexpired task token; it is normally resource-scoped to that Activity ARN, while SendTaskSuccess requires Resource *.
+    - id: unsafe_callback_consumer
+      description: A subsequent state must map the forged callback output into an action or code path that the source could not invoke directly; the role's authority is bounded by that fixed workflow.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Separate Activity polling from callback completion grants, validate callback output against a strict schema and allow-list sensitive parameters in subsequent states.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html
+  notes: The target workflow's Activity binding is not collected, so this conservative entry remains unresolved until the execution and consumer are inspected.
+
 - id: aws-stepfunctions-teststate-passrole
   provider: aws
   service: stepfunctions

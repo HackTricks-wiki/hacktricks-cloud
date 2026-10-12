@@ -7,12 +7,12 @@
   service: gameliftstreams
   title: Open an admin shell in a live stream session that has a role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamscreatestreamsessionadminshell-on-a-session-with-a-role
-  source_revision: 171e422299
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of the role of live GameLift Streams sessions in stream groups it can open admin shells in.
   requires:
     all_of:
-      - action: gameliftstreams:CreateStreamSessionAdminShell
-        resource: "*"
+    - action: gameliftstreams:CreateStreamSessionAdminShell
+      resource: '*'
   target:
     kind: aws_role
     selector:
@@ -20,20 +20,22 @@
       name_prefix: GameLiftStreams-
       via_resource_type: gameliftstreams_stream_session
     scope: same_account
-    aggregate_as: "Roles of live GameLift Streams sessions in {account}"
+    aggregate_as: Roles of live GameLift Streams sessions in {account}
   conditions:
-    - id: live_session_with_role
-      description: A stream session started with a RoleArn must be live; the role is only exposed for the session lifetime.
-    - id: stream_group_scope
-      description: The action authorizes the parent stream-group ARN; the edge is computed only for grants covering "*".
+  - id: live_session_with_role
+    description: A stream session started with a RoleArn must be live; the role is only exposed for the session lifetime.
+  - id: stream_group_scope
+    description: The action authorizes the parent stream-group ARN; the "*" requirement matches any CreateStreamSessionAdminShell grant by overlap, so the specific stream group holding the role-bearing
+      session must be within the grant.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict gameliftstreams:CreateStreamSessionAdminShell to operators and give session roles only what the application needs.
   references:
-    - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
+  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
   notes: Stream sessions are not collected; attachment resolves as unknown. No iam:PassRole is needed because the backend already attached the role.
+
 
 - id: aws-gameliftstreams-passrole-startstreamsession
   provider: aws

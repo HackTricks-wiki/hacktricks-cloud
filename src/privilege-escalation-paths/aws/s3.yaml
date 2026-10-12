@@ -45,34 +45,42 @@
 - id: aws-s3-putobject-ec2-userdata-object
   provider: aws
   service: s3
-  title: Overwrite an S3 object that EC2 instances fetch and execute at boot
+  title: Replace an S3 object fetched and run by an EC2 managed node
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putobject-s3getobject
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the instance-profile role of EC2 instances whose bootstrap downloads and executes the writable object.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain an instance-profile role when a managed node later fetches and runs a writable
+    S3 object as boot-time user data or an SSM remote script.
   requires:
     all_of:
-      - action: s3:PutObject
-        resource: "{target.artifact_arn}"
+    - action: s3:PutObject
+      resource: '{target.artifact_arn}'
   target:
     kind: aws_role
     selector:
       has_instance_profile: true
       via_artifact_type: s3_object
     scope: same_account
-    aggregate_as: "Instance-profile roles of EC2 bootstraps reading writable S3 objects in {account}"
+    aggregate_as: Instance-profile roles of EC2 bootstraps reading writable S3 objects in {account}
   conditions:
-    - id: later_boot
-      description: The bootstrap must run after the replacement (new instance, Auto Scaling scale-out, or per-boot user data).
-    - id: consumer_identification
-      description: Consumers are identified from user data / launch templates referencing the object; references hidden inside scripts are not visible to the control plane.
+  - id: later_boot
+    description: The bootstrap must run after the replacement (new instance, Auto Scaling scale-out, or per-boot
+      user data).
+  - id: consumer_identification
+    description: Consumers are identified from user data, launch templates, SSM association parameters, or command
+      history referencing the object; references hidden in scripts may not be visible to the control plane.
+  - id: run_remote_script_invocation
+    description: An authorized caller, State Manager association, or automation must later run AWS-RunRemoteScript
+      with the exact key; the write alone runs nothing.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Keep bootstrap objects in buckets writable only by the deployment pipeline and verify object integrity before execution.
+  mitigation: Keep bootstrap objects in buckets writable only by the deployment pipeline and verify object integrity
+    before execution.
   references:
-    - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
+  - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
   notes: s3:GetObject is not required when the source can supply a complete replacement.
+
 
 - id: aws-s3-putobject-terraform-state
   provider: aws

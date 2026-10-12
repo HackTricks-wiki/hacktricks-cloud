@@ -11,127 +11,140 @@
   service: container
   title: Bind a privileged ClusterRole to oneself through GKE IAM bind permission
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containerrolesbind--containerclusterrolesbind
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of cluster-admin on every GKE cluster in projects where it holds container.clusterRoles.bind and container.clusterRoleBindings.create.
   requires:
     all_of:
-      - action: container.clusterRoles.bind
-        resource: "{target.scope}"
+    - action: container.clusterRoles.bind
+      resource: '{target.scope}'
     any_of:
-      - - action: container.clusterRoleBindings.create
-          resource: "{target.scope}"
-      - - action: container.clusterRoleBindings.update
-          resource: "{target.scope}"
+    - - action: container.clusterRoleBindings.create
+        resource: '{target.scope}'
+    - - action: container.clusterRoleBindings.update
+        resource: '{target.scope}'
   target:
     kind: k8s_cluster_admin
     selector:
       any_principal_in_scope: true
     scope: cluster
-    aggregate_as: "Cluster admin of GKE cluster {target.scope}"
+    aggregate_as: Cluster admin of GKE cluster {target.scope}
   conditions:
-    - id: api_server_reachable
-      description: Private clusters / master authorized networks require network reachability to the API server (or Connect Gateway access).
-    - id: credentials
-      description: Obtaining a kubeconfig normally uses container.clusters.get/getCredentials; endpoint and CA can also come from elsewhere.
+  - id: api_server_reachable
+    description: Private clusters / master authorized networks require network reachability to the API server (or Connect Gateway access).
+  - id: credentials
+    description: Obtaining a kubeconfig normally uses container.clusters.get/getCredentials; endpoint and CA can also come from elsewhere.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: derived
   severity: critical
   mitigation: Do not grant container.clusterRoles.bind/escalate (roles/container.admin) outside cluster administrators.
   references:
-    - https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
-  notes: The namespaced variant (container.roles.bind + roleBindings.create) reaches namespace-scoped RBAC only and is left to the k8s catalog.
+  - https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
+  notes: 'The bind permission follows the referenced role kind: clusterRoles.bind with only roleBindings.create/update grants the ClusterRole inside namespaces, modelled with the namespaced Role variant
+    by gcp-container-namespaced-rbac-ksa.'
 
 - id: gcp-container-clusterroles-escalate
   provider: gcp
   service: container
   title: Widen a ClusterRole bound to the source through GKE IAM escalate permission
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containerrolesescalate--containerclusterrolesescalate
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of cluster-admin on GKE clusters where it holds container.clusterRoles.escalate and can update a ClusterRole already bound to it.
   requires:
     all_of:
-      - action: container.clusterRoles.escalate
-        resource: "{target.scope}"
-      - action: container.clusterRoles.update
-        resource: "{target.scope}"
+    - action: container.clusterRoles.escalate
+      resource: '{target.scope}'
+    any_of:
+    - - action: container.clusterRoles.update
+        resource: '{target.scope}'
+    - - action: container.clusterRoles.create
+        resource: '{target.scope}'
   target:
     kind: k8s_cluster_admin
     selector:
       any_principal_in_scope: true
     scope: cluster
-    aggregate_as: "Cluster admin of GKE cluster {target.scope}"
+    aggregate_as: Cluster admin of GKE cluster {target.scope}
   conditions:
-    - id: bound_role_exists
-      description: A ClusterRole must already be bound to the source (directly or through a group such as system:authenticated); otherwise creating a more powerful role also needs bind rights.
-    - id: api_server_reachable
-      description: The API server must be reachable.
+  - id: bound_role_exists
+    description: With update, a ClusterRole must already be bound to the source (directly or through a group such as system:authenticated). With create, an existing ClusterRoleBinding must reference a not-yet-existing
+      ClusterRole name the source can create; otherwise bind rights are also needed (gcp-container-clusterroles-bind).
+  - id: api_server_reachable
+    description: The API server must be reachable.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Do not grant container.clusterRoles.escalate outside cluster administrators.
-  notes: The namespaced variant (container.roles.escalate) is left to the k8s catalog.
+  notes: 'HackTricks @6fb9ac51fd: escalate plus the matching Role/ClusterRole create or update. The namespaced variant (container.roles.escalate) is modelled by gcp-container-namespaced-rbac-ksa.'
 
 - id: gcp-container-pod-template-node-sa
   provider: gcp
   service: container
   title: Create or update a workload whose pod reads the node pool service account from the metadata server
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#workload-and-pod-create--update-permissions
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of the node pool service accounts of GKE clusters in projects where it can create pods or pod-template workloads.
   requires:
     any_of:
-      - - action: container.pods.create
-          resource: "*"
-      - - action: container.deployments.create
-          resource: "*"
-      - - action: container.daemonSets.create
-          resource: "*"
-      - - action: container.jobs.create
-          resource: "*"
-      - - action: container.cronJobs.create
-          resource: "*"
-      - - action: container.statefulSets.create
-          resource: "*"
-      - - action: container.replicaSets.create
-          resource: "*"
-      - - action: container.replicationControllers.create
-          resource: "*"
-      - - action: container.deployments.update
-          resource: "*"
-      - - action: container.daemonSets.update
-          resource: "*"
-      - - action: container.statefulSets.update
-          resource: "*"
-      - - action: container.cronJobs.update
-          resource: "*"
-      - - action: container.pods.update
-          resource: "*"
+    - - action: container.pods.create
+        resource: '*'
+    - - action: container.deployments.create
+        resource: '*'
+    - - action: container.daemonSets.create
+        resource: '*'
+    - - action: container.jobs.create
+        resource: '*'
+    - - action: container.cronJobs.create
+        resource: '*'
+    - - action: container.statefulSets.create
+        resource: '*'
+    - - action: container.replicaSets.create
+        resource: '*'
+    - - action: container.replicationControllers.create
+        resource: '*'
+    - - action: container.deployments.update
+        resource: '*'
+    - - action: container.daemonSets.update
+        resource: '*'
+    - - action: container.statefulSets.update
+        resource: '*'
+    - - action: container.cronJobs.update
+        resource: '*'
+    - - action: container.jobs.update
+        resource: '*'
+    - - action: container.replicaSets.update
+        resource: '*'
+    - - action: container.replicationControllers.update
+        resource: '*'
+    - - action: container.pods.update
+        resource: '*'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: gke_nodepool
       gcp_sa_in_scope_of_permission: true
     scope: same_project
-    aggregate_as: "GKE node pool SAs of {project}"
+    aggregate_as: GKE node pool SAs of {project}
   conditions:
-    - id: metadata_reachable
-      description: Pods reach the node SA only when the node pool does not use GKE metadata server / Workload Identity (GKE_METADATA) or metadata concealment, and network policy does not block the metadata address.
-    - id: access_scopes
-      description: The usable token is limited by the node pool's OAuth access scopes.
-    - id: admission
-      description: Admission policies (Pod Security, Policy Controller, Binary Authorization) may reject the workload.
-    - id: api_server_reachable
-      description: The API server must be reachable.
+  - id: metadata_reachable
+    description: Pods reach the node SA only when the node pool does not use GKE metadata server / Workload Identity (GKE_METADATA) or metadata concealment, and network policy does not block the metadata
+      address.
+  - id: access_scopes
+    description: The usable token is limited by the node pool's OAuth access scopes.
+  - id: admission
+    description: Admission policies (Pod Security, Policy Controller, Binary Authorization) may reject the workload.
+  - id: api_server_reachable
+    description: The API server must be reachable.
   blockers:
-    - gcp_deny_policy
-    - pod_security_admission
-    - admission_policy
+  - gcp_deny_policy
+  - pod_security_admission
+  - admission_policy
   confidence: conditional
   severity: high
   mitigation: Enable Workload Identity Federation for GKE on all node pools, use least-privilege node SAs and restrict container.*.create.
-  notes: Kubernetes service account token theft through the pod template is in-cluster and left to the k8s catalog. With Workload Identity, a pod can instead act as the GSA bound to its KSA (not modelled here).
+  notes: Kubernetes service account reach through the pod template (including KSAs bound to Google SAs through Workload Identity) is modelled by gcp-container-pod-template-ksa. container.pods.update only
+    swaps an existing Pod's image, keeping its KSA and node.
 
 - id: gcp-container-pods-exec-node-sa
   provider: gcp
@@ -304,35 +317,65 @@
   service: container
   title: Push fleet-managed in-cluster RBAC through a fleet RBAC role binding and connect via Connect Gateway
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#gkehubrbacrolebindingscreate--fleet-managed-in-cluster-rbac
-  source_revision: 171e422
-  summary: The source can obtain the privileges of cluster-admin on fleet-member clusters of every project where it holds gkehub.rbacrolebindings.create and gkehub.gateway.generateCredentials.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of cluster-admin (bounded by the Fleet RBAC role model) on fleet-member clusters of every project where it can create or update fleet RBAC role bindings and
+    has, or can self-grant, an API-server access path.
   requires:
-    all_of:
-      - action: gkehub.rbacrolebindings.create
-        resource: "*"
-      - action: gkehub.gateway.generateCredentials
-        resource: "*"
-      - action: gkehub.gateway.get
-        resource: "*"
+    any_of:
+    - - action: gkehub.rbacrolebindings.create
+        resource: '*'
+      - &id001
+        action: gkehub.gateway.generateCredentials
+        resource: '*'
+      - &id002
+        action: gkehub.gateway.get
+        resource: '*'
+    - - action: gkehub.rbacrolebindings.create
+        resource: '*'
+      - &id003
+        action: gkehub.memberships.setIamPolicy
+        resource: '*'
+    - - action: gkehub.rbacrolebindings.create
+        resource: '*'
+      - &id004
+        action: container.clusters.get
+        resource: '*'
+    - - action: gkehub.rbacrolebindings.update
+        resource: '*'
+      - *id001
+      - *id002
+    - - action: gkehub.rbacrolebindings.update
+        resource: '*'
+      - *id003
+    - - action: gkehub.rbacrolebindings.update
+        resource: '*'
+      - *id004
   target:
     kind: k8s_cluster_admin
     selector:
       any_principal_in_scope: true
     scope: cluster
-    aggregate_as: "Cluster admin of fleet-member clusters in {project}"
+    aggregate_as: Cluster admin of fleet-member clusters in {project}
   conditions:
-    - id: fleet_scope_membership
-      description: The cluster must be a fleet member in a fleet scope the RBAC binding targets.
-    - id: fleet_role_not_cluster_admin
-      description: The predefined ADMIN fleet role grants admin-level (edit plus RBAC management) Kubernetes access, not cluster-admin; reaching cluster-admin needs an allowed custom role mapped to an equivalent ClusterRole, or onward pivots such as creating pods with privileged service accounts.
-    - id: mutating_verbs
-      description: Write operations through the gateway need gkehub.gateway.post/put/patch/delete and exec needs gkehub.gateway.stream.
+  - id: fleet_scope_membership
+    description: The cluster must be a fleet member in a fleet scope the RBAC binding targets.
+  - id: fleet_role_not_cluster_admin
+    description: The predefined ADMIN fleet role grants admin-level (edit plus RBAC management) Kubernetes access, not cluster-admin; reaching cluster-admin needs an allowed custom role mapped to an equivalent
+      ClusterRole, or onward pivots such as creating pods with privileged service accounts.
+  - id: mutating_verbs
+    description: Write operations through the gateway need gkehub.gateway.post/put/patch/delete and exec needs gkehub.gateway.stream.
+  - id: access_path
+    description: gkehub.memberships.setIamPolicy works by self-granting a Connect Gateway role on the membership; container.clusters.get is the direct GKE endpoint path and additionally needs network reachability
+      to the API server (private endpoint / master authorized networks).
+  - id: update_existing
+    description: gkehub.rbacrolebindings.update needs an existing fleet RBAC role binding to repoint to the source or to a stronger role.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Restrict gkehub.rbacrolebindings.* and gkehub.gateway.* (both included in basic roles/editor).
-  notes: Without the gateway permission the source still controls RBAC and needs another network path to the API server. gkehub.memberships.setIamPolicy can self-grant the gateway half.
+  notes: 'HackTricks @6fb9ac51fd: rbacrolebindings.create for a new binding (.update for an existing one), plus a gateway or direct access path; a Fleet Admin (roles/gkehub.admin) can self-grant gateway
+    transport through gkehub.memberships.setIamPolicy.'
 
 - id: gcp-gkehub-features-configmanagement
   provider: gcp
@@ -477,3 +520,126 @@
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
   notes: HackTricks @171e422 frames this as persistence or privilege escalation depending on the matching rules and backend; with an attacker-controlled backend and broad rules, any KSA whose pods are re-admitted is reachable (and through privileged-pod injection, the node pool SA).
+
+- id: gcp-container-pod-template-ksa
+  provider: gcp
+  service: container
+  title: Create or update a pod-template workload that runs as a chosen Kubernetes service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#workload-and-pod-create--update-permissions
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of every Kubernetes service account (and, through Workload Identity, the Google service accounts bound to them) in GKE clusters where GKE IAM lets it create pods or create/update pod-template controllers.
+  requires:
+    any_of:
+      - - action: container.pods.create
+          resource: "{target.scope}"
+      - - action: container.deployments.create
+          resource: "{target.scope}"
+      - - action: container.daemonSets.create
+          resource: "{target.scope}"
+      - - action: container.jobs.create
+          resource: "{target.scope}"
+      - - action: container.cronJobs.create
+          resource: "{target.scope}"
+      - - action: container.statefulSets.create
+          resource: "{target.scope}"
+      - - action: container.replicaSets.create
+          resource: "{target.scope}"
+      - - action: container.replicationControllers.create
+          resource: "{target.scope}"
+      - - action: container.deployments.update
+          resource: "{target.scope}"
+      - - action: container.daemonSets.update
+          resource: "{target.scope}"
+      - - action: container.statefulSets.update
+          resource: "{target.scope}"
+      - - action: container.cronJobs.update
+          resource: "{target.scope}"
+      - - action: container.jobs.update
+          resource: "{target.scope}"
+      - - action: container.replicaSets.update
+          resource: "{target.scope}"
+      - - action: container.replicationControllers.update
+          resource: "{target.scope}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_cluster: true
+    scope: cluster
+    aggregate_as: "KSAs selectable in pod templates of GKE cluster {target.scope}"
+  conditions:
+    - id: ksa_rbac
+      description: The reached privileges are the Kubernetes RBAC of each KSA and, with Workload Identity Federation for GKE, the Google service accounts that grant roles/iam.workloadIdentityUser to that KSA member.
+    - id: token_mounted
+      description: The pod must receive a KSA token (automountServiceAccountToken not disabled for that pod, or a projected token volume) or use the GKE metadata server for Workload Identity.
+    - id: admission
+      description: Admission policies (Pod Security, Policy Controller, Binary Authorization) may reject the workload or the chosen KSA / image.
+    - id: api_server_reachable
+      description: The API server must be reachable (or Connect Gateway access).
+  blockers:
+    - gcp_deny_policy
+    - pod_security_admission
+    - admission_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict container.pods.create and pod-controller create/update permissions (roles/container.developer and above), avoid privileged KSAs, and grant roles/iam.workloadIdentityUser only to dedicated KSAs in namespaces untrusted principals cannot write to.
+  references:
+    - https://kubernetes.io/docs/concepts/security/service-accounts/
+    - https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+  notes: GKE IAM authorizes the request without separate Kubernetes RBAC, so this edge is not visible to the in-cluster k8s catalog. container.pods.update alone only swaps an existing Pod's image and keeps its KSA; it is left out here (node SA path in gcp-container-pod-template-node-sa). The KSA -> Google SA step is the k8s catalog edge k8s-cloud-gke-workload-identity.
+
+- id: gcp-container-namespaced-rbac-ksa
+  provider: gcp
+  service: container
+  title: Grant oneself namespace RBAC beyond held permissions through GKE IAM bind or escalate
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containerrolesbind--containerclusterrolesbind
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of Kubernetes service accounts in GKE clusters where GKE IAM lets it write RoleBindings with a bind permission, or namespaced Roles with escalate, because the resulting namespace-scoped admin rights allow running pods as any KSA of those namespaces.
+  requires:
+    any_of:
+      - - action: container.clusterRoles.bind
+          resource: "{target.scope}"
+        - action: container.roleBindings.create
+          resource: "{target.scope}"
+      - - action: container.clusterRoles.bind
+          resource: "{target.scope}"
+        - action: container.roleBindings.update
+          resource: "{target.scope}"
+      - - action: container.roles.bind
+          resource: "{target.scope}"
+        - action: container.roleBindings.create
+          resource: "{target.scope}"
+      - - action: container.roles.bind
+          resource: "{target.scope}"
+        - action: container.roleBindings.update
+          resource: "{target.scope}"
+      - - action: container.roles.escalate
+          resource: "{target.scope}"
+        - action: container.roles.update
+          resource: "{target.scope}"
+      - - action: container.roles.escalate
+          resource: "{target.scope}"
+        - action: container.roles.create
+          resource: "{target.scope}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_cluster: true
+    scope: cluster
+    aggregate_as: "KSAs of namespaces the source can self-grant RBAC in on GKE cluster {target.scope}"
+  conditions:
+    - id: strong_role_available
+      description: clusterRoles.bind can reference cluster-admin or another admin ClusterRole inside a namespace; roles.bind needs an existing powerful Role in the namespace; roles.escalate needs a Role already bound to the source (update) or a RoleBinding referencing a Role name the source can create.
+    - id: namespace_scope
+      description: The grant is namespace-scoped; reaching a KSA needs the source to then run a pod as (or mint a token for) that KSA in the same namespace. Cluster-scoped objects stay out of reach.
+    - id: api_server_reachable
+      description: The API server must be reachable (or Connect Gateway access).
+  blockers:
+    - gcp_deny_policy
+    - pod_security_admission
+    - admission_policy
+  confidence: conditional
+  severity: high
+  mitigation: Do not grant container.roles.bind/escalate or container.clusterRoles.bind (roles/container.admin, roles/container.clusterAdmin) outside cluster administrators.
+  references:
+    - https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
+  notes: HackTricks @6fb9ac51fd states the bind permission follows the referenced role kind, not whether the binding is namespaced. The cluster-wide variants are gcp-container-clusterroles-bind and gcp-container-clusterroles-escalate. GKE IAM container.* grants apply to every namespace of every cluster in the project.

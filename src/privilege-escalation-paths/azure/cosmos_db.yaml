@@ -96,18 +96,28 @@
   service: cosmos_db
   title: Grant a Cosmos DB native data-plane role on the Cassandra, Gremlin, Table or MongoDB API
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#same-native-rbac-self-grant-on-the-other-cosmos-apis-cassandra--gremlin--table--mongo-vcore
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain full data-plane access on the Cosmos DB account through the API-specific native role assignments.
   requires:
     all_of: []
     any_of:
-      - - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleAssignments/write
+      - - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleDefinitions/write
           scope: '{target.scope}'
-      - - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleAssignments/write
+        - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
           scope: '{target.scope}'
       - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
           scope: '{target.scope}'
-      - - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleAssignments/write
+      - - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleAssignments/write
           scope: '{target.scope}'
   target:
     kind: azure_dataplane_admin
@@ -117,7 +127,7 @@
     aggregate_as: Cosmos DB data-plane admins of {target.scope}
   conditions:
     - id: api_rbac_supported
-      description: The account must use the matching API with Entra/native RBAC enabled; a custom role additionally needs the matching role-definition write.
+      description: The account must use the matching API with Entra/native RBAC enabled. The assignment-only Table branch grants the built-in Data Contributor role; other branches define and assign a privileged custom role.
     - id: network_reachable
       description: Account firewall must allow the source.
   blockers: []

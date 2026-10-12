@@ -226,7 +226,7 @@
   service: lambda
   title: Remove or replace a function's code-signing config, then replace its code
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdadeletefunctioncodesigningconfig-or-lambdaputfunctioncodesigningconfig--lambdaupdatefunctioncode--bypass-lambda-code-signing
-  source_revision: 171e422299
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose code-signing config it can remove or replace.
   requires:
     all_of:
@@ -239,6 +239,8 @@
           resource: "*"
         - action: lambda:PutFunctionCodeSigningConfig
           resource: "{target.resource_arn}"
+      - - action: lambda:PutFunctionCodeSigningConfig
+          resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -247,6 +249,8 @@
     scope: same_account
     aggregate_as: "Execution roles of code-signed Lambda functions in {account}"
   conditions:
+    - id: warn_config_available
+      description: The PutFunctionCodeSigningConfig-only alternative requires an existing code-signing configuration with UntrustedArtifactOnDeployment set to Warn; otherwise the source must also create such a configuration.
     - id: function_invocation
       description: The function must run after the change (own InvokeFunction permission or existing trigger).
     - id: lambda_codesigningconfigarns_condition
@@ -454,3 +458,46 @@
   references:
     - https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html
   notes: HackTricks marks this combination as untested; the edge is conditional on the Function URL authorization behaviour described in the AWS documentation.
+
+- id: aws-lambda-microvm-passrole-runmicrovm-shell
+  provider: aws
+  service: lambda
+  title: Launch a Lambda MicroVM with a passed execution role and open a shell into it
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-microvms
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles usable as Lambda MicroVM execution roles by launching a MicroVM runtime with that role and the shell-ingress connector and then opening an interactive shell in the guest, which receives the role credentials through IMDSv2.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: lambda:RunMicrovm
+        resource: "*"
+      - action: lambda:CreateMicrovmShellAuthToken
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: lambda.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles passable as Lambda MicroVM execution roles in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService / iam:AssociatedResourceArn conditions on the PassRole grant may restrict which roles can be attached to a MicroVM.
+    - id: same_image_scope
+      description: RunMicrovm and CreateMicrovmShellAuthToken are authorized on the MicroVM image ARN; both grants must cover the same usable image (customer or AWS-managed) for the edge to hold.
+    - id: shell_ingress_connector
+      description: The runtime must be launched with the AWS-managed SHELL_INGRESS connector; it cannot be added to a running MicroVM.
+    - id: alternative_attacker_image
+      description: A source able to build its own MicroVM image could instead run arbitrary application code with the passed role without a shell token; that variant is not modelled separately.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole for MicroVM execution roles to exact role ARNs with iam:PassedToService, scope lambda:RunMicrovm and lambda:CreateMicrovmShellAuthToken to exact image ARNs for operators only, and avoid the SHELL_INGRESS connector on images that run with privileged roles.
+  references:
+    - https://docs.aws.amazon.com/lambda/latest/dg/microvms-how-it-works.html
+    - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_lambda.html
+  notes: The enum page documents that RunMicrovm attaches an optional execution role whose credentials the guest receives through IMDSv2; the shell-token half follows the existing aws-lambda-microvm-createmicrovmshellauthtoken entry. The execution-role trust principal is assumed to be lambda.amazonaws.com, as in the existing MicroVM entry; verify against the MicroVM execution-role documentation. Resources are "*" because the image may be AWS-managed or customer-owned.

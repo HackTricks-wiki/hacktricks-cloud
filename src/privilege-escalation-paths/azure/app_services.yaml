@@ -358,12 +358,15 @@
   service: app_services
   title: Obtain slot publishing credentials and deploy into the slot
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesslotspublishxmlaction
-  source_revision: 171e422
-  summary: The slot publishing profile with secrets allows Kudu zip deployment into the slot when SCM basic auth is allowed.
+  source_revision: a66f094ede
+  summary: The slot publishing profile with secrets (or the slot publishing credentials returned by slot config listing) allows Kudu zip deployment into the slot when SCM basic auth is allowed.
   requires:
-    all_of:
-      - action: Microsoft.Web/sites/slots/publishxml/action
-        scope: "{target.host_resource}"
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/slots/publishxml/action
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Web/sites/slots/config/list/action
+          scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
     selector:
@@ -380,7 +383,7 @@
   mitigation: Disable basic auth on slots and restrict slots/publishxml/action.
   references:
     - https://learn.microsoft.com/en-us/azure/app-service/configure-basic-auth-disable
-  notes: ""
+  notes: slots/config/list/action is the slot counterpart of config/list/action (the Function App page documents it as the same capability for a slot); it authorizes listing the slot's security-sensitive settings, including its publishing credentials.
 
 - id: azure-appservice-slot-swap-promote-code
   provider: azure
@@ -449,12 +452,19 @@
   service: app_services
   title: Read the Easy Auth identity-provider client secret from app settings
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#easy-auth-secret-theft--authentication-bypass
-  source_revision: 171e422
-  summary: App Service Authentication stores the Entra app registration's client secret in an app setting, which config/list/action returns, yielding the application's service principal.
+  source_revision: a66f094ede
+  summary: App Service Authentication stores the Entra app registration's client secret in an app setting, which config/list/action (or a config snapshot secret listing) returns, yielding the application's service principal.
   requires:
-    all_of:
-      - action: Microsoft.Web/sites/config/list/action
-        scope: "{pivot}"
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/config/list/action
+          scope: "{pivot}"
+      - - action: Microsoft.Web/sites/config/snapshots/listsecrets/action
+          scope: "{pivot}"
+      - - action: Microsoft.Web/sites/slots/config/list/action
+          scope: "{pivot}"
+      - - action: Microsoft.Web/sites/slots/config/snapshots/listsecrets/action
+          scope: "{pivot}"
   pivot_resource_type: Microsoft.Web/sites
   target:
     kind: azure_service_principal
@@ -473,7 +483,7 @@
   mitigation: Use a federated identity credential (managed identity) for Easy Auth instead of a client secret; restrict config/list/action.
   references:
     - https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad
-  notes: ""
+  notes: The same settings listings also expose any other service-principal secret kept in app settings or connection strings (e.g. AZURE_CLIENT_SECRET); historical snapshots can return secrets that were later removed from the live configuration, valid unless rotated. Slot-scoped listings return the slot's settings, which commonly carry the same credential.
 
 - id: azure-appservice-process-dump-cached-tokens
   provider: azure

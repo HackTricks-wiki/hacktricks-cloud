@@ -31,3 +31,42 @@
     - https://learn.microsoft.com/en-us/azure/deployment-environments/concept-environments-key-concepts
     - https://learn.microsoft.com/en-us/azure/deployment-environments/how-to-configure-project-environment-types
   notes: Covers the catalog poisoning section of the page as the template-control route.
+
+- id: azure-devcenter-environment-type-assign-user-assigned-identity
+  provider: azure
+  service: dev_center
+  title: Bind a user-assigned identity to a project environment type and deploy with it
+  source: src/pentesting-cloud/azure-security/az-persistence/az-dev-center-persistence.md#dev-center
+  source_revision: a66f094ede
+  summary: A source that can create or repoint a project environment type to a user-assigned identity it may assign, and deploy environments of that type, runs its environment definitions with that identity's roles.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.DevCenter/projects/environmentTypes/write
+        scope: "{pivot}"
+      - action: Microsoft.DevCenter/projects/users/environments/userWrite/action
+        data_action: true
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.DevCenter/projects
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: identity_attached_to_dev_center
+      description: A user-assigned deployment identity must also be attached to the parent dev center (devcenters/write), and the environment type must be enabled for a deployment target subscription.
+    - id: template_control
+      description: The source must control an environment definition the project can use (catalog repository write or a catalog it can attach), as for azure-devcenter-ade-deployment-identity.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict projects/environmentTypes/write (DevCenter Project Admin) and userAssignedIdentities/assign/action, and review the deployment identities bound to environment types.
+  references:
+    - https://learn.microsoft.com/en-us/azure/deployment-environments/how-to-configure-project-environment-types
+    - https://learn.microsoft.com/en-us/azure/deployment-environments/how-to-configure-managed-identity
+  notes: Existing environment types with their current identity are covered by azure-devcenter-ade-deployment-identity.

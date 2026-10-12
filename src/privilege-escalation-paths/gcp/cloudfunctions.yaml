@@ -10,7 +10,7 @@
   service: cloudfunctions
   title: Create a Cloud Function running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#cloudfunctionsfunctionscreate--source-upload--iamserviceaccountsactas--create-a-runtime-token-oracle
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
   requires:
     all_of:
@@ -22,6 +22,8 @@
       - - action: cloudfunctions.functions.sourceCodeSet
           resource: "*"
       - - action: cloudfunctions.functions.generateUploadUrl
+          resource: "*"
+      - - action: storage.objects.get
           resource: "*"
   target:
     kind: gcp_service_account
@@ -35,6 +37,8 @@
       description: actAs is also needed on the SA used to build the function image (Compute default SA unless a build SA is set).
     - id: trigger
       description: Triggering the function may require invoke permission (cloudfunctions.functions.invoke for gen1, run.routes.invoke for gen2) or an event trigger the source controls.
+    - id: prepared_storage_source
+      description: The storage.objects.get branch points the function at an already prepared Cloud Storage source; the object may live in another bucket or project, so this branch only approximates the read requirement.
     - id: cross_project_sa
       description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced; not modelled.
   blockers:
@@ -153,7 +157,7 @@
   service: cloudfunctions
   title: Run attacker build hooks as a function's build service account during source deployment
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#source-deploy--selected-build-service-account--execute-as-the-builder-before-deployment
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of the project's default Cloud Build identity used to build functions it can create or update from source.
   requires:
     any_of:
@@ -164,6 +168,10 @@
       - - action: cloudfunctions.functions.create
           resource: "*"
         - action: cloudfunctions.functions.generateUploadUrl
+          resource: "*"
+      - - action: cloudfunctions.functions.create
+          resource: "*"
+        - action: storage.objects.get
           resource: "*"
       - - action: cloudfunctions.functions.update
           resource: "*"

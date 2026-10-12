@@ -6,31 +6,41 @@
   service: sts
   title: Assume a role whose trust policy allows the source
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumerole
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of every role whose trust policy allows the source (or its account) and that its identity policy lets it assume.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of every role whose trust policy allows the source (or its account)
+    and that its identity policy lets it assume.
   requires:
     all_of:
-      - action: sts:AssumeRole
-        resource: "{target.arn}"
+    - action: sts:AssumeRole
+      resource: '{target.arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_principal_of_source: true
     scope: any
-    aggregate_as: "Roles assumable by the source"
+    aggregate_as: Roles assumable by the source
   conditions:
-    - id: trust_names_principal_directly
-      description: For a same-account trust that names the source principal ARN directly, the identity-policy sts:AssumeRole grant is not required. Trusts naming only the account root require it; cross-account always requires it.
-    - id: trust_conditions
-      description: Trust conditions such as sts:ExternalId, aws:MultiFactorAuthPresent, sts:SourceIdentity, aws:PrincipalOrgID or aws:SourceIp may block the assumption.
+  - id: trust_names_principal_directly
+    description: For a same-account trust that names the source principal ARN directly, the identity-policy sts:AssumeRole
+      grant is not required. Trusts naming only the account root require it; cross-account always requires it.
+  - id: trust_conditions
+    description: Trust conditions such as sts:ExternalId, aws:MultiFactorAuthPresent, sts:SourceIdentity, aws:PrincipalOrgID
+      or aws:SourceIp may block the assumption.
+  - id: source_controlled_session_attributes
+    description: Trust conditions on aws:PrincipalTag/*, aws:RequestTag/*, sts:SourceIdentity or sts:RoleSessionName
+      may be satisfiable through source-controlled identity tags, sts:TagSession, sts:SetSourceIdentity, transitive
+      tags from an earlier session, or attributes asserted by the trusted account.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Trust specific principal ARNs (not account roots or "*"), add aws:PrincipalOrgID / ExternalId / MFA conditions, and limit sts:AssumeRole Resources.
+  mitigation: Trust specific principal ARNs (not account roots or "*"), add aws:PrincipalOrgID / ExternalId / MFA
+    conditions, and limit sts:AssumeRole Resources.
   references:
-    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
-  notes: Severity is critical only when an assumable role is admin-equivalent. Role chaining is handled by the evaluator through repeated edges.
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
+  notes: Severity is critical only when an assumable role is admin-equivalent. Role chaining is handled by the evaluator
+    through repeated edges.
+
 
 - id: aws-rolesanywhere-updatetrustanchor
   provider: aws
@@ -103,14 +113,14 @@
   service: rolesanywhere
   title: Remove a certificate attribute mapping that a negative role-trust condition relies on
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#rolesanywheredeleteattributemapping--putattributemapping--exploit-missing-certificate-tags
-  source_revision: 171e422299
+  source_revision: 6fb9ac51fd
   summary: A source that holds a trusted certificate can obtain a Roles Anywhere profile role whose trust denies that certificate only through a negative or IfExists condition on an x509 principal tag, by removing the attribute mapping that produces the tag.
   requires:
     any_of:
       - - action: rolesanywhere:DeleteAttributeMapping
-          resource: "*"
+          resource: "{target.rolesanywhere_profile_arn}"
       - - action: rolesanywhere:PutAttributeMapping
-          resource: "*"
+          resource: "{target.rolesanywhere_profile_arn}"
   target:
     kind: aws_role
     selector:
@@ -118,6 +128,7 @@
       rolesanywhere_profile_includes_target: true
     scope: same_account
     aggregate_as: "Roles in Roles Anywhere profiles whose attribute mappings the source can change in {account}"
+    outcome: credentials
   conditions:
     - id: holds_trusted_certificate
       description: The source must already hold a private key and certificate accepted by an enabled trust anchor and listed profile.
@@ -130,7 +141,8 @@
   mitigation: Use positive StringEquals conditions on certificate attributes plus aws:SourceArn of the trust anchor in role trusts, and restrict attribute-mapping changes to administrators.
   references:
     - https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html
-  notes: "No iam:PassRole is needed. Trust-condition shape is not analysed by the evaluator, so the edge is conditional."
+  notes: No iam:PassRole is needed. The page states the minimum permission is the mapping action on the exact profile ARN, so the requirement is on {target.rolesanywhere_profile_arn} (same modelling as aws-rolesanywhere-updateprofile-remove-session-policy). Trust-condition shape is not analysed by the evaluator, so the edge is conditional.
+
 
 - id: aws-sts-assumeroot-member-accounts
   provider: aws

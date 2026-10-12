@@ -6,59 +6,103 @@
   service: apprunner
   title: Create an App Runner service with a passed instance role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#iampassrole-apprunnercreateservice
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by running code it controls in a new App Runner service using that instance role.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by running
+    code it controls in a new App Runner service using that instance role.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: apprunner:CreateService
-        resource: "*"
+    - action: iam:PassRole
+      resource: '{target.arn}'
+    - action: apprunner:CreateService
+      resource: '*'
   target:
     kind: aws_role
     selector:
       trust_allows_service: tasks.apprunner.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting tasks.apprunner.amazonaws.com in {account}"
+    aggregate_as: Roles trusting tasks.apprunner.amazonaws.com in {account}
+    outcome: workload_execution
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict this.
-    - id: image_source
-      description: The source needs a code repository connection or an image it can supply (public ECR image or private ECR with an access role).
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict this.
+  - id: image_source
+    description: The source needs a code repository connection or an image it can supply (public ECR image or private
+      ECR with an access role).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
-  severity: high
+  severity: critical
   mitigation: Restrict iam:PassRole on App Runner instance roles with iam:PassedToService and specific role ARNs.
   references:
-    - https://docs.aws.amazon.com/apprunner/latest/dg/security_iam_service-with-iam.html
-  notes: Severity critical when a reachable role is admin-equivalent.
+  - https://docs.aws.amazon.com/apprunner/latest/dg/security_iam_service-with-iam.html
+  notes: Severity critical because a reachable instance role can be admin-equivalent.
+
 
 - id: aws-apprunner-updateservice
   provider: aws
   service: apprunner
   title: Update an existing App Runner service that has an instance role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the instance role of an existing App Runner service by changing its image or start command.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the instance role of an existing App Runner service by changing
+    its image or start command.
   requires:
     all_of:
-      - action: apprunner:UpdateService
-        resource: "{target.attached_resource_arn}"
+    - action: apprunner:UpdateService
+      resource: '{target.attached_resource_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: apprunner
       attached_resource_covered_by: apprunner:UpdateService
     scope: same_account
-    aggregate_as: "Instance roles of App Runner services covered by apprunner:UpdateService in {account}"
+    aggregate_as: Instance roles of App Runner services covered by apprunner:UpdateService in {account}
+    outcome: workload_execution
   conditions:
-    - id: passrole_on_change
-      description: If the update changes the instance role, iam:PassRole is required; keeping the current role does not need it.
+  - id: passrole_on_change
+    description: If the update changes the instance role, iam:PassRole is required; keeping the current role does
+      not need it.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
-  severity: high
+  severity: critical
   mitigation: Restrict apprunner:UpdateService to deployment pipelines.
   references: []
-  notes: ""
+  notes: ''
+
+
+- id: aws-apprunner-updateservice-passrole
+  provider: aws
+  service: apprunner
+  title: Repoint an existing App Runner service to a passed instance role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by updating an existing App Runner service to use that instance role together with code or a start command it controls.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: apprunner:UpdateService
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: tasks.apprunner.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting tasks.apprunner.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: existing_service
+      description: At least one existing App Runner service must be covered by apprunner:UpdateService.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict apprunner:UpdateService to deployment pipelines and iam:PassRole on App Runner instance roles with iam:PassedToService and exact role ARNs.
+  references:
+    - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
+  notes: Companion of aws-apprunner-updateservice (keeps the existing role, no PassRole); the page notes that changing role-bearing configuration triggers iam:PassRole.

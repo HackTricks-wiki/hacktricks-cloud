@@ -59,7 +59,7 @@
   service: automation
   title: Decrypt Automation credential/variable assets from runbook code
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobswrite-microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsjobsoutputread-microsoftautomationautomationaccountsrunbookspublishaction-microsoftresourcessubscriptionsresourcegroupsread-microsoftautomationautomationaccountsrunbookswrite
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: Runbook code the source controls can read credential assets and encrypted variables, which may hold passwords or client secrets of users or service principals.
   requires:
     all_of: []
@@ -72,6 +72,8 @@
           scope: "{pivot}"
         - action: Microsoft.Automation/automationAccounts/jobs/write
           scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/output/read
+          scope: "{pivot}"
       - - action: Microsoft.Automation/automationAccounts/runbooks/write
           scope: "{pivot}"
         - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
@@ -79,6 +81,8 @@
         - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
           scope: "{pivot}"
         - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/output/read
           scope: "{pivot}"
       - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
           scope: "{pivot}"
@@ -102,14 +106,68 @@
   mitigation: Do not store user or service principal secrets as Automation credentials/variables; use the account managed identity instead.
   references:
     - https://learn.microsoft.com/en-us/azure/automation/shared-resources/credentials
-  notes: Target may also be Entra users (credential assets often hold user passwords); evaluator should render a single conditional aggregate node per account.
+  notes: Entra users stored in credential assets are modelled by azure-automation-runbook-credential-assets-user; evaluator should render a single conditional aggregate node per account and kind.
+
+- id: azure-automation-runbook-credential-assets-user
+  provider: azure
+  service: automation
+  title: Decrypt Automation credential assets holding user passwords from runbook code
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobswrite-microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsjobsoutputread-microsoftautomationautomationaccountsrunbookspublishaction-microsoftresourcessubscriptionsresourcegroupsread-microsoftautomationautomationaccountsrunbookswrite
+  source_revision: a66f094ede
+  summary: Runbook code the source controls can read credential assets and encrypted variables, which may hold passwords or client secrets of users or service principals.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/output/read
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/jobs/output/read
+          scope: "{pivot}"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
+          scope: "{pivot}"
+        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_user
+    selector:
+      credential_stored_in_scope: "{pivot}"
+    scope: any
+    aggregate_as: "Users whose passwords are stored as credential assets in Automation account {pivot}"
+  conditions:
+    - id: credential_content_unknown
+      description: Which principals' credentials (if any) are stored in credential assets/encrypted variables is not visible from RBAC metadata; the edge is conditional on asset contents.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Do not store user or service principal secrets as Automation credentials/variables; use the account managed identity instead.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/shared-resources/credentials
+  notes: User sibling of azure-automation-runbook-credential-assets (PSCredential assets usually hold user name/password pairs); MFA or Conditional Access on the user may block interactive reuse.
 
 - id: azure-automation-runbook-hybrid-worker
   provider: azure
   service: automation
   title: Run runbook code on a Hybrid Runbook Worker VM and use the VM's managed identities
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#hybrid-workers-group
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: Runbook jobs targeted at a Hybrid Worker group execute on the worker machine, so an Azure VM worker's managed identities become reachable through IMDS.
   requires:
     all_of: []
@@ -140,10 +198,12 @@
   target:
     kind: azure_managed_identity
     selector:
-      attached_to_service: Microsoft.Compute/virtualMachines
+      attached_to_service:
+        - Microsoft.Compute/virtualMachines
+        - Microsoft.HybridCompute/machines
       azure_host_linked_to_pivot: automation_hybrid_worker
     scope: any
-    aggregate_as: "Managed identities of Hybrid Worker VMs of Automation account {pivot}"
+    aggregate_as: "Managed identities of Hybrid Worker VMs / Arc machines of Automation account {pivot}"
   conditions:
     - id: worker_is_azure_vm
       description: Only Hybrid Workers that are Azure VMs / Arc machines with managed identities expose cloud identities; on-prem workers yield OS context only.
@@ -153,7 +213,7 @@
   mitigation: Restrict runbook authoring on accounts with Hybrid Worker groups and do not attach privileged managed identities to worker VMs.
   references:
     - https://learn.microsoft.com/en-us/azure/automation/automation-hrw-run-runbooks
-  notes: Jobs also run as SYSTEM/root on the worker. Arc-enabled servers expose the Arc machine identity similarly (selector would be Microsoft.HybridCompute/machines).
+  notes: Jobs also run as SYSTEM/root on the worker. Arc-enabled server workers expose the Arc machine identity (worker vmResourceId is the Microsoft.HybridCompute/machines id), hence both host types in attached_to_service.
 
 - id: azure-automation-assign-user-assigned-identity
   provider: azure
@@ -253,17 +313,12 @@
   service: automation
   title: Configure source control to import attacker runbooks and run them
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountssourcecontrolswrite-microsoftautomationautomationaccountssourcecontrolsread
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: A source-control link to an attacker repository imports and publishes runbooks, which then run with the Automation account identities.
   requires:
     all_of:
       - action: Microsoft.Automation/automationAccounts/sourceControls/write
         scope: "{target.host_resource}"
-    any_of:
-      - - action: Microsoft.Automation/automationAccounts/jobs/write
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Automation/automationAccounts/jobSchedules/write
-          scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
     selector:
@@ -273,8 +328,8 @@
   conditions:
     - id: source_control_identity_contributor
       description: Source-control sync only works if the account's managed identity has Contributor on the account (user-assigned needs AUTOMATION_SC_USER_ASSIGNED_IDENTITY_ID).
-    - id: overwrite_scheduled_runbook
-      description: Overwriting a runbook name that is already scheduled or webhook-bound may make a trigger permission unnecessary.
+    - id: runbook_trigger
+      description: The source must have jobs/write or jobSchedules/write to trigger the imported runbook, or overwrite a runbook already scheduled or bound to a webhook and wait for that trigger to fire.
   blockers: []
   confidence: conditional
   severity: high

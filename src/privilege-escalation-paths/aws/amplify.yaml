@@ -6,68 +6,82 @@
   service: amplify
   title: Change an Amplify app build specification and start a build
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifyupdateapp-amplifystartjob
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM service role attached to an Amplify app whose build it can reconfigure and run.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the IAM service role attached to an Amplify app whose build it
+    can reconfigure and run.
   requires:
     all_of:
-      - action: amplify:UpdateApp
-        resource: "{target.attached_resource_arn}"
-      - action: amplify:StartJob
-        resource: "{target.attached_resource_arn}"
+    - action: amplify:UpdateApp
+      resource: '{target.attached_resource_arn}'
+    - action: amplify:StartJob
+      resource: '{target.attached_resource_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: amplify
       attached_resource_covered_by: amplify:UpdateApp
     scope: same_account
-    aggregate_as: "Service roles of Amplify apps covered by amplify:UpdateApp in {account}"
+    aggregate_as: Service roles of Amplify apps covered by amplify:UpdateApp in {account}
+    outcome: workload_execution
   conditions:
-    - id: app_has_service_role
-      description: The app must have an IAM service role configured (trusting amplify.amazonaws.com); otherwise builds run without AWS permissions.
+  - id: app_has_service_role
+    description: The app must have an IAM service role configured (trusting amplify.amazonaws.com); otherwise builds
+      run without AWS permissions.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
-  severity: high
+  severity: critical
   mitigation: Restrict amplify:UpdateApp/UpdateBranch and StartJob; keep Amplify service roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/amplify/latest/userguide/how-to-service-role-amplify-console.html
-  notes: StartJob Resource is the branch ARN (app ARN prefix); the evaluator should treat app-ARN wildcards as covering branches. amplify:UpdateBranch can be an equivalent build-spec change path. Severity critical when the attached role is admin-equivalent.
+  - https://docs.aws.amazon.com/amplify/latest/userguide/how-to-service-role-amplify-console.html
+  notes: StartJob Resource is the branch ARN (app ARN prefix); the evaluator should treat app-ARN wildcards as covering
+    branches. amplify:UpdateBranch can be an equivalent build-spec change path. Severity critical when the attached
+    role is admin-equivalent.
+
 
 - id: aws-amplify-updatebranch-startjob
   provider: aws
   service: amplify
   title: Change an Amplify branch's build environment variables and start a build
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifyupdatebranch-amplifystartjob--branch-scoped-build-code-execution
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM service role of an Amplify app whose branch build environment it can change and build.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the IAM service role of an Amplify app whose branch build environment
+    it can change and build.
   requires:
     all_of:
-      - action: amplify:UpdateBranch
-        resource: "{target.attached_resource_arn}"
-      - action: amplify:StartJob
-        resource: "{target.attached_resource_arn}"
+    - action: amplify:UpdateBranch
+      resource: '{target.attached_resource_arn}'
+    - action: amplify:StartJob
+      resource: '{target.attached_resource_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: amplify
       attached_resource_covered_by: amplify:UpdateBranch
     scope: same_account
-    aggregate_as: "Service roles of Amplify apps with branches covered by amplify:UpdateBranch in {account}"
+    aggregate_as: Service roles of Amplify apps with branches covered by amplify:UpdateBranch in {account}
+    outcome: workload_execution
   conditions:
-    - id: app_has_service_role
-      description: The app must have an IAM service role configured (trusting amplify.amazonaws.com); otherwise builds run without AWS permissions.
-    - id: runtime_honours_startup_variable
-      description: The existing build must start an interpreter that loads a startup environment variable pointing at content reachable in the build workspace; a branch buildSpec override was observed not to be executed.
-    - id: trigger
-      description: Automatic builds or an incoming webhook can replace amplify:StartJob as the trigger.
+  - id: app_has_service_role
+    description: The app must have an IAM service role configured (trusting amplify.amazonaws.com); otherwise builds
+      run without AWS permissions.
+  - id: runtime_honours_startup_variable
+    description: The existing build must start an interpreter that loads a startup environment variable pointing
+      at content reachable in the build workspace; a branch buildSpec override was observed not to be executed.
+  - id: trigger
+    description: Automatic builds or an incoming webhook can replace amplify:StartJob as the trigger.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict amplify:UpdateBranch, amplify:UpdateApp and amplify:StartJob to deployment administrators and keep Amplify service roles least-privileged.
+  severity: critical
+  mitigation: Restrict amplify:UpdateBranch, amplify:UpdateApp and amplify:StartJob to deployment administrators
+    and keep Amplify service roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/amplify/latest/userguide/how-to-service-role-amplify-console.html
-  notes: Branch ARNs are under the app ARN; the evaluator should treat app-ARN wildcards as covering branches and jobs. No iam:PassRole is needed when the existing service role is reused. Severity critical when the attached role is admin-equivalent.
+  - https://docs.aws.amazon.com/amplify/latest/userguide/how-to-service-role-amplify-console.html
+  notes: Branch ARNs are under the app ARN; the evaluator should treat app-ARN wildcards as covering branches and
+    jobs. No iam:PassRole is needed when the existing service role is reused. Severity critical when the attached
+    role is admin-equivalent.
+
 
 - id: aws-amplify-updateapp-passrole
   provider: aws

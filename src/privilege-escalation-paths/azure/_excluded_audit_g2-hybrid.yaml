@@ -1,0 +1,80 @@
+# Azure privesc completeness audit (g2-hybrid): techniques reviewed and intentionally NOT modelled.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pta-pass-through-authentication.md#pivoting
+  technique: PTA agent backdoor on the sync host, or rogue PTA agent registered by a Global Administrator
+  source_revision: a66f094ede
+  reason: Agent backdoor needs local administrator on the on-prem PTA host (outside the cloud graph); registering a rogue agent needs Global Administrator, which
+    already reaches every user, so it adds only credential harvesting (persistence of held privileges).
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-connect-sync.md#abusing-connectsyncprovisioning_connectsync_
+  technique: ConnectSyncProvisioning application certificate theft and key addition
+  source_revision: a66f094ede
+  reason: Requires stealing the application certificate from the sync server process (host compromise); the application has no directory roles and its sync-API abuse
+    is undocumented, so there is no configuration-derived edge. Adding keys afterwards is persistence of the same identity.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-connect-sync.md#abusing-msol_
+  technique: MSOL_ connector account DCSync
+  source_revision: a66f094ede
+  reason: MSOL_ is an on-prem AD account and the target is the on-prem domain; outside the cloud principal graph.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-exchange-hybrid-impersonation.md#modify-federation-configuration-via-exchange
+  technique: Federation configuration changes with Exchange hybrid first-party tokens
+  source_revision: a66f094ede
+  reason: Source is on-prem Exchange server compromise and the Exchange token permissions are documented as removed; the cloud-side federation change by tenant principals
+    is azure-entraid-domain-federation-backdoor.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-seamless-sso.md#on-prem---cloud-via-resource-based-constrained-delegation
+  technique: Seamless SSO via RBCD on AZUREADSSOACC$
+  source_revision: a66f094ede
+  reason: Requires write access to the on-prem AZUREADSSOACC$ computer object; source is on-prem AD.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-seamless-sso.md#creating-kerberos-tickets-for-cloud-only-users
+  technique: Kerberos tickets for cloud-only users via Seamless SSO
+  source_revision: a66f094ede
+  reason: Documented as no longer working (struck through on the page) and requires the on-prem AZUREADSSOACC$ key.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-federation.md#recover-the-active-ad-fs-key-through-machine-dpapi
+  technique: AD FS token-signing key recovery through machine DPAPI
+  source_revision: a66f094ede
+  reason: Requires administrator on the on-prem AD FS server; source is outside the cloud graph.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-federation.md#aws--ad-fs--golden-saml
+  technique: Golden SAML into AWS through AD FS
+  source_revision: a66f094ede
+  reason: Requires the on-prem AD FS signing key; the AWS SAML trust side is modelled by the AWS catalog, not from Azure configuration.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md#abusing-protected-prts
+  technique: Requesting tokens through the Windows token broker with a TPM-protected PRT
+  source_revision: a66f094ede
+  reason: Needs code execution in the user's session on a joined device (runtime host state); the same user's privileges are reused.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-primary-refresh-token-prt.md#phishing-prts
+  technique: Device-code phishing with the broker client to obtain a PRT
+  source_revision: a66f094ede
+  reason: Requires the victim to complete an interactive sign-in (phishing); not derivable from the source principal's permissions.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-local-cloud-credentials.md#local-token-storage-and-security-considerations
+  technique: Azure CLI / PowerShell token caches on a host
+  source_revision: a66f094ede
+  reason: Needs file or memory access on a host where the user signed in (runtime host state); same principal reused.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-local-cloud-credentials.md#secrets-in-azure-enumeration-artifacts
+  technique: Application secrets left in enumeration output files
+  source_revision: a66f094ede
+  reason: Secret discovery in local files is runtime host state, not configuration; credential reuse of the leaked application is not a permission edge.
+- source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-local-cloud-credentials.md#tokens-in-memory
+  technique: Tokens extracted from process memory
+  source_revision: a66f094ede
+  reason: Needs memory access on a host (runtime state); same principal reused.
+- source: src/pentesting-cloud/azure-security/az-device-registration.md#historical-registering-a-device-with-sso-tokens
+  technique: Registering a device with stolen SSO tokens (historical)
+  source_revision: a66f094ede
+  reason: Documented as historical and fixed by Microsoft; required stolen tokens of the same user.
+- source: src/pentesting-cloud/azure-security/az-device-registration.md#historical-overwriting-a-device-ticket
+  technique: Overwriting a device transport key (historical)
+  source_revision: a66f094ede
+  reason: Documented as historical and fixed by Microsoft; required a vulnerability in device registration.
+- source: src/pentesting-cloud/azure-security/az-device-registration.md#historical-overwrite-whfb-key
+  technique: Overwriting a Windows Hello for Business key (historical)
+  source_revision: a66f094ede
+  reason: Documented as historical and fixed by Microsoft; required a vulnerability and a token of the same user (persistence, not escalation).
+- source: src/pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md#reusable-workflows-and-job_workflow_ref-scoping
+  technique: Federated credential subjects scoped to reusable workflows
+  source_revision: a66f094ede
+  reason: The source is an external GitHub workflow identity, not a tenant principal; the FIC subject is not matched against repository contents in the snapshot.
+- source: src/pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md#code-execution-vectors-that-bypass-job_workflow_ref-protections
+  technique: Code execution in CI that satisfies a federated credential subject
+  source_revision: a66f094ede
+  reason: Needs write or pull-request access to an external repository and its workflow contents; outside the Azure configuration graph.
+- source: src/pentesting-cloud/azure-security/az-basic-information/az-federation-abuse.md#terraform-plan-as-an-execution-primitive-in-prs
+  technique: Terraform plan in pull requests as a CI execution primitive
+  source_revision: a66f094ede
+  reason: Needs pull-request access to an external repository; outside the Azure configuration graph.

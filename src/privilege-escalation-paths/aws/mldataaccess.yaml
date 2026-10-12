@@ -75,3 +75,89 @@
   references:
     - https://docs.aws.amazon.com/finspace/latest/management-api/API_CreateKxCluster.html
   notes: Documentation-grounded; Managed kdb environments are rare. CreateKxUser/UpdateKxUser role binding is not modelled.
+
+- id: aws-kafkaconnect-passrole-createconnector
+  provider: aws
+  service: kafkaconnect
+  title: Create an MSK Connect connector with a passed service execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles trusting kafkaconnect.amazonaws.com by running connector plugin code it controls in MSK Connect workers that carry that role.
+  requires:
+    any_of:
+      - - action: iam:PassRole
+          resource: "{target.arn}"
+        - action: kafkaconnect:CreateConnector
+          resource: "*"
+        - action: kafkaconnect:CreateCustomPlugin
+          resource: "*"
+      - - action: iam:PassRole
+          resource: "{target.arn}"
+        - action: kafkaconnect:CreateConnector
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: kafkaconnect.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting kafkaconnect.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: controlled_plugin_code
+      description: Without kafkaconnect:CreateCustomPlugin, an existing custom plugin whose code the source controls (for example a writable plugin object in S3) is required; AWS-provided connectors alone do not run arbitrary code.
+    - id: plugin_object_readable
+      description: When a new custom plugin is registered, its code object must be stored in S3 at a location readable for plugin creation.
+    - id: reachable_kafka_cluster
+      description: The connector needs a reachable Apache Kafka cluster (MSK or self-managed) and VPC subnets and security groups to attach to.
+    - id: ec2_dependent_actions
+      description: Connector creation also needs EC2 network-interface and VPC/subnet/security-group describe permissions, plus log-delivery permissions if worker logging is configured.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on MSK Connect service execution roles and kafkaconnect:CreateConnector / CreateCustomPlugin to platform administrators, keep connector roles least-privileged, and alert on CreateConnector calls that name an unexpected service execution role.
+  references:
+    - https://docs.aws.amazon.com/msk/latest/developerguide/msk-connect-service-execution-role.html
+    - https://docs.aws.amazon.com/msk/latest/developerguide/mkc-iam-policy-examples.html
+  notes: The page lists MSK Connect in its code-executing table ("Kafka connector plugin"). Connector workers run the plugin's JVM code and use the service execution role for AWS calls, so arbitrary plugin code can act with that role. The second any_of branch covers reuse of an existing attacker-influenced plugin and is gated by the controlled_plugin_code condition.
+
+- id: aws-pcs-getcluster-slurm-secret-node-roles
+  provider: aws
+  service: pcs
+  title: Read a PCS cluster's Slurm authentication or REST JWT signing secret and run jobs on its compute nodes
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-pcs-post-exploitation/README.md#pcsgetcluster-secretsmanagergetsecretvalue--steal-the-slurm-scheduler-authentication-key
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the instance-profile roles of PCS compute node groups by stealing the cluster's PCS-managed Slurm shared key (or Slurm REST JWT signing key) and submitting scheduler work as a forged cluster user.
+  requires:
+    all_of:
+      - action: pcs:GetCluster
+        resource: "arn:aws:pcs:*:{target.account}:cluster/*"
+      - action: secretsmanager:GetSecretValue
+        resource: "arn:aws:secretsmanager:*:{target.account}:secret:pcs!*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      instance_profile_name_prefix_or_path: [AWSPCS, /aws-pcs/]
+    scope: same_account
+    aggregate_as: "PCS compute node instance-profile roles in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: scheduler_reachability
+      description: The source needs network reachability to the cluster's private Slurm scheduler endpoint (or, for the JWT variant, to the private Slurm REST endpoint, which must be enabled in STANDARD mode) and compatible Slurm client tooling.
+    - id: kms_decrypt
+      description: When the PCS secret is protected by a customer managed KMS key, the source also needs kms:Decrypt on that key and the key policy must allow it.
+    - id: node_group_exists
+      description: The cluster must have compute node groups (with a queue) that accept jobs; the reached roles are those of the node groups' instance profiles.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict secretsmanager:GetSecretValue on pcs!-prefixed secrets to cluster administrators, restrict pcs:GetCluster, isolate scheduler and REST endpoints at the network layer, and keep PCS node roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/pcs/latest/userguide/slurm-rest-api-authenticate.html
+  notes: Covers both page sections (Slurm shared-key theft and Slurm REST JWT forging, anchor pcsgetcluster-secretsmanagergetsecretvalue--forge-slurm-rest-jwts); both read a PCS-managed secret whose ARN GetCluster discloses. The secret pattern pcs!* is an account-level approximation because no cluster-to-secret placeholder exists; the role set approximates node-group roles by the PCS instance-profile naming rule, as in aws-pcs-passrole-createcomputenodegroup.

@@ -68,7 +68,7 @@
   service: container_registry
   title: Overwrite a registry image and restart the consuming container group
   source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespushwrite-microsoftcontainerinstancecontainergroupsrestartaction
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: Replacing the image tag a container group pulls and restarting the group runs attacker code with the group's managed identities.
   requires:
     all_of:
@@ -77,8 +77,23 @@
     any_of:
       - - action: Microsoft.ContainerRegistry/registries/push/write
           scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/repositories/content/write
+      - - action: Microsoft.ContainerRegistry/registries/repositories/content/read
           data_action: true
+          scope: "{pivot}"
+        - action: Microsoft.ContainerRegistry/registries/repositories/content/write
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/listCredentials/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/regenerateCredential/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/generateCredentials/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/importImage/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/taskruns/write
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/scheduleRun/action
           scope: "{pivot}"
   pivot_resource_type: Microsoft.ContainerRegistry/registries
   target:
@@ -92,11 +107,69 @@
       description: The container group must pull a mutable tag (not a digest) from registry {pivot}; the image-to-registry link is not evaluated.
     - id: registry_write_allowed
       description: The tag must not be locked (writeEnabled false) and the registry network rules must allow the push.
+    - id: tag_write_path
+      description: listCredentials and regenerateCredential need the admin user enabled; generateCredentials needs an existing token whose scope map allows push to the consumed repository; importImage must force-overwrite the existing tag; taskruns/write and scheduleRun push through a build run.
   blockers:
     - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Pin consumer images by digest, lock production tags, and restrict AcrPush / repository content write and containerGroups/restart/action.
+  mitigation: Pin consumer images by digest, lock production tags, disable the registry admin user, and restrict AcrPush / repository content write, import, task-run and containerGroups/restart/action.
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-lock
-  notes: data_action form applies to registries using ABAC repository permissions.
+  notes: The repository content pair (both read and write are required for the manifest PUT) applies to registries using ABAC repository permissions. Consumers that only re-pull on their own (scale-out, node replacement, scheduled jobs) are not modelled because the image-to-registry consumer link is not a selector yet.
+
+- id: azure-acr-push-restart-containerapp-consumer
+  provider: azure
+  service: container_registry
+  title: Overwrite a registry image and restart the consuming Container App revision
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#mutable-image-tag-poisoning-with-repository-content-permissions
+  source_revision: a66f094ede
+  summary: Replacing the mutable tag a Container App pulls and restarting its revision runs attacker code with the app's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.App/containerApps/revisions/restart/action
+        scope: "{target.host_resource}"
+    any_of:
+      - - action: Microsoft.ContainerRegistry/registries/push/write
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/repositories/content/read
+          data_action: true
+          scope: "{pivot}"
+        - action: Microsoft.ContainerRegistry/registries/repositories/content/write
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/listCredentials/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/regenerateCredential/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/generateCredentials/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/importImage/action
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/taskruns/write
+          scope: "{pivot}"
+      - - action: Microsoft.ContainerRegistry/registries/scheduleRun/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.ContainerRegistry/registries
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.App/containerApps
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Container App {target.host_resource}"
+  conditions:
+    - id: app_pulls_mutable_tag_from_pivot
+      description: The active revision must reference a mutable tag (not a digest) from registry {pivot}; the image-to-registry link is not evaluated.
+    - id: registry_write_allowed
+      description: The tag must not be locked (writeEnabled false) and the registry network rules must allow the push.
+    - id: tag_write_path
+      description: listCredentials and regenerateCredential need the admin user enabled; generateCredentials needs an existing token whose scope map allows push to the consumed repository; importImage must force-overwrite the existing tag; taskruns/write and scheduleRun push through a build run.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Pin Container App images by digest, lock production tags, disable the registry admin user, and restrict repository write paths and revisions/restart/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-rbac-abac-repository-permissions
+    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-tag-version
+  notes: HackTricks observed that replacing the tag does not hot-reload the running revision, while a revision restart pulled the new digest and ran it with the app identity.

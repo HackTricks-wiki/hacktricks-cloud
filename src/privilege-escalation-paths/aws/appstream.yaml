@@ -8,202 +8,252 @@
   service: appstream
   title: Open a streaming session on an existing fleet that has an IAM role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreatestreamingurl--enter-an-existing-fleet-under-its-machine-role
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM role of existing AppStream fleets associated with a stack it can create streaming URLs for.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the IAM role of existing AppStream fleets associated with a stack
+    it can create streaming URLs for.
   requires:
     all_of:
-      - action: appstream:CreateStreamingURL
-        resource: "*"
+    - action: appstream:CreateStreamingURL
+      resource: '*'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       via_resource_type: appstream_fleet
     scope: same_account
-    aggregate_as: "IAM roles of AppStream fleets in {account}"
+    aggregate_as: IAM roles of AppStream fleets in {account}
+    outcome: workload_execution
   conditions:
-    - id: stack_fleet_association
-      description: The fleet must be running and associated with a stack; CreateStreamingURL authorizes the stack ARN (the edge is computed only for grants covering "*").
-    - id: session_can_reach_credentials
-      description: The streamed application or desktop must let the user run code or reach the instance's role credential profile; locked-down application-only stacks with restricted file system and clipboard settings may prevent it.
-    - id: application_allowed
-      description: Fleets using Elastic or application-mode streaming need an application the user is allowed to launch.
+  - id: stack_fleet_association
+    description: The fleet must be running and associated with a stack; CreateStreamingURL authorizes the stack
+      ARN (the edge is computed only for grants covering "*").
+  - id: session_can_reach_credentials
+    description: The streamed application or desktop must let the user run code or reach the instance's role credential
+      profile; locked-down application-only stacks with restricted file system and clipboard settings may prevent
+      it.
+  - id: application_allowed
+    description: Fleets using Elastic or application-mode streaming need an application the user is allowed to launch.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict appstream:CreateStreamingURL to the identity broker, attach least-privilege roles to fleets and prefer SAML or user-pool access with entitlements over API-minted streaming URLs.
+  severity: critical
+  mitigation: Restrict appstream:CreateStreamingURL to the identity broker, attach least-privilege roles to fleets
+    and prefer SAML or user-pool access with entitlements over API-minted streaming URLs.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateStreamingURL.html
-    - https://docs.aws.amazon.com/appstream2/latest/developerguide/using-iam-roles-to-grant-permissions-to-applications-scripts-streaming-instances.html
-  notes: Fleet instances expose the fleet IamRoleArn through the appstream_machine_role credential profile. Fleet-to-stack association is not collected, so every role trusting appstream.amazonaws.com is reported with unknown attachment.
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateStreamingURL.html
+  - https://docs.aws.amazon.com/appstream2/latest/developerguide/using-iam-roles-to-grant-permissions-to-applications-scripts-streaming-instances.html
+  notes: Fleet instances expose the fleet IamRoleArn through the appstream_machine_role credential profile. Fleet-to-stack
+    association is not collected, so every role trusting appstream.amazonaws.com is reported with unknown attachment.
+
 
 - id: aws-appstream-createimagebuilderstreamingurl
   provider: aws
   service: appstream
   title: Connect to an existing image builder that has an IAM role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilderstreamingurl--administratorroot-access-to-an-existing-builder
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM role of existing AppStream image builders in Resource scope (image-builder sessions run with administrator access).
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the IAM role of existing AppStream image builders in Resource
+    scope (image-builder sessions run with administrator access).
   requires:
     all_of:
-      - action: appstream:CreateImageBuilderStreamingURL
-        resource: "{target.resource_arn}"
+    - action: appstream:CreateImageBuilderStreamingURL
+      resource: '{target.resource_arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       via_resource_type: appstream_image_builder
     scope: same_account
-    aggregate_as: "IAM roles of AppStream image builders in {account}"
+    aggregate_as: IAM roles of AppStream image builders in {account}
+    outcome: workload_execution
   conditions:
-    - id: builder_running
-      description: The image builder must be running (or startable by the source with appstream:StartImageBuilder) and have an IAM role.
+  - id: builder_running
+    description: The image builder must be running (or startable by the source with appstream:StartImageBuilder)
+      and have an IAM role.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict appstream:CreateImageBuilderStreamingURL to image administrators and do not attach privileged roles to image builders.
+  severity: critical
+  mitigation: Restrict appstream:CreateImageBuilderStreamingURL to image administrators and do not attach privileged
+    roles to image builders.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilderStreamingURL.html
   notes: Image builder inventory is not collected; attachment resolves as unknown.
+
 
 - id: aws-appstream-createappblockbuilderstreamingurl
   provider: aws
   service: appstream
   title: Connect to an existing app block builder that has an IAM role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateappblockbuilderstreamingurl--take-over-an-existing-app-package-builder
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM role of existing AppStream app block builders in Resource scope.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the IAM role of existing AppStream app block builders in Resource
+    scope.
   requires:
     all_of:
-      - action: appstream:CreateAppBlockBuilderStreamingURL
-        resource: "{target.resource_arn}"
+    - action: appstream:CreateAppBlockBuilderStreamingURL
+      resource: '{target.resource_arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       via_resource_type: appstream_app_block_builder
     scope: same_account
-    aggregate_as: "IAM roles of AppStream app block builders in {account}"
+    aggregate_as: IAM roles of AppStream app block builders in {account}
+    outcome: workload_execution
   conditions:
-    - id: builder_running
-      description: The app block builder must be running (or startable by the source) and have an IAM role.
+  - id: builder_running
+    description: The app block builder must be running (or startable by the source) and have an IAM role.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict appstream:CreateAppBlockBuilderStreamingURL to packaging administrators and do not attach privileged roles to app block builders.
+  severity: critical
+  mitigation: Restrict appstream:CreateAppBlockBuilderStreamingURL to packaging administrators and do not attach
+    privileged roles to app block builders.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilderStreamingURL.html
   notes: App block builder inventory is not collected; attachment resolves as unknown.
+
 
 - id: aws-appstream-updateapplication-elastic-fleet
   provider: aws
   service: appstream
   title: Change the launch definition of an application used by an Elastic fleet
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamupdateapplication--poison-an-elastic-fleet-application-launch
-  source_revision: 171e422299
-  summary: The source can obtain (when a user next launches the application) the privileges of the IAM role of fleets that run an application it can update.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain (when a user next launches the application) the privileges of the IAM role of fleets
+    that run an application it can update.
   requires:
     all_of:
-      - action: appstream:UpdateApplication
-        resource: "{target.consumer_input_arn}"
+    - action: appstream:UpdateApplication
+      resource: '{target.consumer_input_arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       consumer_input_writable_via: appstream:UpdateApplication
     scope: same_account
-    aggregate_as: "IAM roles of AppStream fleets running updatable applications in {account}"
+    aggregate_as: IAM roles of AppStream fleets running updatable applications in {account}
+    outcome: workload_execution
   conditions:
-    - id: application_launched
-      description: A user (or the source, through a streaming URL) must launch the application on a fleet that has an IAM role.
-    - id: launch_target_controlled
-      description: The new launch path or parameters must run content the source controls (for example from an app block it can write).
+  - id: application_launched
+    description: A user (or the source, through a streaming URL) must launch the application on a fleet that has
+      an IAM role.
+  - id: launch_target_controlled
+    description: The new launch path or parameters must run content the source controls (for example from an app
+      block it can write).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict appstream:UpdateApplication and app block sources to packaging administrators and attach least-privilege roles to Elastic fleets.
+  severity: critical
+  mitigation: Restrict appstream:UpdateApplication and app block sources to packaging administrators and attach
+    least-privilege roles to Elastic fleets.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateApplication.html
-  notes: "{target.consumer_input_arn} is the AppStream application ARN; the application-to-fleet mapping is not collected."
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateApplication.html
+  notes: '{target.consumer_input_arn} is the AppStream application ARN; the application-to-fleet mapping is not
+    collected.'
+
 
 - id: aws-appstream-updatefleet-image-swap
   provider: aws
   service: appstream
-  title: Replace the image of an existing fleet that keeps its IAM role
+  title: Replace an existing AppStream fleet image or session-script archive while retaining its role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamupdatefleet--replace-an-existing-fleet-image-while-retaining-its-role
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the IAM role of existing fleets in Resource scope by pointing them at an image it controls.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the IAM role privileges of an existing fleet by supplying a controlled image or
+    session-script archive that runs on later fleet instances.
   requires:
     all_of:
-      - action: appstream:UpdateFleet
-        resource: "{target.resource_arn}"
+    - action: appstream:UpdateFleet
+      resource: '{target.resource_arn}'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       via_resource_type: appstream_fleet
     scope: same_account
-    aggregate_as: "IAM roles of AppStream fleets in {account}"
+    aggregate_as: IAM roles of AppStream fleets in {account}
+    outcome: workload_execution
   conditions:
-    - id: controlled_image
-      description: The source needs an image it controls (built through an image builder or shared to the account).
-    - id: code_runs_on_instance
-      description: The image must run the source's code on fleet instances (startup scripts, session scripts or a streaming session).
+  - id: controlled_image_or_script
+    description: The source must provide an image it controls, or an S3 session-script ZIP readable by AppStream
+      in the fleet account and Region.
+  - id: session_trigger
+    description: The fleet must launch an instance or user session so the controlled image or session script runs.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict appstream:UpdateFleet to fleet administrators, restrict image sharing into the account and monitor image changes on fleets with roles.
+  severity: critical
+  mitigation: Restrict appstream:UpdateFleet on fleets with IAM roles, validate images and session-script S3 objects,
+    and monitor changes to fleet image and session-script settings.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateFleet.html
-  notes: Changing IamRoleArn in the same call would also need iam:PassRole (covered by the PassRole entry).
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateFleet.html
+  notes: The same UpdateFleet permission and fleet-role target cover both image substitution and an Elastic fleet
+    session-script location change. The session-script variant is documented at aws-persistence/aws-appstream-persistence/README.md#appstreamupdatefleet--s3--recurring-system-session-scripts-on-an-existing-elastic-fleet.
+    A role swap instead requires iam:PassRole.
+
 
 - id: aws-appstream-passrole-createimagebuilder-createfleet
   provider: aws
   service: appstream
   title: Create an image builder or fleet with a passed role and stream into it
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
-  source_revision: 171e422299
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of any passable role trusting appstream.amazonaws.com.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    - action: iam:PassRole
+      resource: '{target.arn}'
     any_of:
-      - - action: appstream:CreateImageBuilder
-          resource: "*"
-        - action: appstream:CreateImageBuilderStreamingURL
-          resource: "*"
-      - - action: appstream:CreateFleet
-          resource: "*"
-        - action: appstream:CreateStack
-          resource: "*"
-        - action: appstream:AssociateFleet
-          resource: "*"
-        - action: appstream:CreateStreamingURL
-          resource: "*"
+    - - action: appstream:CreateImageBuilder
+        resource: '*'
+      - action: appstream:CreateImageBuilderStreamingURL
+        resource: '*'
+    - - action: appstream:CreateFleet
+        resource: '*'
+      - action: appstream:CreateStack
+        resource: '*'
+      - action: appstream:AssociateFleet
+        resource: '*'
+      - action: appstream:CreateStreamingURL
+        resource: '*'
+    - - action: appstream:CreateAppBlockBuilder
+        resource: '*'
+      - action: appstream:CreateAppBlockBuilderStreamingURL
+        resource: '*'
+    - - action: appstream:UpdateFleet
+        resource: '*'
+      - action: appstream:CreateStreamingURL
+        resource: '*'
+    - - action: appstream:UpdateAppBlockBuilder
+        resource: '*'
+      - action: appstream:CreateAppBlockBuilderStreamingURL
+        resource: '*'
   target:
     kind: aws_role
     selector:
       trust_allows_service: appstream.amazonaws.com
       resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting appstream.amazonaws.com passable in {account}"
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: image_and_network
-      description: An available image and VPC subnet/security group the source may use are required; the fleet path can reuse an existing stack instead of CreateStack/AssociateFleet.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: image_and_network
+    description: An available image and VPC subnet/security group the source may use are required; the fleet path
+      can reuse an existing stack instead of CreateStack/AssociateFleet.
+  - id: update_existing
+    description: The UpdateFleet and UpdateAppBlockBuilder alternatives need an existing fleet (associated with
+      a stack the source can stream from) or app block builder in scope, and set its role to the passed one.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on AppStream roles with iam:PassedToService and specific role ARNs; limit image builder and fleet creation to AppStream administrators.
+  mitigation: Restrict iam:PassRole on AppStream roles with iam:PassedToService and specific role ARNs; limit image
+    builder and fleet creation to AppStream administrators.
   references:
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilder.html
-    - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateFleet.html
-  notes: Reach is roles trusting appstream.amazonaws.com in PassRole scope.
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateFleet.html
+  notes: 'Reach is roles trusting appstream.amazonaws.com in PassRole scope. Alternatives: new image builder, new
+    fleet with stack, new app block builder, or an existing fleet / app block builder repointed to the passed role.'

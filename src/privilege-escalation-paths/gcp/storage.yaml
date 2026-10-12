@@ -47,12 +47,14 @@
   service: storage
   title: Self-grant write on a Composer environment bucket through the bucket IAM policy
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of the service account of every Composer environment whose bucket IAM policy it controls.
   requires:
-    all_of:
-      - action: storage.buckets.setIamPolicy
-        resource: "{target.host_resource.content_storage}"
+    any_of:
+      - - action: storage.buckets.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+      - - action: storage.managedFolders.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
   target:
     kind: gcp_service_account
     selector:
@@ -65,7 +67,9 @@
     - id: allowed_member_domains
       description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
     - id: blind_replace
-      description: setIamPolicy alone replaces the whole bucket policy; a non-destructive read-modify-write also needs storage.buckets.getIamPolicy. Managed-folder setIamPolicy on the dags/ prefix gives the same object write under that prefix.
+      description: setIamPolicy alone replaces the whole bucket policy; a non-destructive read-modify-write also needs storage.buckets.getIamPolicy.
+    - id: managed_folder
+      description: The managed-folder alternative needs a uniform-access bucket with a managed folder covering the dags/ prefix; it grants object write only under that prefix.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
@@ -75,7 +79,7 @@
   confidence: derived
   severity: critical
   mitigation: Restrict storage.buckets.setIamPolicy (roles/storage.admin) on Composer and other code-bearing buckets.
-  notes: The same self-grant also enables the (race-conditional) function source and App Engine staging bucket techniques; the engine should treat bucket setIamPolicy as implying object write for every bucket-write entry.
+  notes: Dataproc staging and unpinned Cloud Build StorageSource consumers are modelled by gcp-storage-buckets-setiampolicy-code-consumers; function source and App Engine staging bucket techniques are race-conditional and not duplicated here.
 
 - id: gcp-storage-cloudbuild-unpinned-storagesource-poison
   provider: gcp
@@ -114,3 +118,40 @@
     - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.builds/retry
     - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
   notes: No cloudbuild.builds.create or actAs is needed when another principal or automation starts or retries the vulnerable build. The build identity can be a user-specified SA, the Compute Engine default SA or the legacy Cloud Build SA.
+
+- id: gcp-storage-buckets-setiampolicy-code-consumers
+  provider: gcp
+  service: storage
+  title: Self-grant object write on a bucket whose code a Dataproc cluster or an unpinned Cloud Build source consumes
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of Dataproc clusters or Cloud Build builds that load code from a bucket whose IAM policy (or managed-folder policy) it controls, by granting itself object write and replacing the consumed object.
+  requires:
+    any_of:
+      - - action: storage.buckets.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+      - - action: storage.managedFolders.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service:
+        - dataproc_cluster
+        - cloudbuild_unpinned_storage_source
+    scope: any
+    aggregate_as: "SAs of workloads loading code from buckets whose IAM the source controls"
+  conditions:
+    - id: followup_replace
+      description: The self-granted role must include storage.objects.create and storage.objects.delete so the consumed object can be replaced (see gcp-dataproc-staging-object-replace and gcp-storage-cloudbuild-unpinned-storagesource-poison); a later job, node startup or build must load it by name without a pinned generation.
+    - id: blind_replace
+      description: setIamPolicy alone replaces the whole policy; a non-destructive read-modify-write also needs the matching getIamPolicy permission.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.buckets.setIamPolicy and storage.managedFolders.setIamPolicy on buckets that hold code, staging artifacts or build sources.
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions

@@ -802,3 +802,245 @@
   references:
     - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateOpenIDConnectProvider.html
   notes: Needs the account's OIDC provider inventory (iam:ListOpenIDConnectProviders); without it the targets are unresolved placeholders.
+
+- id: aws-iam-enable-attacker-mfa-device-other-user
+  provider: aws
+  service: iam
+  title: Enrol an attacker-controlled virtual MFA device on another user and mint its credentials
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamcreatevirtualmfadevice-iamenablemfadevice-and-the-target-users-access-keys
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain MFA-authenticated sessions of IAM users on which it can enable a virtual MFA device it created and create access keys or a console password, including users whose permissions are gated on MFA or whose console sign-in is protected by MFA.
+  requires:
+    all_of:
+      - action: iam:CreateVirtualMFADevice
+        resource: "arn:aws:iam::{target.account}:mfa/*"
+      - action: iam:EnableMFADevice
+        resource: "{target.arn}"
+    any_of:
+      - - action: iam:CreateAccessKey
+          resource: "{target.arn}"
+      - - action: iam:CreateLoginProfile
+          resource: "{target.arn}"
+      - - action: iam:UpdateLoginProfile
+          resource: "{target.arn}"
+  target:
+    kind: aws_user
+    selector:
+      resource_permission_covers_target: iam:EnableMFADevice
+    scope: same_account
+    aggregate_as: IAM users on which the source can enrol its own MFA device and mint credentials in {account}
+    outcome: credentials
+  conditions:
+    - id: mfa_device_limit
+      description: An IAM user can hold at most eight MFA devices; a user already at the limit also needs iam:DeactivateMFADevice on the target.
+    - id: credential_state
+      description: CreateAccessKey needs fewer than two existing keys (or iam:DeleteAccessKey); CreateLoginProfile needs the user to have no console password; UpdateLoginProfile needs an existing one.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:EnableMFADevice and iam:CreateVirtualMFADevice to self-service on the caller's own user (aws:username), and alert on a second MFA enrolment for a user that already has one.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_EnableMFADevice.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateVirtualMFADevice.html
+    - https://docs.aws.amazon.com/STS/latest/APIReference/API_GetSessionToken.html
+  notes: Complements aws-iam-createaccesskey-other-user / aws-iam-createloginprofile-other-user / aws-iam-updateloginprofile-other-user by removing their MFA caveats (aws:MultiFactorAuthPresent-gated policies and MFA-protected console sign-in). GetSessionToken needs no IAM permission. The page notes the technique needs the target's access keys; the any_of supplies the credential-creation half that makes it reachable from configuration alone.
+
+- id: aws-iam-deactivate-mfa-loginprofile-other-user
+  provider: aws
+  service: iam
+  title: Remove another user's MFA device and set its console password
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamuploadsshpublickey--iamdeactivatemfadevice
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain console access as MFA-protected IAM users by deactivating their MFA device and creating or resetting their console password.
+  requires:
+    all_of:
+      - action: iam:DeactivateMFADevice
+        resource: "{target.arn}"
+    any_of:
+      - - action: iam:CreateLoginProfile
+          resource: "{target.arn}"
+      - - action: iam:UpdateLoginProfile
+          resource: "{target.arn}"
+  target:
+    kind: aws_user
+    selector:
+      resource_permission_covers_target: iam:DeactivateMFADevice
+    scope: same_account
+    aggregate_as: IAM users whose MFA the source can remove and whose password it can set in {account}
+    outcome: credentials
+  conditions:
+    - id: all_devices_removed
+      description: Every MFA device of the target must be deactivated (one DeactivateMFADevice per device serial) before password-only sign-in works.
+    - id: login_profile_state
+      description: CreateLoginProfile needs the user to have no console password; UpdateLoginProfile needs an existing one.
+    - id: mfa_gated_permissions_lost
+      description: Permissions conditioned on aws:MultiFactorAuthPresent are not usable from the resulting password-only session.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict iam:DeactivateMFADevice and login-profile management on other users to break-glass administrators and alert on DeactivateMFADevice.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_DeactivateMFADevice.html
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateLoginProfile.html
+  notes: Lifts the target_mfa condition of aws-iam-createloginprofile-other-user / aws-iam-updateloginprofile-other-user. DeactivateMFADevice alone (password unknown) stays out of scope.
+
+- id: aws-iam-updateuser-path-move-self-policy
+  provider: aws
+  service: iam
+  title: Move the source user into an IAM path where it can edit user policies
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateuser--iamupdategroup--moving-the-target-into-a-path-you-already-control
+  source_revision: 6fb9ac51fd
+  summary: The source IAM user can obtain administrator privileges by changing its own path into one where it holds path-scoped iam:AttachUserPolicy or iam:PutUserPolicy and then granting itself a policy.
+  requires:
+    all_of:
+      - action: iam:UpdateUser
+        resource: "{source.arn}"
+    any_of:
+      - - action: iam:AttachUserPolicy
+          resource: "arn:aws:iam::{source.account}:user/*"
+      - - action: iam:PutUserPolicy
+          resource: "arn:aws:iam::{source.account}:user/*"
+  target:
+    kind: aws_account_admin
+    selector:
+      same_as_source: true
+      source_kind: aws_user
+    scope: same_account
+    aggregate_as: Administrator of {account} (self-escalation via path move)
+    outcome: permission_grant
+  conditions:
+    - id: new_path_covered
+      description: iam:UpdateUser is authorized on both the current and the new user ARN, and the policy-edit permission must cover the source at its new path; the evaluator only checks that some user path is covered.
+    - id: policyarn_condition
+      description: An iam:PolicyARN condition limiting attachable policies removes or limits the AttachUserPolicy variant.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Treat iam:UpdateUser as a privileged permission; do not scope IAM policy-edit permissions by path when principals can change their own path.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateUser.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html
+  notes: Policy-edit counterpart of aws-iam-updateuser-path-move (which models credential creation on a moved victim). If the source already holds the policy permission on its current ARN, aws-iam-attachuserpolicy-self / putuserpolicy-self apply directly.
+
+- id: aws-iam-updategroup-path-move-self-policy
+  provider: aws
+  service: iam
+  title: Move one of the source's groups into an IAM path where it can edit group policies
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateuser--iamupdategroup--moving-the-target-into-a-path-you-already-control
+  source_revision: 6fb9ac51fd
+  summary: The source IAM user can obtain administrator privileges by moving one of its groups into a path where it holds path-scoped iam:AttachGroupPolicy or iam:PutGroupPolicy and then granting the group a policy.
+  requires:
+    all_of:
+      - action: iam:UpdateGroup
+        resource: "{source.group_arn}"
+    any_of:
+      - - action: iam:AttachGroupPolicy
+          resource: "arn:aws:iam::{source.account}:group/*"
+      - - action: iam:PutGroupPolicy
+          resource: "arn:aws:iam::{source.account}:group/*"
+  target:
+    kind: aws_account_admin
+    selector:
+      same_as_source: true
+      source_kind: aws_user
+      source_group_covered_by: iam:UpdateGroup
+    scope: same_account
+    aggregate_as: Administrator of {account} (self-escalation via group path move)
+    outcome: permission_grant
+  conditions:
+    - id: new_path_covered
+      description: iam:UpdateGroup is authorized on both the current and the new group ARN, and the policy-edit permission must cover the group at its new path; the evaluator only checks that some group path is covered.
+    - id: policyarn_condition
+      description: An iam:PolicyARN condition limiting attachable policies removes or limits the AttachGroupPolicy variant.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Treat iam:UpdateGroup as a privileged permission and avoid path-scoped group policy-edit grants.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateGroup.html
+  notes: '{source.group_arn} is one of the source user''s groups. Policy-edit counterpart of aws-iam-updategroup-path-move (which models joining a moved group).'
+
+- id: aws-iam-rolepermissionsboundary-assumable-role
+  provider: aws
+  service: iam
+  title: Replace or remove the permissions boundary of a role the source can assume
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamputrolepermissionsboundary
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the full identity-policy privileges of a boundary-capped role it can assume by replacing or removing that role's permissions boundary.
+  requires:
+    any_of:
+      - - action: iam:PutRolePermissionsBoundary
+          resource: "{source.assumable_role_arn}"
+      - - action: iam:DeleteRolePermissionsBoundary
+          resource: "{source.assumable_role_arn}"
+  target:
+    kind: aws_account_admin
+    selector:
+      via_assumable_role_covered_by: iam:PutRolePermissionsBoundary
+    scope: same_account
+    aggregate_as: Administrator of {account} (via an assumable role's boundary)
+    outcome: scope_control
+  conditions:
+    - id: unbounded_identity_policy_is_admin
+      description: Only an escalation if the assumable role currently has a boundary and its identity policies are broader than it; reaching admin requires those identity policies to be admin-equivalent.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Explicitly deny iam:Put/DeleteRolePermissionsBoundary for delegated administrators on roles they can assume, and require boundaries via iam:PermissionsBoundary conditions.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
+  notes: Assumable-role counterpart of aws-iam-putrolepermissionsboundary-self (whose notes say this edge was not modelled). via_assumable_role_covered_by applies to whichever any_of action matched.
+
+- id: aws-iam-createrole-satisfy-cross-account-trust
+  provider: aws
+  service: iam
+  title: Create a role in a trusted account to satisfy another account's role trust
+  source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/iam-trust-and-federation-attacks.md#path-name-and-arn-conditions
+  source_revision: 6fb9ac51fd
+  summary: A principal that can create and grant permissions to a role in its own account can obtain the privileges of roles in other accounts whose trust delegates to that account (account root, or Principal "*" filtered by aws:PrincipalArn path/name patterns), even without holding sts:AssumeRole itself.
+  requires:
+    all_of:
+      - action: iam:CreateRole
+        resource: "arn:aws:iam::{source.account}:role/*"
+        bind: new_role
+        request_context:
+          iam:PermissionsBoundary: {absent: true}
+    any_of:
+      - - action: iam:PutRolePolicy
+          resource: "arn:aws:iam::{source.account}:role/*"
+          bind: new_role
+      - - action: iam:AttachRolePolicy
+          resource: "arn:aws:iam::{source.account}:role/*"
+          bind: new_role
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_principal_of_source: true
+    scope: any
+    aggregate_as: "Roles in other accounts trusting {account} that a newly created role can satisfy"
+    outcome: credentials
+  conditions:
+    - id: principal_arn_pattern_matchable
+      description: Trusts filtered with aws:PrincipalArn (ArnLike path or name patterns, or a deleted-and-recreatable role name) are satisfied only when CreateRole/PutRolePolicy cover a role path and name matching the pattern.
+    - id: trust_names_specific_principal
+      description: Trusts that name a specific existing principal ARN in Principal (stored as its unique id) cannot be satisfied by a new role; those targets are false positives of this entry.
+    - id: other_trust_conditions
+      description: ExternalId, MFA, aws:PrincipalOrgID, source IP/VPC or tag conditions on the trust must also be satisfiable by the new role session.
+    - id: new_role_identity_policy
+      description: The source writes the new role's identity policy allowing sts:AssumeRole on the target; a permissions boundary forced on CreateRole or an SCP deny on sts:AssumeRole blocks it.
+  preconditions:
+    - target_in_other_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Trust specific role ARNs in Principal instead of account roots or "*" with aws:PrincipalArn patterns, require iam:PermissionsBoundary on iam:CreateRole in trusted accounts, and pin cross-account trusts to aws:PrincipalOrgID plus exact role ARNs.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
+  notes: Complements aws-sts-assumerole-trusted (which needs sts:AssumeRole on the target in the source's own policy) and aws-iam-createrole-attach-assume (same-account admin). Same-account targets are left to aws-iam-createrole-attach-assume through target_in_other_account. A role trusting the source's account root, or "*" with an aws:PrincipalArn condition, is satisfiable by any new role in that account; trust conditions keep the edge conditional.

@@ -500,7 +500,7 @@
   service: rbac
   title: Bind a powerful Role or ClusterRole inside a namespace
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the ServiceAccounts in the namespace by binding a role that grants workload or token control there.
   requires:
     all_of: []
@@ -553,6 +553,16 @@
           resource: rolebindings
           api_group: rbac.authorization.k8s.io
           namespace: "{target.namespace}"
+      # ClusterRoleBinding variant: bind on a (non-admin-equivalent) ClusterRole granted cluster-wide plus
+      # clusterrolebindings writes; the bound ClusterRole then applies in every namespace.
+      - - verb: bind
+          resource: clusterroles
+          api_group: rbac.authorization.k8s.io
+          namespace: "*"
+        - any_of:
+            - {verb: create, resource: clusterrolebindings, api_group: rbac.authorization.k8s.io, namespace: "*"}
+            - {verb: update, resource: clusterrolebindings, api_group: rbac.authorization.k8s.io, namespace: "*"}
+            - {verb: patch, resource: clusterrolebindings, api_group: rbac.authorization.k8s.io, namespace: "*"}
   target:
     kind: k8s_service_account
     selector:
@@ -568,7 +578,7 @@
   mitigation: Restrict bind with resourceNames to low-privilege roles and avoid granting rolebinding writes to tenants.
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
-  notes: A RoleBinding grants a referenced ClusterRole's rules only inside its own namespace. The update/patch groups only apply to existing RoleBindings.
+  notes: A RoleBinding grants a referenced ClusterRole's rules only inside its own namespace. The update/patch groups only apply to existing RoleBindings or ClusterRoleBindings. The ClusterRoleBinding group covers bind on ClusterRoles that are not admin-equivalent (admin-equivalent ones are k8s-rbac-bind-clusterrolebinding-cluster-admin); the bound ClusterRole's rules then reach ServiceAccounts in every namespace (a66f094ede).
 
 - id: k8s-rbac-escalate-bound-clusterrole
   provider: k8s
@@ -700,28 +710,23 @@
   service: certificates
   title: Issue and approve a client certificate for an existing username
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of any user (or ServiceAccount username) that has RBAC bindings by self-approving a kube-apiserver-client certificate for it.
   requires:
     all_of:
-      - verb: create
-        resource: certificatesigningrequests
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: get
-        resource: certificatesigningrequests
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: update
-        resource: certificatesigningrequests
-        subresource: approval
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: approve
-        resource: signers
-        api_group: certificates.k8s.io
-        namespace: "*"
-        resource_name: "kubernetes.io/kube-apiserver-client"
+      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      # Read the issued certificate back (status.certificate).
+      - any_of:
+          - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: list, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: watch, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: patch, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+      # The signer check also accepts the domain wildcard resourceName.
+      - any_of:
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client"}
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/*"}
   target:
     kind: k8s_user
     selector:
@@ -746,28 +751,23 @@
   service: certificates
   title: Issue and approve a client certificate carrying groups
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of RBAC-bound groups (other than system:masters) by self-approving a kube-apiserver-client certificate with those organizations.
   requires:
     all_of:
-      - verb: create
-        resource: certificatesigningrequests
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: get
-        resource: certificatesigningrequests
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: update
-        resource: certificatesigningrequests
-        subresource: approval
-        api_group: certificates.k8s.io
-        namespace: "*"
-      - verb: approve
-        resource: signers
-        api_group: certificates.k8s.io
-        namespace: "*"
-        resource_name: "kubernetes.io/kube-apiserver-client"
+      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      # Read the issued certificate back (status.certificate).
+      - any_of:
+          - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: list, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: watch, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: patch, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+      # The signer check also accepts the domain wildcard resourceName.
+      - any_of:
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client"}
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/*"}
   target:
     kind: k8s_group
     selector:
@@ -793,7 +793,7 @@
   service: rbac
   title: Create a ServiceAccount referenced by an existing binding but missing
   source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-missing-service-account.md#missing-service-account
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges granted to a non-existent ServiceAccount name by creating it (and its namespace if missing) and then using it.
   requires:
     all_of:
@@ -801,10 +801,23 @@
         resource: serviceaccounts
         namespace: "{target.namespace}"
     any_of:
-      - - {verb: create, resource: pods, namespace: "{target.namespace}"}
+      # Run a workload as the recreated ServiceAccount (pod or any pod-creating controller).
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{target.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{target.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{target.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
       - - {verb: create, resource: serviceaccounts, subresource: token, namespace: "{target.namespace}"}
+      # Legacy token Secret for the recreated ServiceAccount, then read it back.
       - - {verb: create, resource: secrets, namespace: "{target.namespace}"}
-        - {verb: get, resource: secrets, namespace: "{target.namespace}"}
+        - any_of:
+            - {verb: get, resource: secrets, namespace: "{target.namespace}"}
+            - {verb: list, resource: secrets, namespace: "{target.namespace}"}
+            - {verb: watch, resource: secrets, namespace: "{target.namespace}"}
   target:
     kind: k8s_service_account
     selector:
@@ -821,7 +834,7 @@
   mitigation: Remove bindings and SCC users entries whose ServiceAccount (or namespace) no longer exists.
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects
-  notes: Applies to vanilla Kubernetes too (RBAC subjects are matched by name, not UID). The target is the binding subject name; the evaluator should synthesize a virtual k8s_service_account node for each subject that does not exist in the snapshot, carrying the bound privileges.
+  notes: Applies to vanilla Kubernetes too (RBAC subjects are matched by name, not UID). The target is the binding subject name; the evaluator should synthesize a virtual k8s_service_account node for each subject that does not exist in the snapshot, carrying the bound privileges. Controller creates are alternatives to pods create (the book requires "a way to use the account, such as permission to create a workload under it"); list/watch return Secret data like get (a66f094ede).
 
 - id: k8s-rbac-secrets-read-argocd-cluster-credential
   provider: k8s
@@ -860,17 +873,32 @@
   service: rbac
   title: Create the missing namespace and ServiceAccount named by a binding or SCC
   source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-missing-service-account.md#missing-service-account
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges granted to a ServiceAccount whose namespace does not exist by creating that namespace and ServiceAccount and then running as it.
   requires:
     all_of: []
     any_of:
       - - {verb: create, resource: namespaces, namespace: "*"}
         - {verb: create, resource: serviceaccounts, namespace: "*"}
-        - {verb: create, resource: pods, namespace: "*"}
+        - any_of:
+            - {verb: create, resource: pods, namespace: "*"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "*"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "*"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "*"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "*"}
+            - {verb: create, resource: replicationcontrollers, namespace: "*"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "*"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "*"}
       - - {verb: create, resource: namespaces, namespace: "*"}
         - {verb: create, resource: serviceaccounts, namespace: "*"}
         - {verb: create, resource: serviceaccounts, subresource: token, namespace: "*"}
+      - - {verb: create, resource: namespaces, namespace: "*"}
+        - {verb: create, resource: serviceaccounts, namespace: "*"}
+        - {verb: create, resource: secrets, namespace: "*"}
+        - any_of:
+            - {verb: get, resource: secrets, namespace: "*"}
+            - {verb: list, resource: secrets, namespace: "*"}
+            - {verb: watch, resource: secrets, namespace: "*"}
       - - {verb: create, resource: projectrequests, api_group: project.openshift.io, namespace: "*"}
   target:
     kind: k8s_service_account

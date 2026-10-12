@@ -76,3 +76,38 @@
   references:
     - https://docs.aws.amazon.com/m2/latest/APIReference/API_StartBatchJob.html
   notes: No iam:PassRole is checked at StartBatchJob; the application role was authorized when the application was created.
+
+- id: aws-m2-updateapplication-deploy-existing-role
+  provider: aws
+  service: m2
+  title: Deploy a modified M2 application version under its existing role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-mainframe-modernization-persistence/README.md#m2updateapplication---store-a-malicious-application-version-for-later-deployment
+  source_revision: 6fb9ac51fd
+  summary: The source can use the authority of an existing M2 application's role by deploying an attacker-controlled application version.
+  requires:
+    all_of:
+      - action: m2:UpdateApplication
+        resource: "{target.resource_arn}"
+      - action: m2:CreateDeployment
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: m2.amazonaws.com
+      via_resource_type: m2_application
+    scope: same_account
+    aggregate_as: Roles of updatable M2 applications in {account}
+    outcome: workload_execution
+  conditions:
+    - id: deploy_environment
+      description: The source must also be authorized on the target runtime environment for CreateDeployment; a stopped application needs StartApplication.
+    - id: valid_runtime_definition
+      description: The modified definition and referenced artifacts must be valid and readable by M2, and the application must execute code that can use its role's authority.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit m2:UpdateApplication and CreateDeployment to controlled deployment pipelines and review new application versions before activation.
+  references:
+    - https://docs.aws.amazon.com/m2/latest/APIReference/API_UpdateApplication.html
+  notes: UpdateApplication alone stores an inert version; CreateDeployment activates it. M2 application-role attachment is not collected, so the evaluator may fall back to roles trusting m2.amazonaws.com.

@@ -65,3 +65,37 @@
     - https://learn.microsoft.com/en-us/azure/synapse-analytics/spark/apache-spark-manage-pool-packages
     - https://learn.microsoft.com/en-us/azure/synapse-analytics/synapse-service-identity
   notes: Only the workspace system-assigned identity and user-assigned identities on the workspace are modelled; user-session credentials are not.
+
+- id: azure-synapse-rogue-shir-linked-service-credentials
+  provider: azure
+  service: synapse
+  title: Register a rogue Synapse self-hosted integration runtime node and receive linked-service credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#rogue-self-hosted-integration-runtime-node-synapse
+  source_revision: a66f094ede
+  summary: A self-hosted integration runtime node registered with a Synapse runtime auth key executes pipeline activities with the stored linked-service credentials, which can include service-principal secrets.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Synapse/workspaces/integrationRuntimes/listAuthKeys/action
+          scope: '{pivot}'
+      - - action: Microsoft.Synapse/workspaces/integrationRuntimes/regenerateAuthKey/action
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.Synapse/workspaces
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in linked services of {pivot}
+  conditions:
+    - id: linked_service_uses_sp_secret_on_shir
+      description: Only linked services that authenticate with a service-principal secret or certificate and connect through that self-hosted runtime are exposed; other credential types are data access only.
+    - id: activity_runs_on_rogue_node
+      description: An activity using the linked service must be dispatched to the rogue node while it is registered.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict integration runtime listAuthKeys and regenerateAuthKey, alert on new runtime node registrations, and store linked-service secrets in Key Vault with managed-identity access.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-factory/create-self-hosted-integration-runtime
+  notes: Same primitive as azure-datafactory-rogue-shir-linked-service-credentials. getConnectionInfo and syncCredentials are recon and credential-sync helpers; regenerateAuthKey also evicts legitimate nodes.

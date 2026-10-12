@@ -61,3 +61,67 @@
   severity: high
   mitigation: Restrict grafana:CreateWorkspaceServiceAccount and CreateWorkspaceServiceAccountToken and inventory workspace service accounts and tokens.
   notes: Token vending alone (CreateWorkspaceServiceAccountToken for an existing service account) reaches only that account's Grafana role, which is not modelled as ADMIN; ADMIN is guaranteed only with CreateWorkspaceServiceAccount.
+
+- id: aws-grafana-updateworkspaceauthentication-saml-admin
+  provider: aws
+  service: grafana
+  title: Add an attacker-controlled SAML administrator to an existing Grafana workspace
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md#grafanaupdateworkspaceauthentication--attacker-controlled-saml-idp
+  source_revision: 6fb9ac51fd
+  summary: The source can gain Grafana administrator access to a workspace through a SAML identity provider it controls.
+  requires:
+    all_of:
+      - action: grafana:UpdateWorkspaceAuthentication
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:UpdateWorkspaceAuthentication
+    scope: same_account
+    aggregate_as: Managed Grafana workspace administrators in {account}
+    outcome: application_admin
+    grants: [Grafana ADMIN]
+  conditions:
+    - id: saml_assertions
+      description: The source must control valid SAML metadata and assertions mapped to the workspace ADMIN role and be able to reach its endpoint.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workspace authentication updates and alert on SAML metadata and administrator role-mapping changes.
+  references:
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdateWorkspaceAuthentication.html
+  notes: The grant is limited to Grafana's application plane and configured data sources; it does not issue IAM credentials.
+
+- id: aws-grafana-updatepermissions-sso-admin
+  provider: aws
+  service: grafana
+  title: Grant a controlled Identity Center identity Grafana administrator access
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md#grafanaupdatepermissions--iam-identity-center-administrator
+  source_revision: 6fb9ac51fd
+  summary: The source can gain Grafana administrator access to a workspace by granting ADMIN to a controlled Identity Center user or group.
+  requires:
+    all_of:
+      - action: grafana:UpdatePermissions
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:UpdatePermissions
+    scope: same_account
+    aggregate_as: Managed Grafana workspace administrators in {account}
+    outcome: application_admin
+    grants: [Grafana ADMIN]
+  conditions:
+    - id: controlled_sso_identity
+      description: The workspace must enable IAM Identity Center and the source must control an existing user or group member that can authenticate to it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict grafana:UpdatePermissions and review ADMIN grants to users and groups in each workspace.
+  references:
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdatePermissions.html
+  notes: The grant is limited to Grafana's application plane; an individual or group still needs a valid Identity Center sign-in.

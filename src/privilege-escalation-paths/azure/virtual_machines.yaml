@@ -267,7 +267,7 @@
   service: virtual_machines
   title: Attach a user-assigned identity to an existing VM the source can execute code on
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachineswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: Adding a user-assigned identity to a VM where the source already has code execution exposes that identity's tokens via IMDS.
   requires:
     all_of:
@@ -306,7 +306,59 @@
   mitigation: Restrict userAssignedIdentities/assign/action and virtualMachines/write; alert on identity changes on VMs.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
-  notes: ""
+  notes: Conditional code-execution routes (customData re-provisioning, Serial Console, VM Applications, OS disk swap, guest configuration) are modelled by azure-vm-assign-user-assigned-identity-indirect-exec.
+
+- id: azure-vm-assign-user-assigned-identity-indirect-exec
+  provider: azure
+  service: virtual_machines
+  title: Attach a user-assigned identity to an existing VM and run code through an indirect guest route
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachineswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: a66f094ede
+  summary: Adding a user-assigned identity to a VM and reaching the guest through customData re-provisioning, Serial Console, a VM Application, an OS disk swap or a guest configuration assignment exposes that identity's tokens via IMDS.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.Compute/virtualMachines/write
+        scope: "{pivot}"
+    any_of:
+      - - action: Microsoft.Compute/virtualMachines/reimage/action
+          scope: "{pivot}"
+      - - action: Microsoft.Compute/virtualMachines/redeploy/action
+          scope: "{pivot}"
+      - - action: Microsoft.SerialConsole/serialPorts/connect/action
+          scope: "{pivot}"
+        - action: Microsoft.Compute/virtualMachines/restart/action
+          scope: "{pivot}"
+      - - action: Microsoft.Compute/galleries/applications/versions/write
+      - - action: Microsoft.Compute/virtualMachines/deallocate/action
+          scope: "{pivot}"
+        - action: Microsoft.Compute/virtualMachines/start/action
+          scope: "{pivot}"
+        - action: Microsoft.Compute/disks/write
+      - - action: Microsoft.GuestConfiguration/guestConfigurationAssignments/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Compute/virtualMachines
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: route_prerequisites
+      description: Each route keeps the prerequisites of its own entry (azure-vm-customdata-reimage, azure-vm-serial-console-connect, azure-vm-gallery-application-install, azure-vm-os-disk-swap, azure-guestconfiguration-assignment-write), such as cloud-init re-provisioning, boot diagnostics and a guest recovery path, a gallery application in the VM's region, a compatible attacker disk, or the guest configuration extension.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and virtualMachines/write; alert on identity changes on VMs together with reimage, Serial Console, applicationProfile, OS disk and guest configuration changes.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/custom-data
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/vm-applications-how-to
+  notes: Split from azure-vm-assign-user-assigned-identity-existing so the conditional routes do not raise the confidence of the direct run-command / extension / login routes. The gallery application and disk requirements carry no scope because the gallery or disk can be any one the source can write (or create).
 
 - id: azure-vmss-vm-runcommand-action
   provider: azure
