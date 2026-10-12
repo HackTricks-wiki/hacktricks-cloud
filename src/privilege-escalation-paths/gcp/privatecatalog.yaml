@@ -35,3 +35,31 @@
   references:
     - https://docs.cloud.google.com/service-catalog/docs/create-solutions
   notes: Deployment Manager solutions run as the consumer project's Google APIs Service Agent (roles/editor by default), like gcp-deploymentmanager-deployments-create.
+- id: gcp-privatecatalog-terraform-version-poison
+  provider: gcp
+  service: cloudprivatecatalogproducer
+  title: Poison a Terraform solution deployed by a consumer
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-private-catalog-privesc.md#cloudprivatecatalogproducerproductsupdate--poison-an-existing-deployable-solution-version
+  summary: Product-version update can cause a later consumer deployment to execute attacker content as its Cloud
+    Build identity.
+  requires:
+    all_of:
+    - action: cloudprivatecatalogproducer.products.update
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-privatecatalog-terraform-version-poison
+    scope: any
+  conditions:
+  - id: terraform_consumer_deploys
+    description: An attached Terraform solution version must be selected for a consumer deployment; its configured
+      or default Cloud Build service account must execute the modified asset and hold privileges beyond the source.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict producer updates and review version assets before consumer deployment.
+  references:
+  - https://docs.cloud.google.com/service-catalog/docs/overview
+  source_revision: 0b36331
+  notes: Exact source/resource/target evidence must be emitted in gcp_privesc_challenge_evidence from the requested
+    collector. Missing evidence is UNKNOWN; do not infer any other service account.

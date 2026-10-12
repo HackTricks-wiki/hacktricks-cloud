@@ -133,3 +133,143 @@
   references:
     - https://cloud.google.com/bigquery/docs/continuous-queries-introduction
   notes: Sibling of gcp-bigquery-transfers-scheduled-query-actas; power is limited to the SA's BigQuery data access plus the configured sink.
+- id: gcp-audit-s01-26-delete-policies-and-deactiva
+  provider: gcp
+  service: bigquery
+  title: Delete policies and deactivate taxonomy enforcement
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerydatapoliciesdelete--datacatalogtaxonomiesupdate--disable-column-level-enforcement
+  summary: The source can gain delete policies and deactivate taxonomy enforcement. Deleting policies and deactivating
+    a taxonomy can expose columns only when every associated policy is deleted and an existing reader has base query
+    rights.
+  requires:
+    all_of:
+    - action: bigquery.dataPolicies.delete
+      resource: '*'
+    - action: datacatalog.taxonomies.update
+      resource: '*'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-audit-s01-26-delete-policies-and-deactiva
+    scope: any
+    aggregate_as: protected-column read entitlement
+  conditions:
+  - id: exact_target_evidence
+    description: Exclusion misses newly unmasked access for existing table readers; both permissions and deletion
+      of every associated data policy are required. Missing target evidence evaluates UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
+  source_revision: 0b36331
+  references:
+  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc/#bigquerydatapoliciesdelete--datacatalogtaxonomiesupdate--disable-column-level-enforcement
+- id: gcp-audit-s01-29-widen-or-delete-row-access-p
+  provider: gcp
+  service: bigquery
+  title: Widen or delete row-access policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryrowaccesspolicies--widen-or-remove-row-level-security
+  summary: The source can gain widen or delete row-access policy. Row policy mutation widens effective rows only
+    for an existing base reader and a concrete policy set.
+  requires:
+    any_of:
+    - - action: bigquery.rowAccessPolicies.create
+        resource: '*'
+      - action: bigquery.rowAccessPolicies.setIamPolicy
+        resource: '*'
+      - action: bigquery.jobs.create
+        resource: '*'
+    - - action: bigquery.rowAccessPolicies.update
+        resource: '*'
+      - action: bigquery.rowAccessPolicies.setIamPolicy
+        resource: '*'
+      - action: bigquery.jobs.create
+        resource: '*'
+    - - action: bigquery.rowAccessPolicies.delete
+        resource: '*'
+      - action: bigquery.rowAccessPolicies.setIamPolicy
+        resource: '*'
+      - action: bigquery.jobs.create
+        resource: '*'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-audit-s01-29-widen-or-delete-row-access-p
+    scope: any
+    aggregate_as: full-row read entitlement
+  conditions:
+  - id: exact_target_evidence
+    description: Exclusion calls it data tamper, but caller with base table read gains rows formerly filtered. Create/update/delete
+      are alternative paths with additional setIamPolicy and jobs.create. Missing target evidence evaluates UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
+  source_revision: 0b36331
+  references:
+  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc/#bigqueryrowaccesspolicies--widen-or-remove-row-level-security
+- id: gcp-bigquery-job-sql-credential
+  provider: gcp
+  service: bigquery
+  title: Recover API keys or tokens in other users’ SQL and query parameters
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigqueryjobslistall--jobslist-jobsget--read-every-principals-sql-silently
+  source_revision: 0b36331
+  summary: Identity authenticated by valid secret in job metadata; emit only for the exact verified source, resource
+    and target.
+  requires:
+    all_of:
+    - action: bigquery.jobs.listAll
+      resource: '*'
+    - action: bigquery.jobs.list
+      resource: '*'
+    - action: bigquery.jobs.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-bigquery-job-sql-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover API keys or tokens in other users’ SQL and query parameters
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Relevant
+      retained job; secret literal or parameter present; target identity and validity verified. INFORMATION_SCHEMA
+      alternative needs jobs.listAll+jobs.create.
+  confidence: conditional
+  severity: high
+  mitigation: Limit bigquery.jobs.listAll to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigqueryjobslistall--jobslist-jobsget--read-every-principals-sql-silently
+- id: gcp-bigquery-table-row-credential
+  provider: gcp
+  service: bigquery
+  title: Read BigQuery table rows
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigquerytablesgetdata--paginate-an-entire-table-without-running-a-query
+  source_revision: 0b36331
+  summary: Usable token or secret in table row; emit only for the exact verified source, resource and target.
+  requires:
+    all_of:
+    - action: bigquery.tables.getData
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-bigquery-table-row-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Read BigQuery table rows
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      eligible table; row and column policies permit access; a usable credential actually appears in returned cells
+      and maps to a target principal.
+  confidence: conditional
+  severity: high
+  mitigation: Limit bigquery.tables.getData to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigquerytablesgetdata--paginate-an-entire-table-without-running-a-query

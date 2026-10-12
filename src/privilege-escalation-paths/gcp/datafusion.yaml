@@ -11,37 +11,41 @@
   title: Deploy and run a code-capable Data Fusion pipeline as the pipeline VM service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-data-fusion-privesc.md#create-and-execute-a-pipeline-as-its-configured-vm-service-account
   source_revision: 171e422
-  summary: The source can obtain the privileges of the pipeline VM service account of Data Fusion instances where it can create and execute pipelines (PySpark / Scala Spark plugins run arbitrary code on the Dataproc cluster).
+  summary: The source can obtain the privileges of the pipeline VM service account of Data Fusion instances where
+    it can create and execute pipelines (PySpark / Scala Spark plugins run arbitrary code on the Dataproc cluster).
   requires:
     all_of:
-      - action: datafusion.instances.get
-        resource: "{target.host_resource}"
-      - action: datafusion.pipelines.create
-        resource: "{target.host_resource}"
-      - action: datafusion.pipelines.execute
-        resource: "{target.host_resource}"
+    - action: datafusion.instances.get
+      resource: '{target.host_resource}'
+    - action: datafusion.namespaces.get
+      resource: '{target.host_resource}'
+    - action: datafusion.pipelines.create
+      resource: '{target.host_resource}'
+    - action: datafusion.pipelines.execute
+      resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: datafusion_instance
     scope: same_project
-    aggregate_as: "Pipeline VM SAs of Data Fusion instances where the source can run pipelines"
+    aggregate_as: Pipeline VM SAs of Data Fusion instances where the source can run pipelines
   conditions:
-    - id: plugin_installed
-      description: A code-capable plugin (PySpark Program, Scala Spark) must be installed; uploading one needs datafusion.artifacts.create/update.
-    - id: valid_compute_profile
-      description: The Data Fusion service agent must already be able to act as the profile's SA; no caller actAs is needed.
-    - id: namespace_scope
-      description: Pipeline permissions may be granted per namespace on RBAC-enabled instances.
+  - id: plugin_installed
+    description: A code-capable plugin (PySpark Program, Scala Spark) must be installed; uploading one needs datafusion.artifacts.create/update.
+  - id: valid_compute_profile
+    description: The Data Fusion service agent must already be able to act as the profile's SA; no caller actAs
+      is needed.
+  - id: namespace_scope
+    description: Pipeline permissions may be granted per namespace on RBAC-enabled instances.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict roles/datafusion.developer and higher; use a low-privilege pipeline SA per compute profile instead of the Compute Engine default SA.
+  mitigation: Restrict roles/datafusion.developer and higher; use a low-privilege pipeline SA per compute profile
+    instead of the Compute Engine default SA.
   references:
-    - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
-    - https://docs.cloud.google.com/data-fusion/docs/concepts/service-accounts
-
+  - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
+  - https://docs.cloud.google.com/data-fusion/docs/concepts/service-accounts
 - id: gcp-datafusion-setiampolicy-self-grant
   provider: gcp
   service: datafusion

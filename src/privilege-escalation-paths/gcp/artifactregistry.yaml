@@ -165,3 +165,71 @@
   severity: medium
   mitigation: Restrict artifactregistry.repositories.update (roles/artifactregistry.admin, roles/editor) and pin package versions with hashes.
   notes: HackTricks frames this as a persistence method; the escalation depends on a consumer installing after the change. The variant of a remote repository pointed at an attacker-controlled upstream URL (persistence page) additionally needs artifactregistry.repositories.create and only matters once a consumed virtual repository lists it as an upstream, which is this same update permission.
+- id: gcp-artifactregistry-download-credential
+  provider: gcp
+  service: artifactregistry
+  title: Recover credentials embedded in Artifact Registry package or image
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md#artifactregistryrepositoriesdownloadartifacts--inspect-stored-artifacts-for-sensitive-data
+  source_revision: 0b36331
+  summary: Identity authenticated by a valid embedded secret; emit only for the exact verified source, resource
+    and target.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.downloadArtifacts
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-artifactregistry-download-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover credentials embedded in Artifact Registry package or image
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      artifact coordinate and repository access; inspect bytes and verify secret-to-principal binding. No automatic
+      consumer SA edge.
+  confidence: conditional
+  severity: high
+  mitigation: Limit artifactregistry.repositories.downloadArtifacts to trusted operators and monitor the target-specific
+    use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md#artifactregistryrepositoriesdownloadartifacts--inspect-stored-artifacts-for-sensitive-data
+- id: gcp-artifactregistry-export-credential
+  provider: gcp
+  service: artifactregistry
+  title: Export Artifact Registry artifact to storage
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md#artifactregistryrepositoriesexportartifacts--copy-an-artifact-to-cloud-storage
+  source_revision: 0b36331
+  summary: Usable credential embedded in exported artifact; emit only for the exact verified source, resource and
+    target.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.exportArtifacts
+      resource: '*'
+    - action: storage.objects.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-artifactregistry-export-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Export Artifact Registry artifact to storage
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      artifact; accepted destination writable by backend and readable by attacker; artifact contains valid credential
+      mapped to principal.
+  confidence: conditional
+  severity: high
+  mitigation: Limit artifactregistry.repositories.exportArtifacts to trusted operators and monitor the target-specific
+    use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md#artifactregistryrepositoriesexportartifacts--copy-an-artifact-to-cloud-storage

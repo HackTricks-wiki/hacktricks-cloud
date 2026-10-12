@@ -527,66 +527,75 @@
   title: Create or update a pod-template workload that runs as a chosen Kubernetes service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#workload-and-pod-create--update-permissions
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of every Kubernetes service account (and, through Workload Identity, the Google service accounts bound to them) in GKE clusters where GKE IAM lets it create pods or create/update pod-template controllers.
+  summary: The source can obtain the privileges of every Kubernetes service account (and, through Workload Identity,
+    the Google service accounts bound to them) in GKE clusters where GKE IAM lets it create pods or create/update
+    pod-template controllers.
   requires:
     any_of:
-      - - action: container.pods.create
-          resource: "{target.scope}"
-      - - action: container.deployments.create
-          resource: "{target.scope}"
-      - - action: container.daemonSets.create
-          resource: "{target.scope}"
-      - - action: container.jobs.create
-          resource: "{target.scope}"
-      - - action: container.cronJobs.create
-          resource: "{target.scope}"
-      - - action: container.statefulSets.create
-          resource: "{target.scope}"
-      - - action: container.replicaSets.create
-          resource: "{target.scope}"
-      - - action: container.replicationControllers.create
-          resource: "{target.scope}"
-      - - action: container.deployments.update
-          resource: "{target.scope}"
-      - - action: container.daemonSets.update
-          resource: "{target.scope}"
-      - - action: container.statefulSets.update
-          resource: "{target.scope}"
-      - - action: container.cronJobs.update
-          resource: "{target.scope}"
-      - - action: container.jobs.update
-          resource: "{target.scope}"
-      - - action: container.replicaSets.update
-          resource: "{target.scope}"
-      - - action: container.replicationControllers.update
-          resource: "{target.scope}"
+    - - action: container.pods.create
+        resource: '{target.scope}'
+    - - action: container.deployments.create
+        resource: '{target.scope}'
+    - - action: container.daemonSets.create
+        resource: '{target.scope}'
+    - - action: container.jobs.create
+        resource: '{target.scope}'
+    - - action: container.cronJobs.create
+        resource: '{target.scope}'
+    - - action: container.statefulSets.create
+        resource: '{target.scope}'
+    - - action: container.replicaSets.create
+        resource: '{target.scope}'
+    - - action: container.replicationControllers.create
+        resource: '{target.scope}'
+    - - action: container.deployments.update
+        resource: '{target.scope}'
+    - - action: container.daemonSets.update
+        resource: '{target.scope}'
+    - - action: container.statefulSets.update
+        resource: '{target.scope}'
+    - - action: container.cronJobs.update
+        resource: '{target.scope}'
+    - - action: container.jobs.update
+        resource: '{target.scope}'
+    - - action: container.replicaSets.update
+        resource: '{target.scope}'
+    - - action: container.replicationControllers.update
+        resource: '{target.scope}'
   target:
     kind: k8s_service_account
     selector:
       k8s_sa_in_cluster: true
     scope: cluster
-    aggregate_as: "KSAs selectable in pod templates of GKE cluster {target.scope}"
+    aggregate_as: KSAs selectable in pod templates of GKE cluster {target.scope}
   conditions:
-    - id: ksa_rbac
-      description: The reached privileges are the Kubernetes RBAC of each KSA and, with Workload Identity Federation for GKE, the Google service accounts that grant roles/iam.workloadIdentityUser to that KSA member.
-    - id: token_mounted
-      description: The pod must receive a KSA token (automountServiceAccountToken not disabled for that pod, or a projected token volume) or use the GKE metadata server for Workload Identity.
-    - id: admission
-      description: Admission policies (Pod Security, Policy Controller, Binary Authorization) may reject the workload or the chosen KSA / image.
-    - id: api_server_reachable
-      description: The API server must be reachable (or Connect Gateway access).
+  - id: ksa_rbac
+    description: The reached privileges are the Kubernetes RBAC of each KSA and, with Workload Identity Federation
+      for GKE, the Google service accounts that grant roles/iam.workloadIdentityUser to that KSA member.
+  - id: token_mounted
+    description: The pod must receive a KSA token (automountServiceAccountToken not disabled for that pod, or a
+      projected token volume) or use the GKE metadata server for Workload Identity.
+  - id: admission
+    description: Admission policies (Pod Security, Policy Controller, Binary Authorization) may reject the workload
+      or the chosen KSA / image.
+  - id: api_server_reachable
+    description: The API server must be reachable (or Connect Gateway access).
   blockers:
-    - gcp_deny_policy
-    - pod_security_admission
-    - admission_policy
+  - gcp_deny_policy
+  - pod_security_admission
+  - admission_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict container.pods.create and pod-controller create/update permissions (roles/container.developer and above), avoid privileged KSAs, and grant roles/iam.workloadIdentityUser only to dedicated KSAs in namespaces untrusted principals cannot write to.
+  mitigation: Restrict container.pods.create and pod-controller create/update permissions (roles/container.developer
+    and above), avoid privileged KSAs, and grant roles/iam.workloadIdentityUser only to dedicated KSAs in namespaces
+    untrusted principals cannot write to.
   references:
-    - https://kubernetes.io/docs/concepts/security/service-accounts/
-    - https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
-  notes: GKE IAM authorizes the request without separate Kubernetes RBAC, so this edge is not visible to the in-cluster k8s catalog. container.pods.update alone only swaps an existing Pod's image and keeps its KSA; it is left out here (node SA path in gcp-container-pod-template-node-sa). The KSA -> Google SA step is the k8s catalog edge k8s-cloud-gke-workload-identity.
-
+  - https://kubernetes.io/docs/concepts/security/service-accounts/
+  - https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+  notes: GKE IAM authorizes the request without separate Kubernetes RBAC, so this edge is not visible to the in-cluster
+    k8s catalog. container.pods.update alone only swaps an existing Pod image and keeps its KSA; that narrower existing-pod
+    KSA credential path is gcp-container-pods-update-running-ksa. The node SA path remains gcp-container-pod-template-node-sa.
+    The KSA -> Google SA step is the k8s catalog edge k8s-cloud-gke-workload-identity.
 - id: gcp-container-namespaced-rbac-ksa
   provider: gcp
   service: container
@@ -691,3 +700,65 @@
   confidence: conditional
   severity: high
   mitigation: Restrict node proxy and isolate privileged workload service accounts.
+- id: gcp-container-pods-update-running-ksa
+  provider: gcp
+  service: container
+  title: Reach the KSA of an existing pod by changing its container image
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#workload-and-pod-create--update-permissions
+  source_revision: 0b36331
+  summary: A pod image update can execute attacker code with the existing running pod’s mounted KSA token.
+  requires:
+    all_of:
+    - action: container.pods.update
+      resource: '{target.scope}'
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_used_by_running_pod: true
+    scope: cluster
+    outcome: credentials
+  conditions:
+  - id: existing_pod
+    description: A running pod using this KSA must have a mutable container image and an available token; the update
+      cannot change its KSA.
+  - id: admission
+    description: Admission and Binary Authorization must allow the replacement image.
+  - id: api_server
+    description: The source must reach the cluster API server.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict GKE pod update on namespaces with privileged KSAs and enforce image admission.
+  references:
+  - https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/
+  - https://kubernetes.io/docs/concepts/security/service-accounts/
+- id: gcp-container-pods-attach-running-ksa
+  provider: gcp
+  service: container
+  title: Use attach to control an interactive process in a running pod
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containerpodsattach
+  source_revision: 0b36331
+  summary: An attach-capable source can issue commands as the pod KSA only when its existing process accepts useful
+    stdin.
+  requires:
+    all_of:
+    - action: container.pods.attach
+      resource: '{target.scope}'
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_used_by_running_pod: true
+      gcp_challenge_fact: gcp-container-pods-attach-running-ksa
+    scope: cluster
+    outcome: credentials
+  conditions:
+  - id: interactive_process
+    description: A running container process must accept attacker-controlled stdin and permit commands that expose
+      its token.
+  - id: api_server
+    description: Cluster API and attach stream must be reachable.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict pod attach and avoid interactive privileged containers.
+  references:
+  - https://kubernetes.io/docs/reference/kubectl/generated/kubectl_attach/
+  notes: Must remain UNKNOWN until the collector supplies an attach-usable process fact joined to the pod and KSA.
