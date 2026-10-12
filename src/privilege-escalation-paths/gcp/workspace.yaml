@@ -341,3 +341,36 @@
   - https://knowledge.workspace.google.com/admin/users/recovering-administrator-access-to-your-account
   notes: Distinct from gcp-workspace-cloud-dns-admin-recovery, which requires record-write permissions initially; this
     path obtains those permissions through a zone IAM self-grant.
+- id: gcp-workspace-cloud-dns-zone-policy-recovery
+  provider: gcp
+  service: dns
+  title: Self-grant zone DNS write and publish a Workspace recovery challenge
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-dns-enum.md#gcp---cloud-dns
+  summary: Managed-zone policy write can grant record-write permissions used in Workspace administrator recovery.
+  pivot_resource_type: dns_managed_zone
+  requires:
+    all_of:
+    - action: dns.managedZones.setIamPolicy
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_super_admin_of_zone_domain
+    scope: any
+    outcome: impersonation
+    aggregate_as: Workspace super administrators of domains served by {pivot}
+  conditions:
+  - id: recovery_process
+    description: Google administrator recovery must accept the DNS challenge for the tenant; this is an external
+      process, not a guaranteed result.
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict managed-zone policy writes on Workspace domains.
+  source_revision: 0b36331
+  blockers:
+  - gcp_deny_policy
+  references:
+  - https://docs.cloud.google.com/dns/docs/access-control
+  - https://docs.cloud.google.com/dns/docs/reference/rest/v1/managedZones/setIamPolicy
+  notes: Only zone-scoped roles/dns.admin on the authoritative managed zone is assumed; this grants the record-write
+    actions needed by gcp-workspace-cloud-dns-admin-recovery. No project-wide DNS grant is inferred.

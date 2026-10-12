@@ -9,36 +9,53 @@
   title: Create an Eventarc Advanced pipeline that sends a service account's OAuth token to an attacker endpoint
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-eventarc-privesc.md#eventarcpipelinescreate--iamserviceaccountsactas--receive-an-oauth-token-for-a-service-account
   source_revision: 171e422
-  summary: The source can obtain an access token, and so the privileges, of any service account on which it holds iam.serviceAccounts.actAs, by routing bus events through a pipeline whose HTTPS destination it controls.
+  summary: The source can obtain an access token, and so the privileges, of any service account on which it
+    holds iam.serviceAccounts.actAs, by routing bus events through a pipeline whose HTTPS destination it controls.
   requires:
     all_of:
-      - action: eventarc.pipelines.create
-        resource: "*"
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+    - action: eventarc.pipelines.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+    any_of:
+    - - action: eventarc.enrollments.create
+        resource: '*'
+      - action: eventarc.messageBuses.use
+        resource: '*'
+    - - action: eventarc.enrollments.update
+        resource: '*'
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
-    aggregate_as: "Service accounts usable as Eventarc pipeline OAuth identity in {project}"
+    aggregate_as: Service accounts usable as Eventarc pipeline OAuth identity in {project}
   conditions:
-    - id: enrollment
-      description: The source must also route bus events into the pipeline, with eventarc.enrollments.create plus eventarc.messageBuses.use on the bus, or eventarc.enrollments.update on an existing enrollment (create/use are not in the permission catalog, so this is kept as a condition).
-    - id: service_agent_token
-      description: The pipeline project's Eventarc service agent needs iam.serviceAccounts.getAccessToken on the SA (roles/eventarc.serviceAgent supplies it for same-project SAs; cross-project SAs need an explicit grant).
-    - id: matching_event
-      description: At least one matching event must traverse the enrollment (a legitimate event, or one injected with eventarc.messageBuses.publish); enrollment, pipeline and bus must share a region.
-    - id: reachable_receiver
-      description: The attacker HTTPS endpoint must be reachable from Eventarc (internal endpoints need a network attachment); Google's guidance to use OAuth only for *.googleapis.com is not an enforced host restriction.
+  - id: enrollment
+    description: An enrollment must route a compatible bus to this pipeline in the same region. The update
+      branch requires an existing enrollment that can be repointed; an enrollment with no matching event does
+      not deliver a token.
+  - id: service_agent_token
+    description: The pipeline project's Eventarc service agent needs iam.serviceAccounts.getAccessToken on
+      the SA (roles/eventarc.serviceAgent supplies it for same-project SAs; cross-project SAs need an explicit
+      grant).
+  - id: matching_event
+    description: At least one matching event must traverse the enrollment (a legitimate event, or one injected
+      with eventarc.messageBuses.publish); enrollment, pipeline and bus must share a region.
+  - id: reachable_receiver
+    description: The attacker HTTPS endpoint must be reachable from Eventarc (internal endpoints need a network
+      attachment); Google's guidance to use OAuth only for *.googleapis.com is not an enforced host restriction.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: critical
-  mitigation: Grant actAs only on dedicated Eventarc SAs, restrict eventarc.pipelines.create and enrollments, and alert on pipelines with non-googleapis.com OAuth destinations.
+  mitigation: Grant actAs only on dedicated Eventarc SAs, restrict eventarc.pipelines.create and enrollments,
+    and alert on pipelines with non-googleapis.com OAuth destinations.
   references:
-    - https://docs.cloud.google.com/eventarc/docs/reference/rest/v1/projects.locations.pipelines
-    - https://docs.cloud.google.com/eventarc/advanced/docs/access-control
-  notes: The token scope defaults to cloud-platform. roles/eventarc.developer lacks actAs and messageBuses.use. Standard-trigger OIDC tokens are audience-bound and not modelled.
+  - https://docs.cloud.google.com/eventarc/docs/reference/rest/v1/projects.locations.pipelines
+  - https://docs.cloud.google.com/eventarc/advanced/docs/access-control
+  notes: The token scope defaults to cloud-platform. roles/eventarc.developer lacks actAs and messageBuses.use.
+    Standard-trigger OIDC tokens are audience-bound and not modelled. Enrollment-create/bus-use or enrollment-update
+    is an IAM prerequisite, not merely a descriptive condition.
