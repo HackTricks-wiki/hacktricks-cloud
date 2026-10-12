@@ -1154,10 +1154,21 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
         if kind == "aws_verified_authority" and not selector.get("aws_challenge_fact"):
             errors.append(f"{where}: aws_verified_authority needs selector aws_challenge_fact")
+        if str(entry.get("id", "")).startswith("aws-v3-") and not selector.get("aws_challenge_fact"):
+            errors.append(f"{where}: AWS v3 challenge entries need an exact evidence selector")
         if kind == "aws_challenge_foothold":
             errors.append(f"{where}: aws_challenge_foothold is a source kind, not a target")
         if selector.get("aws_challenge_fact") and selector["aws_challenge_fact"] != entry.get("id"):
             errors.append(f"{where}: aws_challenge_fact must equal the technique id")
+        if selector.get("aws_challenge_fact"):
+            if kind not in ("aws_role", "aws_user", "aws_verified_authority"):
+                errors.append(f"{where}: aws_challenge_fact needs an IAM role/user or bounded authority target")
+            if entry.get("confidence") != "conditional":
+                errors.append(f"{where}: aws_challenge_fact must remain conditional")
+            if entry.get("source_kind") == "aws_challenge_foothold" and not re.fullmatch(
+                    r"aws_challenge_foothold:\*:(anonymous|runtime|local|application|endpoint)",
+                    str((entry.get("source_selector") or {}).get("source_id_glob", ""))):
+                errors.append(f"{where}: challenge foothold source must be restricted to one class")
         for key, wanted in (("k8s_secret_holds_cloud_credential", "cloud_identity"),
                             ("k8s_secret_holds_remote_cluster_credential", "k8s_remote_cluster"),
                             ("k8s_node_hosting_pod_of_source", "k8s_node"), ("k8s_sa_used_by_pending_pod", "k8s_service_account"),

@@ -132,8 +132,10 @@ def main():
         if len(errors) > 50:
             print(f'... {len(errors) - 50} more errors', file=sys.stderr)
         return 1
+    evidence_bound = sum(entry.get('id', '').startswith('aws-v3-') for entry in result['entries'])
     print(f"Privilege-escalation paths are valid: {len(result['files'])} files, "
-          f"{len(result['entries'])} techniques, {result['excluded']} reviewed exclusions")
+          f"{len(result['entries'])} techniques, {result['excluded']} reviewed exclusions, "
+          f"{evidence_bound} evidence-bound AWS challenge techniques")
     return 0
 
 
