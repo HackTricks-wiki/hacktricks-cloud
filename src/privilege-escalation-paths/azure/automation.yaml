@@ -432,3 +432,70 @@
   references:
     - https://learn.microsoft.com/en-us/azure/automation/shared-resources/variables
   notes: Same consumer-dependent class as azure-automation-trigger-existing-runbook; overwriting an encrypted variable with a known value is a side effect, not an identity gain.
+- id: azure-automation-job-output-credential
+  provider: azure
+  service: automation
+  title: Read tokens and credentials from prior Automation job output
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#harvest-secrets-from-prior-job-output-and-streams
+  source_revision: 0b36331
+  summary: Read a verified usable credential from historical Automation job output and gain its Entra service principal
+    permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Automation/automationAccounts/jobs/read
+      scope: '{pivot}'
+    any_of:
+    - - action: Microsoft.Automation/automationAccounts/jobs/output/read
+        scope: '{pivot}'
+    - - action: Microsoft.Automation/automationAccounts/jobs/streams/read
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: Draft requires azure.automation.job_output_credential_holders; the evaluator must join only verified holders,
+    and return UNKNOWN if that fact is missing or incomplete.
+- id: azure-automation-runbook-source-credential
+  provider: azure
+  service: automation
+  title: Read hardcoded credentials from runbook source
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#read-runbook-source-for-hardcoded-secrets
+  source_revision: 0b36331
+  summary: Read a verified usable credential from published Automation runbook source and gain its Entra service
+    principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Automation/automationAccounts/runbooks/content/read
+      scope: '{pivot}'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: Draft requires azure.automation.runbook_content_credential_holders; the evaluator must join only verified
+    holders, and return UNKNOWN if that fact is missing or incomplete.

@@ -179,3 +179,34 @@
   - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/storage#microsoftstorage
   notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
     evaluate UNKNOWN. Collector fact required: storageAccounts.'
+- id: azure-storage-blob-content-credential
+  provider: azure
+  service: storage
+  title: Read Entra credentials embedded in blobs
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md#microsoftstoragestorageaccountsblobservicescontainersblobsread
+  source_revision: 0b36331
+  summary: Read a verified usable credential from a readable blob and gain its Entra service principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob
+  notes: Draft requires azure.storage.blob_credential_holders; the evaluator must join only verified holders, and
+    return UNKNOWN if that fact is missing or incomplete.

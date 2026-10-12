@@ -29,7 +29,7 @@
       description: The command runs in the launching user's session; reaching the host identity requires IMDS to be reachable from that context (not blocked by host firewall).
   blockers:
     - azure_deny_assignment
-  confidence: unknown
+  confidence: conditional
   severity: high
   mitigation: Restrict Desktop Virtualization Application Group Contributor, alert on application filePath / commandLineArguments changes, and keep session-host identities least-privileged.
   references:
@@ -69,3 +69,35 @@
     - https://learn.microsoft.com/en-us/azure/virtual-desktop/manage-app-groups
     - https://learn.microsoft.com/en-us/azure/virtual-desktop/rbac
   notes: The session-host managed identity half of the same technique is azure-avd-application-write-session-host-rce. Users are those holding Desktop Virtualization User on the application group (directly or through groups).
+- id: azure-avd-appattach-share-overwrite-assigned-user
+  provider: azure
+  service: virtual_desktop
+  title: Overwrite an assigned App Attach image to reach launching users
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md#common-techniques
+  summary: Writing the exact Azure Files image of an App Attach package can run an accepted replacement in a user
+    session when the assigned user launches the app.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/write
+      data_action: true
+      scope: '{pivot}'
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_user
+    selector:
+      azure_challenge_fact: azure-avd-appattach-share-overwrite-assigned-user
+    scope: tenant
+    outcome: credentials
+    aggregate_as: Assigned users of App Attach packages stored on {pivot}
+  conditions:
+  - id: accepted_package_and_user_launch
+    description: The replacement image must pass package certificate trust and an assigned user must launch the
+      application; reusable session tokens are conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to App Attach image shares and verify package signatures and assignments.
+  references:
+  - https://learn.microsoft.com/en-us/azure/virtual-desktop/app-attach-setup
+  - https://learn.microsoft.com/en-us/rest/api/desktopvirtualization/app-attach-package/list-by-subscription?view=rest-desktopvirtualization-2025-10-10
+  notes: Inert until exact azure_avd_appattach_share_bindings evidence is collected. The generic host-managed-identity
+    outcome is azure-v3-09-file-share-overwrite; user sessions need separate target evidence.

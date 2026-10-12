@@ -202,3 +202,34 @@
   - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-roles
   notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
     absent => UNKNOWN.'
+- id: azure-acr-layer-credential
+  provider: azure
+  service: container_registry
+  title: Extract credentials from ACR image layers
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespullread
+  source_revision: 0b36331
+  summary: Read a verified usable credential from an ACR image layer and gain its Entra service principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.ContainerRegistry/registries/pull/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.ContainerRegistry/registries
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-concepts
+  notes: Draft requires azure.acr.image_layer_credential_holders; the evaluator must join only verified holders,
+    and return UNKNOWN if that fact is missing or incomplete.

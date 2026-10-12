@@ -1,0 +1,61 @@
+# Verified Azure audit exclusions.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-vms-persistence.md#backdoor-instances
+  technique: VM userData poisoning consumed by privileged startup code
+  source_revision: 0b36331
+  reason: virtualMachines/write can change userData, but the new bytes execute only if guest provisioning or application
+    code reads and trusts them. The ARM snapshot does not expose that host/application behavior, execution event
+    or credential access; VM extension and reimage paths are separately modeled.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-aks-kubernetes-unauth.md#bearer-identity-tokens
+  technique: Recover accepted bearer identity token
+  source_revision: 0b36331
+  reason: The regex detects JWT-shaped bytes, not a credential. A target edge needs the actual token, accepted issuer
+    and signature, audience, expiry, target principal and effective Kubernetes/Azure grants; those live in public
+    artifact content and live authentication state outside the configuration snapshot.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-aks-kubernetes-unauth.md#kubeconfig-credentials
+  technique: Recover accepted kubeconfig credential
+  source_revision: 0b36331
+  reason: A public kubeconfig is an identity path only if it contains a live bearer token or client certificate
+    plus private key accepted by the cluster and bound to a privileged principal. The page supplies a regex, not
+    the public file bytes, credential validity, cluster reachability or RBAC join; a server URL alone grants nothing.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-api-management-unauth.md#apim-subscription-keys
+  technique: Use leaked APIM product/API subscription key
+  source_revision: 0b36331
+  reason: A real unexpired key can grant product/API calls, but its bytes, enabled subscription and product, API
+    policies and any backend authentication must be verified at runtime. An APIM subscription key is a service data-plane
+    credential, not an Azure/Entra or other catalog principal.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-api-management-unauth.md#developer-portal-self-registration
+  technique: APIM open developer self-registration
+  source_revision: 0b36331
+  reason: Registration can create an APIM developer identity and possibly a product subscription, but approval,
+    product exposure and gateway policy determine access. It grants no Azure/Entra principal or catalog target;
+    the signup result is a live application workflow outside the cloud RBAC snapshot.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-api-management-unauth.md#signup-bypass-even-when-registration-is-disabled
+  technique: APIM signup bypass yields developer account and subscription key
+  source_revision: 0b36331
+  reason: The page describes a live portal signup and CAPTCHA replay, followed by email confirmation and self-subscription.
+    Those runtime steps and product approval are not ARM configuration facts; the result is an APIM developer account/key,
+    not an Azure/Entra principal.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-app-services-functions-unauth.md#azure-sas-urlstokens
+  technique: Leaked signed service URL or SAS
+  source_revision: 0b36331
+  reason: A valid SAS can delegate service-specific data-plane operations, but the regex does not establish signature,
+    expiry, permissions or resource. It does not confer the signer's Azure/Entra identity; a later privileged consumer
+    pivot needs an identified consumer and executable content.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-app-services-functions-unauth.md#dangling-cname-subdomain-takeover
+  technique: Legacy App Service name reclaimed to intercept victim session
+  source_revision: 0b36331
+  reason: 'A dangling CNAME alone does not show the hostname is reclaimable: tenant reservation, secure default
+    hostname and asuid TXT protection must be checked. An Azure user gain also requires a victim to send a usable
+    session to the claimed domain; that future traffic and token validity are not snapshot facts.'
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-app-services-functions-unauth.md#function-host-and-master-keys
+  technique: Leaked Functions master key permits runtime administration
+  source_revision: 0b36331
+  reason: The page distinguishes function, host and master keys, but the regex does not identify a valid master
+    key for a specific app. MI access further needs a reachable runtime admin/file-write path and execution of modified
+    code; key bytes, endpoint response and runtime behavior are not in the configuration snapshot.
+- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-automation-webhooks-unauth.md#automation-webhook-urls
+  technique: Leaked Automation webhook triggers privileged runbook
+  source_revision: 0b36331
+  reason: A complete live webhook URL permits only the configured runbook invocation. An identity gain needs the
+    actual unexpired token, enabled webhook, runbook identity, accepted parameters and code path that performs a
+    caller-controlled privileged action; URL shape and ARM metadata do not establish those runtime facts.
