@@ -1,47 +1,4 @@
 # AWS appconfig privilege escalation techniques.
 # Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
 
-- id: aws-appconfig-passrole-createconfigurationprofile
-  provider: aws
-  service: appconfig
-  title: Read another service's data through a passed AppConfig retrieval role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appconfig-privesc/README.md#appconfigcreateconfigurationprofile--iampassrole--deploymentread-permissions
-  source_revision: 6fb9ac51fd
-  summary: The source can exercise the read privileges of a passable role trusting appconfig.amazonaws.com over Secrets Manager secrets, Parameter Store parameters, SSM documents or S3 objects by making it the retrieval role of an external-source configuration profile it deploys and reads.
-  requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: appconfig:CreateConfigurationProfile
-        resource: "*"
-      - action: appconfig:StartDeployment
-        resource: "*"
-      - action: appconfig:StartConfigurationSession
-        resource: "*"
-      - action: appconfig:GetLatestConfiguration
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: appconfig.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting appconfig.amazonaws.com passable in {account}"
-    outcome: impersonation
-  conditions:
-    - id: bounded_read
-      description: AppConfig uses the retrieval role only to fetch the configured source; the source obtains that source's content, not a role session or arbitrary API calls.
-    - id: known_source_and_version
-      description: The secret, parameter, document or object ARN and a deployable version must be known, and an existing application, environment and deployment strategy must be in scope of the AppConfig actions.
-    - id: kms_decrypt
-      description: The retrieval role also needs kms:Decrypt on the source's customer-managed key when one is used.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict iam:PassRole on AppConfig retrieval roles with iam:PassedToService and exact role ARNs, scope each retrieval role to its own configuration sources, and limit external-source configuration profile creation to AppConfig administrators.
-  references:
-    - https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-configuration-and-profile.html
-  notes: Bounded impact - delegated data read of what the retrieval role can read, not a role session (same modelling as the DataSync bounded PassRole entries). Replaces the exclusion of this heading.
+[]

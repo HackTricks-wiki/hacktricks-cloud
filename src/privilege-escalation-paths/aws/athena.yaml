@@ -7,19 +7,21 @@
   provider: aws
   service: athena
   title: Create an Athena Spark workgroup with a passed execution role and run code in it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreateworkgroup--athenastartsession--run-spark-code-as-an-arbitrary-passed-execution-role
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreateworkgroup--athenastartsession--run-spark-code-as-an-arbitrary-passed-execution-role
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting athena.amazonaws.com by binding it to a new Spark workgroup and running calculations there.
+  summary: The source can obtain the privileges of any passable role trusting athena.amazonaws.com by binding it to a
+    new Spark workgroup and running calculations there.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: athena:CreateWorkGroup
-        resource: "*"
-      - action: athena:StartSession
-        resource: "*"
-      - action: athena:StartCalculationExecution
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: athena:CreateWorkGroup
+      resource: "*"
+    - action: athena:StartSession
+      resource: "*"
+    - action: athena:StartCalculationExecution
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -28,31 +30,34 @@
     scope: same_account
     aggregate_as: "Roles trusting athena.amazonaws.com passable in {account}"
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: spark_region_support
-      description: Athena for Apache Spark must be available in the region.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: spark_region_support
+    description: Athena for Apache Spark must be available in the region.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Restrict iam:PassRole on Athena Spark execution roles with iam:PassedToService=athena.amazonaws.com and restrict athena:CreateWorkGroup to administrators.
+  mitigation: Restrict iam:PassRole on Athena Spark execution roles with iam:PassedToService=athena.amazonaws.com and
+    restrict athena:CreateWorkGroup to administrators.
   references:
-    - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-getting-started.html
-    - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreateWorkGroup.html
+  - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-getting-started.html
+  - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreateWorkGroup.html
   notes: Generic PassRole path independent of existing sessions.
 
 - id: aws-athena-startcalculationexecution-existing-session
   provider: aws
   service: athena
   title: Submit a calculation to an existing Athena Spark session
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenastartcalculationexecution--execute-code-in-an-existing-spark-session
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenastartcalculationexecution--execute-code-in-an-existing-spark-session
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of Spark workgroups in which it can submit calculations to a live session.
+  summary: The source can obtain the privileges of the execution role of Spark workgroups in which it can submit
+    calculations to a live session.
   requires:
     all_of:
-      - action: athena:StartCalculationExecution
-        resource: "{target.resource_arn}"
+    - action: athena:StartCalculationExecution
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -61,58 +66,31 @@
     scope: same_account
     aggregate_as: "Execution roles of Athena Spark workgroups in {account}"
   conditions:
-    - id: live_session
-      description: A session must be active in the workgroup and its ID known to the source; sessions are ephemeral.
+  - id: live_session
+    description: A session must be active in the workgroup and its ID known to the source; sessions are ephemeral.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Scope athena:StartCalculationExecution to the caller's own workgroups and keep Spark execution roles least-privileged.
+  mitigation: Scope athena:StartCalculationExecution to the caller's own workgroups and keep Spark execution roles
+    least-privileged.
   references:
-    - https://docs.aws.amazon.com/athena/latest/APIReference/API_StartCalculationExecution.html
+  - https://docs.aws.amazon.com/athena/latest/APIReference/API_StartCalculationExecution.html
   notes: The action is authorized on the workgroup ARN; no PassRole is needed.
-
-- id: aws-athena-getsessionendpoint-spark-connect
-  provider: aws
-  service: athena
-  title: Obtain the Spark Connect endpoint and token of an active Athena Spark session
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenagetsessionendpoint--take-over-an-active-spark-connect-session
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of Spark workgroups whose active Spark Connect sessions it can attach to.
-  requires:
-    all_of:
-      - action: athena:GetSessionEndpoint
-        resource: "{target.resource_arn}"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: athena.amazonaws.com
-      via_resource_type: athena_workgroup
-    scope: same_account
-    aggregate_as: "Execution roles of Athena Spark workgroups in {account}"
-  conditions:
-    - id: live_spark35_session
-      description: A live Spark 3.5 session must exist in the workgroup and its ID be known to the source.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict athena:GetSessionEndpoint to session owners and keep Spark execution roles least-privileged.
-  references:
-    - https://docs.aws.amazon.com/athena/latest/APIReference/API_GetSessionEndpoint.html
-  notes: The returned bearer token controls the existing session; no PassRole is needed.
 
 - id: aws-athena-createpresignednotebookurl
   provider: aws
   service: athena
   title: Mint a presigned URL for a running Athena Spark notebook
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreatepresignednotebookurl--take-over-a-running-spark-notebook
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreatepresignednotebookurl--take-over-a-running-spark-notebook
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of Spark workgroups whose running notebook sessions it can open.
+  summary: The source can obtain the privileges of the execution role of Spark workgroups whose running notebook
+    sessions it can open.
   requires:
     all_of:
-      - action: athena:CreatePresignedNotebookUrl
-        resource: "{target.resource_arn}"
+    - action: athena:CreatePresignedNotebookUrl
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -121,28 +99,31 @@
     scope: same_account
     aggregate_as: "Execution roles of Athena Spark workgroups in {account}"
   conditions:
-    - id: live_notebook_session
-      description: A live notebook session must exist in the workgroup and its ID be known to the source.
+  - id: live_notebook_session
+    description: A live notebook session must exist in the workgroup and its ID be known to the source.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict athena:CreatePresignedNotebookUrl to notebook owners and keep Spark execution roles least-privileged.
+  mitigation: Restrict athena:CreatePresignedNotebookUrl to notebook owners and keep Spark execution roles
+    least-privileged.
   references:
-    - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreatePresignedNotebookUrl.html
+  - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreatePresignedNotebookUrl.html
   notes: The URL is a bearer credential for the notebook; no PassRole or StartCalculationExecution is needed.
 
 - id: aws-athena-updatenotebook-poison
   provider: aws
   service: athena
   title: Replace the cells of an Athena Spark notebook that is executed later
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-stored-query-privesc/README.md#athenaupdatenotebook--poison-a-spark-notebook-executed-later
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-stored-query-privesc/README.md#athenaupdatenotebook--poison-a-spark-notebook-executed-later
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of Spark workgroups whose notebooks it can rewrite, once those cells are run.
+  summary: The source can obtain the privileges of the execution role of Spark workgroups whose notebooks it can
+    rewrite, once those cells are run.
   requires:
     all_of:
-      - action: athena:UpdateNotebook
-        resource: "{target.resource_arn}"
+    - action: athena:UpdateNotebook
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -151,15 +132,15 @@
     scope: same_account
     aggregate_as: "Execution roles of Athena Spark workgroups in {account}"
   conditions:
-    - id: notebook_runs_later
-      description: An operator or automation must later run the rewritten cells; the update itself executes nothing.
-    - id: known_notebook
-      description: The notebook ID (and session ID for an active notebook) must be known to the source.
+  - id: notebook_runs_later
+    description: An operator or automation must later run the rewritten cells; the update itself executes nothing.
+  - id: known_notebook
+    description: The notebook ID (and session ID for an active notebook) must be known to the source.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict athena:UpdateNotebook to notebook owners and keep Spark execution roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/athena/latest/APIReference/API_UpdateNotebook.html
+  - https://docs.aws.amazon.com/athena/latest/APIReference/API_UpdateNotebook.html
   notes: Authorized on the workgroup ARN, so any known notebook in the workgroup is reachable.

@@ -5,10 +5,11 @@
   provider: aws
   service: apprunner
   title: Create an App Runner service with a passed instance role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#iampassrole-apprunnercreateservice
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#iampassrole-apprunnercreateservice
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by running
-    code it controls in a new App Runner service using that instance role.
+  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by running code
+    it controls in a new App Runner service using that instance role.
   requires:
     all_of:
     - action: iam:PassRole
@@ -43,10 +44,11 @@
   provider: aws
   service: apprunner
   title: Update an existing App Runner service that has an instance role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the instance role of an existing App Runner service by changing
-    its image or start command.
+  summary: The source can obtain the privileges of the instance role of an existing App Runner service by changing its
+    image or start command.
   requires:
     all_of:
     - action: apprunner:UpdateService
@@ -61,8 +63,8 @@
     outcome: workload_execution
   conditions:
   - id: passrole_on_change
-    description: If the update changes the instance role, iam:PassRole is required; keeping the current role does
-      not need it.
+    description: If the update changes the instance role, iam:PassRole is required; keeping the current role does not
+      need it.
   blockers:
   - scp_or_boundary_deny
   confidence: derived
@@ -76,15 +78,17 @@
   provider: aws
   service: apprunner
   title: Repoint an existing App Runner service to a passed instance role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by updating an existing App Runner service to use that instance role together with code or a start command it controls.
+  summary: The source can obtain the privileges of passable roles trusting tasks.apprunner.amazonaws.com by updating an
+    existing App Runner service to use that instance role together with code or a start command it controls.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: apprunner:UpdateService
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: apprunner:UpdateService
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -94,15 +98,45 @@
     aggregate_as: "Roles trusting tasks.apprunner.amazonaws.com passable in {account}"
     outcome: workload_execution
   conditions:
-    - id: existing_service
-      description: At least one existing App Runner service must be covered by apprunner:UpdateService.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: existing_service
+    description: At least one existing App Runner service must be covered by apprunner:UpdateService.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict apprunner:UpdateService to deployment pipelines and iam:PassRole on App Runner instance roles with iam:PassedToService and exact role ARNs.
+  mitigation: Restrict apprunner:UpdateService to deployment pipelines and iam:PassRole on App Runner instance roles
+    with iam:PassedToService and exact role ARNs.
   references:
-    - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
-  notes: Companion of aws-apprunner-updateservice (keeps the existing role, no PassRole); the page notes that changing role-bearing configuration triggers iam:PassRole.
+  - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
+  notes: Companion of aws-apprunner-updateservice (keeps the existing role, no PassRole); the page notes that changing
+    role-bearing configuration triggers iam:PassRole.
+- id: aws-apprunner-plaintext-credential
+  provider: aws
+  service: apprunner
+  title: DescribeService returns plaintext environment credentials
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerdescribeservice--read-plaintext-runtime-variables
+  source_revision: 0b36331
+  summary: A verified exposed AWS credential for another principal can be read by the source.
+  requires:
+    all_of:
+    - action: apprunner:DescribeService
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-apprunner-plaintext-credential
+    scope: same_account
+  conditions:
+  - id: verified_evidence
+    description: The exact usable credential and its newly reachable owner, or service-plane administrator grant, must
+      be verified; absent evidence yields UNKNOWN.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved operators and protect exposed credentials.
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.

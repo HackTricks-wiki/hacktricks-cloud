@@ -5,19 +5,21 @@
   provider: aws
   service: codepipeline
   title: Create a pipeline and CodeBuild project with passed roles and start it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#iampassrole-codepipelinecreatepipeline-codebuildcreateproject-codepipelinestartpipelineexecution
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#iampassrole-codepipelinecreatepipeline-codebuildcreateproject-codepipelinestartpipelineexecution
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by running a build it controls from a pipeline it creates.
+  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by running a build it
+    controls from a pipeline it creates.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: codepipeline:CreatePipeline
-        resource: "*"
-      - action: codebuild:CreateProject
-        resource: "*"
-      - action: codepipeline:StartPipelineExecution
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: codepipeline:CreatePipeline
+      resource: "*"
+    - action: codebuild:CreateProject
+      resource: "*"
+    - action: codepipeline:StartPipelineExecution
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -25,33 +27,37 @@
     scope: same_account
     aggregate_as: "Roles trusting codebuild.amazonaws.com in {account}"
   conditions:
-    - id: passable_pipeline_role
-      description: iam:PassRole must also cover a role trusting codepipeline.amazonaws.com for the pipeline itself, and that role must be able to start the CodeBuild project.
-    - id: readable_source
-      description: The pipeline needs a source it can read (S3, ECR, connection).
+  - id: passable_pipeline_role
+    description: iam:PassRole must also cover a role trusting codepipeline.amazonaws.com for the pipeline itself, and
+      that role must be able to start the CodeBuild project.
+  - id: readable_source
+    description: The pipeline needs a source it can read (S3, ECR, connection).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on CodeBuild and CodePipeline service roles.
   references: []
-  notes: Roles trusting codepipeline.amazonaws.com are not targets (the pipeline role does not run arbitrary code itself).
+  notes: Roles trusting codepipeline.amazonaws.com are not targets (the pipeline role does not run arbitrary code
+    itself).
 
 - id: aws-codepipeline-updatepipeline-codebuild-updateproject
   provider: aws
   service: codepipeline
   title: Alter a pipeline's CodeBuild project and run the pipeline
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codebuildupdateproject-codepipelineupdatepipeline-codepipelinestartpipelineexecution
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codebuildupdateproject-codepipelineupdatepipeline-codepipelinestartpipelineexecution
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role of a CodeBuild project used by a pipeline by changing the project/action configuration and starting the pipeline.
+  summary: The source can obtain the privileges of the service role of a CodeBuild project used by a pipeline by
+    changing the project/action configuration and starting the pipeline.
   requires:
     all_of:
-      - action: codebuild:UpdateProject
-        resource: "{target.attached_resource_arn}"
-      - action: codepipeline:UpdatePipeline
-        resource: "*"
-      - action: codepipeline:StartPipelineExecution
-        resource: "*"
+    - action: codebuild:UpdateProject
+      resource: "{target.attached_resource_arn}"
+    - action: codepipeline:UpdatePipeline
+      resource: "*"
+    - action: codepipeline:StartPipelineExecution
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -60,10 +66,10 @@
     scope: same_account
     aggregate_as: "Service roles of CodeBuild projects covered by codebuild:UpdateProject in {account}"
   conditions:
-    - id: pipeline_can_start_project
-      description: The pipeline's service role must be allowed to start the covered project.
+  - id: pipeline_can_start_project
+    description: The pipeline's service role must be allowed to start the covered project.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict codebuild:UpdateProject and codepipeline:UpdatePipeline to administrators.
@@ -74,13 +80,15 @@
   provider: aws
   service: codepipeline
   title: Replace the S3 source object of a pipeline
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#s3putobject-on-a-configured-s3-source-codepipelinestartpipelineexecution-optional
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#s3putobject-on-a-configured-s3-source-codepipelinestartpipelineexecution-optional
   source_revision: 171e422299
-  summary: The source can obtain (at the next execution) the privileges of the roles of downstream actions (CodeBuild projects, CloudFormation deploy roles) of a pipeline whose S3 source object it can overwrite.
+  summary: The source can obtain (at the next execution) the privileges of the roles of downstream actions (CodeBuild
+    projects, CloudFormation deploy roles) of a pipeline whose S3 source object it can overwrite.
   requires:
     all_of:
-      - action: s3:PutObject
-        resource: "{target.consumer_input_arn}"
+    - action: s3:PutObject
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -89,29 +97,36 @@
     scope: same_account
     aggregate_as: "Roles of downstream actions of pipelines with writable S3 sources in {account}"
   conditions:
-    - id: delayed_trigger
-      description: An execution must start afterwards (S3 change detection, schedule or source-held StartPipelineExecution).
-    - id: source_executed
-      description: A downstream action must execute content from the artifact (buildspec, template).
+  - id: delayed_trigger
+    description: An execution must start afterwards (S3 change detection, schedule or source-held
+      StartPipelineExecution).
+  - id: source_executed
+    description: A downstream action must execute content from the artifact (buildspec, template).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Use versioned, immutable source objects and restrict s3:PutObject on pipeline source keys.
   references: []
-  notes: The evaluator resolves attached_to_service codepipeline to roles trusting codepipeline.amazonaws.com, i.e. the pipeline role, which runs no artifact content; the selector therefore targets CodeBuild project roles (the main code-executing downstream action). CloudFormation deploy-action roles are also reachable but are not modelled here. Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves unknown.
+  notes: The evaluator resolves attached_to_service codepipeline to roles trusting codepipeline.amazonaws.com, i.e. the
+    pipeline role, which runs no artifact content; the selector therefore targets CodeBuild project roles (the main
+    code-executing downstream action). CloudFormation deploy-action roles are also reachable but are not modelled here.
+    Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves unknown.
 
 - id: aws-codepipeline-s3-source-poisoning-cloudformation-role
   provider: aws
   service: codepipeline
   title: Replace the S3 source object of a pipeline that deploys through CloudFormation
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#s3putobject-on-a-configured-s3-source-codepipelinestartpipelineexecution-optional
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#s3putobject-on-a-configured-s3-source-codepipelinestartpipelineexecution-optional
   source_revision: 6fb9ac51fd
-  summary: The source can obtain (at the next execution) the privileges of the CloudFormation deploy-action roles of a pipeline whose S3 source object it can overwrite, because the deploy action applies the template carried in that artifact with its stored role.
+  summary: The source can obtain (at the next execution) the privileges of the CloudFormation deploy-action roles of a
+    pipeline whose S3 source object it can overwrite, because the deploy action applies the template carried in that
+    artifact with its stored role.
   requires:
     all_of:
-      - action: s3:PutObject
-        resource: "{target.consumer_input_arn}"
+    - action: s3:PutObject
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -121,18 +136,78 @@
     aggregate_as: "CloudFormation deploy roles of pipelines with writable S3 sources in {account}"
     outcome: workload_execution
   conditions:
-    - id: delayed_trigger
-      description: An execution must start afterwards (S3 change detection, schedule, operator or source-held StartPipelineExecution).
-    - id: template_from_artifact
-      description: A CloudFormation deploy action must take its template (or template configuration) from the replaced source artifact.
-    - id: approval_gates
-      description: Manual approval or validation stages before the deploy action may stop the poisoned revision.
+  - id: delayed_trigger
+    description: An execution must start afterwards (S3 change detection, schedule, operator or source-held
+      StartPipelineExecution).
+  - id: template_from_artifact
+    description: A CloudFormation deploy action must take its template (or template configuration) from the replaced
+      source artifact.
+  - id: approval_gates
+    description: Manual approval or validation stages before the deploy action may stop the poisoned revision.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Use versioned, immutable source objects, restrict s3:PutObject on pipeline source keys to a dedicated publisher, and gate CloudFormation deploy stages with reviewed approvals.
+  mitigation: Use versioned, immutable source objects, restrict s3:PutObject on pipeline source keys to a dedicated
+    publisher, and gate CloudFormation deploy stages with reviewed approvals.
   references:
-    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-S3.html
-    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html
-  notes: Companion of aws-codepipeline-s3-source-poisoning, which targets CodeBuild project roles; the page states the impact reaches the roles of downstream build or deployment actions. The CloudFormation deploy action role trusts cloudformation.amazonaws.com. Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves unknown.
+  - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-S3.html
+  - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html
+  notes: Companion of aws-codepipeline-s3-source-poisoning, which targets CodeBuild project roles; the page states the
+    impact reaches the roles of downstream build or deployment actions. The CloudFormation deploy action role trusts
+    cloudformation.amazonaws.com. Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves
+    unknown.
+- id: aws-codepipeline-pollforjobs-artifact-session
+  provider: aws
+  service: codepipeline
+  title: codepipeline:PollForJobs
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-job-credentials-privesc/README.md#codepipelinepollforjobs--custom-action-artifact-credentials
+  source_revision: 0b36331
+  summary: Receive temporary AWS credentials scoped to a pending custom-action job artifact store.
+  requires:
+    all_of:
+    - action: codepipeline:PollForJobs
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codepipeline-pollforjobs-artifact-session
+    scope: same_account
+  conditions:
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named operation to trusted administrators and review downstream grants.
+  references:
+  - https://docs.aws.amazon.com/codepipeline/latest/APIReference/Welcome.html
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+- id: aws-codepipeline-getjobdetails-artifact-session
+  provider: aws
+  service: codepipeline
+  title: codepipeline:GetJobDetails
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-job-credentials-privesc/README.md#codepipelinegetjobdetails--known-job-artifact-credentials
+  source_revision: 0b36331
+  summary: Receive temporary AWS credentials scoped to a pending custom-action job artifact store.
+  requires:
+    all_of:
+    - action: codepipeline:GetJobDetails
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codepipeline-getjobdetails-artifact-session
+    scope: same_account
+  conditions:
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named operation to trusted administrators and review downstream grants.
+  references:
+  - https://docs.aws.amazon.com/codepipeline/latest/APIReference/Welcome.html
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.

@@ -7,13 +7,15 @@
   provider: aws
   service: kinesisanalytics
   title: Repoint the code of an existing Managed Flink application that keeps its execution role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#updateapplication--code-control--application-execution-role
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#updateapplication--code-control--application-execution-role
   source_revision: 171e422299
-  summary: The source can obtain the IAM privileges of the execution role of Managed Flink applications it can update, once they start or update.
+  summary: The source can obtain the IAM privileges of the execution role of Managed Flink applications it can update,
+    once they start or update.
   requires:
     all_of:
-      - action: kinesisanalytics:UpdateApplication
-        resource: "{target.resource_arn}"
+    - action: kinesisanalytics:UpdateApplication
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -22,34 +24,39 @@
     scope: same_account
     aggregate_as: "Execution roles of Managed Flink applications in {account}"
   conditions:
-    - id: code_readable_by_role
-      description: The execution role must be able to read code the source controls (writable existing key, a covered bucket, a cross-account bucket allowing the role, or an unpinned artifact).
-    - id: application_restart
-      description: The code runs when the application next starts or updates; a stopped application needs kinesisanalytics:StartApplication or an operator.
+  - id: code_readable_by_role
+    description: The execution role must be able to read code the source controls (writable existing key, a covered
+      bucket, a cross-account bucket allowing the role, or an unpinned artifact).
+  - id: application_restart
+    description: The code runs when the application next starts or updates; a stopped application needs
+      kinesisanalytics:StartApplication or an operator.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict kinesisanalytics:UpdateApplication to the deployment pipeline, protect code buckets, and keep execution roles least-privileged.
+  mitigation: Restrict kinesisanalytics:UpdateApplication to the deployment pipeline, protect code buckets, and keep
+    execution roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_UpdateApplication.html
+  - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_UpdateApplication.html
   notes: No PassRole is needed while the current role is kept; supplying a role update requires iam:PassRole.
 
 - id: aws-flink-passrole-createapplication
   provider: aws
   service: kinesisanalytics
   title: Create and start a Managed Flink application with a passed execution role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#createapplication--iampassrole--malicious-code
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#createapplication--iampassrole--malicious-code
   source_revision: 171e422299
-  summary: The source can obtain the IAM privileges of any passable role trusting kinesisanalytics.amazonaws.com by running its own application code under it.
+  summary: The source can obtain the IAM privileges of any passable role trusting kinesisanalytics.amazonaws.com by
+    running its own application code under it.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: kinesisanalytics:CreateApplication
-        resource: "*"
-      - action: kinesisanalytics:StartApplication
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: kinesisanalytics:CreateApplication
+      resource: "*"
+    - action: kinesisanalytics:StartApplication
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -58,30 +65,33 @@
     scope: same_account
     aggregate_as: "Roles trusting kinesisanalytics.amazonaws.com passable in {account}"
   conditions:
-    - id: code_readable_by_role
-      description: The passed role must be able to read the application code the source supplies.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: code_readable_by_role
+    description: The passed role must be able to read the application code the source supplies.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: high
-  mitigation: Restrict iam:PassRole on Flink roles with iam:PassedToService=kinesisanalytics.amazonaws.com and restrict CreateApplication to the deployment pipeline.
+  mitigation: Restrict iam:PassRole on Flink roles with iam:PassedToService=kinesisanalytics.amazonaws.com and restrict
+    CreateApplication to the deployment pipeline.
   references:
-    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplication.html
+  - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplication.html
   notes: The service does not expose role credentials directly; the code acts with the role's permissions.
 
 - id: aws-flink-studio-presigned-url
   provider: aws
   service: kinesisanalytics
   title: Open a running Managed Flink Studio notebook through a presigned URL
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#studio-presigned-url-to-zeppelin-execution
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#studio-presigned-url-to-zeppelin-execution
   source_revision: 171e422299
-  summary: The source can obtain the IAM privileges of the execution role of running Studio (INTERACTIVE) applications it can mint URLs for.
+  summary: The source can obtain the IAM privileges of the execution role of running Studio (INTERACTIVE) applications
+    it can mint URLs for.
   requires:
     all_of:
-      - action: kinesisanalytics:CreateApplicationPresignedUrl
-        resource: "{target.resource_arn}"
+    - action: kinesisanalytics:CreateApplicationPresignedUrl
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -90,13 +100,48 @@
     scope: same_account
     aggregate_as: "Execution roles of Managed Flink Studio applications in {account}"
   conditions:
-    - id: running_studio_application
-      description: The application must be an INTERACTIVE (Studio) application in RUNNING state, or the source must also start it.
+  - id: running_studio_application
+    description: The application must be an INTERACTIVE (Studio) application in RUNNING state, or the source must also
+      start it.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict kinesisanalytics:CreateApplicationPresignedUrl to notebook owners and keep Studio execution roles least-privileged.
+  mitigation: Restrict kinesisanalytics:CreateApplicationPresignedUrl to notebook owners and keep Studio execution roles
+    least-privileged.
   references:
-    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplicationPresignedUrl.html
-  notes: Streaming (non-Studio) applications are also matched by the selector; the condition limits the edge to Studio applications.
+  - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplicationPresignedUrl.html
+  notes: Streaming (non-Studio) applications are also matched by the selector; the condition limits the edge to Studio
+    applications.
+- id: aws-s05-28-studio-presigned-url-to-zeppelin-execution
+  provider: aws
+  service: managed-flink
+  title: Studio presigned URL to Zeppelin execution
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#studio-presigned-url-to-zeppelin-execution
+  source_revision: 0b36331
+  summary: 'Conditional gain: interactive notebook execution.'
+  requires:
+    all_of:
+    - action: kinesisanalytics:CreateApplicationPresignedUrl
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-28-studio-presigned-url-to-zeppelin-execution
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact application is INTERACTIVE and RUNNING; UI URL reachable.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.

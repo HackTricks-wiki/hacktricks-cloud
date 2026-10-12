@@ -5,13 +5,15 @@
   provider: aws
   service: devicefarm
   title: Replace the content of a custom test specification used by privileged runs
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#trojanize-an-existing-custom-test-specification
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#trojanize-an-existing-custom-test-specification
   source_revision: 171e422299
-  summary: The source can obtain (at the next run that uses the specification) the privileges of the execution role of Device Farm projects or runs that use a test-spec upload it can update.
+  summary: The source can obtain (at the next run that uses the specification) the privileges of the execution role of
+    Device Farm projects or runs that use a test-spec upload it can update.
   requires:
     all_of:
-      - action: devicefarm:UpdateUpload
-        resource: "{target.consumer_input_arn}"
+    - action: devicefarm:UpdateUpload
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -20,32 +22,34 @@
     scope: same_account
     aggregate_as: "Device Farm execution roles of runs using updatable test specs in {account}"
   conditions:
-    - id: delayed_run
-      description: A later run must schedule the same test-spec upload with a project or run execution role.
+  - id: delayed_run
+    description: A later run must schedule the same test-spec upload with a project or run execution role.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict devicefarm:UpdateUpload on test-spec uploads to CI publishers and pin test specs per run.
   references:
-    - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_UpdateUpload.html
+  - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_UpdateUpload.html
   notes: "{target.consumer_input_arn} is the *_TEST_SPEC upload ARN; the upload-to-run mapping is not collected."
 
 - id: aws-devicefarm-passrole-project-schedulerun
   provider: aws
   service: devicefarm
   title: Run a custom test with a passed execution role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting devicefarm.amazonaws.com by scheduling a run with a test specification it controls.
+  summary: The source can obtain the privileges of any passable role trusting devicefarm.amazonaws.com by scheduling a
+    run with a test specification it controls.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: devicefarm:ScheduleRun
-        resource: "*"
-      - action: devicefarm:CreateUpload
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: devicefarm:ScheduleRun
+      resource: "*"
+    - action: devicefarm:CreateUpload
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -54,15 +58,54 @@
     scope: same_account
     aggregate_as: "Roles trusting devicefarm.amazonaws.com passable in {account}"
   conditions:
-    - id: project_available
-      description: A project the source can schedule runs in (existing, or devicefarm:CreateProject) and a compatible device or device pool are required.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: project_available
+    description: A project the source can schedule runs in (existing, or devicefarm:CreateProject) and a compatible
+      device or device pool are required.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict iam:PassRole on Device Farm execution roles with iam:PassedToService and specific role ARNs; limit run scheduling to CI.
+  mitigation: Restrict iam:PassRole on Device Farm execution roles with iam:PassedToService and specific role ARNs;
+    limit run scheduling to CI.
   references:
-    - https://docs.aws.amazon.com/devicefarm/latest/developerguide/custom-test-environment-iam-roles.html
-  notes: The role can be set on the project (CreateProject / UpdateProject) or overridden per run (ScheduleRun configuration).
+  - https://docs.aws.amazon.com/devicefarm/latest/developerguide/custom-test-environment-iam-roles.html
+  notes: The role can be set on the project (CreateProject / UpdateProject) or overridden per run (ScheduleRun
+    configuration).
+- id: aws-devicefarm-schedulerun-existing-test-spec-passrole
+  provider: aws
+  service: devicefarm
+  title: Schedule an existing malicious Device Farm test spec with a passed role
+  summary: Attacker commands execute inside the Device Farm test runtime with the passed execution role.
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
+  source_revision: 0b36331
+  requires:
+    all_of:
+    - action: devicefarm:ScheduleRun
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-devicefarm-schedulerun-existing-test-spec-passrole
+    scope: same_account
+  conditions:
+  - id: condition_1
+    description: An existing project, compatible app/test package, device pool and attacker-controlled custom test-spec
+      upload already exist.
+  - id: condition_2
+    description: configuration.executionRoleArn in ScheduleRun overrides the project role; a new CreateUpload or
+      CreateProject/UpdateProject is unnecessary in this case.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the required actions to reviewed resources and principals.
+  references: []
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
