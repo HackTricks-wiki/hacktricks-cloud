@@ -82,3 +82,35 @@
     - https://docs.aws.amazon.com/appsync/latest/APIReference/API_UpdateResolver.html
     - https://docs.aws.amazon.com/appsync/latest/devguide/resolver-reference-http-js.html
   notes: No-PassRole variant of aws-appsync-passrole-datasource-sigv4 (which reaches passable roles); this one reaches only roles already stored on data sources. AppSync data sources are not collected, so roles trusting appsync.amazonaws.com are the fallback target set (unknown).
+- id: aws-audit2-appsync-2
+  provider: aws
+  service: appsync
+  title: Read environment secrets and export the schema
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-appsync-post-exploitation/README.md#read-environment-secrets-and-export-the-schema
+  source_revision: 0b36331
+  summary: Under exact prerequisites, the source obtains plaintext credential or token value.
+  requires:
+    all_of:
+    - action: appsync:GetGraphqlApiEnvironmentVariables
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit2-appsync-2
+    scope: same_account
+    aggregate_as: Verified appsync authority in {account}
+    grants:
+    - plaintext credential or token value
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Resource *. Actual environment value must contain usable secret. GetIntrospectionSchema and ListDataSources
+      are recon. Evidence must bind exact source, target and resource; missing evidence is unknown.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions and verify exact resource and downstream authority.
+  references:
+  - https://attacker.example
+  notes: 'Provisional: exact verified source, target and authority evidence required; missing evidence evaluates
+    UNKNOWN.'

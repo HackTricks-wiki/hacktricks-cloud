@@ -194,18 +194,20 @@
   reason: "Returns an external OAuth access token bounded by the external provider's scopes; no AWS principal's privileges
     are obtained."
   source_revision: 6fb9ac51fd
-- source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-acm-pca-scep-post-exploitation/README.md#pca-connector-scepcreatechallenge--getchallengepassword--mint-a-scep-enrollment-secret-rogue-device-certificate-backdoor
-  technique: "pca-connector-scep:CreateChallenge / GetChallengePassword"
-  reason: "Yields a device certificate for network/mTLS authentication bounded by the SCEP certificate profile; the page documents
-    no AWS principal reached (an IAM Roles Anywhere trust anchor on the same CA would be a separate, undocumented chain)."
-  source_revision: 6fb9ac51fd
-- source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md#recover-githubbitbucket-configured-tokens
-  technique: "CodeBuild source-provider token leakage (in-build GetBuildInfo, custom Docker image MitM, insecureSsl)"
-  reason: "Recovers an external GitHub/Bitbucket credential; the prerequisite build-control permissions (CreateProject/UpdateProject/StartBuild)
-    already yield the project role through the modelled CodeBuild entries."
-  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-acm-pca-scep-post-exploitation/README.md#pca-connector-scepcreatechallenge--getchallengepassword--mint-a-scep-enrollment-secret-rogue-device-certificate-backdoor
+  technique: '`pca-connector-scep:CreateChallenge` / `GetChallengePassword` — mint a SCEP enrollment secret (rogue-device
+    certificate backdoor)'
+  reason: Add a SCEP device-certificate target and selector joining general-purpose connector, CA profile, relying-party
+    trust and challenge access.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md#recover-githubbitbucket-configured-tokens
+  technique: CodeBuild source-provider token leakage (in-build GetBuildInfo, custom Docker image MitM, insecureSsl)
+  reason: The page documents three separate ways to obtain a GitHub, Bitbucket or GHES source token. In-build GetBuildInfo
+    starts with running-build code and needs no attacker CreateProject/UpdateProject/StartBuild permission; image/proxy
+    and GHES insecureSsl variants need project control and a build. The token is distinct from the CodeBuild role,
+    but source-auth configuration, actual token return or interception, validity and external scopes are uncollected
+    runtime/provider facts. insecureSsl is GHES-only.
+  source_revision: 0b36331
 - source:
     src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-untrusted-pr-webhook-bypass.md#misconfigurations-that-allow-external-pr-code-execution
   technique: "Untrusted pull-request execution through weak CodeBuild webhook filters"
@@ -218,12 +220,12 @@
   reason: "The browser session is bounded by the caller's own IAM identity and space grants; no other principal's privileges
     are obtained."
   source_revision: 6fb9ac51fd
-- source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-user-pools-post-exploitation/README.md#add-an-app-client-secret-and-mint-an-m2m-token
-  technique: "cognito-idp:AddUserPoolClientSecret (post-exploitation page)"
-  reason: "M2M access tokens carry only the client's custom resource-server scopes (application plane); they are not accepted
-    by identity pools and grant no AWS credentials."
-  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-user-pools-post-exploitation/README.md#add-an-app-client-secret-and-mint-an-m2m-token
+  technique: cognito-idp:AddUserPoolClientSecret (post-exploitation page)
+  reason: AddUserPoolClientSecret returns a new M2M app-client secret; configured custom scopes can authenticate
+    to downstream resource servers, but not an AWS identity-pool role. An exact app-client authority needs flow,
+    secret-slot, scope and resource-server facts.
+  source_revision: 0b36331
 - source:
     src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#bedrock-agentcorecreategatewaytarget--updategatewaytarget--mitm-an-agents-tools-tool-response-injection
   technique: "bedrock-agentcore:CreateGatewayTarget / UpdateGatewayTarget"
@@ -245,3 +247,34 @@
   reason: The configuration snapshot cannot identify which EBS volume contains a Domain Controller database and SYSTEM
     hive or whether their runtime contents yield usable domain credentials; snapshot permission alone does not establish
     a reachable domain administrator.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-data-access-post-exploitation/README.md#knowledge-bases--retrieve-indexed-private-documents-without-source-storage-access
+  source_revision: 0b36331
+  technique: bedrock:Retrieve returns indexed source text that may contain a credential
+  reason: Indexed text must actually contain a valid, usable credential and its holder must be identified from returned
+    content; neither fact is present in the configuration snapshot.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-data-access-post-exploitation/README.md#read-bedrock-plaintext-directly-from-an-s3-vectors-backing-index
+  source_revision: 0b36331
+  technique: S3 Vectors GetVectors returns AMAZON_BEDROCK_TEXT from Bedrock index
+  reason: A returned vector chunk must contain a usable credential and identify its holder; index configuration
+    alone cannot establish that content or identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#aws---bedrock-agents-memory-poisoning-indirect-prompt-injection
+  source_revision: 0b36331
+  technique: Persistent agent-memory injection induces later privileged tool calls and exfiltration
+  reason: Requires poisoned memory content to be retained, replayed and obeyed by a later model/user session before
+    a privileged tool is called; none is determined by static agent configuration.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#aws---bedrock-agents-multi-agent-prompt-injection-chains
+  source_revision: 0b36331
+  technique: Multi-agent prompt injection coaxes collaborator action-group misuse
+  reason: Requires the supervisor to forward the attacker text and a collaborator model to obey it and invoke a
+    privileged action group; routing and tool behavior are runtime facts.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudformation-registry-post-exploitation/README.md#read-stored-extension-configuration
+  source_revision: 0b36331
+  technique: BatchDescribeTypeConfigurations returns literal Hook/extension credentials
+  reason: The stored extension configuration must contain a literal, usable credential and its holder must be identified
+    from the API response; dynamic references do not expose the secret and inventory metadata does not contain its
+    value.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudwatch-omni-post-exploitation/README.md#query-unified-logs-and-traces-through-the-default-dataset
+  source_revision: 0b36331
+  technique: Omni SQL default Dataset query retrieves credential-bearing logs/traces
+  reason: The queried log or trace rows must contain a usable credential and identify its holder; telemetry content
+    and query results are absent from the configuration snapshot.

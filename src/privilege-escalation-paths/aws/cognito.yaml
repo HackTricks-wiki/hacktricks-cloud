@@ -458,3 +458,32 @@
     - https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html
     - https://docs.aws.amazon.com/cognito/latest/developerguide/role-trust-and-permissions.html
   notes: Complements aws-cognito-updateidentitypool (pool's configured roles, via attached_resource_covered_by). In the basic flow the role is not taken from the pool configuration, so no SetIdentityPoolRoles or iam:PassRole is needed; reachability is decided by the role trust's aud and amr conditions, which the evaluator should check when the trust is collected.
+- id: aws-cognito-upstream-idp-client-secret
+  provider: aws
+  service: cognito-idp
+  title: Read upstream social or OIDC provider client secret
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-directory-secret-disclosure-post-exploitation/README.md#iam-reads-that-expose-directory-data-and-idp-client-secrets
+  source_revision: 0b36331
+  summary: DescribeIdentityProvider may disclose an upstream OAuth application client secret and its bounded external
+    authority.
+  requires:
+    all_of:
+    - action: cognito-idp:DescribeIdentityProvider
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-cognito-upstream-idp-client-secret
+    scope: any
+    grants:
+    - verified upstream OAuth application client scopes
+  confidence: conditional
+  severity: high
+  mitigation: Restrict DescribeIdentityProvider and rotate exposed upstream client secrets.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-directory-secret-disclosure-post-exploitation/README.md#iam-reads-that-expose-directory-data-and-idp-client-secrets
+  conditions:
+  - ProviderDetails must contain a cleartext client_secret; the external provider must accept it with the matching
+    client ID and configured flow.
+  notes: The existing aws-v3-25 entry is for DescribeUserPoolClient, a different Cognito secret and action. Missing
+    external validation must evaluate UNKNOWN.

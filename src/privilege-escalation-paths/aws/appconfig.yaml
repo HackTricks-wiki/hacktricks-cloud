@@ -1,4 +1,39 @@
 # AWS appconfig privilege escalation techniques.
 # Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
 
-[]
+- id: aws-audit2-appconfig-2
+  provider: aws
+  service: appconfig
+  title: AppConfig Data — read the deployed configuration
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-appconfig-post-exploitation/README.md#appconfig-data--read-the-deployed-configuration
+  source_revision: 0b36331
+  summary: Under exact prerequisites, the source obtains deployed bytes, including content fetched by AppConfig
+    retrieval role.
+  requires:
+    all_of:
+    - action: appconfig:StartConfigurationSession
+      resource: '*'
+    - action: appconfig:GetLatestConfiguration
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit2-appconfig-2
+    scope: same_account
+    aggregate_as: Verified appconfig authority in {account}
+    grants:
+    - deployed bytes, including content fetched by AppConfig retrieval role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Both actions on exact configuration ARN. Deployment exists; customer KMS may require kms:Decrypt;
+      no cross-account AppConfig Data read. Evidence must bind exact source, target and resource; missing evidence
+      is unknown.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions and verify exact resource and downstream authority.
+  references:
+  - https://docs.aws.amazon.com/appconfig/latest/userguide/what-is-appconfig.html
+  notes: 'Provisional: exact verified source, target and authority evidence required; missing evidence evaluates
+    UNKNOWN.'

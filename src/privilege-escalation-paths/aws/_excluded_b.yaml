@@ -172,11 +172,13 @@
   source_revision: a53b46392c
   technique: events:StartReplay
   reason: Replays events into fixed targets; no control of code or role.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer/README.md#route53createhostedzone-route53changeresourcerecordsets-acm-pcaissuecertificate-acm-pcagetcertificate-ec2describevpcs
-  source_revision: a53b46392c
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer/README.md#route53createhostedzone-route53changeresourcerecordsets-acm-pcaissuecertificate-acm-pcagetcertificate-ec2describevpcs
+  source_revision: 0b36331
   technique: route53:CreateHostedZone + ChangeResourceRecordSets + acm-pca:IssueCertificate + GetCertificate
-  reason: Traffic interception (MitM) of in-VPC clients; no IAM principal is obtained directly.
+  reason: Private DNS and a trusted Private CA can intercept a vulnerable client, but a privilege edge requires
+    host trust-store and TLS behavior, attacker endpoint/routing control, a victim request carrying reusable credentials,
+    and proof of the credential target. These runtime and host facts are not established by the IAM configuration
+    snapshot.
 - source:
     src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducecreateeditor-iamlistroles-elasticmapreducelistclusters-iampassrole-elasticmapreducedescribeeditor-elasticmapreduceopeneditorinconsole
   source_revision: a53b46392c
@@ -264,25 +266,28 @@
   source_revision: a53b46392c
   technique: ssm:StartAssociationsOnce
   reason: Runs fixed associations on fixed targets; no control of code or role.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmdescribeparameters-ssmgetparameter--ssmgetparameters--ssmgetparametersbypath
-  source_revision: a53b46392c
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmdescribeparameters-ssmgetparameter--ssmgetparameters--ssmgetparametersbypath
+  source_revision: 0b36331
   technique: ssm:GetParameter(s)
-  reason: Data read.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetparameterhistory--recover-current-and-previous-parameter-values
-  source_revision: a53b46392c
+  reason: Parameter contents may contain keys, but a snapshot cannot infer credential type, validity or target identity
+    from GetParameter permission alone. Requires exact content inspection and validation against the external or
+    IAM identity before an identity edge is justified.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetparameterhistory--recover-current-and-previous-parameter-values
+  source_revision: 0b36331
   technique: ssm:GetParameterHistory
-  reason: Data read.
+  reason: History may expose old secrets, but an old password or token is not necessarily still valid. Requires
+    exact content inspection and validation against the external or IAM identity before an identity edge is justified.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmlistcommands
-  source_revision: a53b46392c
+  source_revision: 0b36331
   technique: ssm:ListCommands
-  reason: Data read.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetcommandinvocation-ssmlistcommandinvocations--ssmlistcommands
-  source_revision: a53b46392c
+  reason: ListCommands can reveal inline secrets only when retained command parameters contain a usable credential.
+    Requires exact content inspection and validation against the external or IAM identity before an identity edge
+    is justified.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetcommandinvocation-ssmlistcommandinvocations--ssmlistcommands
+  source_revision: 0b36331
   technique: ssm:GetCommandInvocation
-  reason: Data read.
+  reason: Command output may contain credentials only when retained stdout/stderr has a still-valid secret. Requires
+    exact content inspection and validation against the external or IAM identity before an identity edge is justified.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#codebuild
   source_revision: a53b46392c
   technique: SSM to CodeBuild session

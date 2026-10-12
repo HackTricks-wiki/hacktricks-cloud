@@ -144,3 +144,70 @@
   references:
   - https://docs.aws.amazon.com/athena/latest/APIReference/API_UpdateNotebook.html
   notes: Authorized on the workgroup ARN, so any known notebook in the workgroup is reachable.
+- id: aws-audit2-athena-query-disclosure-1
+  provider: aws
+  service: athena-query-disclosure
+  title: Query-history and result disclosure
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-athena-query-disclosure-post-exploitation/README.md#query-history-and-result-disclosure
+  source_revision: 0b36331
+  summary: Under exact prerequisites, the source obtains credential or token from another user query text.
+  requires:
+    all_of:
+    - action: athena:GetQueryExecution
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit2-athena-query-disclosure-1
+    scope: same_account
+    aggregate_as: Verified athena-query-disclosure authority in {account}
+    grants:
+    - credential or token from another user query text
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Known execution ID; ListQueryExecutions discovery only. SQL must hold usable value tied to target.
+      Evidence must bind exact source, target and resource; missing evidence is unknown.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions and verify exact resource and downstream authority.
+  references:
+  - https://docs.aws.amazon.com/AmazonS3/latest/userguide/dual-stack-endpoints.html
+  notes: 'Provisional: exact verified source, target and authority evidence required; missing evidence evaluates
+    UNKNOWN.'
+- id: aws-audit2-athena-query-disclosure-2
+  provider: aws
+  service: athena-query-disclosure
+  title: GetQueryResults with result-object access
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-athena-query-disclosure-post-exploitation/README.md#query-history-and-result-disclosure
+  source_revision: 0b36331
+  summary: Under exact prerequisites, the source obtains credential value in result rows.
+  requires:
+    all_of:
+    - action: athena:GetQueryResults
+      resource: '*'
+    - action: s3:GetObject
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit2-athena-query-disclosure-2
+    scope: same_account
+    aggregate_as: Verified athena-query-disclosure authority in {account}
+    grants:
+    - credential value in result rows
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Both actions for Athena retrieval of SSE-S3 result; SSE-KMS may add kms:Decrypt. Direct S3 GetObject
+      is separate equivalent path. Actual rows must contain credential. Evidence must bind exact source, target
+      and resource; missing evidence is unknown.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions and verify exact resource and downstream authority.
+  references:
+  - https://docs.aws.amazon.com/AmazonS3/latest/userguide/dual-stack-endpoints.html
+  notes: 'Provisional: exact verified source, target and authority evidence required; missing evidence evaluates
+    UNKNOWN.'
