@@ -1,4 +1,3 @@
-# Azure exclusions from the rev 171e422 catalog refresh (agent azA): guest-configuration through managed-grafana pages.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md#guest-configuration
   technique: Page intro / service link
   reason: Introductory section; the technique is modelled by azure-guestconfiguration-assignment-write.
@@ -46,7 +45,9 @@
   reason: Enabler of the template-deployment path; vaults/write is already a requirement branch of azure-keyvault-secret-read-sp-credentials (it can rewrite accessPolicies directly), and enabledForTemplateDeployment is the condition of azure-keyvault-template-deployment-secret-reference.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#swap-the-authorization-model-with-microsoftkeyvaultvaultswrite-enablerbacauthorization-toggle
   technique: vaults/write toggles enableRbacAuthorization to revive stored access policies
-  reason: Same permission and target set as the vaults/write branch of azure-keyvault-secret-read-sp-credentials (switching to the access-policy model and rewriting accessPolicies); the toggle-to-RBAC direction is denial of service.
+  reason: A vaults/write permission can revive secret access only when the vault stores a stale secret-read access
+    policy for a source-controlled principal and the model can be switched to access policies. Requires a source-principal-to-access-policy
+    join and current permission model; otherwise UNKNOWN.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#approve-an-attacker-private-endpoint-to-reach-a-publicnetworkaccessdisabled-vault
   technique: Approve an attacker private endpoint connection
   reason: Network reachability only; condition network_reachable of the Key Vault entries.
@@ -106,7 +107,11 @@
   reason: Overview of publisher authorizations and deny assignments; the escalation is mapped under listTokens.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-applications-privesc.md#deploy-as-identity-inside-a-managed-app
   technique: Deploy a malicious managed app definition
-  reason: The deployment only acts inside a newly created managed resource group, with authorizations the attacker defines for itself; it does not reach pre-existing identities. Cross-tenant delegatedManagedIdentityResourceId grants need publisher-tenant setup. Persistence, not escalation.
+  source_revision: 0b36331
+  reason: A managed-app template may create an identity and assign roles through the deployment authorization. The
+    path is conditional on the exact definition, deployment scope and platform authorization permitting a role assignment
+    beyond the source rights. Missing authorization/template facts are UNKNOWN; do not infer gain from applications/write
+    alone.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-devops-pools-privesc.md#managed-devops-pools
   technique: Managed DevOps Pools introduction
   reason: Introductory section.
@@ -116,3 +121,12 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md#microsoftdashboardgrafanamanagedprivateendpointswrite--network-pivot-into-a-private-vnet
   technique: Grafana managed private endpoint
   reason: Network reachability only; no identity gain.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#aks-cluster-credentials
+  technique: clusterUser kubeconfig on AKS
+  reason: The returned clusterUser identity has cluster-admin authority only if its effective Kubernetes RBAC grants
+    it; local accounts and absence of Entra integration do not prove that binding. The collector must read cluster
+    RBAC bindings for the returned subject; until then the path is UNKNOWN.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: User or service-account impersonation to cluster admin
+  reason: Requires an impersonable user or service account with effective cluster-admin RBAC, including namespace
+    scope; no subject-to-binding collector exists, so evaluate UNKNOWN until collected.

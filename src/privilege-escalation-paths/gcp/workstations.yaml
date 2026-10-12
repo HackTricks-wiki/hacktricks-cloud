@@ -83,35 +83,37 @@
   title: Connect to an existing workstation (directly or after an IAM self-grant) and use its SA
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#workstationsworkstationconfigscreate--actas--pin-an-arbitrary-sa-and-steal-its-token
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service accounts of existing workstations it can use or whose IAM policy it controls.
+  summary: The source can obtain the SA of an existing workstation it can use or whose workstation IAM policy it
+    controls; config-policy self-grant needs a separate config-to-workstation join.
   requires:
     any_of:
-      - - action: workstations.workstations.use
-          resource: "{target.host_resource}"
-        - action: workstations.workstations.start
-          resource: "{target.host_resource}"
-      - - action: workstations.workstations.setIamPolicy
-          resource: "{target.host_resource}"
-      - - action: workstations.workstationConfigs.setIamPolicy
-          resource: "{target.host_resource}"
+    - - action: workstations.workstations.use
+        resource: '{target.host_resource}'
+    - - action: workstations.workstations.setIamPolicy
+        resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: workstations_workstation
     scope: same_project
-    aggregate_as: "SAs of Cloud Workstations the source can connect to"
+    aggregate_as: SAs of Cloud Workstations the source can connect to
   conditions:
-    - id: scoped_config_actas
-      description: If the config sets service-account scopes, users also need actAs on the SA at launch/use time.
-    - id: other_user_session
-      description: Using another developer's workstation also exposes that user's session data; IAM on workstations is granted per workstation or config.
+  - id: scoped_config_actas
+    description: If the config sets service-account scopes, users also need actAs on the SA at launch/use time.
+  - id: other_user_session
+    description: Using another developer's workstation also exposes that user's session data; IAM on workstations
+      is granted per workstation or config.
+  - id: running_or_startable
+    description: For the direct use branch the workstation must already be running, or the source must additionally
+      hold workstations.workstations.start on it.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: medium
-  mitigation: Grant roles/workstations.user per workstation only to its owner and restrict workstations.*.setIamPolicy (roles/workstations.policyAdmin, roles/workstations.admin, roles/owner).
-  notes: Connection tokens from generateAccessToken cannot be revoked and last up to 24h.
-
+  mitigation: Grant roles/workstations.user per workstation only to its owner and restrict workstations.*.setIamPolicy
+    (roles/workstations.policyAdmin, roles/workstations.admin, roles/owner).
+  notes: Connection tokens from generateAccessToken cannot be revoked and last up to 24h. Config setIamPolicy requires
+    its own config resource join and a later create/start/use or another user session.
 - id: gcp-workstations-create-from-existing-config
   provider: gcp
   service: workstations
@@ -145,3 +147,36 @@
   references:
     - https://cloud.google.com/workstations/docs/access-control
   notes: HackTricks @6fb9ac51fd states roles/workstations.workstationCreator can launch workstations only from existing configs, so its power depends on the SA those configs already carry. Creating the config with a chosen SA is gcp-workstations-config-create-actas.
+- id: gcp-audit-s01-39-escape-workstation-container
+  provider: gcp
+  service: cloud-workstations
+  title: Escape workstation container to VM and steal metadata SA token
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#container-breakout-via-docker-socket-container---vm---project
+  summary: The source can gain escape workstation container to VM and steal metadata SA token. Host breakout needs
+    an actual shell plus exposed Docker socket/privileged container and reachable metadata; config-create paths
+    require different IAM permissions.
+  requires:
+    all_of: []
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-audit-s01-39-escape-workstation-container
+    scope: any
+    aggregate_as: workstation VM OS root and attached SA token
+  conditions:
+  - id: exact_target_evidence
+    description: Exclusion calls this already covered by config-create entries, but the page explicitly says a shell
+      in any accessible workstation plus Docker socket/privileged container suffices with no IAM config-create or
+      actAs permissions. Missing target evidence evaluates UNKNOWN.
+  - id: host_configuration
+    description: An accessible running workstation must expose Docker host control or privileged container access
+      and a usable metadata SA token.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
+  source_revision: 0b36331
+  references:
+  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc/#container-breakout-via-docker-socket-container---vm---project
+  source_kind:
+  - gcp_user
+  - gcp_service_account

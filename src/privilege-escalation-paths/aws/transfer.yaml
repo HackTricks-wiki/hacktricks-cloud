@@ -7,188 +7,300 @@
   service: transfer
   title: Import an SSH key for an existing service-managed Transfer user
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferimportsshpublickey--impersonate-a-service-managed-user
-  source_revision: 171e422299
-  summary: The source can obtain the S3/EFS file-access privileges of the IAM role configured on a service-managed Transfer Family user.
+  source_revision: 0b36331
+  summary: Transfer file operations as the selected service-managed user within the exact server, storage, session-policy
+    and home-directory limits.
   requires:
     all_of:
-      - action: transfer:ImportSshPublicKey
-        resource: "{target.resource_arn}"
+    - action: transfer:ImportSshPublicKey
+      resource: '{target.resource_arn}'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: transfer.amazonaws.com
-      via_resource_type: transfer_user
+      aws_challenge_fact: aws-transfer-importsshpublickey
     scope: same_account
-    aggregate_as: "Roles of service-managed Transfer Family users in {account}"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Transfer file operations as the selected service-managed user
   conditions:
-    - id: service_managed_identity
-      description: The server must use service-managed identities (custom identity providers authenticate elsewhere) with SFTP enabled.
-    - id: network_reachability
-      description: The source needs a network path to the server's public or VPC endpoint.
-    - id: session_policy_and_home_directory
-      description: Access is limited to the file operations the role allows, further narrowed by the user's session policy and logical home directory; no AWS API credentials are obtained.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: transfer_scope_join
+    description: Bind the exact server, authenticated user, selected role, session policy, home directory, and accessible
+      S3/EFS paths; the role is never assumed by the attacker.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict transfer:ImportSshPublicKey to Transfer administrators, scope user roles and session policies to the user's own prefix, and alert on key imports.
+  mitigation: Restrict transfer:ImportSshPublicKey to Transfer administrators, scope user roles and session policies
+    to the user's own prefix, and alert on key imports.
   references:
-    - https://docs.aws.amazon.com/transfer/latest/APIReference/API_ImportSshPublicKey.html
-  notes: Bounded impact - the role is used by the Transfer service for file operations only, so this is data-plane access via another principal's role rather than full role assumption.
-
+  - https://docs.aws.amazon.com/transfer/latest/APIReference/API_ImportSshPublicKey.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-transfer-passrole-createuser-access
   provider: aws
   service: transfer
   title: Attach a passed role to a Transfer Family user or access mapping the source can log in as
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transfercreateuserupdateusercreateaccessupdateaccess--iampassrole--attach-a-chosen-role-to-an-sftp-identity
-  source_revision: 171e422299
-  summary: The source can exercise the S3/EFS file-access privileges of a passable role trusting transfer.amazonaws.com by binding it to a Transfer Family identity it can authenticate as.
+  source_revision: 0b36331
+  summary: Transfer file operations through the selected passable role within the exact server, storage, session-policy
+    and home-directory limits.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    - action: iam:PassRole
+      resource: '{target.arn}'
     any_of:
-      - - action: transfer:CreateUser
-          resource: "*"
-      - - action: transfer:UpdateUser
-          resource: "*"
-      - - action: transfer:CreateAccess
-          resource: "*"
-      - - action: transfer:UpdateAccess
-          resource: "*"
+    - - action: transfer:CreateUser
+        resource: '*'
+    - - action: transfer:UpdateUser
+        resource: '*'
+    - - action: transfer:CreateAccess
+        resource: '*'
+    - - action: transfer:UpdateAccess
+        resource: '*'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: transfer.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      aws_challenge_fact: aws-transfer-passrole-createuser-access
     scope: same_account
-    aggregate_as: "Roles trusting transfer.amazonaws.com passable in {account}"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Transfer file operations through the selected passable role
   conditions:
-    - id: authenticate_as_identity
-      description: The source must authenticate as the identity (an SSH key it supplies for a service-managed user, or membership in the mapped AD group for an access mapping).
-    - id: network_reachability
-      description: The source needs a network path to the server's public or VPC endpoint.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: transfer_scope_join
+    description: Bind the exact server, authenticated user, selected role, session policy, home directory, and accessible
+      S3/EFS paths; the role is never assumed by the attacker.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict transfer:CreateUser/UpdateUser/CreateAccess/UpdateAccess and iam:PassRole on Transfer roles, and scope Transfer roles to per-user prefixes.
+  mitigation: Restrict transfer:CreateUser/UpdateUser/CreateAccess/UpdateAccess and iam:PassRole on Transfer roles,
+    and scope Transfer roles to per-user prefixes.
   references:
-    - https://docs.aws.amazon.com/transfer/latest/APIReference/API_CreateUser.html
-  notes: Bounded impact - file operations through the role; no API credentials are returned.
-
+  - https://docs.aws.amazon.com/transfer/latest/APIReference/API_CreateUser.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-transfer-secret-backed-idp-record
   provider: aws
   service: transfer
   title: Rewrite a Secrets Manager record used by a Transfer custom identity provider
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#secretsmanagerputsecretvalue--poison-a-secrets-manager-backed-custom-idp-user
-  source_revision: 171e422299
-  summary: The source can exercise the file-access privileges of any role trusting transfer.amazonaws.com by writing a custom-IdP user record that sets its credential and selects that role.
+  source_revision: 0b36331
+  summary: Transfer file operations selected by the exact secret-backed IdP record within the exact server, storage,
+    session-policy and home-directory limits.
   requires:
     all_of:
-      - action: secretsmanager:PutSecretValue
-        resource: "{target.consumer_input_arn}"
+    - action: secretsmanager:PutSecretValue
+      resource: '{target.resource_arn}'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: transfer.amazonaws.com
-      consumer_input_writable_via: secretsmanager:PutSecretValue
+      aws_challenge_fact: aws-transfer-secret-backed-idp-record
     scope: same_account
-    aggregate_as: "Roles trusting transfer.amazonaws.com selectable by writable custom-IdP records in {account}"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Transfer file operations selected by the exact secret-backed IdP record
   conditions:
-    - id: idp_reads_role_from_secret
-      description: Only the legacy Secrets Manager-backed custom IdP that reads Role/Policy/HomeDirectory from the same secret (aws/transfer/<server-id>/<user>) is affected; DynamoDB-backed solutions are not.
-    - id: kms_key
-      description: A customer-managed KMS key on the secret also requires kms permissions for the source.
-    - id: network_reachability
-      description: The source needs a network path to the server endpoint.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: transfer_scope_join
+    description: Bind the exact server, authenticated user, selected role, session policy, home directory, and accessible
+      S3/EFS paths; the role is never assumed by the attacker.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Separate credential data from authorization attributes in custom IdPs, deny PutSecretValue on aws/transfer/* secrets except to the IdP administrators, and alert on such writes.
+  mitigation: Separate credential data from authorization attributes in custom IdPs, deny PutSecretValue on aws/transfer/*
+    secrets except to the IdP administrators, and alert on such writes.
   references:
-    - https://docs.aws.amazon.com/transfer/latest/userguide/custom-idp-intro.html
-  notes: No iam:PassRole is involved; the IdP response chooses the role. Bounded to file operations through the role.
-
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-idp-intro.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-transfer-custom-idp-takeover
   provider: aws
   service: transfer
   title: Take over a Transfer Family custom identity provider
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferupdateserver-lambdaupdatefunctioncode-or-api-gateway-response-writes--take-over-a-custom-identity-provider
-  source_revision: 171e422299
-  summary: The source can exercise the file-access privileges of any role trusting transfer.amazonaws.com by controlling the custom identity provider response that selects the session role.
+  source_revision: 0b36331
+  summary: Transfer file operations selected by the active custom IdP response within the exact server, storage,
+    session-policy and home-directory limits.
   requires:
     any_of:
-      - - action: transfer:UpdateServer
-          resource: "*"
-      - - action: lambda:UpdateFunctionCode
-          resource: "{target.consumer_input_arn}"
-      - - action: apigateway:PATCH
-          resource: "{target.consumer_input_arn}"
-        - action: apigateway:POST
-          resource: "*"
+    - - action: transfer:UpdateServer
+        resource: '*'
+    - - action: lambda:UpdateFunctionCode
+        resource: '{target.resource_arn}'
+    - - action: apigateway:PATCH
+        resource: '{target.resource_arn}'
+      - action: apigateway:POST
+        resource: '*'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: transfer.amazonaws.com
+      aws_challenge_fact: aws-transfer-custom-idp-takeover
     scope: same_account
-    aggregate_as: "Roles trusting transfer.amazonaws.com in {account} (custom IdP servers)"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Transfer file operations selected by the active custom IdP response
   conditions:
-    - id: custom_idp_server
-      description: The server must use a Lambda or API Gateway custom identity provider (UpdateServer can also switch it to one).
-    - id: updateserver_existing_function
-      description: The UpdateServer path needs an existing Lambda function the source controls whose resource policy allows the server to invoke it.
-    - id: lambda_code_signing
-      description: Code signing enforced on the IdP function blocks an unsigned replacement.
-    - id: network_reachability
-      description: The source needs a network path to the server endpoint.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: transfer_scope_join
+    description: Bind the exact server, authenticated user, selected role, session policy, home directory, and accessible
+      S3/EFS paths; the role is never assumed by the attacker.
   blockers:
-    - scp_or_boundary_deny
-    - lambda_code_signing_enforced
+  - scp_or_boundary_deny
+  - lambda_code_signing_enforced
   confidence: conditional
   severity: medium
-  mitigation: Restrict transfer:UpdateServer to deployment roles, protect IdP functions with code signing and restricted lambda:UpdateFunctionCode, restrict API Gateway PATCH/deployment on IdP APIs, and keep Transfer roles least-privileged.
+  mitigation: Restrict transfer:UpdateServer to deployment roles, protect IdP functions with code signing and restricted
+    lambda:UpdateFunctionCode, restrict API Gateway PATCH/deployment on IdP APIs, and keep Transfer roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
-  notes: The IdP response chooses any role trusting transfer.amazonaws.com without iam:PassRole. The IdP function/API (consumer input) mapping is not collected, so the Lambda/API Gateway groups resolve as unknown; apigateway:POST is required on "*" because the deployment resource differs from the integration response (false negatives only).
-
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-transfer-workflow-passrole-updateserver
   provider: aws
   service: transfer
   title: Attach a managed workflow with a passed execution role to a Transfer server
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#managed-workflow-role-abuse--execute-storage-actions-on-upload
-  source_revision: 171e422299
-  summary: The source can have Transfer Family run workflow steps (copy, tag, delete, decrypt, custom Lambda invoke) with the privileges of a passable role trusting transfer.amazonaws.com.
+  source_revision: 0b36331
+  summary: Only COPY, TAG, DELETE, DECRYPT or allowed Lambda invocation steps within the exact server, storage,
+    session-policy and home-directory limits.
   requires:
     all_of:
-      - action: transfer:CreateWorkflow
-        resource: "*"
-      - action: transfer:UpdateServer
-        resource: "*"
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    - action: transfer:CreateWorkflow
+      resource: '*'
+    - action: transfer:UpdateServer
+      resource: '*'
+    - action: iam:PassRole
+      resource: '{target.arn}'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: transfer.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      aws_challenge_fact: aws-transfer-workflow-passrole-updateserver
     scope: same_account
-    aggregate_as: "Roles trusting transfer.amazonaws.com passable in {account}"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Only COPY, TAG, DELETE, DECRYPT or allowed Lambda invocation steps
   conditions:
-    - id: upload_trigger
-      description: Workflows run on a completed or partial upload to the server; the source must be able to upload or wait for legitimate uploads (AS2 messages do not trigger server workflows).
-    - id: step_types_bound_impact
-      description: The role is only exercised through workflow step types; custom steps invoke existing Lambda functions, which run with their own roles.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: transfer_scope_join
+    description: Bind the exact server, authenticated user, selected role, session policy, home directory, and accessible
+      S3/EFS paths; the role is never assumed by the attacker.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict transfer:CreateWorkflow/UpdateServer and iam:PassRole on Transfer workflow roles, and scope workflow roles to the prefixes they process.
+  mitigation: Restrict transfer:CreateWorkflow/UpdateServer and iam:PassRole on Transfer workflow roles, and scope
+    workflow roles to the prefixes they process.
   references:
-    - https://docs.aws.amazon.com/transfer/latest/userguide/workflow-execution-role.html
-  notes: Bounded impact - storage operations on uploaded files through the workflow role.
+  - https://docs.aws.amazon.com/transfer/latest/userguide/workflow-execution-role.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
+- id: aws-audit-redirect-connector-to-steal-partner-sftp-credential
+  provider: aws
+  service: transfer
+  title: Redirect connector to steal partner SFTP credential
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferupdateconnector--redirect-an-sftp-connector-and-capture-its-stored-credential
+  source_revision: 0b36331
+  summary: The source can authenticate as partner or access partner files only when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: transfer:UpdateConnector
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-redirect-connector-to-steal-partner-sftp-credential
+    scope: same_account
+    aggregate_as: Verified Authenticate as partner or access partner fil in {account}
+    grants:
+    - Authenticate as partner or access partner files
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Evidence must prove the connector URL update reaches an attacker endpoint accepted by host-key
+      validation, a later connection occurs, and a reusable password is captured and validated for the partner identity.
+      SSH public-key authentication alone does not disclose the private key.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/
+- id: aws-s05-connector-remote-directory-move-and-delete-capability-pivot
+  provider: aws
+  service: transfer
+  title: Connector remote-directory, move, and delete capability pivot
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#connector-remote-directory-move-and-delete-capability-pivot
+  source_revision: 0b36331
+  summary: The source may obtain Remote SFTP connector identity and its authorized remote directory capability when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: transfer:StartDirectoryListing
+        resource: '*'
+    - - action: transfer:StartRemoteMove
+        resource: '*'
+    - - action: transfer:StartRemoteDelete
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-connector-remote-directory-move-and-delete-capability-pivot
+    scope: same_account
+    aggregate_as: Verified Remote SFTP connector identity and its authorized remote directory capability in {account}
+    grants:
+    - Remote SFTP connector identity and its authorized remote directory capability
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing connector and stored credential, reachable remote path; listing also needs connector-role S3 output and attacker read access to result. StartRemoteMove and StartRemoteDelete are independent alternatives on the exact connector ARN. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  - https://docs.aws.amazon.com/transfer/latest/userguide/authentication-api-gateway.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
+  provider: aws
+  service: transfer
+  title: '`logs:FilterLogEvents` / `logs:GetLogEvents` — recover custom-IdP passwords from logs'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#logsfilterlogevents--logsgetlogevents--recover-custom-idp-passwords-from-logs
+  source_revision: 0b36331
+  summary: The source may obtain Transfer custom-IdP user identity when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: logs:FilterLogEvents
+        resource: '*'
+    - - action: logs:GetLogEvents
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
+    scope: same_account
+    aggregate_as: Verified Transfer custom-IdP user identity in {account}
+    grants:
+    - Transfer custom-IdP user identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Known Lambda/API Gateway custom-IdP log group actually contains plaintext passwords; GetLogEvents on a known stream is an alternative. Password login still must work. Existing exclusion is false for service identity takeover. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  - https://docs.aws.amazon.com/transfer/latest/userguide/authentication-api-gateway.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

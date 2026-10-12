@@ -5,26 +5,28 @@
   provider: aws
   service: ecr
   title: Push an image over a mutable tag consumed by a workload with a role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrgetauthorizationtoken-ecrbatchchecklayeravailability-ecrbatchgetimage-ecrcompletelayerupload-ecrinitiatelayerupload-ecrputimage-ecruploadlayerpart
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrgetauthorizationtoken-ecrbatchchecklayeravailability-ecrbatchgetimage-ecrcompletelayerupload-ecrinitiatelayerupload-ecrputimage-ecruploadlayerpart
   source_revision: 171e422299
-  summary: The source can obtain (on the next pull) the privileges of the roles of workloads (ECS tasks, Batch jobs, App Runner services, Lambda on redeploy, SageMaker, EKS pods) that run an image tag it can overwrite.
+  summary: The source can obtain (on the next pull) the privileges of the roles of workloads (ECS tasks, Batch jobs, App
+    Runner services, Lambda on redeploy, SageMaker, EKS pods) that run an image tag it can overwrite.
   requires:
     all_of:
-      - action: ecr:PutImage
-        resource: "{target.consumer_input_arn}"
+    - action: ecr:PutImage
+      resource: "{target.consumer_input_arn}"
     any_of:
-      - - action: ecr:GetAuthorizationToken
-          resource: "*"
-        - action: ecr:InitiateLayerUpload
-          resource: "{target.consumer_input_arn}"
-        - action: ecr:UploadLayerPart
-          resource: "{target.consumer_input_arn}"
-        - action: ecr:CompleteLayerUpload
-          resource: "{target.consumer_input_arn}"
-        - action: ecr:BatchCheckLayerAvailability
-          resource: "{target.consumer_input_arn}"
-      - - action: ecr:BatchGetImage
-          resource: "{target.consumer_input_arn}"
+    - - action: ecr:GetAuthorizationToken
+        resource: "*"
+      - action: ecr:InitiateLayerUpload
+        resource: "{target.consumer_input_arn}"
+      - action: ecr:UploadLayerPart
+        resource: "{target.consumer_input_arn}"
+      - action: ecr:CompleteLayerUpload
+        resource: "{target.consumer_input_arn}"
+      - action: ecr:BatchCheckLayerAvailability
+        resource: "{target.consumer_input_arn}"
+    - - action: ecr:BatchGetImage
+        resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -32,45 +34,55 @@
     scope: same_account
     aggregate_as: "Roles of workloads running images from repositories covered by ecr:PutImage in {account}"
   conditions:
-    - id: tag_mutable
-      description: The repository must have mutable tags (immutable repositories need PutImageTagMutability, separate entry) and consumers must reference a tag, not a digest.
-    - id: refresh_boundary
-      description: ECS pins the digest per deployment (new deployment/scale re-resolves); Lambda pins at deployment, so the image runs only after a later CreateFunction/UpdateFunctionCode with the tag; App Runner re-pulls only with automatic deployments; Batch resolves at each job run; SageMaker Processing and Training resolve when a later job starts.
-    - id: retag_needs_attacker_image
-      description: The BatchGetImage-only group just retags a manifest already in the repository; it yields code execution only if an attacker-controlled image already exists there (otherwise layer-upload permissions are needed).
+  - id: tag_mutable
+    description: The repository must have mutable tags (immutable repositories need PutImageTagMutability, separate
+      entry) and consumers must reference a tag, not a digest.
+  - id: refresh_boundary
+    description: ECS pins the digest per deployment (new deployment/scale re-resolves); Lambda pins at deployment, so
+      the image runs only after a later CreateFunction/UpdateFunctionCode with the tag; App Runner re-pulls only with
+      automatic deployments; Batch resolves at each job run; SageMaker Processing and Training resolve when a later job
+      starts.
+  - id: retag_needs_attacker_image
+    description: The BatchGetImage-only group just retags a manifest already in the repository; it yields code execution
+      only if an attacker-controlled image already exists there (otherwise layer-upload permissions are needed).
   blockers:
-    - scp_or_boundary_deny
-    - ecr_tag_immutability
+  - scp_or_boundary_deny
+  - ecr_tag_immutability
   confidence: conditional
   severity: high
   mitigation: Use immutable tags or digest references, enable image signing verification and restrict push permissions.
   references:
-    - https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-push-iam.html
-  notes: "{target.consumer_input_arn} is the repository ARN the workload's image comes from. Cross-account consumers can be reached if they pull from this registry. The service-specific ECR-tag sections of the App Runner, Batch, ECS, Lambda (ecrputimage-on-a-mutable-lambda-image-tag-later-code-deployment-required) and SageMaker (ecrputimage-on-a-mutable-processing-image-later-job-required) pages are folded into this entry, which replaces the former aws-lambda-ecr-putimage-mutable-tag and aws-sagemaker-ecr-putimage-processing-image entries."
+  - https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-push-iam.html
+  notes: "{target.consumer_input_arn} is the repository ARN the workload's image comes from. Cross-account consumers can be
+    reached if they pull from this registry. The service-specific ECR-tag sections of the App Runner, Batch, ECS, Lambda (ecrputimage-on-a-mutable-lambda-image-tag-later-code-deployment-required)
+    and SageMaker (ecrputimage-on-a-mutable-processing-image-later-job-required) pages are folded into this entry, which replaces
+    the former aws-lambda-ecr-putimage-mutable-tag and aws-sagemaker-ecr-putimage-processing-image entries."
 
 - id: aws-ecr-public-push-consumed-image
   provider: aws
   service: ecr
   title: Push to an ECR Public repository consumed by workloads with roles
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecr-publicgetauthorizationtoken-stsgetservicebearertoken-ecr-publicbatchchecklayeravailability-ecr-publiccompletelayerupload-ecr-publicinitiatelayerupload-ecr-publicputimage-ecr-publicuploadlayerpart
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecr-publicgetauthorizationtoken-stsgetservicebearertoken-ecr-publicbatchchecklayeravailability-ecr-publiccompletelayerupload-ecr-publicinitiatelayerupload-ecr-publicputimage-ecr-publicuploadlayerpart
   source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads (in any account) that run an image tag from an ECR Public repository it can push to.
+  summary: The source can obtain the privileges of roles of workloads (in any account) that run an image tag from an ECR
+    Public repository it can push to.
   requires:
     all_of:
-      - action: ecr-public:GetAuthorizationToken
-        resource: "*"
-      - action: sts:GetServiceBearerToken
-        resource: "*"
-      - action: ecr-public:InitiateLayerUpload
-        resource: "{target.consumer_input_arn}"
-      - action: ecr-public:UploadLayerPart
-        resource: "{target.consumer_input_arn}"
-      - action: ecr-public:CompleteLayerUpload
-        resource: "{target.consumer_input_arn}"
-      - action: ecr-public:BatchCheckLayerAvailability
-        resource: "{target.consumer_input_arn}"
-      - action: ecr-public:PutImage
-        resource: "{target.consumer_input_arn}"
+    - action: ecr-public:GetAuthorizationToken
+      resource: "*"
+    - action: sts:GetServiceBearerToken
+      resource: "*"
+    - action: ecr-public:InitiateLayerUpload
+      resource: "{target.consumer_input_arn}"
+    - action: ecr-public:UploadLayerPart
+      resource: "{target.consumer_input_arn}"
+    - action: ecr-public:CompleteLayerUpload
+      resource: "{target.consumer_input_arn}"
+    - action: ecr-public:BatchCheckLayerAvailability
+      resource: "{target.consumer_input_arn}"
+    - action: ecr-public:PutImage
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -78,64 +90,33 @@
     scope: any
     aggregate_as: "Roles of workloads running images from ECR Public repositories covered by ecr-public:PutImage"
   conditions:
-    - id: refresh_boundary
-      description: Same digest/refresh semantics as private ECR consumers.
+  - id: refresh_boundary
+    description: Same digest/refresh semantics as private ECR consumers.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Pin public images by digest or mirror them to private repositories with immutable tags.
   references: []
   notes: Only consumers visible in collected snapshots can be evaluated.
 
-- id: aws-ecr-setrepositorypolicy
-  provider: aws
-  service: ecr
-  title: Rewrite a private repository policy to grant the source push access
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrsetrepositorypolicy--self-grant-private-image-access
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads running images from a repository whose policy it can rewrite to grant itself push access.
-  requires:
-    all_of:
-      - action: ecr:SetRepositoryPolicy
-        resource: "{target.consumer_input_arn}"
-      - action: ecr:GetAuthorizationToken
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      consumer_input_writable_via: ecr:SetRepositoryPolicy
-    scope: same_account
-    aggregate_as: "Roles of workloads running images from repositories covered by ecr:SetRepositoryPolicy in {account}"
-  conditions:
-    - id: tag_mutable
-      description: Tags must be mutable and consumed by tag.
-    - id: refresh_boundary
-      description: Same consumer refresh semantics as aws-ecr-push-consumed-tag.
-  blockers:
-    - scp_or_boundary_deny
-    - ecr_tag_immutability
-  confidence: conditional
-  severity: high
-  mitigation: Restrict ecr:SetRepositoryPolicy to administrators.
-  references: []
-  notes: Same-account principals named in a repository policy get access without an identity-policy grant, except ecr:GetAuthorizationToken which is registry-level.
-
 - id: aws-ecr-public-setrepositorypolicy
   provider: aws
   service: ecr
   title: Rewrite an ECR Public repository policy to grant the source push access
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecr-publicsetrepositorypolicy
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecr-publicsetrepositorypolicy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads running images from an ECR Public repository whose policy it can rewrite to grant itself push access.
+  summary: The source can obtain the privileges of roles of workloads running images from an ECR Public repository whose
+    policy it can rewrite to grant itself push access.
   requires:
     all_of:
-      - action: ecr-public:SetRepositoryPolicy
-        resource: "{target.consumer_input_arn}"
-      - action: ecr-public:GetAuthorizationToken
-        resource: "*"
-      - action: sts:GetServiceBearerToken
-        resource: "*"
+    - action: ecr-public:SetRepositoryPolicy
+      resource: "{target.consumer_input_arn}"
+    - action: ecr-public:GetAuthorizationToken
+      resource: "*"
+    - action: sts:GetServiceBearerToken
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -143,10 +124,10 @@
     scope: any
     aggregate_as: "Roles of workloads running images from ECR Public repositories covered by ecr-public:SetRepositoryPolicy"
   conditions:
-    - id: refresh_boundary
-      description: Same consumer refresh semantics as private ECR.
+  - id: refresh_boundary
+    description: Same consumer refresh semantics as private ECR.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict ecr-public:SetRepositoryPolicy to administrators.
@@ -159,13 +140,14 @@
   title: Rewrite the registry policy to grant the source push access to all repositories
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrputregistrypolicy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads running images from any repository of the registry by granting itself push access through the V2 registry policy.
+  summary: The source can obtain the privileges of roles of workloads running images from any repository of the registry
+    by granting itself push access through the V2 registry policy.
   requires:
     all_of:
-      - action: ecr:PutRegistryPolicy
-        resource: "*"
-      - action: ecr:GetAuthorizationToken
-        resource: "*"
+    - action: ecr:PutRegistryPolicy
+      resource: "*"
+    - action: ecr:GetAuthorizationToken
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -173,13 +155,13 @@
     scope: same_account
     aggregate_as: "Roles of workloads running images from the ECR registry of {account}"
   conditions:
-    - id: tag_mutable
-      description: Tags must be mutable and consumed by tag.
-    - id: registry_policy_v2
-      description: Registry policy scope V2 (the only currently valid scope) is required for push actions.
+  - id: tag_mutable
+    description: Tags must be mutable and consumed by tag.
+  - id: registry_policy_v2
+    description: Registry policy scope V2 (the only currently valid scope) is required for push actions.
   blockers:
-    - scp_or_boundary_deny
-    - ecr_tag_immutability
+  - scp_or_boundary_deny
+  - ecr_tag_immutability
   confidence: conditional
   severity: high
   mitigation: Restrict ecr:PutRegistryPolicy to administrators.
@@ -190,13 +172,15 @@
   provider: aws
   service: ecr
   title: Map a trusted private repository prefix (or ROOT) to an upstream the source controls
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrcreatepullthroughcacherule
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrcreatepullthroughcacherule
   source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads that pull not-yet-existing repositories under a prefix it can map to an upstream registry namespace it controls.
+  summary: The source can obtain the privileges of roles of workloads that pull not-yet-existing repositories under a
+    prefix it can map to an upstream registry namespace it controls.
   requires:
     all_of:
-      - action: ecr:CreatePullThroughCacheRule
-        resource: "*"
+    - action: ecr:CreatePullThroughCacheRule
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -204,17 +188,20 @@
     scope: same_account
     aggregate_as: "Roles of workloads pulling cacheable private ECR paths in {account}"
   conditions:
-    - id: repository_absent
-      description: Only paths whose private repository does not yet exist are served from upstream; existing repositories are not overwritten.
-    - id: consumer_import_permissions
-      description: The pulling workload (or its image-pull role) must hold ecr:BatchImportUpstreamImage and, when absent, ecr:CreateRepository.
-    - id: root_prefix
-      description: A ROOT-prefix rule covers every path of the registry (see the global-registry-hijack section).
+  - id: repository_absent
+    description: Only paths whose private repository does not yet exist are served from upstream; existing repositories
+      are not overwritten.
+  - id: consumer_import_permissions
+    description: The pulling workload (or its image-pull role) must hold ecr:BatchImportUpstreamImage and, when absent,
+      ecr:CreateRepository.
+  - id: root_prefix
+    description: A ROOT-prefix rule covers every path of the registry (see the global-registry-hijack section).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict ecr:CreatePullThroughCacheRule and avoid granting workloads BatchImportUpstreamImage/CreateRepository broadly.
+  mitigation: Restrict ecr:CreatePullThroughCacheRule and avoid granting workloads
+    BatchImportUpstreamImage/CreateRepository broadly.
   references: []
   notes: Covers both the prefix and the ROOT ('global registry hijack') sections.
 
@@ -224,36 +211,111 @@
   title: Make an immutable repository mutable and overwrite a consumed tag
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrputimagetagmutability
   source_revision: 171e422299
-  summary: The source can obtain the privileges of roles of workloads running a tag from an immutable repository by turning off immutability and pushing over the tag.
+  summary: The source can obtain the privileges of roles of workloads running a tag from an immutable repository by
+    turning off immutability and pushing over the tag.
   requires:
     all_of:
-      - action: ecr:PutImageTagMutability
-        resource: "{target.consumer_input_arn}"
-      - action: ecr:GetAuthorizationToken
-        resource: "*"
+    - action: ecr:PutImageTagMutability
+      resource: '{target.consumer_input_arn}'
+    - action: ecr:PutImage
+      resource: '{target.consumer_input_arn}'
+    any_of:
+    - - action: ecr:BatchGetImage
+        resource: '{target.consumer_input_arn}'
+    - - action: ecr:GetAuthorizationToken
+        resource: '*'
       - action: ecr:InitiateLayerUpload
-        resource: "{target.consumer_input_arn}"
+        resource: '{target.consumer_input_arn}'
       - action: ecr:UploadLayerPart
-        resource: "{target.consumer_input_arn}"
+        resource: '{target.consumer_input_arn}'
       - action: ecr:CompleteLayerUpload
-        resource: "{target.consumer_input_arn}"
+        resource: '{target.consumer_input_arn}'
       - action: ecr:BatchCheckLayerAvailability
-        resource: "{target.consumer_input_arn}"
-      - action: ecr:PutImage
-        resource: "{target.consumer_input_arn}"
+        resource: '{target.consumer_input_arn}'
   target:
     kind: aws_role
     selector:
       consumer_input_writable_via: ecr:PutImage
     scope: same_account
-    aggregate_as: "Roles of workloads running images from immutable repositories covered by ecr:PutImageTagMutability in {account}"
+    aggregate_as: Roles of workloads running images from immutable repositories covered by ecr:PutImageTagMutability in
+      {account}
   conditions:
-    - id: refresh_boundary
-      description: Same consumer refresh semantics as aws-ecr-push-consumed-tag.
+  - id: refresh_boundary
+    description: Same consumer refresh semantics as aws-ecr-push-consumed-tag.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict ecr:PutImageTagMutability and reference images by digest.
   references: []
-  notes: Distinct from aws-ecr-push-consumed-tag only for immutable repositories.
+  notes: Existing image manifests can be retagged with BatchGetImage and PutImage; new-layer upload remains an
+    alternative.
+- id: aws-ecr-setrepositorypolicy
+  provider: aws
+  service: ecr
+  title: Rewrite a private repository policy to grant the source push access
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrsetrepositorypolicy--self-grant-private-image-access
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of roles of workloads running images from a repository whose policy it
+    can rewrite to grant itself push access.
+  requires:
+    all_of:
+    - action: ecr:SetRepositoryPolicy
+      resource: '{target.consumer_input_arn}'
+  target:
+    kind: aws_role
+    selector:
+      consumer_input_writable_via: ecr:SetRepositoryPolicy
+    scope: same_account
+    aggregate_as: Roles of workloads running images from repositories covered by ecr:SetRepositoryPolicy in {account}
+  conditions:
+  - id: tag_mutable
+    description: Tags must be mutable and consumed by tag.
+  - id: refresh_boundary
+    description: Same consumer refresh semantics as aws-ecr-push-consumed-tag.
+  blockers:
+  - scp_or_boundary_deny
+  - ecr_tag_immutability
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ecr:SetRepositoryPolicy to administrators.
+  references: []
+  notes: Raw SigV4 repository APIs work with resource-policy grants without GetAuthorizationToken; Docker login still
+    needs it.
+- id: aws-ecr-image-embedded-credential
+  provider: aws
+  service: ecr
+  title: ECR image-layer embedded credential theft
+  summary: The identity represented by a live credential recovered from an ECR image.
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrgetauthorizationtoken-ecrbatchgetimage-ecrgetdownloadurlforlayer
+  source_revision: 0b36331
+  requires:
+    all_of:
+    - action: ecr:BatchGetImage
+      resource: '*'
+    - action: ecr:GetDownloadUrlForLayer
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-ecr-image-embedded-credential
+    scope: same_account
+  conditions:
+  - id: condition_1
+    description: The readable image layer actually contains a live credential for another cloud principal;
+      GetAuthorizationToken is needed for Docker registry login but not necessarily for direct signed API calls.
+  - id: condition_2
+    description: A known repository and image tag/digest are needed; no IAM identity can be inferred from image-read
+      permission alone.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict access to sensitive resources and remove secrets from the artifact.
+  references: []
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.

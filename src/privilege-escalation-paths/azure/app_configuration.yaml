@@ -1,0 +1,37 @@
+# Azure privilege escalation paths.
+
+- id: azure-appconfig-snapshot-credential
+  provider: azure
+  service: app_configuration
+  title: Recover credentials retained in App Configuration snapshot
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#bulk-exfil--loot-persistence-via-snapshots-configurationstoressnapshotsread--write
+  source_revision: 0b36331
+  summary: Read a verified usable credential from an App Configuration snapshot and gain its Entra service principal
+    permissions.
+  requires:
+    all_of:
+    - action: Microsoft.AppConfiguration/configurationStores/snapshots/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.AppConfiguration/configurationStores
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  - id: snapshot_access
+    description: The snapshot must already exist and be readable; creating a new snapshot additionally needs keyValues/read
+      and snapshots/write.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/azure-app-configuration/concept-snapshots
+  notes: Draft requires azure.app_configuration.snapshot_credential_holders; the evaluator must join only verified
+    holders, and return UNKNOWN if that fact is missing or incomplete.

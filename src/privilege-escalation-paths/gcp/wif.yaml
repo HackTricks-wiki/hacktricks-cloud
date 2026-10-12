@@ -11,129 +11,144 @@
   title: Add a provider trusting attacker-controlled credentials to a pool with broad bindings
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workloadidentitypoolproviderscreate--add-trust-to-an-already-authorized-pool
   source_revision: 171e422
-  summary: The source can obtain the privileges of service accounts and roles bound to pool-wide principals of workload identity pools on which it holds workloadIdentityPoolProviders.create.
+  summary: The source can obtain the privileges of service accounts bound to pool-wide principals of workload identity
+    pools on which it holds workloadIdentityPoolProviders.create.
   requires:
     all_of:
-      - action: iam.googleapis.com/workloadIdentityPoolProviders.create
-        resource: "{target.host_resource}"
+    - action: iam.googleapis.com/workloadIdentityPoolProviders.create
+      resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: wif_pool_bound
     scope: any
-    aggregate_as: "SAs and roles bound to pool-wide principals of controllable WIF pools"
+    aggregate_as: SAs bound to pool-wide principals of controllable WIF pools
   conditions:
-    - id: pool_wide_binding
-      description: Only effective when the pool has a binding for all its identities (principalSet .../workloadIdentityPools/<pool>/*) or for attribute values the new provider can assert.
-    - id: pool_active
-      description: The pool must be enabled.
+  - id: pool_wide_binding
+    description: Only effective when the pool has a binding for all its identities (principalSet .../workloadIdentityPools/<pool>/*)
+      or for attribute values the new provider can assert.
+  - id: pool_active
+    description: The pool must be enabled.
   blockers:
-    - gcp_deny_policy
-    - {id: org_policy_constraint, constraint: iam.workloadIdentityPoolProviders}
+  - gcp_deny_policy
+  - id: org_policy_constraint
+    constraint: iam.workloadIdentityPoolProviders
   confidence: conditional
   severity: critical
-  mitigation: Restrict workloadIdentityPoolProviders.* (roles/iam.workloadIdentityPoolAdmin), avoid pool-wide bindings and restrict allowed providers by org policy.
-
+  mitigation: Restrict workloadIdentityPoolProviders.* (roles/iam.workloadIdentityPoolAdmin), avoid pool-wide bindings
+    and restrict allowed providers by org policy.
 - id: gcp-wif-provider-update
   provider: gcp
   service: iam
   title: Change an existing provider's trust configuration
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workloadidentitypoolprovidersupdate--take-over-an-authorized-provider
   source_revision: 171e422
-  summary: The source can obtain the privileges of service accounts and roles bound to principals of workload identity pools whose providers it can update.
+  summary: The source can obtain the privileges of service accounts bound to principals of workload identity pools
+    whose providers it can update.
   requires:
     all_of:
-      - action: iam.googleapis.com/workloadIdentityPoolProviders.update
-        resource: "{target.host_resource}"
+    - action: iam.googleapis.com/workloadIdentityPoolProviders.update
+      resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: wif_pool_bound
     scope: any
-    aggregate_as: "SAs and roles bound to principals of WIF pools with updatable providers"
+    aggregate_as: SAs bound to principals of WIF pools with updatable providers
   conditions:
-    - id: matching_binding
-      description: An IAM binding must exist for a subject, group or mapped attribute the modified provider can assert, and the provider's attribute condition must be satisfiable.
-    - id: provider_enabled
-      description: The provider and pool must be enabled.
+  - id: matching_binding
+    description: An IAM binding must exist for a subject, group or mapped attribute the modified provider can assert,
+      and the provider's attribute condition must be satisfiable.
+  - id: provider_enabled
+    description: The provider and pool must be enabled.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Restrict workloadIdentityPoolProviders.update and alert on provider metadata/issuer changes.
-  notes: SAML metadata updates must keep one current certificate, which does not prevent adding another. An OIDC oidc.jwksJson upload replaces discovery-fetched keys while keeping the issuer URI.
-
+  notes: SAML metadata updates must keep one current certificate, which does not prevent adding another. An OIDC
+    oidc.jwksJson upload replaces discovery-fetched keys while keeping the issuer URI.
 - id: gcp-wif-pool-provider-restore
   provider: gcp
   service: iam
   title: Re-enable or undelete a pool or provider that still trusts attacker-controlled credentials
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#poolprovider-update--undelete--restore-a-residual-trust-path
   source_revision: 171e422
-  summary: The source can obtain the privileges of service accounts and roles still bound to principals of disabled or deleted workload identity pools or providers it can restore.
+  summary: The source can obtain the privileges of service accounts still bound to principals of disabled or deleted
+    workload identity pools or providers it can restore.
   requires:
     any_of:
-      - - action: iam.googleapis.com/workloadIdentityPoolProviders.undelete
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workloadIdentityPools.update
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workloadIdentityPools.undelete
-          resource: "{target.host_resource}"
+    - - action: iam.googleapis.com/workloadIdentityPoolProviders.undelete
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workloadIdentityPools.update
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workloadIdentityPools.undelete
+        resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: wif_pool_bound
     scope: any
-    aggregate_as: "SAs and roles bound to principals of restorable WIF pools"
+    aggregate_as: SAs bound to principals of restorable WIF pools
   conditions:
-    - id: residual_trust
-      description: The restored provider must already accept an identity the source controls and a matching IAM binding must remain.
-    - id: retention
-      description: Deleted pools/providers are restorable for approximately 30 days.
+  - id: residual_trust
+    description: The restored provider must already accept an identity the source controls and a matching IAM binding
+      must remain.
+  - id: retention
+    description: Deleted pools/providers are restorable for approximately 30 days.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Remove IAM bindings of decommissioned pools before deleting them and restrict pool/provider update and undelete.
-  notes: Also covers pools.update (re-enable) and pools.undelete. Provider re-enable through workloadIdentityPoolProviders.update is modelled by gcp-wif-provider-update. Disabling a provider blocks only new exchanges; disabling a pool also blocks use of issued tokens.
-
+  mitigation: Remove IAM bindings of decommissioned pools before deleting them and restrict pool/provider update
+    and undelete.
+  notes: Also covers pools.update (re-enable) and pools.undelete. Provider re-enable through workloadIdentityPoolProviders.update
+    is modelled by gcp-wif-provider-update. Disabling a provider blocks only new exchanges; disabling a pool also
+    blocks use of issued tokens.
 - id: gcp-wif-workforce-provider-control
   provider: gcp
   service: iam
   title: Create, change or restore a workforce pool provider to admit an attacker-controlled external user
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workforce-provider-control-and-trust-restoration--hijack-an-authorized-pool
   source_revision: 171e422
-  summary: The source can obtain the privileges of service accounts that grant impersonation to principals of workforce pools whose providers or state it controls.
+  summary: The source can obtain the privileges of service accounts that grant impersonation to principals of workforce
+    pools whose providers or state it controls.
   requires:
     any_of:
-      - - action: iam.googleapis.com/workforcePoolProviders.create
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workforcePoolProviders.update
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workforcePoolProviders.undelete
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workforcePools.update
-          resource: "{target.host_resource}"
-      - - action: iam.googleapis.com/workforcePools.undelete
-          resource: "{target.host_resource}"
+    - - action: iam.googleapis.com/workforcePoolProviders.create
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workforcePoolProviders.update
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workforcePoolProviders.undelete
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workforcePools.update
+        resource: '{target.host_resource}'
+    - - action: iam.googleapis.com/workforcePools.undelete
+        resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: workforce_pool_bound
     scope: any
-    aggregate_as: "SAs and roles bound to principals of controllable workforce pools"
+    aggregate_as: SAs bound to principals of controllable workforce pools
   conditions:
-    - id: matching_binding
-      description: An existing IAM binding must cover a workforce principal, group, attribute or pool-wide set that the created, changed or restored provider can assert; no target policy is changed.
-    - id: residual_trust
-      description: Pool/provider restore only helps while attacker-usable trust and a matching binding remain, within the recovery window.
-    - id: programmatic_only_jwks
-      description: A locally uploaded OIDC JWKS works only for programmatic STS exchange, not federated console sign-in.
+  - id: matching_binding
+    description: An existing IAM binding must cover a workforce principal, group, attribute or pool-wide set that
+      the created, changed or restored provider can assert; no target policy is changed.
+  - id: residual_trust
+    description: Pool/provider restore only helps while attacker-usable trust and a matching binding remain, within
+      the recovery window.
+  - id: programmatic_only_jwks
+    description: A locally uploaded OIDC JWKS works only for programmatic STS exchange, not federated console sign-in.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
-  mitigation: Restrict workforce pool/provider administration (roles/iam.workforcePoolAdmin, roles/iam.workforcePoolEditor) at the organization and avoid pool-wide bindings.
+  mitigation: Restrict workforce pool/provider administration (roles/iam.workforcePoolAdmin, roles/iam.workforcePoolEditor)
+    at the organization and avoid pool-wide bindings.
   references:
-    - https://cloud.google.com/iam/docs/manage-workforce-identity-pools-providers
-    - https://cloud.google.com/iam/docs/workforce-identity-federation
-  notes: Workforce pools are organization-scoped and their principals usually receive roles directly; those direct grants need the proposed gcp_federated_principal kind. Only service accounts that grant token creation or workloadIdentityUser to workforce principals are reachable today.
+  - https://cloud.google.com/iam/docs/manage-workforce-identity-pools-providers
+  - https://cloud.google.com/iam/docs/workforce-identity-federation
+  notes: Workforce pools are organization-scoped and their principals usually receive roles directly; those direct
+    grants need the proposed gcp_federated_principal kind. Only service accounts that grant token creation or workloadIdentityUser
+    to workforce principals are reachable today.

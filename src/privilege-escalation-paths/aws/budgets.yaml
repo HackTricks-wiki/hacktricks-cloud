@@ -1,46 +1,4 @@
 # AWS Budgets privilege escalation techniques.
 # Source: hacktricks-cloud aws-budgets-privesc/README.md (rev 171e422299).
 
-- id: aws-budgets-passrole-createbudgetaction
-  provider: aws
-  service: budgets
-  title: Create a budget action that runs as a passed execution role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-budgets-privesc/README.md#budgetscreatebudgetaction-iampassrole--budgetsexecutebudgetaction--self-attach-an-admin-policy--scp--run-code-as-a-passed-role
-  source_revision: 6fb9ac51fd
-  summary: The source can make a passable role trusting budgets.amazonaws.com attach IAM policies or SCPs, or run
-    SSM documents, on its behalf (bounded by the three budget action types).
-  requires:
-    all_of:
-    - action: iam:PassRole
-      resource: '{target.arn}'
-    - action: budgets:CreateBudgetAction
-      resource: '*'
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: budgets.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: Roles trusting budgets.amazonaws.com passable in {account}
-    outcome: impersonation
-  conditions:
-  - id: action_type_bound
-    description: Only APPLY_IAM_POLICY (managed policy to users/groups/roles), APPLY_SCP_POLICY (management account)
-      and RUN_SSM_DOCUMENTS (stop EC2/RDS documents) are possible; the gain is what the role can do through these,
-      not a full role session.
-  - id: action_fires
-    description: The action runs only when the budget threshold is crossed (automatic approval) or after budgets:ExecuteBudgetAction
-      approval; an existing budget the source can attach the action to is required.
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict iam:PassRole on budget execution roles and budgets:CreateBudgetAction to finance administrators;
-    scope execution roles to the policies and targets intended.
-  references:
-  - https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-controls.html
-  - https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_budgets_CreateBudgetAction.html
-  notes: With APPLY_IAM_POLICY and a role allowed to attach any managed policy, the source can attach AdministratorAccess
-    to itself.
+[]

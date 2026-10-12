@@ -9,122 +9,269 @@
   title: Deploy an App Engine version running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#deploy-attacker-controlled-code-as-a-version-service-account
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, including the App Engine default service account.
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs,
+    including the App Engine default service account.
   requires:
     all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-      - action: appengine.versions.create
-        resource: "*"
-      - action: storage.objects.create
-        resource: "*"
-      - action: cloudbuild.builds.create
-        resource: "*"
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+    - action: appengine.versions.create
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
-    aggregate_as: "Service accounts usable as App Engine runtime SA in {project}"
+    aggregate_as: Service accounts usable as App Engine runtime SA in {project}
   conditions:
-    - id: app_exists
-      description: An App Engine application must already exist in the project.
-    - id: deploy_prereqs
-      description: The effective deploy permission set varies (Google recommends App Engine Deployer, Service Account User, Cloud Build Editor and Storage Object Admin); read and operation-polling permissions used by the CLI may be avoidable.
-    - id: legacy_default_sa_actas_exception
-      description: In legacy-affected organizations the auto-created appspot default SA can be deployed as without actAs until constraints/appengine.enforceServiceAccountActAsCheck is enforced; this entry conservatively still requires actAs.
-    - id: version_sa_artifact_registry
-      description: The version's SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts for flexible) or the deployment never reaches execution.
+  - id: app_exists
+    description: An App Engine application must already exist in the project.
+  - id: deploy_prereqs
+    description: The effective deploy permission set varies (Google recommends App Engine Deployer, Service Account
+      User, Cloud Build Editor and Storage Object Admin); read and operation-polling permissions used by the CLI
+      may be avoidable.
+  - id: legacy_default_sa_actas_exception
+    description: In legacy-affected organizations the auto-created appspot default SA can be deployed as without
+      actAs until constraints/appengine.enforceServiceAccountActAsCheck is enforced; this entry conservatively still
+      requires actAs.
+  - id: version_sa_artifact_registry
+    description: The version's SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts
+      for flexible) or the deployment never reaches execution.
+  - id: source_staging
+    description: gcloud source deployment additionally needs Storage object staging and Cloud Build creation; direct
+      Admin API with an already deployable version artifact does not universally require those caller permissions.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: critical
-  mitigation: Grant actAs only on specific SAs, remove roles/editor from the App Engine default SA and restrict roles/appengine.deployer.
+  mitigation: Grant actAs only on specific SAs, remove roles/editor from the App Engine default SA and restrict
+    roles/appengine.deployer.
   references:
-    - https://cloud.google.com/appengine/docs/standard/configure-service-accounts
-  notes: A no-promote version is reachable without moving production traffic. Also covers replacing a named version and environment-variable startup injection in app.yaml. The SA must be in the App Engine application's project.
-
+  - https://cloud.google.com/appengine/docs/standard/configure-service-accounts
+  notes: A no-promote version is reachable without moving production traffic. Also covers replacing a named version
+    and environment-variable startup injection in app.yaml. The SA must be in the App Engine application's project.
 - id: gcp-appengine-instances-enabledebug
   provider: gcp
   service: appengine
   title: SSH into an App Engine flexible instance and use its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#ssh-into-a-flexible-environment-instance-through-debug-mode-or-os-login
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account of App Engine flexible versions on which it holds appengine.instances.enableDebug, or OS Login plus actAs on that service account.
+  summary: The source can obtain the privileges of the service account of App Engine flexible versions on which
+    it holds appengine.instances.enableDebug, or OS Login plus actAs on that service account.
   requires:
     any_of:
-      - - action: appengine.instances.enableDebug
-          resource: "{target.host_resource}"
-      - - action: compute.instances.osLogin
-          resource: "*"
-        - action: iam.serviceAccounts.actAs
-          resource: "{target.email}"
-      - - action: compute.instances.osAdminLogin
-          resource: "*"
-        - action: iam.serviceAccounts.actAs
-          resource: "{target.email}"
+    - - action: appengine.instances.enableDebug
+        resource: '{target.host_resource}'
+    - - action: compute.instances.osLogin
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+    - - action: compute.instances.osAdminLogin
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: appengine_version
     scope: same_project
-    aggregate_as: "SAs of App Engine flexible versions the source can debug"
+    aggregate_as: SAs of App Engine flexible versions the source can debug
   conditions:
-    - id: flexible_only
-      description: Only App Engine flexible instances support SSH debug; standard environment versions are not reachable.
-    - id: ssh_reachability
-      description: The instance VM must be reachable over SSH from the source (external IP, or IAP TCP forwarding which adds iap.tunnelInstances.accessViaIAP and a firewall path).
-    - id: os_login_scope
-      description: The OS Login branch needs the role at project level for the CLI (or compute.projects.get); external-organization principals also need compute.osLoginExternalUser.
+  - id: flexible_only
+    description: Only App Engine flexible instances support SSH debug; standard environment versions are not reachable.
+  - id: ssh_reachability
+    description: The instance VM must be reachable over SSH from the source (external IP, or IAP TCP forwarding
+      which adds iap.tunnelInstances.accessViaIAP and a firewall path).
+  - id: os_login_scope
+    description: The OS Login branch needs the role at project level for the CLI (or compute.projects.get); external-organization
+      principals also need compute.osLoginExternalUser.
+  - id: os_login_debug_state
+    description: For either OS Login branch the flexible instance must already have debug mode enabled or the source
+      must also hold appengine.instances.enableDebug on that instance; a usable SSH path is still required.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict roles/appengine.appAdmin and avoid privileged SAs on flexible versions.
   references:
-    - https://docs.cloud.google.com/appengine/docs/flexible/debugging-an-instance
-    - https://docs.cloud.google.com/compute/docs/oslogin/set-up-oslogin
-  notes: The debug branch does not require actAs or Compute setMetadata (the debug request carries the SSH key). The OS Login branch requires actAs because the VM has an attached SA. OS Login resource "*" is project-level; the VM is the version's flexible instance.
-
+  - https://docs.cloud.google.com/appengine/docs/flexible/debugging-an-instance
+  - https://docs.cloud.google.com/compute/docs/oslogin/set-up-oslogin
+  notes: The debug branch does not require actAs or Compute setMetadata (the debug request carries the SSH key).
+    The OS Login branch requires actAs because the VM has an attached SA. OS Login resource "*" is project-level;
+    the VM is the version's flexible instance.
 - id: gcp-appengine-versions-create-legacy-default-sa-no-actas
   provider: gcp
   service: appengine
   title: Deploy an App Engine version as the legacy default service account without actAs
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#deploy-attacker-controlled-code-as-a-version-service-account
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the auto-created App Engine default service account of projects where it can deploy versions, in legacy-affected organizations that do not enforce the App Engine actAs check.
+  summary: The source can obtain the privileges of the auto-created App Engine default service account of projects
+    where it can deploy versions, in legacy-affected organizations that do not enforce the App Engine actAs check.
   requires:
     all_of:
-      - action: appengine.versions.create
-        resource: "*"
-      - action: storage.objects.create
-        resource: "*"
-      - action: cloudbuild.builds.create
-        resource: "*"
+    - action: appengine.versions.create
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      target_id_glob: ["*@appspot.gserviceaccount.com"]
+      target_id_glob:
+      - '*@appspot.gserviceaccount.com'
       gcp_sa_in_scope_of_permission: true
     scope: same_project
-    aggregate_as: "App Engine default SA deployable without actAs in {project}"
+    aggregate_as: App Engine default SA deployable without actAs in {project}
   conditions:
-    - id: legacy_affected_org
-      description: Only legacy-affected organizations have the exemption; where constraints/appengine.enforceServiceAccountActAsCheck is not visible the check is already enforced and this edge does not exist.
-    - id: app_exists
-      description: An App Engine application must already exist and the version must run as the app-level default SA (no per-version SA and no user-managed app default).
-    - id: version_sa_artifact_registry
-      description: The default SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts for flexible) or the deployment never reaches execution.
+  - id: legacy_affected_org
+    description: Only legacy-affected organizations have the exemption; where constraints/appengine.enforceServiceAccountActAsCheck
+      is not visible the check is already enforced and this edge does not exist.
+  - id: app_exists
+    description: An App Engine application must already exist and the version must run as the app-level default
+      SA (no per-version SA and no user-managed app default).
+  - id: version_sa_artifact_registry
+    description: The default SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts
+      for flexible) or the deployment never reaches execution.
+  - id: source_staging
+    description: gcloud source deployment additionally needs Storage object staging and Cloud Build creation; direct
+      Admin API with an already deployable version artifact does not universally require those caller permissions.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-    - id: org_policy_constraint
-      constraint: appengine.enforceServiceAccountActAsCheck
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  - id: org_policy_constraint
+    constraint: appengine.enforceServiceAccountActAsCheck
   confidence: conditional
   severity: critical
-  mitigation: Enforce constraints/appengine.enforceServiceAccountActAsCheck and remove roles/editor from the App Engine default SA.
+  mitigation: Enforce constraints/appengine.enforceServiceAccountActAsCheck and remove roles/editor from the App
+    Engine default SA.
   references:
-    - https://docs.cloud.google.com/iam/docs/service-accounts-actas
-  notes: Complements gcp-appengine-versions-create-actas (which requires actAs) for the documented legacy exception; it does not cover per-version or user-managed default SAs.
+  - https://docs.cloud.google.com/iam/docs/service-accounts-actas
+  notes: Complements gcp-appengine-versions-create-actas (which requires actAs) for the documented legacy exception;
+    it does not cover per-version or user-managed default SAs.
+- id: gcp-appengine-version-env-credential
+  provider: gcp
+  service: appengine
+  title: Read literal secrets from App Engine version environment
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-secrets-and-deployment-locations-from-version-configuration
+  source_revision: 0b36331
+  summary: Credential represented by an env variable; emit only for the exact verified source, resource and target.
+  requires:
+    all_of:
+    - action: appengine.versions.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-appengine-version-env-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Read literal secrets from App Engine version environment
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      version and view=FULL; alternative is appengine.versions.list on known service. Edge only if a valid reusable
+      credential is present and its authority can be identified.
+  confidence: conditional
+  severity: high
+  mitigation: Limit appengine.versions.get to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-secrets-and-deployment-locations-from-version-configuration
+- id: gcp-appengine-source-credential
+  provider: gcp
+  service: appengine
+  title: Recover hard-coded credentials from retained App Engine deployment source
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-source-code
+  source_revision: 0b36331
+  summary: Identity authenticated by a valid embedded key or password; emit only for the exact verified source,
+    resource and target.
+  requires:
+    all_of:
+    - action: appengine.versions.get
+      resource: '*'
+    - action: storage.objects.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-appengine-source-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover hard-coded credentials from retained App Engine deployment source
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      extant deployment sourceUrl; alternatively versions.list; Console Code Viewer is a separate non-scriptable
+      path needing roles/appengine.codeViewer. Edge only after credential content and target verified.
+  confidence: conditional
+  severity: high
+  mitigation: Limit appengine.versions.get to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-source-code
+- id: gcp-appengine-memcache-session
+  provider: gcp
+  service: appengine
+  title: Recover cached session token from Memcache
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-or-poison-app-engine-memcache-data
+  source_revision: 0b36331
+  summary: Application session represented by cached token; emit only for the exact verified source, resource and
+    target.
+  requires:
+    all_of:
+    - action: appengine.memcache.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-appengine-memcache-session
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover cached session token from Memcache
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      cache key and type; list/getKey may be needed to discover it; token must be present and usable.
+  confidence: conditional
+  severity: high
+  mitigation: Limit appengine.memcache.get to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-or-poison-app-engine-memcache-data
+- id: gcp-appengine-log-credential
+  provider: gcp
+  service: appengine
+  title: Recover credentials printed in App Engine logs
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-application-logs-with-logginglogentrieslist
+  source_revision: 0b36331
+  summary: Identity authenticated by a valid token or password printed in logs; emit only for the exact verified
+    source, resource and target.
+  requires:
+    all_of:
+    - action: logging.logEntries.list
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-appengine-log-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover credentials printed in App Engine logs
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Log entry
+      actually contains credential; optional logging.privateLogEntries.list for private entries or logging.views.access
+      for a specific view. No edge from permission alone.
+  confidence: conditional
+  severity: high
+  mitigation: Limit logging.logEntries.list to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-app-engine-post-exploitation.md#read-application-logs-with-logginglogentrieslist

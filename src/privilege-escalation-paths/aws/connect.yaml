@@ -2,48 +2,19 @@
 # Source: hacktricks-cloud aws-connect-privesc/README.md (rev 171e422299).
 # Connect instances, users and security profiles are not collected: every edge is one unresolved placeholder per account.
 
-- id: aws-connect-saml-session-name-impersonation
-  provider: aws
-  service: connect
-  title: Impersonate a SAML Connect user by choosing the role-session name
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#impersonate-a-saml-connect-user-with-a-controllable-role-session-name
-  source_revision: 171e422299
-  summary: The source can obtain the Amazon Connect application privileges (for example the Admin security profile) of any SAML Connect user whose username it can use as its role-session name.
-  requires:
-    all_of:
-      - action: connect:GetFederationToken
-        resource: "{target.resource_arn}"
-  target:
-    kind: aws_service_plane_admin
-    selector:
-      service_plane: connect
-      resource_permission_covers_target: connect:GetFederationToken
-    scope: same_account
-    aggregate_as: "Amazon Connect administrators in {account}"
-    grants: [Connect Admin security profile]
-  conditions:
-    - id: saml_identity_and_session_name
-      description: The instance uses SAML identity management and the source can assume the federation role with an arbitrary RoleSessionName matching the victim's case-sensitive Connect username.
-    - id: broad_federation_grant
-      description: The federation role's connect:GetFederationToken grant is not restricted to the intended per-user identity pattern.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Prevent arbitrary RoleSessionName selection on Connect federation roles (sts:RoleSessionName conditions) and restrict connect:GetFederationToken to the caller's own user.
-  notes: Contact-center administration only; the Connect token is not AWS credentials. The requirement is evaluated on the source; when the source reaches it only through the federation role, that role's edge carries the chain.
-
 - id: aws-connect-updateuseridentityinfo-takeover
   provider: aws
   service: connect
   title: Take over a Connect-managed user by changing its email
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#take-over-a-connect-managed-user-through-updateuseridentityinfo
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#take-over-a-connect-managed-user-through-updateuseridentityinfo
   source_revision: 171e422299
-  summary: The source can take over CONNECT_MANAGED Amazon Connect users (including administrators) by redirecting their email and resetting the password.
+  summary: The source can take over CONNECT_MANAGED Amazon Connect users (including administrators) by redirecting their
+    email and resetting the password.
   requires:
     all_of:
-      - action: connect:UpdateUserIdentityInfo
-        resource: "{target.resource_arn}/agent/*"
+    - action: connect:UpdateUserIdentityInfo
+      resource: "{target.resource_arn}/agent/*"
   target:
     kind: aws_service_plane_admin
     selector:
@@ -53,32 +24,36 @@
     aggregate_as: "Amazon Connect administrators in {account}"
     grants: [Connect user security profiles (Admin when the victim is an administrator)]
   conditions:
-    - id: connect_managed_identity
-      description: Only CONNECT_MANAGED identity; SAML rejects an email change and EXISTING_DIRECTORY identities are managed by the directory.
-    - id: admin_victim
-      description: Administration is reached only when the targeted user holds an administrative security profile.
+  - id: connect_managed_identity
+    description: Only CONNECT_MANAGED identity; SAML rejects an email change and EXISTING_DIRECTORY identities are
+      managed by the directory.
+  - id: admin_victim
+    description: Administration is reached only when the targeted user holds an administrative security profile.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict connect:UpdateUserIdentityInfo to identity administrators and alert on email changes of administrators followed by password resets.
+  mitigation: Restrict connect:UpdateUserIdentityInfo to identity administrators and alert on email changes of
+    administrators followed by password resets.
   notes: Contact-center administration only; does not grant the victim's IAM identity.
 
 - id: aws-connect-security-profile-admin
   provider: aws
   service: connect
   title: Grant Connect Admin through security-profile assignment or mutation
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#grant-admin-through-security-profile-mutation
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#grant-admin-through-security-profile-mutation
   source_revision: 171e422299
-  summary: The source can give a Connect user it controls the Admin security profile, or widen a profile already assigned to it, gaining Amazon Connect application administration.
+  summary: The source can give a Connect user it controls the Admin security profile, or widen a profile already
+    assigned to it, gaining Amazon Connect application administration.
   requires:
     any_of:
-      - - action: connect:UpdateUserSecurityProfiles
-          resource: "{target.resource_arn}/agent/*"
-        - action: connect:UpdateUserSecurityProfiles
-          resource: "{target.resource_arn}/security-profile/*"
-      - - action: connect:UpdateSecurityProfile
-          resource: "{target.resource_arn}/security-profile/*"
+    - - action: connect:UpdateUserSecurityProfiles
+        resource: "{target.resource_arn}/agent/*"
+      - action: connect:UpdateUserSecurityProfiles
+        resource: "{target.resource_arn}/security-profile/*"
+    - - action: connect:UpdateSecurityProfile
+        resource: "{target.resource_arn}/security-profile/*"
   target:
     kind: aws_service_plane_admin
     selector:
@@ -87,11 +62,237 @@
     aggregate_as: "Amazon Connect administrators in {account}"
     grants: [Connect Admin security profile]
   conditions:
-    - id: controlled_connect_user
-      description: The source must control a Connect user (to assign the profile to, or whose assigned profile it widens).
+  - id: controlled_connect_user
+    description: The source must control a Connect user (to assign the profile to, or whose assigned profile it widens).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict connect:UpdateUserSecurityProfiles and connect:UpdateSecurityProfile (connect:InstanceId / resource tags) and alert on Admin-profile assignment.
-  notes: UpdateUserSecurityProfiles must allow both the user ARN and every supplied security-profile ARN. Service-level escalation only, not IAM administrator access.
+  mitigation: Restrict connect:UpdateUserSecurityProfiles and connect:UpdateSecurityProfile (connect:InstanceId /
+    resource tags) and alert on Admin-profile assignment.
+  notes: UpdateUserSecurityProfiles must allow both the user ARN and every supplied security-profile ARN. Service-level
+    escalation only, not IAM administrator access.
+- id: aws-connect-saml-session-name-impersonation
+  provider: aws
+  service: connect
+  title: Impersonate a SAML Connect user by choosing the role-session name
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#impersonate-a-saml-connect-user-with-a-controllable-role-session-name
+  source_revision: 171e422299
+  summary: The source can obtain the Amazon Connect application privileges (for example the Admin security profile) of
+    any SAML Connect user whose username it can use as its role-session name.
+  requires:
+    all_of:
+    - action: connect:GetFederationToken
+      resource: '*'
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: connect
+    scope: same_account
+    aggregate_as: Amazon Connect administrators in {account}
+    grants:
+    - Connect Admin security profile
+  conditions:
+  - id: saml_identity_and_session_name
+    description: The instance uses SAML identity management and the source can assume the federation role with an
+      arbitrary RoleSessionName matching the victim's case-sensitive Connect username.
+  - id: broad_federation_grant
+    description: The federation role's connect:GetFederationToken grant is not restricted to the intended per-user
+      identity pattern.
+  - id: resource_pattern
+    description: A caller-specific /user/${aws:userid} grant can also work when its policy expansion matches the assumed
+      role session; ordinary instance and /agent ARNs do not authorize GetFederationToken.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Prevent arbitrary RoleSessionName selection on Connect federation roles (sts:RoleSessionName conditions)
+    and restrict connect:GetFederationToken to the caller's own user.
+  notes: Contact-center administration only; the Connect token is not AWS credentials. The requirement is evaluated on
+    the source; when the source reaches it only through the federation role, that role's edge carries the chain.
+- id: aws-connect-contact-credential
+  provider: aws
+  service: connect
+  title: Recover a credential persisted in Connect contact attributes or attached files
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#collect-contact-metadata-attributes-references-and-files
+  source_revision: 0b36331
+  summary: Recover a credential persisted in Connect contact attributes or attached files when exact source-to-target
+    authority is verified.
+  requires:
+    all_of:
+    - action: connect:GetContactAttributes
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-contact-credential
+    scope: any
+    grants:
+    - verified credential owner authority
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#collect-contact-metadata-attributes-references-and-files
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge. Alternative APIs listed in collector_request need separate OR branches before implementation; the draft
+    names one sufficient action and must not be used for the others until represented.'
+  conditions:
+  - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
+    or usable downstream scope.
+- id: aws-connect-flow-credential
+  provider: aws
+  service: connect
+  title: Recover hard-coded credential from Connect flow/module source
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#recover-flow-source-and-integration-targets
+  source_revision: 0b36331
+  summary: Recover hard-coded credential from Connect flow/module source when exact source-to-target authority is
+    verified.
+  requires:
+    all_of:
+    - action: connect:DescribeContactFlow
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-flow-credential
+    scope: any
+    grants:
+    - verified credential owner authority
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#recover-flow-source-and-integration-targets
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge. Alternative APIs listed in collector_request need separate OR branches before implementation; the draft
+    names one sufficient action and must not be used for the others until represented.'
+  conditions:
+  - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
+    or usable downstream scope.
+- id: aws-connect-conversation-credential
+  provider: aws
+  service: connect
+  title: Capture a credential from live voice/chat transcript or monitor session
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#read-or-monitor-live-conversations
+  source_revision: 0b36331
+  summary: Capture a credential from live voice/chat transcript or monitor session when exact source-to-target authority
+    is verified.
+  requires:
+    all_of:
+    - action: connect:ListRealtimeContactAnalysisSegments
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-conversation-credential
+    scope: any
+    grants:
+    - verified credential owner authority
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#read-or-monitor-live-conversations
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge. Alternative APIs listed in collector_request need separate OR branches before implementation; the draft
+    names one sufficient action and must not be used for the others until represented.'
+  conditions:
+  - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
+    or usable downstream scope.
+- id: aws-connect-stream-credential
+  provider: aws
+  service: connect
+  title: Capture a credential from cross-account live chat stream
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#stream-an-active-chat-to-a-cross-account-sns-topic
+  source_revision: 0b36331
+  summary: Capture a credential from cross-account live chat stream when exact source-to-target authority is verified.
+  requires:
+    all_of:
+    - action: connect:StartContactStreaming
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-stream-credential
+    scope: any
+    grants:
+    - verified credential owner authority
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#stream-an-active-chat-to-a-cross-account-sns-topic
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge. Alternative APIs listed in collector_request need separate OR branches before implementation; the draft
+    names one sufficient action and must not be used for the others until represented.'
+  conditions:
+  - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
+    or usable downstream scope.
+- id: aws-connect-processor-credential
+  provider: aws
+  service: connect
+  title: Capture a credential through controlled Connect message processor
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#intercept-and-alter-an-active-chat-with-a-custom-message-processor
+  source_revision: 0b36331
+  summary: Capture a credential through controlled Connect message processor when exact source-to-target authority
+    is verified.
+  requires:
+    all_of:
+    - action: connect:StartContactMediaProcessing
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-processor-credential
+    scope: any
+    grants:
+    - verified credential owner authority
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#intercept-and-alter-an-active-chat-with-a-custom-message-processor
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge. Alternative APIs listed in collector_request need separate OR branches before implementation; the draft
+    names one sufficient action and must not be used for the others until represented.'
+  conditions:
+  - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
+    or usable downstream scope.
+
+- id: aws-connect-createparticipant-bearer
+  provider: aws
+  service: connect
+  title: Mint a participant bearer for an active Connect contact
+  source: src/pentesting-cloud/aws-security/aws-services/aws-connect-enum.md#authorization-and-unauthenticated-boundary
+  source_revision: 0b36331
+  summary: CreateParticipant grants an additional chat or WebRTC participant identity for a verified active contact.
+  requires:
+    all_of:
+    - action: connect:CreateParticipant
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-createparticipant-bearer
+    scope: same_account
+    aggregate_as: Verified Connect participant identities for active contacts in {account}
+    grants:
+    - The participant role's chat or WebRTC capabilities for the exact active contact.
+  conditions:
+  - id: exact_active_contact
+    description: The source must know the initial contact ID, hold CreateParticipant on both required Contact and
+      Instance resources, and satisfy channel-specific role and state limits.
+  - id: short_token_lifetime
+    description: The participant token must be exchanged promptly; a stale contact snapshot cannot prove a successful
+      join.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateParticipant on Contact and Instance resources and monitor unexpected participant joins.
+  references:
+  - https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateParticipant.html
+  notes: aws_verified_authority represents the bounded Connect participant identity; no new target kind is required.
+    Missing evidence is UNKNOWN.

@@ -1,0 +1,42 @@
+- id: aws-qbusiness-crossaccount-data-accessor
+  provider: aws
+  service: qbusiness
+  title: Grant a controlled ISV accessor Q Business retrieval authority
+  source: src/pentesting-cloud/aws-security/aws-services/aws-q-business-enum.md#data-accessors-and-resource-policies
+  source_revision: 0b36331
+  summary: An application administrator can authorize a controlled registered ISV accessor to retrieve documents
+    allowed to assigned end users.
+  requires:
+    all_of:
+    - action: qbusiness:CreateDataAccessor
+      resource: '{target.resource_arn}'
+    - action: qbusiness:AssociatePermission
+      resource: '{target.resource_arn}'
+    - action: qbusiness:PutResourcePolicy
+      resource: '{target.resource_arn}'
+    - action: sso:PutApplicationAssignmentConfiguration
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-qbusiness-crossaccount-data-accessor
+    scope: any
+    outcome: permission_grant
+    grants:
+    - qbusiness:SearchRelevantContent on documents permitted by propagated end-user ACLs
+    aggregate_as: Verified Q Business ISV accessor authority
+  conditions:
+  - id: exact_isv_assignment_and_acl
+    description: Evidence must bind a controlled registered ISV tenant, the application policy, Identity Center
+      assignment, propagated end user and document ACL.
+  - id: tti_variant
+    description: TTI access also requires qbusiness:CreateDataAccessorWithTti; the base entry covers the standard
+      CreateDataAccessor flow only.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict accessor creation, resource-policy writes and Identity Center assignments; audit ISV tenant
+    IDs and data-source filters.
+  references:
+  - https://docs.aws.amazon.com/amazonq/latest/qbusiness-ug/data-accessors.html

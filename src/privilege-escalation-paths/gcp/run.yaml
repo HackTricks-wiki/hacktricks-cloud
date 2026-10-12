@@ -391,3 +391,53 @@
   severity: high
   mitigation: Restrict run.workerpools.setIamPolicy (roles/run.admin, roles/owner).
   notes: Mirrors gcp-run-services-setiampolicy-actas for the worker pool resource type.
+- id: gcp-run-literal-sa-key-disclosure
+  provider: gcp
+  service: run
+  title: Plaintext credential theft
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#plaintext-environment-disclosure-with-cloud-run-read-permissions
+  requires:
+    any_of:
+    - - action: run.services.get
+        resource: '*'
+    - - action: run.services.list
+        resource: '*'
+    - - action: run.configurations.get
+        resource: '*'
+    - - action: run.configurations.list
+        resource: '*'
+    - - action: run.revisions.get
+        resource: '*'
+    - - action: run.revisions.list
+        resource: '*'
+    - - action: run.jobs.get
+        resource: '*'
+    - - action: run.jobs.list
+        resource: '*'
+    - - action: run.executions.get
+        resource: '*'
+    - - action: run.executions.list
+        resource: '*'
+    - - action: run.tasks.get
+        resource: '*'
+    - - action: run.tasks.list
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-run-literal-sa-key-disclosure
+    scope: any
+  conditions:
+  - id: active_key_in_literal_env
+    description: An environment value must contain an active Google service-account key, not a Secret Manager reference
+      or opaque application password. The active key ID and service-account email must match collector evidence.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions and audit the target configuration.
+  references:
+  - https://docs.cloud.google.com/run/docs/instances/create-and-manage-instances
+  summary: Reading a Cloud Run template with an embedded active Google service-account key can disclose that stronger
+    credential.
+  source_revision: 0b36331
+  notes: Exact source/resource/target evidence must be emitted in gcp_privesc_challenge_evidence from the requested
+    collector. Missing evidence is UNKNOWN; do not infer any other service account.

@@ -62,8 +62,11 @@
   technique: Keep diagnostic settings removed or narrowed
   reason: Security-control weakening, telemetry tampering or DoS; no Azure/Entra principal is obtained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewaysgetconfigurationaction--bulk-policysecret-pull-data-action-bypasses-the-administrative-log
-  technique: '`Microsoft.ApiManagement/service/gateways/getConfiguration/action` — bulk policy/secret pull (data action, bypasses the Administrative log)'
-  reason: Self-hosted gateway configuration/secrets of unknown content; no Azure/Entra principal.
+  technique: '`Microsoft.ApiManagement/service/gateways/getConfiguration/action` — bulk policy/secret pull (data
+    action, bypasses the Administrative log)'
+  reason: Gateway configuration can contain an Entra service-principal secret, but the configuration snapshot does
+    not reveal or validate its content or map it to a principal. A content collector and identity join are needed;
+    otherwise this is data disclosure only.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewayslistkeysaction--raw-self-hosted-gateway-keys-offline-token-minting
   technique: '`Microsoft.ApiManagement/service/gateways/listKeys/action` — raw self-hosted-gateway keys (offline token minting)'
   reason: Self-hosted gateway key; gateway impersonation, no Azure/Entra principal.
@@ -105,7 +108,8 @@
   reason: Data exfiltration/tampering/evasion/DoS; no new Azure/Entra principal.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespullread
   technique: '`Microsoft.ContainerRegistry/registries/pull/read`'
-  reason: Data exfiltration/tampering/evasion/DoS; no new Azure/Entra principal.
+  reason: ACR image config and historical layers can contain Entra credentials; pull permission alone does not establish
+    their content, credential validity, or mapped principal. A complete layer scan and identity join are needed.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#remove-registry-webhooks
   technique: Remove registry webhooks
   reason: Data exfiltration/tampering/evasion/DoS; no new Azure/Entra principal.
@@ -195,7 +199,10 @@
   reason: Workspace access token authorizes the Playwright service only; no Azure/Entra principal.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-service-connector-post-exploitation.md#read-connection-configuration-to-exfiltrate-the-backing-secret
   technique: Read connection configuration to exfiltrate the backing secret
-  reason: Backing secret of a secret-auth connection; target-service data access, content-dependent.
+  reason: Secret-auth linker configuration may disclose a reusable credential for its backing service without direct
+    rights on that service. A principal edge needs the exact linker-to-target resource join and a verified secret-returned
+    fact; missing or denied collection is UNKNOWN. Managed-identity and service-principal connections return no
+    reusable backing secret.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-trusted-signing-post-exploitation.md#persistence--self-granted-signer--timestamps-that-outlive-revocation
   technique: Persistence — self-granted Signer + timestamps that outlive revocation
   reason: Code-signing abuse; no Azure/Entra principal is obtained.
@@ -252,34 +259,53 @@
   reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#control-plane-packet-capture-network-watcher-wiretap
   technique: Control-plane packet capture (Network Watcher wiretap)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: The packet capture can contain reusable tokens or session cookies only if the selected VM sends them in
+    observable cleartext traffic. A readable capture destination, deployed Network Watcher extension, actual victim
+    traffic, and token validity are runtime/content facts; the ARM write grant alone identifies no credential or
+    target principal.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#private-dns-record-hijack-internal-mitm
   technique: Private DNS record hijack (internal MITM)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: The A-record change can redirect linked-VNet clients, but credential gain requires clients to resolve
+    that name, connect to the attacker endpoint, disclose reusable authentication material, and accept its TLS/authentication
+    behavior. DNS configuration alone cannot identify a captured principal.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#public-dns-subdomain-takeover-via-dangling-record-dnszonescnameawrite
   technique: Public DNS subdomain takeover via dangling record (`dnszones/CNAME|A/write`)
   reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#inbound-email-hijack-via-mx-rewrite-dnszonesmxwrite
   technique: Inbound email hijack via MX rewrite (`dnszones/MX/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: MX control can intercept password-reset or email-OTP messages only if the affected domain uses this zone
+    and a victim service sends a usable message during the hijack. The message contents, expiry, and account-recovery
+    policy are external facts; no account is obtained from the DNS write alone.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#ns-delegation-hijack-of-a-subdomain-dnszonesnswrite
   technique: NS delegation hijack of a subdomain (`dnszones/NS/write`)
   reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#dns-private-resolver-forwarding-rule-tamper-dnsforwardingrulesetsforwardingruleswrite
   technique: DNS Private Resolver forwarding-rule tamper (`dnsForwardingRulesets/forwardingRules/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: A forwarding-rule change can steer linked-VNet DNS, but a credential edge requires a winning resolution
+    rule, client traffic to the chosen name, TLS or application trust of the attacker endpoint, and reusable authentication
+    material in that traffic. Those runtime facts are absent from the ARM permission snapshot.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#front-door--cdn-origin-repoint-edge-reverse-proxy-mitm-cdnprofilesorigingroupsoriginswrite
   technique: Front Door / CDN origin repoint (edge reverse-proxy MITM) (`Cdn/profiles/origingroups/origins/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: Origin repoint can expose proxied cookies or bearer tokens only when an active route uses this origin,
+    requests carrying reusable authentication material arrive, and the attacker can receive the origin leg. Route
+    use, traffic contents, and token validity are runtime facts, so the write grant alone cannot name a gained principal.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#front-door-rules-engine-headerroute-rewrite-auth-header-backdoor--partial-mitm-cdnprofilesrulesetsruleswrite
   technique: Front Door rules-engine header/route rewrite (auth-header backdoor / partial MITM) (`Cdn/profiles/rulesets/rules/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: Header injection grants application authorization only if the origin trusts the injected header; route
+    override yields credentials only if the rule is attached, matching requests carry reusable authentication material,
+    and the attacker receives them. Origin trust and request contents are application/runtime facts absent from
+    ARM RBAC.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#classic-front-door-v1-backend-pool-repoint--https-downgrade-networkfrontdoorsbackendpoolswrite
   technique: Classic Front Door (v1) backend-pool repoint + HTTPS downgrade (`Network/frontDoors/backendPools/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: Backend-pool repoint or HTTPS downgrade can expose credentials only if an active frontend routes matching
+    authentication requests through the modified backend or downgraded listener and those requests contain reusable
+    material. Routing, client behavior, and traffic content cannot be inferred from backendPools/write.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#application-gateway-backend-repoint--listener-tls-cert-swap-regional-l7-mitm-networkapplicationgatewayswrite
   technique: Application Gateway backend repoint + listener TLS-cert swap (regional L7 MITM) (`Network/applicationGateways/write`)
-  reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.
+  reason: Gateway write can repoint a live backend or replace a listener certificate, but a credential gain requires
+    affected authentication traffic, a working attacker-controlled endpoint or trusted replacement certificate,
+    and reusable tokens or passwords in requests. Listener routing, client trust, and traffic content are not established
+    by gateway write permission.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-vms-and-network-post-exploitation.md#traffic-manager-endpoint-repoint-dns-level-traffic-steal-networktrafficmanagerprofilesexternalendpointswrite
   technique: Traffic Manager endpoint repoint (DNS-level traffic steal) (`Network/trafficManagerProfiles/externalEndpoints/write`)
   reason: Network/traffic interception, exposure or DNS tampering; no Azure/Entra principal is obtained.

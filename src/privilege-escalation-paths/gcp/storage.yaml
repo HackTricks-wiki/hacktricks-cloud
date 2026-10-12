@@ -155,3 +155,61 @@
   mitigation: Restrict storage.buckets.setIamPolicy and storage.managedFolders.setIamPolicy on buckets that hold code, staging artifacts or build sources.
   references:
     - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+- id: gcp-designcenter-bucket-credential
+  provider: gcp
+  service: storage
+  title: Read known bucket objects through Design Center Viewer role
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-application-design-center-post-exploitation.md#rolesdesigncenterviewer--read-objects-from-known-cloud-storage-buckets
+  source_revision: 0b36331
+  summary: Credential in known bucket object; emit only for the exact verified source, resource and target.
+  requires:
+    all_of:
+    - action: storage.objects.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-designcenter-bucket-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Read known bucket objects through Design Center Viewer role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      bucket/object; effective role grant supplies object get; object contains usable credential mapped to a principal.
+      Storage list is optional discovery.
+  confidence: conditional
+  severity: high
+  mitigation: Limit storage.objects.get to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-application-design-center-post-exploitation.md#rolesdesigncenterviewer--read-objects-from-known-cloud-storage-buckets
+- id: gcp-storage-object-sa-credential
+  provider: gcp
+  service: storage
+  title: Read credential from Storage object or older generation of a GCP service account
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-storage-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable storage object generation contains a verified reusable credential belonging to another GCP
+    service account.
+  requires:
+    all_of:
+    - action: storage.objects.get
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-storage-object-sa-credential
+    scope: any
+    outcome: credentials
+  conditions:
+  - id: verified_content
+    description: Emit only for exact source, resource, target and scope evidence after verifying credential validity;
+      absent or incomplete content is UNKNOWN, and metadata or secret names alone do not qualify.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.objects.get on sensitive resources; rotate exposed service-account credentials.
+  references:
+  - https://docs.cloud.google.com/storage/docs/json_api/v1/objects/get

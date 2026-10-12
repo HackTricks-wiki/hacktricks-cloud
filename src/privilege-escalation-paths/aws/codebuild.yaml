@@ -5,16 +5,18 @@
   provider: aws
   service: codebuild
   title: Start a build of an existing project with an overridden buildspec
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartbuild--codebuildstartbuildbatch
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartbuild--codebuildstartbuildbatch
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role of an existing CodeBuild project by starting a build (or build batch) with build commands it controls.
+  summary: The source can obtain the privileges of the service role of an existing CodeBuild project by starting a build
+    (or build batch) with build commands it controls.
   requires:
     all_of: []
     any_of:
-      - - action: codebuild:StartBuild
-          resource: "{target.attached_resource_arn}"
-      - - action: codebuild:StartBuildBatch
-          resource: "{target.attached_resource_arn}"
+    - - action: codebuild:StartBuild
+        resource: "{target.attached_resource_arn}"
+    - - action: codebuild:StartBuildBatch
+        resource: "{target.attached_resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -23,25 +25,29 @@
     scope: same_account
     aggregate_as: "Service roles of CodeBuild projects covered by codebuild:StartBuild in {account}"
   conditions:
-    - id: override_available
-      description: StartBuild accepts buildspec, source and environment-variable overrides without extra permissions; StartBuildBatch requires the project to have batch configuration.
+  - id: override_available
+    description: StartBuild accepts buildspec, source and environment-variable overrides without extra permissions;
+      StartBuildBatch requires the project to have batch configuration.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Restrict codebuild:StartBuild/StartBuildBatch to pipelines and keep project service roles least-privileged.
+  mitigation: Restrict codebuild:StartBuild/StartBuildBatch to pipelines and keep project service roles
+    least-privileged.
   references:
-    - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartBuild.html
-  notes: The selector applies to whichever any_of action matched. Environment-variable overrides (StartBuild Env Var Override subsection) are a variant of the same edge.
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartBuild.html
+  notes: The selector applies to whichever any_of action matched. Environment-variable overrides (StartBuild Env Var
+    Override subsection) are a variant of the same edge.
 
 - id: aws-codebuild-startcommandexecution
   provider: aws
   service: codebuild
   title: Run a command in a running CodeBuild sandbox
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox
-    it can send commands to.
+  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox it
+    can send commands to.
   requires:
     all_of:
     - action: codebuild:StartCommandExecution
@@ -51,8 +57,8 @@
     selector:
       attached_to_service: codebuild
     scope: same_account
-    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartCommandExecution
-      in {account}
+    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartCommandExecution in
+      {account}
     outcome: workload_execution
   conditions:
   - id: running_sandbox
@@ -63,18 +69,19 @@
   severity: critical
   mitigation: Restrict sandbox actions and stop idle sandboxes.
   references: []
-  notes: No iam:PassRole, StartBuild or UpdateProject is needed. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn}
-    expands to sandbox/<project>:* of each project running as the target role.
+  notes: No iam:PassRole, StartBuild or UpdateProject is needed. The API resource is the sandbox ARN;
+    {target.codebuild_sandbox_arn} expands to sandbox/<project>:* of each project running as the target role.
 
 
 - id: aws-codebuild-startsandboxconnection
   provider: aws
   service: codebuild
   title: Open an interactive Session Manager shell in a running CodeBuild sandbox
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartsandboxconnection--open-an-interactive-shell-in-a-running-sandbox
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartsandboxconnection--open-an-interactive-shell-in-a-running-sandbox
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox
-    by opening an interactive shell inside the sandbox container.
+  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox by
+    opening an interactive shell inside the sandbox container.
   requires:
     all_of:
     - action: codebuild:StartSandboxConnection
@@ -84,15 +91,15 @@
     selector:
       attached_to_service: codebuild
     scope: same_account
-    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartSandboxConnection
-      in {account}
+    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartSandboxConnection in
+      {account}
     outcome: workload_execution
   conditions:
   - id: running_sandbox
     description: A sandbox must be running for the project and its ID known to the source.
   - id: ssm_agent_in_image
-    description: The sandbox image must have a working SSM Agent and the project configuration must allow CodeBuild
-      to start the Session Manager session.
+    description: The sandbox image must have a working SSM Agent and the project configuration must allow CodeBuild to
+      start the Session Manager session.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
@@ -100,28 +107,30 @@
   mitigation: Scope codebuild:StartSandboxConnection to exact sandbox ARNs of trusted operators and stop idle sandboxes.
   references:
   - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandboxConnection.html
-  notes: Caller-side ssm:StartSession and iam:PassRole are not required. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn}
-    expands to sandbox/<project>:* of each project running as the target role.
+  notes: Caller-side ssm:StartSession and iam:PassRole are not required. The API resource is the sandbox ARN;
+    {target.codebuild_sandbox_arn} expands to sandbox/<project>:* of each project running as the target role.
 
 
 - id: aws-codebuild-passrole-createproject
   provider: aws
   service: codebuild
   title: Create a CodeBuild project with a passed service role and run it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#iampassrole-codebuildcreateproject-codebuildstartbuild--codebuildstartbuildbatch
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#iampassrole-codebuildcreateproject-codebuildstartbuild--codebuildstartbuildbatch
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by creating and running a project with that service role.
+  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by creating and
+    running a project with that service role.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: codebuild:CreateProject
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: codebuild:CreateProject
+      resource: "*"
     any_of:
-      - - action: codebuild:StartBuild
-          resource: "*"
-      - - action: codebuild:StartBuildBatch
-          resource: "*"
+    - - action: codebuild:StartBuild
+        resource: "*"
+    - - action: codebuild:StartBuildBatch
+        resource: "*"
   target:
     kind: aws_role
     selector:
@@ -129,10 +138,10 @@
     scope: same_account
     aggregate_as: "Roles trusting codebuild.amazonaws.com in {account}"
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict this.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict this.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
   mitigation: Restrict iam:PassRole on CodeBuild service roles and limit codebuild:CreateProject.
@@ -143,20 +152,22 @@
   provider: aws
   service: codebuild
   title: Change a CodeBuild project's service role and run it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#iampassrole-codebuildupdateproject-codebuildstartbuild--codebuildstartbuildbatch
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#iampassrole-codebuildupdateproject-codebuildstartbuild--codebuildstartbuildbatch
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by assigning them to an existing project and running it.
+  summary: The source can obtain the privileges of passable roles trusting codebuild.amazonaws.com by assigning them to
+    an existing project and running it.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: codebuild:UpdateProject
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: codebuild:UpdateProject
+      resource: "*"
     any_of:
-      - - action: codebuild:StartBuild
-          resource: "*"
-      - - action: codebuild:StartBuildBatch
-          resource: "*"
+    - - action: codebuild:StartBuild
+        resource: "*"
+    - - action: codebuild:StartBuildBatch
+        resource: "*"
   target:
     kind: aws_role
     selector:
@@ -164,10 +175,10 @@
     scope: same_account
     aggregate_as: "Roles trusting codebuild.amazonaws.com in {account}"
   conditions:
-    - id: existing_project
-      description: At least one existing project must be covered by both UpdateProject and StartBuild/StartBuildBatch.
+  - id: existing_project
+    description: At least one existing project must be covered by both UpdateProject and StartBuild/StartBuildBatch.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
   mitigation: Restrict iam:PassRole on CodeBuild service roles and codebuild:UpdateProject.
@@ -178,18 +189,20 @@
   provider: aws
   service: codebuild
   title: Change an existing CodeBuild project's build definition and run it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildupdateproject-codebuildstartbuild--codebuildstartbuildbatch
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildupdateproject-codebuildstartbuild--codebuildstartbuildbatch
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role of an existing project by changing its buildspec and starting a build.
+  summary: The source can obtain the privileges of the service role of an existing project by changing its buildspec and
+    starting a build.
   requires:
     all_of:
-      - action: codebuild:UpdateProject
-        resource: "{target.attached_resource_arn}"
+    - action: codebuild:UpdateProject
+      resource: "{target.attached_resource_arn}"
     any_of:
-      - - action: codebuild:StartBuild
-          resource: "{target.attached_resource_arn}"
-      - - action: codebuild:StartBuildBatch
-          resource: "{target.attached_resource_arn}"
+    - - action: codebuild:StartBuild
+        resource: "{target.attached_resource_arn}"
+    - - action: codebuild:StartBuildBatch
+        resource: "{target.attached_resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -198,27 +211,30 @@
     scope: same_account
     aggregate_as: "Service roles of CodeBuild projects covered by codebuild:UpdateProject in {account}"
   conditions:
-    - id: automatic_trigger
-      description: Without StartBuild, a webhook or pipeline trigger may still run the modified project (delayed).
+  - id: automatic_trigger
+    description: Without StartBuild, a webhook or pipeline trigger may still run the modified project (delayed).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
   mitigation: Restrict codebuild:UpdateProject to administrators.
   references: []
-  notes: Largely subsumed by aws-codebuild-startbuild-attached-role (StartBuild alone allows overrides); kept as a distinct permission combination.
+  notes: Largely subsumed by aws-codebuild-startbuild-attached-role (StartBuild alone allows overrides); kept as a
+    distinct permission combination.
 
 - id: aws-codebuild-s3-source-poisoning
   provider: aws
   service: codebuild
   title: Replace the S3 source object of a CodeBuild project
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#s3putobject-on-a-configured-s3-source-codebuildstartbuild-optional
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#s3putobject-on-a-configured-s3-source-codebuildstartbuild-optional
   source_revision: 171e422299
-  summary: The source can obtain (at the next build) the privileges of the service role of a project whose S3 source object (with buildspec) the source can overwrite.
+  summary: The source can obtain (at the next build) the privileges of the service role of a project whose S3 source
+    object (with buildspec) the source can overwrite.
   requires:
     all_of:
-      - action: s3:PutObject
-        resource: "{target.consumer_input_arn}"
+    - action: s3:PutObject
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -227,12 +243,14 @@
     scope: same_account
     aggregate_as: "Service roles of CodeBuild projects with writable S3 sources in {account}"
   conditions:
-    - id: delayed_trigger
-      description: A build must run afterwards (source-held codebuild:StartBuild, a schedule or a pipeline); otherwise the edge is delayed.
-    - id: buildspec_from_source
-      description: The project must take its buildspec from the source archive (no inline buildspec), or the source contents must otherwise be executed.
+  - id: delayed_trigger
+    description: A build must run afterwards (source-held codebuild:StartBuild, a schedule or a pipeline); otherwise the
+      edge is delayed.
+  - id: buildspec_from_source
+    description: The project must take its buildspec from the source archive (no inline buildspec), or the source
+      contents must otherwise be executed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Use versioned, immutable source objects and restrict s3:PutObject on build source locations.
@@ -243,18 +261,20 @@
   provider: aws
   service: codebuild
   title: Start a CodeBuild sandbox for a project and run commands in it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service role of an existing CodeBuild project by starting a sandbox for it and running commands or opening a shell in that sandbox.
+  summary: The source can obtain the privileges of the service role of an existing CodeBuild project by starting a
+    sandbox for it and running commands or opening a shell in that sandbox.
   requires:
     all_of:
-      - action: codebuild:StartSandbox
-        resource: "{target.attached_resource_arn}"
+    - action: codebuild:StartSandbox
+      resource: "{target.attached_resource_arn}"
     any_of:
-      - - action: codebuild:StartCommandExecution
-          resource: "{target.codebuild_sandbox_arn}"
-      - - action: codebuild:StartSandboxConnection
-          resource: "{target.codebuild_sandbox_arn}"
+    - - action: codebuild:StartCommandExecution
+        resource: "{target.codebuild_sandbox_arn}"
+    - - action: codebuild:StartSandboxConnection
+        resource: "{target.codebuild_sandbox_arn}"
   target:
     kind: aws_role
     selector:
@@ -264,28 +284,35 @@
     aggregate_as: "Service roles of CodeBuild projects covered by codebuild:StartSandbox in {account}"
     outcome: workload_execution
   conditions:
-    - id: ssm_agent_in_image
-      description: The interactive-shell alternative needs a working SSM Agent in the sandbox image and a project configuration that lets CodeBuild start the Session Manager session.
+  - id: ssm_agent_in_image
+    description: The interactive-shell alternative needs a working SSM Agent in the sandbox image and a project
+      configuration that lets CodeBuild start the Session Manager session.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Restrict codebuild:StartSandbox, StartCommandExecution and StartSandboxConnection to trusted operators on exact projects and keep project service roles least-privileged.
+  mitigation: Restrict codebuild:StartSandbox, StartCommandExecution and StartSandboxConnection to trusted operators on
+    exact projects and keep project service roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandbox.html
-  notes: Removes the running-sandbox runtime prerequisite of aws-codebuild-startcommandexecution and aws-codebuild-startsandboxconnection; the page states the caller of those needs no StartSandbox only when a sandbox is already running.
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandbox.html
+  notes: Removes the running-sandbox runtime prerequisite of aws-codebuild-startcommandexecution and
+    aws-codebuild-startsandboxconnection; the page states the caller of those needs no StartSandbox only when a sandbox
+    is already running.
 
 - id: aws-codebuild-env-parameter-store-poisoning
   provider: aws
   service: codebuild
   title: Overwrite a Parameter Store value consumed as a CodeBuild environment variable
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
   source_revision: 6fb9ac51fd
-  summary: The source can obtain (at the next build) the privileges of the service role of a project whose PARAMETER_STORE environment variable feeds privileged build logic and references a parameter the source can overwrite.
+  summary: The source can obtain (at the next build) the privileges of the service role of a project whose
+    PARAMETER_STORE environment variable feeds privileged build logic and references a parameter the source can
+    overwrite.
   requires:
     all_of:
-      - action: ssm:PutParameter
-        resource: "{target.consumer_input_arn}"
+    - action: ssm:PutParameter
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -295,30 +322,37 @@
     aggregate_as: "Service roles of CodeBuild projects with writable PARAMETER_STORE variables in {account}"
     outcome: workload_execution
   conditions:
-    - id: delayed_trigger
-      description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger CodeBuild.
-    - id: consumer_semantics
-      description: Code execution or credential substitution depends on how the trusted buildspec and tools use the variable; otherwise the impact is limited to configuration poisoning.
+  - id: delayed_trigger
+    description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger
+      CodeBuild.
+  - id: consumer_semantics
+    description: Code execution or credential substitution depends on how the trusted buildspec and tools use the
+      variable; otherwise the impact is limited to configuration poisoning.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Scope ssm:PutParameter away from build-consumed parameters, validate values before use and prefer immutable, version-reviewed build inputs.
+  mitigation: Scope ssm:PutParameter away from build-consumed parameters, validate values before use and prefer
+    immutable, version-reviewed build inputs.
   references:
-    - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
-  notes: "{target.consumer_input_arn} is the Parameter Store parameter ARN referenced by the project's PARAMETER_STORE environment variable."
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+  notes: "{target.consumer_input_arn} is the Parameter Store parameter ARN referenced by the project's PARAMETER_STORE environment
+    variable."
 
 - id: aws-codebuild-env-secretsmanager-poisoning
   provider: aws
   service: codebuild
   title: Overwrite a Secrets Manager value consumed as a CodeBuild environment variable
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
   source_revision: 6fb9ac51fd
-  summary: The source can obtain (at the next build) the privileges of the service role of a project whose SECRETS_MANAGER environment variable feeds privileged build logic and references a secret the source can write a new value to.
+  summary: The source can obtain (at the next build) the privileges of the service role of a project whose
+    SECRETS_MANAGER environment variable feeds privileged build logic and references a secret the source can write a new
+    value to.
   requires:
     all_of:
-      - action: secretsmanager:PutSecretValue
-        resource: "{target.consumer_input_arn}"
+    - action: secretsmanager:PutSecretValue
+      resource: "{target.consumer_input_arn}"
   target:
     kind: aws_role
     selector:
@@ -328,17 +362,114 @@
     aggregate_as: "Service roles of CodeBuild projects with writable SECRETS_MANAGER variables in {account}"
     outcome: workload_execution
   conditions:
-    - id: delayed_trigger
-      description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger CodeBuild.
-    - id: consumer_semantics
-      description: Code execution or credential substitution depends on how the trusted buildspec and tools use the variable; otherwise the impact is limited to configuration poisoning.
-    - id: version_pinning
-      description: A variable pinned to a specific version stage or version ID other than AWSCURRENT is not changed by a new current value.
+  - id: delayed_trigger
+    description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger
+      CodeBuild.
+  - id: consumer_semantics
+    description: Code execution or credential substitution depends on how the trusted buildspec and tools use the
+      variable; otherwise the impact is limited to configuration poisoning.
+  - id: version_pinning
+    description: A variable pinned to a specific version stage or version ID other than AWSCURRENT is not changed by a
+      new current value.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Scope secretsmanager:PutSecretValue away from build-consumed secrets, validate values before use and prefer immutable, version-reviewed build inputs.
+  mitigation: Scope secretsmanager:PutSecretValue away from build-consumed secrets, validate values before use and
+    prefer immutable, version-reviewed build inputs.
   references:
-    - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
   notes: "{target.consumer_input_arn} is the secret ARN referenced by the project's SECRETS_MANAGER environment variable."
+- id: aws-codebuild-ssm-debug-session-role
+  provider: aws
+  service: codebuild
+  title: ssm:StartSession into CodeBuild sandboxes
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
+  source_revision: 0b36331
+  summary: A live paused CodeBuild debug session gives shell access with the project service role.
+  requires:
+    all_of:
+    - action: ssm:StartSession
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codebuild-ssm-debug-session-role
+    scope: same_account
+  conditions:
+  - id: live_breakpoint
+    description: A build with session connections enabled must be paused at codebuild-breakpoint.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named operation to trusted administrators and review downstream grants.
+  references:
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+- id: aws-codebuild-plaintext-env-credential
+  provider: aws
+  service: codebuild
+  title: codebuild:BatchGetProjects / BatchGetBuilds
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildbatchgetprojects-codebuildbatchgetbuilds--read-build-environment-values
+  source_revision: 0b36331
+  summary: Read a verified usable credential from a plaintext CodeBuild environment value.
+  requires:
+    all_of: []
+    any_of:
+    - - action: codebuild:BatchGetProjects
+        resource: '*'
+    - - action: codebuild:BatchGetBuilds
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codebuild-plaintext-env-credential
+    scope: same_account
+  conditions:
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named operation to trusted administrators and review downstream grants.
+  references:
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+
+- id: aws-codebuild-read-plaintext-aws-credential
+  provider: aws
+  service: codebuild
+  title: Recover another AWS principal's credential from build variables
+  source: src/pentesting-cloud/aws-security/aws-services/aws-codebuild-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable project or build exposes a verified credential belonging to another principal in a PLAINTEXT
+    environment variable.
+  requires:
+    any_of:
+    - - action: codebuild:BatchGetProjects
+        resource: '*'
+    - - action: codebuild:BatchGetBuilds
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codebuild-read-plaintext-aws-credential
+    scope: same_account
+    aggregate_as: Verified AWS identities exposed by readable CodeBuild environment values in {account}
+    grants:
+    - The exact AWS permissions of the verified credential owner during credential validity.
+  conditions:
+  - id: exact_credential_binding
+    description: Evidence must identify the exact readable project or build, source principal, credential owner
+      and validity interval; PARAMETER_STORE and SECRETS_MANAGER references do not qualify.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Keep credentials out of PLAINTEXT build variables and restrict CodeBuild metadata reads.
+  references:
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-env-vars.html
+  notes: The verified-authority fact is absent from current snapshots; without it the result remains UNKNOWN.

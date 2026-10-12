@@ -1,6 +1,3 @@
-# Azure SRE Agent privilege escalation techniques (declarative only).
-# Source: hacktricks-cloud az-sre-agent-privesc.md (rev 171e422; re-reviewed at a66f094ede).
-
 - id: azure-sre-agent-drive-managed-identity
   provider: azure
   service: sre_agent
@@ -45,7 +42,6 @@
     - https://learn.microsoft.com/en-us/azure/sre-agent/overview
     - https://learn.microsoft.com/en-us/azure/sre-agent/run-modes
   notes: threads/approve/action alone only approves actions the agent already proposed, so it is not an alternative here.
-
 - id: azure-sre-agent-assign-user-assigned-identity
   provider: azure
   service: sre_agent
@@ -80,3 +76,93 @@
   references:
     - https://learn.microsoft.com/en-us/azure/sre-agent/overview
   notes: agents/write is also the instruction channel used by azure-sre-agent-drive-managed-identity.
+- id: azure-audit-drive-the-agents-managed-identity-instruction-tool-config-injection-agen
+  provider: azure
+  service: sre_agent
+  title: Drive the agent's managed identity — instruction / tool-config injection (agents/threads, agents/write,
+    ...)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#drive-the-agents-managed-identity--instruction--tool-config-injection-agentsthreads-agentswrite-
+  summary: approve privileged agent remediation as its MI
+  requires:
+    all_of:
+    - action: Microsoft.App/agents/threads/approve/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_challenge_fact: azure-audit-drive-the-agents-managed-identity-instruction-tool-config-injection-agen
+    scope: inherited_scope
+    aggregate_as: Drive the agent's managed identity — instruction / tool-config injection (agents/threads, agents/write,
+      ...) on {target.scope}
+    outcome: workload_execution
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/sre-agent/overview
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: sreAgents.pendingApprovals.'
+- id: azure-sre-agent-microsoftappagentsdataconnectorslistsecretsaction
+  provider: azure
+  service: sre_agent
+  title: Read an SRE Agent connector credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#microsoftappagentsdataconnectorslistsecretsaction
+  source_revision: 0b36331
+  summary: Returns the cleartext protected configuration of one connector (dataSource and protected CustomHeader values normally redacted on GET) -> reusable credentials to source code, telemetry, incident-management systems, or other external data. Scope is the downstream service permissions of each returned credential; callable against a known connector ID without agent/connector read.
+  requires:
+    all_of:
+    - action: Microsoft.App/agents/dataconnectors/listSecrets/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-sre-agent-microsoftappagentsdataconnectorslistsecretsaction
+    scope: inherited_scope
+    aggregate_as: Pending service authority for sre_agent
+    outcome: application_admin
+    grants:
+    - The exact SRE Agent OAuth/private-key credential or named data connector credential returned by listSecrets.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_sre_connector_secrets inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md
+  notes: 'Collector fact required: azure_sre_connector_secrets. UNKNOWN until a reusable credential and its target principal/rights are identified.'
+- id: azure-sre-agent-microsoftappagentslistsecretsaction
+  provider: azure
+  service: sre_agent
+  title: Read an SRE Agent protected credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#microsoftappagentslistsecretsaction
+  source_revision: 0b36331
+  summary: Control-plane action returning the protected secrets of an SRE Agent (can include private key material / generated OAuth key). Callable against a known agent ID without Microsoft.App/agents/read -> credential disclosure; downstream scope is whatever the recovered key grants.
+  requires:
+    all_of:
+    - action: Microsoft.App/agents/listSecrets/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-sre-agent-microsoftappagentslistsecretsaction
+    scope: inherited_scope
+    aggregate_as: Pending service authority for sre_agent
+    outcome: application_admin
+    grants:
+    - The exact SRE Agent OAuth/private-key credential or named data connector credential returned by listSecrets.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_sre_agent_secrets inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md
+  notes: 'Collector fact required: azure_sre_agent_secrets. UNKNOWN until the protected value is known to be a reusable privileged credential.'

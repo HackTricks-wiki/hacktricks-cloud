@@ -46,3 +46,37 @@
     - https://docs.aws.amazon.com/AmazonSynthetics/latest/APIReference/API_StartCanaryDryRun.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_synthetics.html
   notes: The source's Lambda UpdateFunctionConfiguration on the generated function is itself an edge (lambda.yaml) to the same role; this entry is the supported Synthetics path.
+- id: aws-audit-trigger-privileged-existing-canary
+  provider: aws
+  service: synthetics
+  title: Trigger privileged existing canary
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md#syntheticsstartcanary--run-unchanged-canary-code-under-its-stored-role
+  source_revision: 0b36331
+  summary: The source can cause attacker-useful privileged effect under stored role only when the exact target and
+    prerequisites are verified.
+  requires:
+    all_of:
+    - action: synthetics:StartCanary
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-trigger-privileged-existing-canary
+    scope: same_account
+    aggregate_as: Verified Cause attacker-useful privileged effect under in {account}
+    grants:
+    - Cause attacker-useful privileged effect under stored role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Stopped canary known and
+      StartCanary permission covers exact ARN; code is fixed; only flag if code has sensitive side effect or exposes
+      role-only data to caller.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/

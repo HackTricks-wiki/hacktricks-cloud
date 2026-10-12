@@ -230,45 +230,48 @@
   service: sso
   title: Create an admin permission set and assign it to a controlled user in a member account
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssocreatepermissionset--policy-attach--ssocreateaccountassignment--build-an-admin-path-from-scratch
-  source_revision: 171e422299
-  summary: The source can become administrator of accounts it can assign by creating a new permission set, attaching an administrator policy, and assigning it to an Identity Center user it controls.
+  source_revision: 0b36331
+  summary: The source can become administrator of accounts it can assign by creating a new permission set, attaching
+    an administrator policy, and assigning it to an Identity Center user it controls.
   requires:
     all_of:
-      - action: sso:CreatePermissionSet
-        resource: "*"
-      - action: sso:CreateAccountAssignment
-        resource: "arn:aws:sso:::account/{target.account}"
-      - action: sso:ProvisionPermissionSet
-        resource: "arn:aws:sso:::account/{target.account}"
+    - action: sso:CreatePermissionSet
+      resource: arn:aws:sso:::instance/*
+    - action: sso:CreateAccountAssignment
+      resource: arn:aws:sso:::account/{target.account}
     any_of:
-      - - action: sso:AttachManagedPolicyToPermissionSet
-          resource: "arn:aws:sso:::permissionSet/*"
-      - - action: sso:PutInlinePolicyToPermissionSet
-          resource: "arn:aws:sso:::permissionSet/*"
+    - - action: sso:AttachManagedPolicyToPermissionSet
+        resource: arn:aws:sso:::permissionSet/*
+    - - action: sso:PutInlinePolicyToPermissionSet
+        resource: arn:aws:sso:::permissionSet/*
   target:
     kind: aws_account_admin
     selector:
       any_principal_in_scope: true
     scope: org
-    aggregate_as: "Accounts reachable with a newly created permission set"
+    aggregate_as: Accounts reachable with a newly created permission set
   conditions:
-    - id: controls_identity_center_user
-      description: The source must control an Identity Center user or group to assign.
-    - id: management_account_permission_sets
-      description: A delegated administrator cannot create assignments in the management account.
-    - id: resource_scoping
-      description: CreatePermissionSet, policy attach and CreateAccountAssignment are authorized on instance, permission-set and account ARNs; aws:ResourceTag conditions on permission sets can limit the attach step.
+  - id: controls_identity_center_user
+    description: The source must control an Identity Center user or group to assign.
+  - id: management_account_permission_sets
+    description: A delegated administrator cannot create assignments in the management account.
+  - id: resource_scoping
+    description: CreatePermissionSet, policy attach and CreateAccountAssignment are authorized on instance, permission-set
+      and account ARNs; aws:ResourceTag conditions on permission sets can limit the attach step.
+  - id: first_assignment_provisions
+    description: For a new permission set, CreateAccountAssignment provisions the account role; subsequent permission-set
+      updates can need ProvisionPermissionSet.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict sso:CreatePermissionSet and assignment permissions to Identity Center administrators; scope assignments to specific accounts and permission-set ARNs.
+  mitigation: Restrict sso:CreatePermissionSet and assignment permissions to Identity Center administrators; scope
+    assignments to specific accounts and permission-set ARNs.
   references:
-    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreatePermissionSet.html
-    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
-    - https://docs.aws.amazon.com/singlesignon/latest/userguide/delegated-admin.html
+  - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreatePermissionSet.html
+  - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
+  - https://docs.aws.amazon.com/singlesignon/latest/userguide/delegated-admin.html
   notes: Complements aws-sso-createaccountassignment, which only reuses existing permission sets.
-
 - id: aws-identitystore-createuser-groupmembership
   provider: aws
   service: sso
@@ -384,3 +387,44 @@
     - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateUser.html
     - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
   notes: Removes the controls_identity_center_user condition of aws-sso-createaccountassignment; the group-membership variant is aws-identitystore-createuser-groupmembership.
+- id: aws-audit-enable-permission-sets-then-create-admin-assignment
+  provider: aws
+  service: sso
+  title: Enable permission sets then create admin assignment
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#aws-identity-center--aws-sso
+  source_revision: 0b36331
+  summary: The source can turn application-only instance into account-access path and assign admin only when the
+    exact target and prerequisites are verified.
+  requires:
+    all_of:
+    - action: sso:UpdateInstance
+      resource: '*'
+    - action: sso:CreatePermissionSet
+      resource: '*'
+    - action: sso:AttachManagedPolicyToPermissionSet
+      resource: '*'
+    - action: sso:CreateAccountAssignment
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-enable-permission-sets-then-create-admin-assignment
+    scope: same_account
+    aggregate_as: Verified Turn application-only instance into account-a in {account}
+    grants:
+    - Turn application-only instance into account-access path and assign admin
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind source, exact target, and these prerequisites: Organization instance starts
+      with PermissionSetsEnabled=false; UpdateInstance enables it; source can create/attach/assign a new admin set
+      to controlled user; management/delegated-admin account restrictions apply.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/

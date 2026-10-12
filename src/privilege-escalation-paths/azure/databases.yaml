@@ -1,6 +1,3 @@
-# Azure managed database (MySQL / PostgreSQL / SQL) control-plane -> database admin techniques (declarative only).
-# Sources: hacktricks-cloud az-mysql-privesc.md, az-postgresql-privesc.md, az-sql-privesc.md, az-sql-persistence.md (rev 171e422).
-
 - id: azure-mysql-flexible-admin-password-reset
   provider: azure
   service: databases
@@ -28,7 +25,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/mysql/flexible-server/how-to-manage-server-cli
   notes: Reset is disruptive to existing clients.
-
 - id: azure-mysql-flexible-entra-admin-write
   provider: azure
   service: databases
@@ -56,7 +52,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/mysql/flexible-server/how-to-azure-ad
   notes: ""
-
 - id: azure-postgresql-flexible-admin-password-reset
   provider: azure
   service: databases
@@ -84,7 +79,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-manage-server-cli
   notes: The azure_storage extension path (configurations/write) lets a database admin read blobs as the server's managed identity; this is a partial, Storage-read-only use of that identity and is not modelled as an identity edge. A newly enabled system-assigned identity has no roles.
-
 - id: azure-postgresql-flexible-entra-admin-write
   provider: azure
   service: databases
@@ -114,7 +108,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication
   notes: ''
-
 - id: azure-sql-server-admin-password-reset
   provider: azure
   service: databases
@@ -144,7 +137,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-azure-ad-only-authentication
   notes: servers/write can also enable or attach a server identity; a privileged SQL session can then read Blob Storage as that identity through a database-scoped credential. That is a partial, read-only use of the identity and is not modelled as an identity edge.
-
 - id: azure-sql-server-entra-admin-write
   provider: azure
   service: databases
@@ -172,7 +164,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure
   notes: ''
-
 - id: azure-sqlmi-entra-admin-write
   provider: azure
   service: databases
@@ -200,7 +191,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure
   notes: Sourced from the HackTricks SQL persistence page, which lists the Managed Instance equivalents of the SQL privesc page's control-plane techniques.
-
 - id: azure-sqlmi-admin-password-reset
   provider: azure
   service: databases
@@ -230,3 +220,41 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-azure-ad-only-authentication
   notes: Disruptive to clients using the old password.
+- id: azure-audit-elastic-jobs-run-arbitrary-t-sql-through-jobagentsjobsstepswrite-executi
+  provider: azure
+  service: sql
+  title: 'Elastic Jobs: run arbitrary T-SQL through jobAgents/jobs/steps/write + executions/write'
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md#elastic-jobs-run-arbitrary-t-sql-through-jobagentsjobsstepswrite--executionswrite
+  summary: arbitrary T-SQL as stored credential across target databases
+  requires:
+    all_of:
+    - action: Microsoft.Sql/servers/jobAgents/jobs/steps/write
+      scope: '{target.scope}'
+    - action: Microsoft.Sql/servers/jobAgents/jobs/executions/write
+      scope: '{target.scope}'
+    - action: Microsoft.Sql/servers/jobAgents/credentials/read
+      scope: '{target.scope}'
+    - action: Microsoft.Sql/servers/jobAgents/targetGroups/read
+      scope: '{target.scope}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_challenge_fact: azure-audit-elastic-jobs-run-arbitrary-t-sql-through-jobagentsjobsstepswrite-executi
+    scope: inherited_scope
+    aggregate_as: 'Elastic Jobs: run arbitrary T-SQL through jobAgents/jobs/steps/write + executions/write on {target.scope}'
+    outcome: workload_execution
+  conditions:
+  - id: same_resource_binding
+    description: All actions must apply to the same service resource and the referenced child object.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/azure-sql/database/elastic-jobs-overview
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: sql.elasticJobs.'

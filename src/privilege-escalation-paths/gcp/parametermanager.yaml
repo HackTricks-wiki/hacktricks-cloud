@@ -1,0 +1,93 @@
+- id: gcp-parametermanager-version-render-credential
+  provider: gcp
+  service: parametermanager
+  title: Render a parameter version to recover a stronger credential
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-parameter-manager-enum.md#relevant-permissions
+  summary: Render resolves a Secret Manager reference as the parameter identity and returns a credential the caller
+    cannot access directly.
+  requires:
+    all_of:
+    - action: parametermanager.parameterVersions.render
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-parametermanager-version-render-credential
+  conditions:
+  - A version embeds a __REF__ to a Secret Manager version holding a stronger credential.
+  - The parameter/template service identity can access that secret; the caller can render the version.
+  - The returned payload must actually contain a usable credential.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict render grants; scope the parameter identity’s Secret Manager access.
+  references:
+  - https://cloud.google.com/secret-manager/parameter-manager/docs/reference-secrets
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. Only a validated
+    stronger service-account credential qualifies; arbitrary content is data.
+  source_revision: 0b36331
+- id: gcp-parametermanager-template-render-credential
+  provider: gcp
+  service: parametermanager
+  title: Render a template version to recover a stronger credential
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-parameter-manager-enum.md#relevant-permissions
+  summary: Render resolves a Secret Manager reference as the parameter identity and returns a credential the caller
+    cannot access directly.
+  requires:
+    all_of:
+    - action: parametermanager.templateVersions.render
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-parametermanager-template-render-credential
+  conditions:
+  - A version embeds a __REF__ to a Secret Manager version holding a stronger credential.
+  - The parameter/template service identity can access that secret; the caller can render the version.
+  - The returned payload must actually contain a usable credential.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict render grants; scope the parameter identity’s Secret Manager access.
+  references:
+  - https://cloud.google.com/secret-manager/parameter-manager/docs/reference-secrets
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. Only a validated
+    stronger service-account credential qualifies; arbitrary content is data.
+  source_revision: 0b36331
+- id: gcp-parametermanager-write-reference-render-credential
+  provider: gcp
+  service: parametermanager
+  title: Insert a secret reference and render it through Parameter Manager identity
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-parameter-manager-enum.md#relevant-permissions
+  summary: A caller able to write a parameter version and render it can cause the parameter identity to dereference
+    a credential-bearing Secret Manager version it can access.
+  requires:
+    any_of:
+    - - action: parametermanager.parameterVersions.create
+        resource: '*'
+      - action: parametermanager.parameterVersions.render
+        resource: '*'
+    - - action: parametermanager.parameterVersions.update
+        resource: '*'
+      - action: parametermanager.parameterVersions.render
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-parametermanager-write-reference-render-credential
+  conditions:
+  - Parameter identity can access the chosen secret; the written __REF__ is accepted; the caller can render the
+    resulting version.
+  - Referenced secret contains a usable stronger credential; target relation needs content evidence.
+  confidence: conditional
+  severity: high
+  mitigation: Do not give untrusted principals both version write and render on identities with broad secret access.
+  references:
+  - https://cloud.google.com/secret-manager/parameter-manager/docs/reference-secrets
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. Only a validated
+    stronger service-account credential qualifies; arbitrary content is data.
+  source_revision: 0b36331

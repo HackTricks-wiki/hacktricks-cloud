@@ -13,17 +13,18 @@
   provider: aws
   service: lambda
   title: Create a Lambda function with a passed execution role and invoke it
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdainvokefunction
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdainvokefunction
   source_revision: 171e422299
   summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:CreateFunction
-        resource: "*"
-      - action: lambda:InvokeFunction
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:CreateFunction
+      resource: "*"
+    - action: lambda:InvokeFunction
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -32,34 +33,39 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService / iam:AssociatedResourceArn conditions on the PassRole grant may restrict which roles can be passed to Lambda.
-    - id: invoke_resource_scope
-      description: lambda:InvokeFunction must cover the newly created function name; a name-restricted Resource limits which names the source can use but does not remove the edge if any covered name is free.
+  - id: passrole_condition_key
+    description: iam:PassedToService / iam:AssociatedResourceArn conditions on the PassRole grant may restrict which
+      roles can be passed to Lambda.
+  - id: invoke_resource_scope
+    description: lambda:InvokeFunction must cover the newly created function name; a name-restricted Resource limits
+      which names the source can use but does not remove the edge if any covered name is free.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Restrict iam:PassRole to specific Lambda execution roles with iam:PassedToService=lambda.amazonaws.com, and scope lambda:CreateFunction/InvokeFunction to named functions.
+  mitigation: Restrict iam:PassRole to specific Lambda execution roles with iam:PassedToService=lambda.amazonaws.com,
+    and scope lambda:CreateFunction/InvokeFunction to named functions.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
+  - https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
   notes: Only roles whose trust policy allows lambda.amazonaws.com can be used as an execution role.
 
 - id: aws-lambda-passrole-createfunction-addpermission
   provider: aws
   service: lambda
   title: Create a Lambda function with a passed role and grant itself invoke via the resource policy
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdaaddpermission
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdaaddpermission
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com without holding lambda:InvokeFunction.
+  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com without holding
+    lambda:InvokeFunction.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:CreateFunction
-        resource: "*"
-      - action: lambda:AddPermission
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:CreateFunction
+      resource: "*"
+    - action: lambda:AddPermission
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -68,12 +74,13 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
-    - id: function_url_or_invoke_path
-      description: Invocation relies on the function resource policy granting the source (or a public Function URL); a lambda:FunctionUrlAuthType or principal-restricting condition on AddPermission may limit it.
+  - id: passrole_condition_key
+    description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
+  - id: function_url_or_invoke_path
+    description: Invocation relies on the function resource policy granting the source (or a public Function URL); a
+      lambda:FunctionUrlAuthType or principal-restricting condition on AddPermission may limit it.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
   mitigation: Restrict iam:PassRole and lambda:AddPermission; deny lambda:AddPermission except to deployment principals.
@@ -84,17 +91,19 @@
   provider: aws
   service: lambda
   title: Create a Lambda function with a passed role and trigger it through an event source mapping
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreateeventsourcemapping
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreateeventsourcemapping
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com via an event-source-triggered function.
+  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com via an
+    event-source-triggered function.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:CreateFunction
-        resource: "*"
-      - action: lambda:CreateEventSourceMapping
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:CreateFunction
+      resource: "*"
+    - action: lambda:CreateEventSourceMapping
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -103,38 +112,46 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
   conditions:
-    - id: event_source_available
-      description: An event source must exist or be creatable and receive a record (e.g. dynamodb:CreateTable/PutItem or an existing stream/queue with traffic); the passed role must be able to read that source for the mapping to be created.
-    - id: passrole_condition_key
-      description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
+  - id: event_source_available
+    description: An event source must exist or be creatable and receive a record (e.g. dynamodb:CreateTable/PutItem or
+      an existing stream/queue with traffic); the passed role must be able to read that source for the mapping to be
+      created.
+  - id: passrole_condition_key
+    description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole to specific roles with iam:PassedToService, and restrict lambda:CreateEventSourceMapping to deployment principals.
+  mitigation: Restrict iam:PassRole to specific roles with iam:PassedToService, and restrict
+    lambda:CreateEventSourceMapping to deployment principals.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html
-  notes: HackTricks uses DynamoDB as the trigger; any poll-based source the passed role can read works. The self-contained DynamoDB variant (Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo) is aws-lambda-passrole-createfunction-dynamodb-stream-trigger.
+  - https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html
+  notes: HackTricks uses DynamoDB as the trigger; any poll-based source the passed role can read works. The
+    self-contained DynamoDB variant (Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo) is
+    aws-lambda-passrole-createfunction-dynamodb-stream-trigger.
 
 - id: aws-lambda-passrole-createfunction-dynamodb-stream-trigger
   provider: aws
   service: lambda
   title: Create a Lambda function with a passed role and trigger it from a new DynamoDB stream
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreateeventsourcemapping
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreateeventsourcemapping
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com by creating a DynamoDB table with a stream, mapping the stream to a function it creates with the role, and writing an item to fire it.
+  summary: The source can obtain the privileges of any passable role trusting lambda.amazonaws.com by creating a
+    DynamoDB table with a stream, mapping the stream to a function it creates with the role, and writing an item to fire
+    it.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:CreateFunction
-        resource: "*"
-      - action: lambda:CreateEventSourceMapping
-        resource: "*"
-      - action: dynamodb:CreateTable
-        resource: "arn:aws:dynamodb:*:{target.account}:table/*"
-      - action: dynamodb:PutItem
-        resource: "arn:aws:dynamodb:*:{target.account}:table/*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:CreateFunction
+      resource: "*"
+    - action: lambda:CreateEventSourceMapping
+      resource: "*"
+    - action: dynamodb:CreateTable
+      resource: "arn:aws:dynamodb:*:{target.account}:table/*"
+    - action: dynamodb:PutItem
+      resource: "arn:aws:dynamodb:*:{target.account}:table/*"
   target:
     kind: aws_role
     selector:
@@ -143,31 +160,37 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
   conditions:
-    - id: role_reads_stream
-      description: The passed role must hold dynamodb:DescribeStream / GetRecords / GetShardIterator / ListStreams on the new table's stream (for example via AWSLambdaDynamoDBExecutionRole), or the mapping creation fails.
-    - id: passrole_condition_key
-      description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
+  - id: role_reads_stream
+    description: The passed role must hold dynamodb:DescribeStream / GetRecords / GetShardIterator / ListStreams on the
+      new table's stream (for example via AWSLambdaDynamoDBExecutionRole), or the mapping creation fails.
+  - id: passrole_condition_key
+    description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole to specific roles with iam:PassedToService, and restrict lambda:CreateEventSourceMapping and dynamodb:CreateTable to deployment principals.
+  mitigation: Restrict iam:PassRole to specific roles with iam:PassedToService, and restrict
+    lambda:CreateEventSourceMapping and dynamodb:CreateTable to deployment principals.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
-    - https://github.com/RhinoSecurityLabs/pacu/tree/master/pacu/modules/iam__privesc_scan
-  notes: Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo. The table is created with StreamSpecification enabled (part of dynamodb:CreateTable); the item write fires the mapping. Removes the event_source_available condition of aws-lambda-passrole-createfunction-createeventsourcemapping.
+  - https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
+  - https://github.com/RhinoSecurityLabs/pacu/tree/master/pacu/modules/iam__privesc_scan
+  notes: Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo. The table is created with StreamSpecification enabled
+    (part of dynamodb:CreateTable); the item write fires the mapping. Removes the event_source_available condition of
+    aws-lambda-passrole-createfunction-createeventsourcemapping.
 
 - id: aws-lambda-updatefunctioncode
   provider: aws
   service: lambda
   title: Replace the code of an existing Lambda function
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaupdatefunctioncode
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaupdatefunctioncode
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose code it can update.
+  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose code it can
+    update.
   requires:
     all_of:
-      - action: lambda:UpdateFunctionCode
-        resource: "{target.resource_arn}"
+    - action: lambda:UpdateFunctionCode
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -176,71 +199,43 @@
     scope: same_account
     aggregate_as: "Execution roles of Lambda functions updatable in {account}"
   conditions:
-    - id: function_invocation
-      description: The modified function must run, either via the source's lambda:InvokeFunction or an existing trigger (event source, schedule, API, resource policy).
+  - id: function_invocation
+    description: The modified function must run, either via the source's lambda:InvokeFunction or an existing trigger
+      (event source, schedule, API, resource policy).
   blockers:
-    - lambda_code_signing_enforced
-    - scp_or_boundary_deny
+  - lambda_code_signing_enforced
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Restrict lambda:UpdateFunctionCode to the deployment pipeline on specific function ARNs and enforce a code-signing config with UntrustedArtifactOnDeployment=Enforce.
+  mitigation: Restrict lambda:UpdateFunctionCode to the deployment pipeline on specific function ARNs and enforce a
+    code-signing config with UntrustedArtifactOnDeployment=Enforce.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/configuration-codesigning.html
-  notes: Reaches exactly the execution roles of functions within the Resource of UpdateFunctionCode, not every Lambda-trusting role.
-
-- id: aws-lambda-updatefunctionconfiguration
-  provider: aws
-  service: lambda
-  title: Change environment variables or layers of an existing Lambda to execute code
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaupdatefunctionconfiguration
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose configuration it can update.
-  requires:
-    all_of:
-      - action: lambda:UpdateFunctionConfiguration
-        resource: "{target.resource_arn}"
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: lambda
-      via_resource_type: lambda_function
-    scope: same_account
-    aggregate_as: "Execution roles of Lambda functions reconfigurable in {account}"
-  conditions:
-    - id: runtime_supports_env_injection
-      description: Environment-variable code execution depends on the runtime (interpreter options, or AWS_LAMBDA_EXEC_WRAPPER pointing at a wrapper staged in a layer attached in the same update, which works on every managed runtime); the layer variant requires a layer the source can publish (lambda:PublishLayerVersion) or a readable existing layer.
-    - id: function_invocation
-      description: The function must run after the change (own InvokeFunction permission or existing trigger).
-  blockers:
-    - lambda_code_signing_enforced
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict lambda:UpdateFunctionConfiguration to deployment principals and enforce code signing (which also covers layers).
-  references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
-  notes: Code signing validates layers as well as function code; environment-variable injection is not prevented by code signing, so lambda_code_signing_enforced only blocks the layer variant.
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-codesigning.html
+  notes: Reaches exactly the execution roles of functions within the Resource of UpdateFunctionCode, not every
+    Lambda-trusting role.
 
 - id: aws-lambda-codesigning-bypass-updatefunctioncode
   provider: aws
   service: lambda
   title: Remove or replace a function's code-signing config, then replace its code
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdadeletefunctioncodesigningconfig-or-lambdaputfunctioncodesigningconfig--lambdaupdatefunctioncode--bypass-lambda-code-signing
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdadeletefunctioncodesigningconfig-or-lambdaputfunctioncodesigningconfig--lambdaupdatefunctioncode--bypass-lambda-code-signing
   source_revision: a66f094ede
-  summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose code-signing config it can remove or replace.
+  summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose code-signing
+    config it can remove or replace.
   requires:
     all_of:
-      - action: lambda:UpdateFunctionCode
-        resource: "{target.resource_arn}"
+    - action: lambda:UpdateFunctionCode
+      resource: "{target.resource_arn}"
     any_of:
-      - - action: lambda:DeleteFunctionCodeSigningConfig
-          resource: "{target.resource_arn}"
-      - - action: lambda:CreateCodeSigningConfig
-          resource: "*"
-        - action: lambda:PutFunctionCodeSigningConfig
-          resource: "{target.resource_arn}"
-      - - action: lambda:PutFunctionCodeSigningConfig
-          resource: "{target.resource_arn}"
+    - - action: lambda:DeleteFunctionCodeSigningConfig
+        resource: "{target.resource_arn}"
+    - - action: lambda:CreateCodeSigningConfig
+        resource: "*"
+      - action: lambda:PutFunctionCodeSigningConfig
+        resource: "{target.resource_arn}"
+    - - action: lambda:PutFunctionCodeSigningConfig
+        resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -249,44 +244,50 @@
     scope: same_account
     aggregate_as: "Execution roles of code-signed Lambda functions in {account}"
   conditions:
-    - id: warn_config_available
-      description: The PutFunctionCodeSigningConfig-only alternative requires an existing code-signing configuration with UntrustedArtifactOnDeployment set to Warn; otherwise the source must also create such a configuration.
-    - id: function_invocation
-      description: The function must run after the change (own InvokeFunction permission or existing trigger).
-    - id: lambda_codesigningconfigarns_condition
-      description: A lambda:CodeSigningConfigArns condition on CreateFunction/UpdateFunctionCode policies can force a specific config and prevents the swap path.
+  - id: warn_config_available
+    description: The PutFunctionCodeSigningConfig-only alternative requires an existing code-signing configuration with
+      UntrustedArtifactOnDeployment set to Warn; otherwise the source must also create such a configuration.
+  - id: function_invocation
+    description: The function must run after the change (own InvokeFunction permission or existing trigger).
+  - id: lambda_codesigningconfigarns_condition
+    description: A lambda:CodeSigningConfigArns condition on CreateFunction/UpdateFunctionCode policies can force a
+      specific config and prevents the swap path.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
   severity: critical
-  mitigation: Deny lambda:DeleteFunctionCodeSigningConfig, lambda:PutFunctionCodeSigningConfig and lambda:CreateCodeSigningConfig to non-admins, and enforce code signing via SCP with lambda:CodeSigningConfigArns.
+  mitigation: Deny lambda:DeleteFunctionCodeSigningConfig, lambda:PutFunctionCodeSigningConfig and
+    lambda:CreateCodeSigningConfig to non-admins, and enforce code signing via SCP with lambda:CodeSigningConfigArns.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/configuration-codesigning.html
-  notes: This entry is the code-signing-enforced counterpart of aws-lambda-updatefunctioncode; for functions without code signing that entry already applies.
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-codesigning.html
+  notes: This entry is the code-signing-enforced counterpart of aws-lambda-updatefunctioncode; for functions without
+    code signing that entry already applies.
 
 - id: aws-lambda-signer-startsigningjob-updatefunctioncode
   provider: aws
   service: lambda
   title: Sign attacker code with a publisher profile already trusted by a function's code-signing config
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#signerstartsigningjob--lambdaupdatefunctioncode--sign-attacker-code-with-an-already-trusted-publisher
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#signerstartsigningjob--lambdaupdatefunctioncode--sign-attacker-code-with-an-already-trusted-publisher
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose config trusts a signing profile it can use.
+  summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose config
+    trusts a signing profile it can use.
   requires:
     all_of:
-      - action: signer:StartSigningJob
-        resource: "*"
-      - action: lambda:UpdateFunctionCode
-        resource: "{target.resource_arn}"
-      - action: lambda:GetCodeSigningConfig
-        resource: "*"
-      - action: s3:PutObject
-        resource: "*"
-      - action: s3:GetObject
-        resource: "*"
-      - action: s3:GetObjectVersion
-        resource: "*"
-      - action: s3:ListBucket
-        resource: "*"
+    - action: signer:StartSigningJob
+      resource: "*"
+    - action: lambda:UpdateFunctionCode
+      resource: "{target.resource_arn}"
+    - action: lambda:GetCodeSigningConfig
+      resource: "*"
+    - action: s3:PutObject
+      resource: "*"
+    - action: s3:GetObject
+      resource: "*"
+    - action: s3:GetObjectVersion
+      resource: "*"
+    - action: s3:ListBucket
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -295,36 +296,41 @@
     scope: same_account
     aggregate_as: "Execution roles of code-signed Lambda functions in {account}"
   conditions:
-    - id: signing_profile_trusted
-      description: signer:StartSigningJob must cover a signing profile whose version ARN is in the AllowedPublishers of the function's code-signing config.
-    - id: versioned_source_bucket
-      description: Signer requires a versioned S3 source bucket and a destination bucket the source can write and read.
-    - id: function_invocation
-      description: The function must run after the update.
+  - id: signing_profile_trusted
+    description: signer:StartSigningJob must cover a signing profile whose version ARN is in the AllowedPublishers of
+      the function's code-signing config.
+  - id: versioned_source_bucket
+    description: Signer requires a versioned S3 source bucket and a destination bucket the source can write and read.
+  - id: function_invocation
+    description: The function must run after the update.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict signer:StartSigningJob on production signing profiles to the release pipeline, and keep signing profiles per environment.
+  mitigation: Restrict signer:StartSigningJob on production signing profiles to the release pipeline, and keep signing
+    profiles per environment.
   references:
-    - https://docs.aws.amazon.com/signer/latest/developerguide/signing-profiles.html
-  notes: The evaluator should check that the signing profile covered by StartSigningJob is trusted by the function's CSC; without that fact the edge is conditional.
+  - https://docs.aws.amazon.com/signer/latest/developerguide/signing-profiles.html
+  notes: The evaluator should check that the signing profile covered by StartSigningJob is trusted by the function's
+    CSC; without that fact the edge is conditional.
 
 - id: aws-lambda-passrole-updatefunctionconfiguration-role-swap
   provider: aws
   service: lambda
   title: Repoint an existing Lambda function's execution role to a passable role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdaupdatefunctionconfiguration-lambdainvokefunction--repoint-an-existing-functions-execution-role
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdaupdatefunctionconfiguration-lambdainvokefunction--repoint-an-existing-functions-execution-role
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting lambda.amazonaws.com by changing the execution role of an existing function it can reconfigure and invoke.
+  summary: The source can obtain the privileges of passable roles trusting lambda.amazonaws.com by changing the
+    execution role of an existing function it can reconfigure and invoke.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:UpdateFunctionConfiguration
-        resource: "*"
-      - action: lambda:InvokeFunction
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:UpdateFunctionConfiguration
+      resource: "*"
+    - action: lambda:InvokeFunction
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -333,37 +339,43 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
   conditions:
-    - id: same_function
-      description: lambda:UpdateFunctionConfiguration and lambda:InvokeFunction must cover the same existing function.
-    - id: code_uses_role
-      description: The new role's privileges are only exercised by the function's code; the gain needs existing code that performs the desired actions, environment/wrapper injection under the same UpdateFunctionConfiguration, or a separate code update.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: same_function
+    description: lambda:UpdateFunctionConfiguration and lambda:InvokeFunction must cover the same existing function.
+  - id: code_uses_role
+    description: The new role's privileges are only exercised by the function's code; the gain needs existing code that
+      performs the desired actions, environment/wrapper injection under the same UpdateFunctionConfiguration, or a
+      separate code update.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict iam:PassRole on Lambda execution roles with iam:PassedToService and exact role ARNs, and restrict lambda:UpdateFunctionConfiguration to deployment principals.
+  mitigation: Restrict iam:PassRole on Lambda execution roles with iam:PassedToService and exact role ARNs, and restrict
+    lambda:UpdateFunctionConfiguration to deployment principals.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionConfiguration.html
-    - https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
-  notes: Differs from aws-lambda-updatefunctionconfiguration, which keeps the function's current role; here the reachable roles are any passable Lambda-trusting role, not only roles already attached to functions.
+  - https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionConfiguration.html
+  - https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
+  notes: Differs from aws-lambda-updatefunctionconfiguration, which keeps the function's current role; here the
+    reachable roles are any passable Lambda-trusting role, not only roles already attached to functions.
 
 - id: aws-lambda-putresourcepolicy-grant-updatefunctioncode
   provider: aws
   service: lambda
   title: Grant code updates to oneself through a Lambda function resource policy
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaputresourcepolicy--lambdaaddpermission--lambdaremovepermission--grant-code-updates-through-a-function-policy
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaputresourcepolicy--lambdaaddpermission--lambdaremovepermission--grant-code-updates-through-a-function-policy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose resource policy it can replace, by granting itself lambda:UpdateFunctionCode there.
+  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose resource policy
+    it can replace, by granting itself lambda:UpdateFunctionCode there.
   requires:
     all_of:
-      - action: lambda:PutResourcePolicy
-        resource: "{target.resource_arn}"
-      - action: lambda:AddPermission
-        resource: "{target.resource_arn}"
-      - action: lambda:RemovePermission
-        resource: "{target.resource_arn}"
+    - action: lambda:PutResourcePolicy
+      resource: "{target.resource_arn}"
+    - action: lambda:AddPermission
+      resource: "{target.resource_arn}"
+    - action: lambda:RemovePermission
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -372,31 +384,38 @@
     scope: same_account
     aggregate_as: "Execution roles of Lambda functions whose policy is writable in {account}"
   conditions:
-    - id: function_invocation
-      description: The modified function must run, either through an invoke permission the source also grants itself or an existing trigger.
-    - id: no_identity_deny
-      description: A resource-policy grant to a same-account principal is effective unless an identity-policy, boundary or SCP deny applies.
+  - id: function_invocation
+    description: The modified function must run, either through an invoke permission the source also grants itself or an
+      existing trigger.
+  - id: no_identity_deny
+    description: A resource-policy grant to a same-account principal is effective unless an identity-policy, boundary or
+      SCP deny applies.
   blockers:
-    - lambda_code_signing_enforced
-    - scp_or_boundary_deny
+  - lambda_code_signing_enforced
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict lambda:PutResourcePolicy, lambda:AddPermission and lambda:RemovePermission to deployment principals on exact function ARNs, and enforce code signing.
+  mitigation: Restrict lambda:PutResourcePolicy, lambda:AddPermission and lambda:RemovePermission to deployment
+    principals on exact function ARNs, and enforce code signing.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/access-control-resource-based.html
-  notes: PutResourcePolicy requires all three permissions per the Lambda documentation, and UpdateFunctionCode is among the actions a function resource policy can grant. lambda:AddPermission alone is covered by the existing AddPermission entries.
+  - https://docs.aws.amazon.com/lambda/latest/dg/access-control-resource-based.html
+  notes: PutResourcePolicy requires all three permissions per the Lambda documentation, and UpdateFunctionCode is among
+    the actions a function resource policy can grant. lambda:AddPermission alone is covered by the existing
+    AddPermission entries.
 
 - id: aws-lambda-microvm-createmicrovmshellauthtoken
   provider: aws
   service: lambda
   title: Open a shell into a running Lambda MicroVM
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdacreatemicrovmshellauthtoken--shell-into-an-existing-lambda-microvm
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdacreatemicrovmshellauthtoken--shell-into-an-existing-lambda-microvm
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of running Lambda MicroVMs launched from an image on which it can create shell tokens.
+  summary: The source can obtain the privileges of the execution role of running Lambda MicroVMs launched from an image
+    on which it can create shell tokens.
   requires:
     all_of:
-      - action: lambda:CreateMicrovmShellAuthToken
-        resource: "{target.resource_arn}"
+    - action: lambda:CreateMicrovmShellAuthToken
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -405,37 +424,42 @@
     scope: same_account
     aggregate_as: "Execution roles of running Lambda MicroVMs in {account}"
   conditions:
-    - id: shell_ingress_running
-      description: A MicroVM from the covered image must be running and must have been launched with the SHELL_INGRESS network connector; connectors cannot be added to a running MicroVM.
-    - id: execution_role_attached
-      description: Escalation only applies when the MicroVM was launched with an execution role.
+  - id: shell_ingress_running
+    description: A MicroVM from the covered image must be running and must have been launched with the SHELL_INGRESS
+      network connector; connectors cannot be added to a running MicroVM.
+  - id: execution_role_attached
+    description: Escalation only applies when the MicroVM was launched with an execution role.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Grant lambda:CreateMicrovmShellAuthToken only to break-glass operators on exact image ARNs (optionally narrowed with aws:ResourceTag), and launch production MicroVMs without the SHELL_INGRESS connector.
+  mitigation: Grant lambda:CreateMicrovmShellAuthToken only to break-glass operators on exact image ARNs (optionally
+    narrowed with aws:ResourceTag), and launch production MicroVMs without the SHELL_INGRESS connector.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
-    - https://docs.aws.amazon.com/lambda/latest/microvm-api/API_CreateMicrovmShellAuthToken.html
-  notes: IAM authorizes the action on the microvm-image ARN, so one grant covers every current and future runtime from that image. MicroVM inventories are not collected; via_resource_type lambda_microvm resolves as unknown.
+  - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
+  - https://docs.aws.amazon.com/lambda/latest/microvm-api/API_CreateMicrovmShellAuthToken.html
+  notes: IAM authorizes the action on the microvm-image ARN, so one grant covers every current and future runtime from
+    that image. MicroVM inventories are not collected; via_resource_type lambda_microvm resolves as unknown.
 
 - id: aws-lambda-passrole-createfunction-functionurl
   provider: aws
   service: lambda
   title: Create a Lambda with a passed role and invoke it through a Function URL
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreatefunctionurlconfig-lambdainvokefunctionurl
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdacreatefunction-lambdacreatefunctionurlconfig-lambdainvokefunctionurl
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting lambda.amazonaws.com by creating a function with that execution role, adding a Function URL to it and invoking the URL instead of calling InvokeFunction.
+  summary: The source can obtain the privileges of passable roles trusting lambda.amazonaws.com by creating a function
+    with that execution role, adding a Function URL to it and invoking the URL instead of calling InvokeFunction.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:CreateFunction
-        resource: "*"
-      - action: lambda:CreateFunctionUrlConfig
-        resource: "*"
-      - action: lambda:InvokeFunctionUrl
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:CreateFunction
+      resource: "*"
+    - action: lambda:CreateFunctionUrlConfig
+      resource: "*"
+    - action: lambda:InvokeFunctionUrl
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -444,20 +468,25 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com in {account}"
   conditions:
-    - id: url_auth_type
-      description: With AuthType AWS_IAM the same-account caller's identity-based lambda:InvokeFunctionUrl allow is enough; AuthType NONE additionally needs a function resource policy allowing public invocation (lambda:AddPermission, covered by aws-lambda-passrole-createfunction-addpermission).
-    - id: invoke_permission_pairing
-      description: Newer Lambda authorization may also require lambda:InvokeFunction for Function URL invocation; where it does, the source effectively also matches aws-lambda-passrole-createfunction-invokefunction.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict this.
+  - id: url_auth_type
+    description: With AuthType AWS_IAM the same-account caller's identity-based lambda:InvokeFunctionUrl allow is
+      enough; AuthType NONE additionally needs a function resource policy allowing public invocation
+      (lambda:AddPermission, covered by aws-lambda-passrole-createfunction-addpermission).
+  - id: invoke_permission_pairing
+    description: Newer Lambda authorization may also require lambda:InvokeFunction for Function URL invocation; where it
+      does, the source effectively also matches aws-lambda-passrole-createfunction-invokefunction.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict this.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on Lambda execution roles and lambda:CreateFunctionUrlConfig to deployment principals.
+  mitigation: Restrict iam:PassRole on Lambda execution roles and lambda:CreateFunctionUrlConfig to deployment
+    principals.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html
-  notes: HackTricks marks this combination as untested; the edge is conditional on the Function URL authorization behaviour described in the AWS documentation.
+  - https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html
+  notes: HackTricks marks this combination as untested; the edge is conditional on the Function URL authorization
+    behaviour described in the AWS documentation.
 
 - id: aws-lambda-microvm-passrole-runmicrovm-shell
   provider: aws
@@ -465,15 +494,17 @@
   title: Launch a Lambda MicroVM with a passed execution role and open a shell into it
   source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-microvms
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of passable roles usable as Lambda MicroVM execution roles by launching a MicroVM runtime with that role and the shell-ingress connector and then opening an interactive shell in the guest, which receives the role credentials through IMDSv2.
+  summary: The source can obtain the privileges of passable roles usable as Lambda MicroVM execution roles by launching
+    a MicroVM runtime with that role and the shell-ingress connector and then opening an interactive shell in the guest,
+    which receives the role credentials through IMDSv2.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: lambda:RunMicrovm
-        resource: "*"
-      - action: lambda:CreateMicrovmShellAuthToken
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: lambda:RunMicrovm
+      resource: "*"
+    - action: lambda:CreateMicrovmShellAuthToken
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -483,21 +514,475 @@
     aggregate_as: "Roles passable as Lambda MicroVM execution roles in {account}"
     outcome: workload_execution
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService / iam:AssociatedResourceArn conditions on the PassRole grant may restrict which roles can be attached to a MicroVM.
-    - id: same_image_scope
-      description: RunMicrovm and CreateMicrovmShellAuthToken are authorized on the MicroVM image ARN; both grants must cover the same usable image (customer or AWS-managed) for the edge to hold.
-    - id: shell_ingress_connector
-      description: The runtime must be launched with the AWS-managed SHELL_INGRESS connector; it cannot be added to a running MicroVM.
-    - id: alternative_attacker_image
-      description: A source able to build its own MicroVM image could instead run arbitrary application code with the passed role without a shell token; that variant is not modelled separately.
+  - id: passrole_condition_key
+    description: iam:PassedToService / iam:AssociatedResourceArn conditions on the PassRole grant may restrict which
+      roles can be attached to a MicroVM.
+  - id: same_image_scope
+    description: RunMicrovm and CreateMicrovmShellAuthToken are authorized on the MicroVM image ARN; both grants must
+      cover the same usable image (customer or AWS-managed) for the edge to hold.
+  - id: shell_ingress_connector
+    description: The runtime must be launched with the AWS-managed SHELL_INGRESS connector; it cannot be added to a
+      running MicroVM.
+  - id: alternative_attacker_image
+    description: A source able to build its own MicroVM image could instead run arbitrary application code with the
+      passed role without a shell token; that variant is not modelled separately.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole for MicroVM execution roles to exact role ARNs with iam:PassedToService, scope lambda:RunMicrovm and lambda:CreateMicrovmShellAuthToken to exact image ARNs for operators only, and avoid the SHELL_INGRESS connector on images that run with privileged roles.
+  mitigation: Restrict iam:PassRole for MicroVM execution roles to exact role ARNs with iam:PassedToService, scope
+    lambda:RunMicrovm and lambda:CreateMicrovmShellAuthToken to exact image ARNs for operators only, and avoid the
+    SHELL_INGRESS connector on images that run with privileged roles.
   references:
-    - https://docs.aws.amazon.com/lambda/latest/dg/microvms-how-it-works.html
-    - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
-    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_lambda.html
-  notes: The enum page documents that RunMicrovm attaches an optional execution role whose credentials the guest receives through IMDSv2; the shell-token half follows the existing aws-lambda-microvm-createmicrovmshellauthtoken entry. The execution-role trust principal is assumed to be lambda.amazonaws.com, as in the existing MicroVM entry; verify against the MicroVM execution-role documentation. Resources are "*" because the image may be AWS-managed or customer-owned.
+  - https://docs.aws.amazon.com/lambda/latest/dg/microvms-how-it-works.html
+  - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_lambda.html
+  notes: The enum page documents that RunMicrovm attaches an optional execution role whose credentials the guest
+    receives through IMDSv2; the shell-token half follows the existing aws-lambda-microvm-createmicrovmshellauthtoken
+    entry. The execution-role trust principal is assumed to be lambda.amazonaws.com, as in the existing MicroVM entry;
+    verify against the MicroVM execution-role documentation. Resources are "*" because the image may be AWS-managed or
+    customer-owned.
+- id: aws-lambda-updatefunctionconfiguration
+  provider: aws
+  service: lambda
+  title: Change environment variables or layers of an existing Lambda to execute code
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaupdatefunctionconfiguration
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of existing Lambda functions whose configuration
+    it can update.
+  requires:
+    all_of:
+    - action: lambda:UpdateFunctionConfiguration
+      resource: '{target.resource_arn}'
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: lambda
+      via_resource_type: lambda_function
+    scope: same_account
+    aggregate_as: Execution roles of Lambda functions reconfigurable in {account}
+  conditions:
+  - id: runtime_supports_env_injection
+    description: Environment-variable code execution depends on the runtime (interpreter options, or
+      AWS_LAMBDA_EXEC_WRAPPER pointing at a wrapper staged in a layer attached in the same update, which works on every
+      managed runtime); the layer variant requires a layer the source can publish (lambda:PublishLayerVersion) or a
+      readable existing layer.
+  - id: function_invocation
+    description: The function must run after the change (own InvokeFunction permission or existing trigger).
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict lambda:UpdateFunctionConfiguration to deployment principals and enforce code signing (which also
+    covers layers).
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: Environment-variable and wrapper injection bypass Lambda code signing; adding a layer still requires a
+    compatible, readable and signed layer when signing is enforced.
+- id: aws-s05-06-lambda-addpermission
+  provider: aws
+  service: lambda
+  title: '`lambda:AddPermission`'
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddpermission
+  source_revision: 0b36331
+  summary: 'Conditional gain: privileged handler invocation.'
+  requires:
+    all_of:
+    - action: lambda:AddPermission
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-06-lambda-addpermission
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing handler accepts controlled input and performs privileged action.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-s05-07-expose-a-pre-existing-authtype-none-function-url
+  provider: aws
+  service: lambda
+  title: Expose a pre-existing `AuthType=NONE` Function URL
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#expose-a-pre-existing-authtypenone-function-url
+  source_revision: 0b36331
+  summary: 'Conditional gain: unauthenticated privileged handler access.'
+  requires:
+    all_of:
+    - action: lambda:AddPermission
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-07-expose-a-pre-existing-authtype-none-function-url
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Known existing NONE Function URL; add public InvokeFunctionUrl and InvokeFunction grants; handler is
+      security sensitive.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-s05-08-lambda-addlayerversionpermission
+  provider: aws
+  service: lambda
+  title: '`lambda:AddLayerVersionPermission`'
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddlayerversionpermission
+  source_revision: 0b36331
+  summary: 'Conditional gain: embedded credential.'
+  requires:
+    all_of:
+    - action: lambda:AddLayerVersionPermission
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-08-lambda-addlayerversionpermission
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Layer contains embedded credential; caller can obtain the newly granted GetLayerVersion response.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-s05-10-lambda-getfunction-download-a-function-deployment-packa
+  provider: aws
+  service: lambda
+  title: '`lambda:GetFunction` — Download a function deployment package'
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunction--download-a-function-deployment-package
+  source_revision: 0b36331
+  summary: 'Conditional gain: embedded credential.'
+  requires:
+    all_of:
+    - action: lambda:GetFunction
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-10-lambda-getfunction-download-a-function-deployment-packa
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: ZIP package embeds credential; GetFunction returns presigned archive URL.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-s05-11-lambda-getfunctionconfiguration-read-environment-variab
+  provider: aws
+  service: lambda
+  title: '`lambda:GetFunctionConfiguration` — Read environment variables'
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunctionconfiguration--read-environment-variables
+  source_revision: 0b36331
+  summary: 'Conditional gain: plaintext credential.'
+  requires:
+    all_of:
+    - action: lambda:GetFunctionConfiguration
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-11-lambda-getfunctionconfiguration-read-environment-variab
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Environment contains credential; customer KMS key may additionally require kms:Decrypt.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-s05-12-lambda-getlayerversion-download-layer-code
+  provider: aws
+  service: lambda
+  title: '`lambda:GetLayerVersion` — Download layer code'
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetlayerversion--download-layer-code
+  source_revision: 0b36331
+  summary: 'Conditional gain: embedded credential.'
+  requires:
+    all_of:
+    - action: lambda:GetLayerVersion
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-12-lambda-getlayerversion-download-layer-code
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Layer code contains credential.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.
+- id: aws-lambda-passrole-createfunction-eventbridge-trigger
+  provider: aws
+  service: lambda
+  title: Run a newly created Lambda with a passable role through EventBridge
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-lambda-persistence/README.md#cronevent-actuator
+  source_revision: 0b36331
+  summary: The source can run chosen code under a stronger Lambda-trusting role by creating a function and a scheduled EventBridge rule that invokes it.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+    - action: lambda:CreateFunction
+      resource: arn:aws:lambda:*:{source.account}:function:*
+      bind: new_function
+    - action: events:PutRule
+      resource: arn:aws:events:*:{source.account}:rule/*
+      bind: scheduled_rule
+    - action: events:PutTargets
+      resource: arn:aws:events:*:{source.account}:rule/*
+      bind: scheduled_rule
+    - action: lambda:AddPermission
+      resource: arn:aws:lambda:*:{source.account}:function:*
+      bind: new_function
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: lambda.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Passable Lambda roles reachable via EventBridge in {account}
+  conditions:
+  - id: scheduled_rule_invokes_function
+    description: The source must create an enabled scheduled rule targeting the newly created function and grant events.amazonaws.com invoke permission on that function; function and rule must be creatable in a common Region.
+  - id: passrole_condition_key
+    description: iam:PassedToService and iam:AssociatedResourceArn conditions must allow passing the role to this new Lambda function.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole, lambda:CreateFunction, events:PutRule, events:PutTargets, and lambda:AddPermission to approved deployment principals.
+  references: []
+  notes: The two page examples, creating IAM user keys and granting assume-role permissions, are payload effects of this one role-execution path. EventBridge schedule can supply the trigger without an external event source.
+- id: aws-lambda-listfunctions-secret-identity
+  provider: aws
+  service: lambda
+  title: Recover a distinct identity credential from ListFunctions environment
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from ListFunctions environment when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: lambda:ListFunctions
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-lambda-listfunctions-secret-identity
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from ListFunctions environment targets in {account}
+    grants:
+    - exact distinct identity authenticated by the recovered credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact returned Environment.Variables must contain a currently usable credential for a distinct
+      target identity; arbitrary secrets, identifiers or text produce no edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.
+- id: aws-lambda-listversions-secret-identity
+  provider: aws
+  service: lambda
+  title: Recover a distinct identity credential from ListVersionsByFunction environment
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from ListVersionsByFunction environment when the exact target
+    and prerequisites are verified.
+  requires:
+    all_of:
+    - action: lambda:ListVersionsByFunction
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-lambda-listversions-secret-identity
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from ListVersionsByFunction environment targets
+      in {account}
+    grants:
+    - exact distinct identity authenticated by the recovered credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact returned version Environment.Variables must contain a currently usable credential for
+      a distinct target identity; arbitrary secrets, identifiers or text produce no edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.
+- id: aws-lambda-getconfig-secret-identity
+  provider: aws
+  service: lambda
+  title: Recover a distinct identity credential from GetFunctionConfiguration environment
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from GetFunctionConfiguration environment when the exact target
+    and prerequisites are verified.
+  requires:
+    all_of:
+    - action: lambda:GetFunctionConfiguration
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-lambda-getconfig-secret-identity
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from GetFunctionConfiguration environment targets
+      in {account}
+    grants:
+    - exact distinct identity authenticated by the recovered credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact returned Environment.Variables must contain a currently usable credential for a distinct
+      target identity; arbitrary secrets, identifiers or text produce no edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.
+- id: aws-lambda-getfunction-package-secret-identity
+  provider: aws
+  service: lambda
+  title: Recover a distinct identity credential from Lambda deployment package
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from Lambda deployment package when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: lambda:GetFunction
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-lambda-getfunction-package-secret-identity
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from Lambda deployment package targets in {account}
+    grants:
+    - exact distinct identity authenticated by the recovered credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact returned downloaded deployment package must contain a currently usable credential for
+      a distinct target identity; arbitrary secrets, identifiers or text produce no edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.
+- id: aws-lambda-durablehistory-secret-identity
+  provider: aws
+  service: lambda
+  title: Recover a distinct identity credential from Lambda durable history
+  source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-durable-executions
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from Lambda durable history when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: lambda:GetDurableExecutionHistory
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-lambda-durablehistory-secret-identity
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from Lambda durable history targets in {account}
+    grants:
+    - exact distinct identity authenticated by the recovered credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact returned retained execution data must contain a currently usable credential for a distinct
+      target identity; arbitrary secrets, identifiers or text produce no edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.

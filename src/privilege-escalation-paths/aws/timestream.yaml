@@ -1,0 +1,148 @@
+- id: aws-audit-create-scheduled-query-to-exfiltrate-role-readable-secrets
+  provider: aws
+  service: timestream
+  title: Create scheduled query to exfiltrate role-readable secrets
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-timestream-privesc/README.md#timestreamcreatescheduledquery--iampassrole--run-sql-and-downstream-writes-as-a-scheduled-query-role
+  source_revision: 0b36331
+  summary: The source can read sensitive rows through role and write to readable target/error report only when the
+    exact target and prerequisites are verified.
+  requires:
+    all_of:
+    - action: timestream:CreateScheduledQuery
+      resource: '*'
+    - action: timestream:DescribeEndpoints
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-create-scheduled-query-to-exfiltrate-role-readable-secrets
+    scope: same_account
+    aggregate_as: Verified Read sensitive rows through role and write to in {account}
+    grants:
+    - Read sensitive rows through role and write to readable target/error report
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Execution role trusts timestream.amazonaws.com
+      and can Select source, WriteRecords target, Publish notification, write S3 error report; selected output readable
+      by source; KMS/TagResource conditional; query name satisfies trust SourceArn.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-timestream-privesc/
+- id: aws-audit-trigger-stored-query-that-delivers-restricted-secrets
+  provider: aws
+  service: timestream
+  title: Trigger stored query that delivers restricted secrets
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-timestream-privesc/README.md#timestreamexecutescheduledquery--trigger-an-already-stored-role-workflow
+  source_revision: 0b36331
+  summary: The source can receive or cause exposure of data/credentials through stored role only when the exact
+    target and prerequisites are verified.
+  requires:
+    all_of:
+    - action: timestream:ExecuteScheduledQuery
+      resource: '*'
+    - action: timestream:DescribeEndpoints
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-trigger-stored-query-that-delivers-restricted-secrets
+    scope: same_account
+    aggregate_as: Verified Receive or cause exposure of data/credentials in {account}
+    grants:
+    - Receive or cause exposure of data/credentials through stored role
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Fixed SQL, role, destination
+      and permitted InvocationTime must already disclose useful rows to an attacker-readable target or error-report
+      prefix; otherwise only cost/integrity effect.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-timestream-privesc/
+- id: aws-s05-liveanalytics-query-a-table-with-timestreamselect
+  provider: aws
+  service: timestream
+  title: 'LiveAnalytics: query a table with `timestream:Select`'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-timestream-post-exploitation/README.md#liveanalytics-query-a-table-with-timestreamselect
+  source_revision: 0b36331
+  summary: The source may obtain Identity represented by a valid secret in Timestream rows when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: timestream:Select
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-liveanalytics-query-a-table-with-timestreamselect
+    scope: same_account
+    aggregate_as: Verified Identity represented by a valid secret in Timestream rows in {account}
+    grants:
+    - Identity represented by a valid secret in Timestream rows
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact table contains a usable secret/token as a dimension or measure, caller can read that table, and the credential remains valid. UNLOAD additionally requires same-Region writable attacker-readable S3 destination and listed S3 permissions; direct Select normally needs DescribeEndpoints for CLI/SDK. Existing exclusion overlooks the explicit secrets/tokens impact while denying AWS-principal gain. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/timestream/latest/developerguide/security_iam_service-with-iam.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_timestream.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-liveanalytics-export-query-results-to-s3-with-timestreamunload
+  provider: aws
+  service: timestream
+  title: 'LiveAnalytics: export query results to S3 with `timestream:Unload`'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-timestream-post-exploitation/README.md#liveanalytics-export-query-results-to-s3-with-timestreamunload
+  source_revision: 0b36331
+  summary: The source may obtain Identity represented by a valid secret in exported Timestream rows when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: timestream:Select
+      resource: '*'
+    - action: timestream:Unload
+      resource: '*'
+    - action: s3:GetBucketAcl
+      resource: '*'
+    - action: s3:PutObject
+      resource: '*'
+    - action: s3:GetObject
+      resource: '*'
+    - action: s3:AbortMultipartUpload
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-liveanalytics-export-query-results-to-s3-with-timestreamunload
+    scope: same_account
+    aggregate_as: Verified Identity represented by a valid secret in exported Timestream rows in {account}
+    grants:
+    - Identity represented by a valid secret in exported Timestream rows
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact table contains a usable secret/token as a dimension or measure, caller can read that table, and the credential remains valid. UNLOAD additionally requires same-Region writable attacker-readable S3 destination and listed S3 permissions; direct Select normally needs DescribeEndpoints for CLI/SDK. Existing exclusion overlooks the explicit secrets/tokens impact while denying AWS-principal gain. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/timestream/latest/developerguide/security_iam_service-with-iam.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_timestream.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

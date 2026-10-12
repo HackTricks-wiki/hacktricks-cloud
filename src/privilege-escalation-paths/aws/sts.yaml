@@ -149,41 +149,41 @@
   service: sts
   title: Obtain a privileged root-user session in a member account with sts:AssumeRoot
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumeroot--privileged-root-sessions-into-any-member-account
-  source_revision: 171e422299
-  summary: A principal in the management account or the IAM delegated-administrator account can open short root sessions in member accounts, limited to AWS-managed task policies that can reset root credentials and unlock resource policies.
+  source_revision: 0b36331
+  summary: AssumeRoot creates a short member-account root session restricted to the selected AWS managed root-task
+    policy.
   requires:
     all_of:
-      - action: sts:AssumeRoot
-        resource: "arn:aws:iam::{target.account}:root"
+    - action: sts:AssumeRoot
+      resource: arn:aws:iam::{target.account}:root
   target:
-    kind: aws_account_admin
+    kind: aws_verified_authority
     selector:
-      any_principal_in_scope: true
-      org_member_account: true
+      aws_challenge_fact: aws-sts-assumeroot-member-accounts
     scope: org
-    aggregate_as: "Member accounts reachable through centralized root sessions"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - One selected IAM root-task policy, never unrestricted root
   conditions:
-    - id: source_in_management_or_delegated_admin
-      description: The source must be in the organization management account or the account registered as IAM delegated administrator; the management account itself cannot be targeted.
-    - id: root_sessions_enabled
-      description: Centralized root access (RootSessions) must be enabled for the organization; from the management account it can be enabled with organizations:EnableAWSServiceAccess, iam:EnableOrganizationsRootCredentialsManagement and iam:EnableOrganizationsRootSessions.
-    - id: task_policy_scope
-      description: Each session is scoped to one task policy (IAMAuditRootUserCredentials, IAMCreateRootUserPassword, IAMDeleteRootUserCredentials, S3UnlockBucketPolicy, SQSUnlockQueuePolicy) and lasts at most 900 seconds; full root control needs IAMCreateRootUserPassword followed by a root sign-in.
-    - id: task_policy_condition_keys
-      description: sts:TaskPolicyArn conditions on the grant can restrict which task policies the source may request.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: task_policy_and_feature
+    description: Centralized RootSessions must be enabled; bind exact member account and permitted sts:TaskPolicyArn.
+      Password reset is not permanent takeover unless root sign-in can complete.
   preconditions:
-    - target_in_other_account
+  - target_in_other_account
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict sts:AssumeRoot to break-glass roles in the management / delegated-admin account, constrain sts:TaskPolicyArn, and alert on AssumeRoot events.
+  mitigation: Restrict sts:AssumeRoot to break-glass roles in the management / delegated-admin account, constrain
+    sts:TaskPolicyArn, and alert on AssumeRoot events.
   references:
-    - https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html
-    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user-privileged-task.html
-    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html
-  notes: Root password recovery for member accounts may still face root MFA when it is configured; SCPs apply to member-account root users.
-
+  - https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user-privileged-task.html
+  - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-rolesanywhere-createtrustanchor-createprofile-passrole
   provider: aws
   service: rolesanywhere
@@ -219,3 +219,45 @@
   references:
     - https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html
   notes: Only roles whose trust policy already allows rolesanywhere.amazonaws.com are reached; adding that trust is a separate trust-policy edge. The profile session policy can reduce the obtained permissions.
+- id: aws-audit-enable-centralized-root-sessions-then-call-assumeroot
+  provider: aws
+  service: organizations
+  title: Enable centralized root sessions then call AssumeRoot
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#enabling-the-feature-yourself-management-account
+  source_revision: 0b36331
+  summary: The source can gain one selected root task capability only when the exact target and prerequisites are
+    verified.
+  requires:
+    all_of:
+    - action: organizations:EnableAWSServiceAccess
+      resource: '*'
+    - action: iam:EnableOrganizationsRootCredentialsManagement
+      resource: '*'
+    - action: iam:EnableOrganizationsRootSessions
+      resource: '*'
+    - action: sts:AssumeRoot
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-enable-centralized-root-sessions-then-call-assumeroot
+    scope: same_account
+    aggregate_as: Verified Gain one selected root task capability in {account}
+    grants:
+    - Gain one selected root task capability
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Source in Organizations
+      management account; feature initially disabled; IAM trusted access enabled; root credentials management enabled;
+      RootSessions enabled; sts:AssumeRoot allowed for member and task policy; registration optional if delegated
+      to another account.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/

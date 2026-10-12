@@ -515,3 +515,32 @@
   references:
     - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/get-process-dump
   notes: The Kudu path with publishing credentials or publish/action is already covered by azure-appservice-kudu-publish-action and the publishing-credential entries.
+- id: azure-app-services-read-configured-third-party-credentials
+  provider: azure
+  service: app_services
+  title: Read configured third-party source-control OAuth tokens
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#read-configured-third-party-credentials
+  source_revision: 0b36331
+  summary: Read the stored third-party source-control OAuth tokens (GitHub, Bitbucket, Dropbox, OneDrive) exposed to the account → pivot into those external accounts (repos, files) with the returned tokens.
+  requires:
+    all_of:
+    - action: Microsoft.Web/sourcecontrols/read
+      scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-app-services-read-configured-third-party-credentials
+    scope: inherited_scope
+    aggregate_as: Pending service authority for app_services
+    outcome: application_admin
+    grants:
+    - The configured third-party GitHub, Bitbucket, Dropbox or OneDrive OAuth identity.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_web_sourcecontrols inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md
+  notes: 'Collector fact required: azure_web_sourcecontrols. UNKNOWN until configured token, owner, and scope are inventoried.'

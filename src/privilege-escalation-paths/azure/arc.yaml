@@ -1,9 +1,3 @@
-# Azure Arc techniques (declarative only).
-# Source: hacktricks-cloud az-arc-enabled-servers-privesc.md and az-arc-resource-bridge-privesc.md (rev 171e422).
-# Arc-enabled servers support only a system-assigned identity; its token (HIMDS) is readable by
-# local administrators / the himds group, which extensions running as SYSTEM/root are.
-# Arc run commands are modelled in virtual_machines.yaml (azure-arc-machine-runcommands-write).
-
 - id: azure-arc-machine-extensions-write
   provider: azure
   service: arc
@@ -33,7 +27,6 @@
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/managed-identity-authentication
   notes: ""
-
 - id: azure-arc-hybrid-connectivity-entra-ssh
   provider: azure
   service: arc
@@ -67,35 +60,3 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/ssh-arc-overview
   notes: ""
-
-- id: azure-arc-resource-bridge-credential-export
-  provider: azure
-  service: arc
-  title: Export Arc resource bridge appliance kubeconfig and keys
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md#export-customer-kubeconfig-and-ssh-credentials
-  source_revision: 171e422
-  summary: Appliance listKeys / listClusterUserCredential return admin credentials of the resource bridge appliance cluster.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.ResourceConnector/appliances/listKeys/action
-          scope: "{target.scope}"
-      - - action: Microsoft.ResourceConnector/appliances/listClusterUserCredential/action
-          scope: "{target.scope}"
-  target:
-    kind: azure_dataplane_admin
-    selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "Arc resource bridge appliance admins of {target.scope}"
-  conditions:
-    - id: appliance_reachable
-      description: The appliance control plane on the on-premises network must be reachable from the source; the bridge's private-cloud credentials are stored inside it.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict appliances listKeys/listClusterUserCredential to bridge operators.
-  references:
-    - https://learn.microsoft.com/en-us/rest/api/resourceconnector/appliances
-  notes: Covers both the customer and partner credential sections of the page.

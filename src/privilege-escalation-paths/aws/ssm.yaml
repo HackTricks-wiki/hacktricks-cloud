@@ -7,33 +7,37 @@
   service: ssm
   title: Start an Automation runbook that carries a preauthorized assume role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the assume role hardcoded in account-owned Automation runbooks it can start, limited to the runbook steps.
+  source_revision: 0b36331
+  summary: Starting a stored-role runbook exercises only its authorized document version, steps and parameters;
+    it does not expose the full role.
   requires:
     all_of:
-      - action: ssm:StartAutomationExecution
-        resource: "{target.resource_arn}"
+    - action: ssm:StartAutomationExecution
+      resource: '{target.resource_arn}'
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: ssm.amazonaws.com
-      via_resource_type: ssm_automation_document
+      aws_challenge_fact: aws-ssm-startautomationexecution-stored-role
     scope: same_account
-    aggregate_as: "Automation assume roles hardcoded in runbooks startable in {account}"
+    aggregate_as: Verified bounded authority in {account}
+    grants:
+    - Only the privileges of the callable Automation steps and outputs
   conditions:
-    - id: runbook_steps_useful
-      description: The source gains only what the runbook's fixed steps do with its parameters (e.g. a runbook that runs a script, attaches a policy or takes caller-chosen inputs); a runbook with no parameter-controlled privileged step gives no meaningful privilege.
-    - id: role_parameterised
-      description: If the assume role is a parameter rather than a literal, the source needs iam:PassRole on it and the technique becomes PassRole-style.
+  - id: exact_verified_prerequisites
+    description: A collected fact must bind the actor, exact resource, permitted inputs, target authority and useful
+      privileged effect.
+  - id: document_version_and_parameter_join
+    description: Resolve the exact startable document version, literal role, allowed parameters and steps; a read-only
+      DescribeOrganization runbook yields only that output.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Keep AutomationAssumeRole roles least-privileged, scope ssm:StartAutomationExecution to specific document ARNs, and avoid runbooks that execute caller-supplied scripts under privileged roles.
+  mitigation: Keep AutomationAssumeRole roles least-privileged, scope ssm:StartAutomationExecution to specific document
+    ARNs, and avoid runbooks that execute caller-supplied scripts under privileged roles.
   references:
-    - https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-setup.html
-  notes: Target is the literal assumeRole of account-owned (not AWS-managed) Automation documents in Resource scope; reach is limited to the document's actions.
-
+  - https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-setup.html
+  notes: The stored role or service is usable only through the documented operation. Missing exact evidence is UNKNOWN.
 - id: aws-ssm-sendcommand
   provider: aws
   service: ssm
@@ -533,3 +537,175 @@
   references:
     - https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows-permissions.html
   notes: The page states that with a passed service role the window task runs under that role. Same reach as aws-ssm-createdocument-startautomationexecution-passrole, delayed to the window schedule.
+- id: aws-audit-start-stored-state-manager-association
+  provider: aws
+  service: ssm
+  title: Start stored State Manager association
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartassociationsonce--run-a-stored-association-on-its-fixed-targets
+  source_revision: 0b36331
+  summary: The source can invoke a privileged fixed document under the node identity only when the exact target
+    and prerequisites are verified.
+  requires:
+    all_of:
+    - action: ssm:StartAssociationsOnce
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-start-stored-state-manager-association
+    scope: same_account
+    aggregate_as: Verified Invoke a privileged fixed document under the  in {account}
+    grants:
+    - Invoke a privileged fixed document under the node identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Association ID is authorized;
+      document, parameters, targets and their role are fixed; existing steps must have an attacker-useful privileged
+      side effect or controllable input.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
+- id: aws-audit-jit-shell-to-hybrid-managed-instance
+  provider: aws
+  service: ssm
+  title: JIT shell to hybrid managed instance
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartaccessrequest--ssmgetaccesstoken--vend-jit-credentials-for-a-session-manager-shell
+  source_revision: 0b36331
+  summary: The source can approved JIT credentials permit shell and node-role theft only when the exact target and
+    prerequisites are verified.
+  requires:
+    all_of:
+    - action: ssm:StartAccessRequest
+      resource: '*'
+    - action: ssm:GetAccessToken
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-jit-shell-to-hybrid-managed-instance
+    scope: same_account
+    aggregate_as: Verified Approved JIT credentials permit shell and nod in {account}
+    grants:
+    - Approved JIT credentials permit shell and node-role theft
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: StartAccessRequest scoped
+      to arn:aws:ssm:<region>:<account>:managed-instance/<mi-id>; GetAccessToken on *; JIT enabled and approved;
+      caller uses supported AssumeRole session; node online.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
+- id: aws-audit-resume-disconnected-hybrid-node-session
+  provider: aws
+  service: ssm
+  title: Resume disconnected hybrid-node session
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmresumesession
+  source_revision: 0b36331
+  summary: The source can shell access and possible role credential theft only when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: ssm:ResumeSession
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-resume-disconnected-hybrid-node-session
+    scope: same_account
+    aggregate_as: Verified Shell access and possible role credential the in {account}
+    grants:
+    - Shell access and possible role credential theft
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Known resumable session
+      ID; session belongs to hybrid node; IAM session resource scope permits caller; node online.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
+- id: aws-audit-create-association-targeting-hybrid-managed-node
+  provider: aws
+  service: ssm
+  title: Create association targeting hybrid managed node
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#privileged-execution-through-a-state-manager-association
+  source_revision: 0b36331
+  summary: The source can execute supplied document as hybrid node only when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: ssm:CreateAssociation
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-create-association-targeting-hybrid-managed-node
+    scope: same_account
+    aggregate_as: Verified Execute supplied document as hybrid node in {account}
+    grants:
+    - Execute supplied document as hybrid node
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Target is an SSM online
+      hybrid node; caller may create association and use a shell-capable document.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
+- id: aws-audit-use-existing-parameterized-automation-runbook-with-runtime-passrole
+  provider: aws
+  service: ssm
+  title: Use existing parameterized Automation runbook with runtime PassRole
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
+  source_revision: 0b36331
+  summary: The source can execute caller-selected runbook steps as passable role only when the exact target and
+    prerequisites are verified.
+  requires:
+    all_of:
+    - action: ssm:StartAutomationExecution
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-use-existing-parameterized-automation-runbook-with-runtime-passrole
+    scope: same_account
+    aggregate_as: Verified Execute caller-selected runbook steps as pass in {account}
+    grants:
+    - Execute caller-selected runbook steps as passable role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind source, exact target, and these prerequisites: Existing runbook accepts AutomationAssumeRole
+      parameter and uses it as role; source can start it with allowed parameters; iam:PassRole covers exact role
+      trusting ssm.amazonaws.com; step must have useful privileged effect.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/

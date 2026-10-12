@@ -1,7 +1,3 @@
-# Azure Batch techniques (declarative only).
-# Source: hacktricks-cloud az-batch-privesc.md (rev 171e422, re-verified).
-# Pool identities are user-assigned only; {target.host_resource} is the Batch account owning the pool.
-
 - id: azure-batch-shared-key-task-submission
   provider: azure
   service: batch
@@ -35,7 +31,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
   notes: regeneratekeys also disrupts legitimate key users.
-
 - id: azure-batch-job-task-submission
   provider: azure
   service: batch
@@ -71,7 +66,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/batch/batch-role-based-access-control
   notes: HackTricks cites the jobs/* and jobSchedules/* wildcards of the built-in role. Microsoft's Batch data-action list has no separate tasks action, so jobs/write (or jobSchedules/write) is the narrowest data action covering task add.
-
 - id: azure-batch-pool-write-starttask
   provider: azure
   service: batch
@@ -102,7 +96,6 @@
     - https://learn.microsoft.com/en-us/rest/api/batchmanagement/pool/update
     - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
   notes: Attaching a new user-assigned identity to a pool is modelled in azure-batch-pool-write-assign-user-assigned-identity.
-
 - id: azure-batch-pool-write-assign-user-assigned-identity
   provider: azure
   service: batch
@@ -135,35 +128,38 @@
   references:
     - https://learn.microsoft.com/en-us/azure/batch/managed-identity-pools
   notes: ""
-
 - id: azure-batch-application-package-poisoning
   provider: azure
   service: batch
   title: Replace a Batch application package version used by pools
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#microsoftbatchbatchaccountsapplicationsversionswrite--activateaction--application-package-supply-chain-poisoning
   source_revision: 171e422
-  summary: Pools or tasks that reference and execute an application package version the source replaced run its code with the pool identities.
+  summary: Pools or tasks that reference and execute an application package version the source replaced run its
+    code with the pool identities.
   requires:
     all_of:
-      - action: Microsoft.Batch/batchAccounts/applications/versions/write
-        scope: "{target.host_resource}"
-      - action: Microsoft.Batch/batchAccounts/applications/versions/activate/action
-        scope: "{target.host_resource}"
+    - action: Microsoft.Batch/batchAccounts/applications/write
+      scope: '{target.host_resource}'
+    - action: Microsoft.Batch/batchAccounts/applications/versions/write
+      scope: '{target.host_resource}'
+    - action: Microsoft.Batch/batchAccounts/applications/versions/activate/action
+      scope: '{target.host_resource}'
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Batch/batchAccounts/pools
       managed_identity_type: user_assigned
     scope: inherited_scope
-    aggregate_as: "Pool identities of Batch account {target.host_resource}"
+    aggregate_as: Pool identities of Batch account {target.host_resource}
   conditions:
-    - id: package_referenced_and_executed
-      description: A pool or task must reference the poisoned package version (or the default version) and execute its contents; packages are deployed when nodes join or tasks start.
+  - id: package_referenced_and_executed
+    description: A pool or task must reference the poisoned package version (or the default version) and execute
+      its contents; packages are deployed when nodes join or tasks start.
   blockers:
-    - azure_deny_assignment
+  - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict application version write/activate and pin explicit package versions.
+  mitigation: Restrict applications/write, application version write/activate, and pin explicit package versions.
   references:
-    - https://learn.microsoft.com/en-us/azure/batch/batch-application-packages
-  notes: ""
+  - https://learn.microsoft.com/en-us/azure/batch/batch-application-packages
+  notes: ''

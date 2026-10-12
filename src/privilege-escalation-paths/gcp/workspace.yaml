@@ -193,7 +193,8 @@
   service: integrations
   title: Publish an Application Integration version with a chosen run-as service account
   source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-application-integration-privesc.md#runasserviceaccount--author--publish-an-integration-that-runs-as-an-arbitrary-sa
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by authoring, publishing and running an integration version configured to run as that account.
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs,
+    by authoring, publishing and running an integration version configured to run as that account.
   requires:
     all_of:
     - action: integrations.integrationVersions.create
@@ -202,11 +203,6 @@
       - - action: integrations.integrationVersions.deploy
           resource: '*'
       - - action: integrations.integrations.deploy
-          resource: '*'
-    - any_of:
-      - - action: integrations.integrationVersions.invoke
-          resource: '*'
-      - - action: integrations.integrations.invoke
           resource: '*'
     - action: iam.serviceAccounts.actAs
       resource: '{target.email}'
@@ -219,16 +215,21 @@
     aggregate_as: Service accounts usable as Application Integration run-as SA in {project}
   conditions:
   - id: task_level
-    description: The SA token is used by Connector, REST caller and Cloud Function tasks of the integration (request level). A trigger-level run-as account also lets scheduled or event triggers run the integration without the invoke permission.
+    description: The SA token is used by Connector, REST caller and Cloud Function tasks of the integration (request
+      level). A trigger-level run-as account also lets scheduled or event triggers run the integration without the
+      invoke permission.
   - id: legacy_behavior
-    description: Before Google's authorization change, publish did not enforce actAs and unset run-as fell back to the integrations service agent.
+    description: Before Google's authorization change, publish did not enforce actAs and unset run-as fell back
+      to the integrations service agent.
+  - id: execution_trigger
+    description: Without caller invoke permission, require a deployed scheduled/event trigger or a verified different
+      principal that invokes the published version; otherwise the path remains UNKNOWN.
   blockers:
   - gcp_deny_policy
   - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on dedicated integration SAs; roles/editor and roles/owner contain both halves.
-
 - id: gcp-workspace-super-admin-org-admin
   provider: gcp
   service: resourcemanager
@@ -264,7 +265,8 @@
   service: integrations
   title: Read a decrypted Application Integration authentication profile
   source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/gcp-application-integration-privesc.md#integrationsauthconfigsget--retrieve-decrypted-credentials
-  summary: The source can obtain the privileges of the identities whose OAuth tokens or reusable credentials are stored in Application Integration authentication profiles on which it holds integrations.authConfigs.get, limited to the stored scopes.
+  summary: The source can obtain a Google Workspace user OAuth credential from a known auth config only when its
+    type and scopes establish that user; external credentials and SA names require separate target modeling.
   pivot_resource_type: appintegration_auth_config
   requires:
     all_of:
@@ -278,9 +280,12 @@
     aggregate_as: Identities whose credentials are stored in {pivot}
   conditions:
   - id: credential_type
-    description: Only OAuth authorization-code profiles (access and refresh token plus client secret) carry a Google user's identity; token, password and JWT profiles reach the external system they authenticate to, and service-account profiles hold only the SA name and scopes, not a key.
+    description: Only OAuth authorization-code profiles (access and refresh token plus client secret) carry a Google
+      user's identity; token, password and JWT profiles reach the external system they authenticate to, and service-account
+      profiles hold only the SA name and scopes, not a key.
   - id: google_scopes
-    description: Workspace impact needs a Google OAuth profile whose user consented to Workspace scopes; the token does not expand scopes or impersonate other users.
+    description: Workspace impact needs a Google OAuth profile whose user consented to Workspace scopes; the token
+      does not expand scopes or impersonate other users.
   - id: known_name
     description: The auth config name (UUID) must be known; authConfigs.get does not imply list.
   blockers:
@@ -288,8 +293,84 @@
   - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Treat integrations.authConfigs.get (included in roles/integrations.integrationViewer) as credential-vault access and prefer run-as service accounts over stored OAuth tokens.
+  mitigation: Treat integrations.authConfigs.get (included in roles/integrations.integrationViewer) as credential-vault
+    access and prefer run-as service accounts over stored OAuth tokens.
   references:
   - https://docs.cloud.google.com/application-integration/docs/reference/rest/v1/projects.locations.authConfigs/get
   - https://docs.cloud.google.com/application-integration/docs/configure-authentication-profiles
-  notes: Modelled like gcp-agentidentity-retrieve-credentials; the GET method returns the decrypted credential. Previously excluded as a plain secret read.
+  notes: Modelled like gcp-agentidentity-retrieve-credentials; the GET method returns the decrypted credential.
+    Previously excluded as a plain secret read.
+
+- id: gcp-dns-managedzones-setiampolicy-workspace-admin-recovery
+  provider: gcp
+  service: dns
+  title: Self-grant DNS record-write permission on a Workspace domain zone and complete administrator recovery
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-dns-post-exploitation.md#scope-boundaries
+  source_revision: 0b36331
+  summary: The source can grant itself record-write authority on a public Cloud DNS zone and use the administrator-recovery
+    challenge to reach a Workspace super administrator of that domain.
+  pivot_resource_type: dns_managed_zone
+  requires:
+    all_of:
+    - action: dns.managedZones.setIamPolicy
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_super_admin_of_zone_domain
+    scope: any
+    aggregate_as: Workspace super administrators of domains served by {pivot}
+    outcome: identity
+  conditions:
+  - id: zone_self_grant
+    description: The source can add itself to a zone-scoped DNS role granting dns.changes.create plus dns.resourceRecordSets.create
+      or update and then write the challenge record.
+  - id: public_delegation
+    description: The zone is the publicly delegated authoritative zone for the Workspace primary domain.
+  - id: recovery_process
+    description: A live recovery challenge is available and Google accepts its DNS proof and any additional verification.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict dns.managedZones.setIamPolicy on zones serving Workspace primary domains and monitor zone IAM
+    changes, DNS challenges, and Workspace recovery.
+  references:
+  - https://docs.cloud.google.com/dns/docs/zones/iam-per-resource-zones
+  - https://docs.cloud.google.com/dns/docs/access-control
+  - https://knowledge.workspace.google.com/admin/users/recovering-administrator-access-to-your-account
+  notes: Distinct from gcp-workspace-cloud-dns-admin-recovery, which requires record-write permissions initially; this
+    path obtains those permissions through a zone IAM self-grant.
+- id: gcp-workspace-cloud-dns-zone-policy-recovery
+  provider: gcp
+  service: dns
+  title: Self-grant zone DNS write and publish a Workspace recovery challenge
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-dns-enum.md#gcp---cloud-dns
+  summary: Managed-zone policy write can grant record-write permissions used in Workspace administrator recovery.
+  pivot_resource_type: dns_managed_zone
+  requires:
+    all_of:
+    - action: dns.managedZones.setIamPolicy
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_super_admin_of_zone_domain
+    scope: any
+    outcome: impersonation
+    aggregate_as: Workspace super administrators of domains served by {pivot}
+  conditions:
+  - id: recovery_process
+    description: Google administrator recovery must accept the DNS challenge for the tenant; this is an external
+      process, not a guaranteed result.
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict managed-zone policy writes on Workspace domains.
+  source_revision: 0b36331
+  blockers:
+  - gcp_deny_policy
+  references:
+  - https://docs.cloud.google.com/dns/docs/access-control
+  - https://docs.cloud.google.com/dns/docs/reference/rest/v1/managedZones/setIamPolicy
+  notes: Only zone-scoped roles/dns.admin on the authoritative managed zone is assumed; this grants the record-write
+    actions needed by gcp-workspace-cloud-dns-admin-recovery. No project-wide DNS grant is inferred.

@@ -73,3 +73,31 @@
   references:
     - https://docs.aws.amazon.com/datazone/latest/APIReference/API_AssociateEnvironmentRole.html
   notes: DataZone authorization is evaluated in addition to IAM and is not collected.
+- id: aws-datazone-createprojectmembership-owner
+  provider: aws
+  service: datazone
+  title: Grant a controlled DataZone profile project ownership
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-datazone-persistence/README.md#add-an-attacker-profile-as-a-project-owner
+  summary: An existing project owner or domain-authorized caller can add a controlled profile as PROJECT_OWNER.
+  requires:
+    all_of:
+    - action: datazone:CreateProjectMembership
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-datazone-createprojectmembership-owner
+    scope: same_account
+    grants:
+    - PROJECT_OWNER on the exact DataZone project
+  conditions:
+  - id: datazone_authorization
+    description: Caller must already be a project owner or have domain-level authorization, beyond the IAM action.
+  - id: controlled_profile
+    description: The existing active user/group profile must be controlled by the attacker; later DataZone API calls still need IAM authorization.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed write action to approved administrators and review grants to controlled or external principals.
+  references:
+  - https://docs.aws.amazon.com/datazone/latest/APIReference/API_CreateProjectMembership.html
+  notes: Draft only. The generic verified-authority target is a schema-valid placeholder. Do not activate this entry until the stated evaluator/collector feature binds the exact source, resource and grantee; absent facts must remain UNKNOWN.

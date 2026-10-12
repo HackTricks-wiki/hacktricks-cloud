@@ -33,7 +33,12 @@
   reason: GCP-to-Kubernetes edge driven by GCP IAM; belongs to the gcp catalog (gcp-container-privesc).
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#validatingwebhookconfigurations-or-mutatingwebhookconfigurations
   technique: ValidatingWebhookConfiguration create
-  reason: A new validating webhook can only admit/deny and observe objects (data disclosure); identity gain is through mutating webhooks (k8s-workloads-mutating-webhook-injection) and weakening existing configurations is k8s-admission-webhook-configuration-weaken.
+  reason: A validating webhook cannot mutate objects, but it can receive the complete AdmissionReview for a later
+    matching Secret create/update. Observation is data disclosure unless that exact review contains a still-valid
+    credential for another identity; such an event and credential are runtime/content facts unavailable to a configuration
+    snapshot. Mutating webhook code injection is k8s-workloads-mutating-webhook-injection; weakening an existing
+    configuration is k8s-admission-webhook-configuration-weaken.
+
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#services-status-cve-2020-8554
   technique: services/status LoadBalancer IP spoofing (CVE-2020-8554)
   reason: Traffic interception (MiTM); no new identity.
@@ -292,7 +297,12 @@
   reason: Covered by k8s-workloads-pods-create (automountServiceAccountToken is not treated as a blocker).
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#init-container-envfrom-omission
   technique: Init-container envFrom policy gap
-  reason: Policy bypass leading to a Secret read in the same namespace (data access, no new identity).
+  reason: The disposable PROOF marker in this example is data, not an identity. If the referenced same-namespace
+    Secret contains a usable token or certificate for another principal, Pod creation can expose that identity;
+    the generic Argo CD Pod-mount path is proposed as k8s-workloads-pods-mount-argocd-cluster-credential, subject
+    to credential evidence and admission. The init-container field omission is only a policy-specific route to that
+    edge.
+
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#scoped-resourcequota-gap
   technique: Scoped ResourceQuota gap
   reason: Resource-exhaustion / DoS.
@@ -396,7 +406,11 @@
   reason: Object taxonomy without a distinct permission set; node scheduling and admission writes are modelled in nodes.yaml and admission_control.yaml.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/kubernetes-objects.md#secret-delivery-example
   technique: Secret delivery example
-  reason: Shows normal Secret projection into a Pod; stealing a mounted ServiceAccount token requires a workload or node access path already modelled.
+  reason: The manifest creates a synthetic Opaque username/password Secret and a Pod that reads that same Secret;
+    it does not demonstrate obtaining another principal's credentials. Creating a Pod to run as a stronger ServiceAccount
+    is covered by k8s-workloads-pods-create. Mounting a pre-existing static Google service-account key is covered
+    by k8s-cloud-pivot-secret-static-gcp-sa-key.
+
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/node-components.md#node-identity-and-authorization
   technique: Node identity and authorization background
   reason: Explains node credentials and NodeRestriction, which constrain the node paths rather than granting a new principal.
@@ -585,3 +599,85 @@
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/helm-template-injection.md#helm-values-yaml-injection
   technique: Generic Helm values YAML injection
   reason: A values edit escalates only through a particular vulnerable chart and a more privileged applier; those template fields and external Git/CI writers are not derivable from the Kubernetes RBAC snapshot.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#kubeconfig-contexts-and-kubectl
+  technique: Malicious kubeconfig exec credential plugin
+  reason: An attacker must control a local kubeconfig or its referenced executable and induce another user to run
+    a client command. Execution and the user's local credentials are workstation runtime facts outside the Kubernetes
+    and cloud configuration snapshot; no Kubernetes API permission or identifiable catalog target follows from the
+    kubeconfig warning alone.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-persistence/workloads-and-gitops.md#helm-release-source-as-a-return-path
+  technique: Patch existing Flux HelmRelease values under a stronger applier
+  reason: HelmRelease patch/update permission alone does not show that an existing release accepts the change or
+    that its chart renders attacker-controlled values into a privileged object. The selected chart content, ownership
+    and later reconciliation, effective deployer ServiceAccount, and admission result must be verified; the current
+    snapshot does not collect these content and runtime facts.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md#pivot-through-an-allowed-application
+  technique: URL fetcher acts as allowed network intermediary
+  reason: NetworkPolicy and Service objects cannot establish that the application accepts a caller-controlled destination,
+    forwards the request, or is authorized by the backend. The application's fetch behavior and a successful live
+    second hop are required to prove use of the intermediary's access.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md#abusing-exposed-kubernetes-management-services
+  technique: Use exposed management app stronger Kubernetes credential
+  reason: Service exposure does not show that the caller can authenticate to or exploit NiFi, Kubeflow, Argo Workflows,
+    Weave Scope, or Dashboard. Each application's runtime authentication, reachable endpoint, credential use, and
+    effective Kubernetes grants must be verified; no common Kubernetes RBAC source permission establishes this edge.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  technique: Crossplane ProviderConfig kubeconfig applies into remote cluster
+  reason: Object write permission does not identify the referenced ProviderConfig's Secret credential or the remote
+    cluster and its effective RBAC. The ProviderConfig-to-Secret reference, kubeconfig content/credential validity,
+    remote endpoint, and remote authorization must be collected and joined before this can target a remote principal.
+    The existing Crossplane entry covers only InjectedIdentity in the local cluster.
+
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: 0b36331
+  technique: Create validating webhook to receive a later credential-bearing Secret AdmissionReview
+  reason: The webhook receives a Secret only if a later create or update request matches its rules and the API server
+    reaches its trusted TLS endpoint. An existing token Secret is never sent retroactively. The later request, delivered
+    AdmissionReview content, token validity, and ownership of a stronger identity are runtime/content facts absent
+    from a configuration snapshot; create validatingwebhookconfigurations alone cannot establish a credential edge.
+    Noncredential Secret observations remain data disclosure.
+
+- source: src/pentesting-ci-cd/argocd-security.md#public-api--ui-attacks
+  technique: Use Argo CD application write through its own API/RBAC to deploy attacker manifests
+  reason: The Argo CD API uses Argo CD RBAC rather than Kubernetes applications CRD write grants. Effective Argo
+    CD policy, API authentication, project constraints, sync state and controller identity are not collected; the
+    existing Kubernetes entry covers only direct CRD writes.
+
+- source: src/pentesting-ci-cd/argocd-security.md#trusted-git-repository-abuse
+  technique: Push attacker manifests to an Argo CD trusted Git repository
+  reason: A Git push is useful only for a repository and path consumed by an Application that can sync into an allowed
+    destination. SCM rights, repository-to-Application mapping, project restrictions and sync state are uncollected.
+
+- source: src/pentesting-ci-cd/argocd-security.md#public-api--ui-attacks
+  technique: Steal Argo CD repository credentials or local/project tokens
+  reason: Repository SSH keys, GitHub App credentials and local/project API tokens are distinct from registered-cluster
+    Secrets. Their secret type, bytes, validity, scopes and the source’s read permission are not collected.
+
+- source: src/pentesting-ci-cd/argocd-security.md#unauthenticated-repo-server-rce-via-kustomize-options
+  technique: Reach internal repo-server gRPC and execute attacker repository payload
+  reason: The repo-server exploit requires network reachability to its internal gRPC endpoint, an affected version/request
+    behavior and attacker repository content. Kubernetes pod creation or API read alone proves none of these runtime
+    facts.
+
+- source: src/pentesting-ci-cd/argocd-security.md#redis-cache-poisoning-to-deploy-manifests
+  technique: Poison Argo CD Redis manifest and Git-ref cache to make controller apply a manifest
+  reason: Redis cache poisoning requires reachable Redis with usable authentication, writable mfst and git-refs
+    entries, a susceptible Argo CD version, sync and permissible project/controller rights. Cache contents and runtime
+    networking are absent.
+
+- source: src/pentesting-ci-cd/argocd-security.md#applicationset-attacks
+  technique: Control ApplicationSet Git or pull-request generator input to create privileged Applications
+  reason: ApplicationSet generator input can create privileged Applications only when attacker-controlled Git or
+    PR data feeds template fields that permit the desired destination and sync. Generator/template fields, SCM rights,
+    project policy and sync state are uncollected; direct CRD write also needs these joins.
+
+- source: src/pentesting-ci-cd/argocd-security.md#post-exploitation
+  technique: Steal Argo CD pod-mounted repository, cloud, Redis or cluster credentials
+  reason: A pod shell may expose mounted repository, cloud or Redis credentials, but the mounted bytes, validity
+    and target principal are not collected. The existing pods/exec entry covers the pod ServiceAccount, and the
+    cluster-Secret entry covers readable Argo CD registered-cluster Secrets.

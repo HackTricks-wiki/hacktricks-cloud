@@ -1,9 +1,3 @@
-# Azure Virtual Machines privilege escalation techniques.
-# Source: hacktricks-cloud az-virtual-machines-and-network-privesc.md (rev 171e422).
-# Placeholder conventions: see catalog/azure/authorization.yaml header.
-# All in-guest code execution reaches the identities exposed by IMDS: the VM's system-assigned
-# identity and every user-assigned identity attached to it.
-
 - id: azure-vm-extensions-write
   provider: azure
   service: virtual_machines
@@ -32,7 +26,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/features-windows
   notes: Covers the VMAccess password/SSH-key reset (which additionally uses virtualMachines/read+write in the CLI flow) and the DSC extension flow. Scale-set model extensions (virtualMachineScaleSets/extensions/write) are modelled separately in azure-vmss-model-write.
-
 - id: azure-vm-runcommand-action
   provider: azure
   service: virtual_machines
@@ -61,7 +54,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command
   notes: ""
-
 - id: azure-vm-managed-runcommands-write
   provider: azure
   service: virtual_machines
@@ -90,7 +82,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command-managed
   notes: ""
-
 - id: azure-vmss-vm-managed-runcommands-write
   provider: azure
   service: virtual_machines
@@ -119,7 +110,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command-managed
   notes: Also includes AKS node pools backed by VMSS (kubelet/agentpool identities) when the source has rights in the node resource group.
-
 - id: azure-arc-machine-runcommands-write
   provider: azure
   service: virtual_machines
@@ -148,7 +138,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/run-command
   notes: On the Arc machine the identity token requires local admin/himds group access, which root/SYSTEM run commands have.
-
 - id: azure-vm-gallery-application-install
   provider: azure
   service: virtual_machines
@@ -180,7 +169,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/vm-applications-how-to
   notes: Pivot gallery can be newly created if galleries/write is held on a resource group.
-
 - id: azure-vm-entra-login
   provider: azure
   service: virtual_machines
@@ -220,7 +208,6 @@
     - https://learn.microsoft.com/en-us/entra/identity/devices/howto-vm-sign-in-azure-ad-linux
     - https://learn.microsoft.com/en-us/azure/virtual-machines/instance-metadata-service
   notes: IMDS is reachable by any local process by default, so even non-admin login exposes the identities.
-
 - id: azure-vm-create-with-user-assigned-identity
   provider: azure
   service: virtual_machines
@@ -261,7 +248,6 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
   notes: Pivot is the resource group where the source can create the VM and NIC. Microsoft.Resources/deployments/write is only needed when creating through an ARM/CLI deployment.
-
 - id: azure-vm-assign-user-assigned-identity-existing
   provider: azure
   service: virtual_machines
@@ -307,7 +293,6 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
   notes: Conditional code-execution routes (customData re-provisioning, Serial Console, VM Applications, OS disk swap, guest configuration) are modelled by azure-vm-assign-user-assigned-identity-indirect-exec.
-
 - id: azure-vm-assign-user-assigned-identity-indirect-exec
   provider: azure
   service: virtual_machines
@@ -359,7 +344,6 @@
     - https://learn.microsoft.com/en-us/azure/virtual-machines/custom-data
     - https://learn.microsoft.com/en-us/azure/virtual-machines/vm-applications-how-to
   notes: Split from azure-vm-assign-user-assigned-identity-existing so the conditional routes do not raise the confidence of the direct run-command / extension / login routes. The gallery application and disk requirements carry no scope because the gallery or disk can be any one the source can write (or create).
-
 - id: azure-vmss-vm-runcommand-action
   provider: azure
   service: virtual_machines
@@ -389,45 +373,51 @@
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command
   notes: The page documents the VM action; the scale-set instance equivalent is a documented Microsoft.Compute operation with the same semantics. AKS node pools backed by VMSS are reachable when the source has the right in the node resource group (AKS normally protects it with a deny assignment).
-
 - id: azure-vm-serial-console-connect
   provider: azure
   service: virtual_machines
-  title: Use Serial Console with a reboot to take over the guest OS
+  title: Use Serial Console and an ARM restart for guest recovery
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftserialconsoleserialportsconnectaction
-  source_revision: 171e422
-  summary: Interactive Serial Console access combined with a VM restart can give root/SYSTEM in the guest (boot-loader or single-user recovery, or an existing local password account), exposing the VM's managed identities.
+  source_revision: 0b36331
+  summary: Interactive Serial Console access combined with an ARM VM restart can reach a guest recovery shell or
+    reset a local password, exposing the VM managed identities when recovery succeeds.
   requires:
     all_of:
-      - action: Microsoft.SerialConsole/serialPorts/connect/action
-        scope: "{target.host_resource}"
-      - action: Microsoft.Compute/virtualMachines/restart/action
-        scope: "{target.host_resource}"
+    - action: Microsoft.SerialConsole/serialPorts/connect/action
+      scope: '{target.host_resource}'
+    - action: Microsoft.Compute/virtualMachines/restart/action
+      scope: '{target.host_resource}'
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
     scope: inherited_scope
-    aggregate_as: "Managed identities of VM {target.host_resource}"
+    aggregate_as: Managed identities of VM {target.host_resource}
   conditions:
-    - id: boot_diagnostics_enabled
-      description: Boot diagnostics must be enabled on the VM (enabling it needs virtualMachines/write). With a custom boot-diagnostics storage account, the source also needs access to that account and it must allow Shared Key access.
-    - id: serial_console_not_disabled
-      description: Serial Console must not be disabled for the subscription or inside the guest.
-    - id: guest_recovery_path
-      description: The guest must allow a takeover through the console, such as an unprotected boot loader or single-user mode, an enabled SAC/CMD channel on Windows, or a local password account known to the source.
-    - id: interactive_session
-      description: The console is interactive (portal or CLI extension), so the source's sign-in, including Conditional Access, applies.
+  - id: boot_diagnostics_enabled
+    description: Boot diagnostics must be enabled on the VM (enabling it needs virtualMachines/write). With a custom
+      boot-diagnostics storage account, the source also needs access to that account and it must allow Shared Key
+      access.
+  - id: serial_console_not_disabled
+    description: Serial Console must not be disabled for the subscription or inside the guest.
+  - id: guest_recovery_path
+    description: The guest must allow console recovery after restart, such as an unprotected boot loader or single-user
+      mode, or an enabled SAC/CMD channel on Windows.
+  - id: interactive_session
+    description: The console is interactive (portal or CLI extension), so the source's sign-in, including Conditional
+      Access, applies.
   blockers:
-    - azure_deny_assignment
+  - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Disable Serial Console where it is not needed, protect boot loaders, restrict serialPorts/connect/action and VM restart rights, and keep VM identities least-privileged.
+  mitigation: Disable Serial Console where it is not needed, protect boot loaders, restrict serialPorts/connect/action
+    and VM restart rights, and keep VM identities least-privileged.
   references:
-    - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/linux/serial-console-linux
-    - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/windows/serial-console-windows
-  notes: Microsoft documents Virtual Machine Contributor or higher as the requirement; that role includes both actions. The same feature exists for scale-set instances, which this entry does not model.
-
+  - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/linux/serial-console-linux
+  - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/windows/serial-console-windows
+  notes: This entry covers the ARM-initiated restart and guest-recovery route. Direct login with an already known
+    local guest password does not require virtualMachines/restart/action, but the credential is not present in the
+    permission snapshot. The same feature exists for scale-set instances, which this entry does not model.
 - id: azure-vm-os-disk-swap
   provider: azure
   service: virtual_machines
@@ -469,7 +459,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/os-disk-swap
   notes: The pivot disk can be newly created where the source holds disks/write. Attaching an existing disk as a data disk (data access only) is excluded separately.
-
 - id: azure-vmss-model-write
   provider: azure
   service: virtual_machines
@@ -504,7 +493,6 @@
     - https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-upgrade-policy
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute
   notes: Microsoft.Compute/virtualMachineScaleSets/virtualMachines/manualUpgrade/action is the documented per-instance upgrade action but is not in the local permission catalog, so it is described as a condition instead of a requirement.
-
 - id: azure-vm-customdata-reimage
   provider: azure
   service: virtual_machines
@@ -539,3 +527,68 @@
   mitigation: Restrict virtualMachines/write, reimage/action and redeploy/action (Virtual Machine Contributor, Contributor) and alert on osProfile changes and reimage operations.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/custom-data
+- id: azure-vm-verified-ssrf-imds
+  provider: azure
+  service: virtual_machines
+  title: Verified VM SSRF to managed identity
+  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/historical-cross-tenant-vulnerabilities.md#trusted-ip-and-metadata-abuse
+  source_revision: 0b36331
+  summary: A verified SSRF on a VM retrieves its managed-identity token.
+  source_kind: azure_challenge_foothold
+  requires:
+    all_of: []
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_challenge_fact: azure-vm-verified-ssrf-imds
+    scope: any
+    aggregate_as: Verified VM SSRF to managed identity targets
+  conditions:
+  - id: verified_runtime_evidence
+    description: Exact source, target and successful credential or token access must be attested; absent evidence
+      remains UNKNOWN.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Remove the vulnerable access path or exposed credential.
+  references:
+  - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-use-vm-token
+  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
+    absent => UNKNOWN.'
+- id: azure-gallery-verified-image-secret
+  provider: azure
+  service: virtual_machines
+  title: Read shared gallery image with verified cloud credential
+  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/resource-and-service-sharing-attacks.md#resource--service-sharing-matrix
+  source_revision: 0b36331
+  summary: Read an accessible gallery image version containing a validated cloud credential.
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  - azure_managed_identity
+  requires:
+    all_of:
+    - action: Microsoft.Compute/galleries/images/versions/read
+      scope: '{pivot}'
+  target:
+    kind: azure_service_principal
+    selector:
+      azure_challenge_fact: azure-gallery-verified-image-secret
+    scope: any
+    aggregate_as: Read shared gallery image with verified cloud credential targets
+  conditions:
+  - id: verified_runtime_evidence
+    description: Exact source, target and successful credential or token access must be attested; absent evidence
+      remains UNKNOWN.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Remove the vulnerable access path or exposed credential.
+  references:
+  - https://learn.microsoft.com/en-us/azure/virtual-machines/share-gallery
+  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
+    absent => UNKNOWN.'

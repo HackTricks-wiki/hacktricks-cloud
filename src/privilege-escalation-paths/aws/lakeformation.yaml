@@ -1,0 +1,37 @@
+# AWS post-exploitation catalog additions.
+- id: aws-audit-lf-register-an-s3-location-under-a-privileged-384933ea
+  provider: aws
+  service: lakeformation
+  title: Register S3 location under passed privileged role
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#register-an-s3-location-under-a-privileged-role
+  summary: LF data-location grant and scoped access to data reachable by registration role
+  requires:
+    all_of:
+    - action: lakeformation:RegisterResource
+      resource: '*'
+    - action: lakeformation:RegisterResourceWithPrivilegedAccess
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+    - action: iam:GetRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-lf-register-an-s3-location-under-a-privileged-384933ea
+    scope: same_account
+    aggregate_as: Verified Register S3 location under passed privileged role in {account}
+    grants:
+    - LF data-location grant and scoped access to data reachable by registration role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Unregistered S3 prefix; role trusts lakeformation.amazonaws.com and reaches S3/KMS; catalog/table
+      control and GetDataAccess plus engine rights for bytes.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the stated action to approved principals and exact resources.
+  source_revision: 0b36331
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md
+  notes: 'Draft only: exact evidence must bind actor, target and prerequisite facts. Missing fact must evaluate
+    UNKNOWN; no definite edge follows from IAM permissions alone.'

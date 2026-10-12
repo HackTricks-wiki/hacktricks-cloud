@@ -1,0 +1,276 @@
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#adding-malicious-code-to-the-project-source
+  technique: Poisoning CDK project source
+  reason: CDK source poisoning needs a later deployment and a repository-to-deployment join. AWS CodeCommit GitPush to a
+    pipeline source is covered by aws-codecommit-gitpush-pipeline-source and
+    aws-codecommit-gitpush-pipeline-source-cloudformation-role; external SCM writes require external repository access
+    absent from the AWS snapshot.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudwatch-omni-privesc/README.md#cloudwatchcreateview-or-updateview--view-scoped-getrecords--expand-delegated-telemetry-access
+  technique: cloudwatch:CreateView|UpdateView + cloudwatch:GetRecords
+  reason: The view can expose raw telemetry, including credentials if a particular log or trace record contains them.
+    Configuration of the view and Dataset grants alone cannot establish a usable secret; actual record content and
+    credential validity are runtime/content facts. No AWS principal credential edge can be emitted from configuration
+    alone.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-privesc/README.md#invoke-a-privileged-flow-without-direct-lambda-or-lex-permission
+  technique: connect:StartChatContact against a privileged contact flow
+  reason: StartChatContact on the exact flow/contact resources can invoke associated Lambda or Lex operations.
+    Escalation depends on the flow and backend code trusting attacker-controlled attributes or messages and performing a
+    privileged action; flow configuration alone does not prove that behavior or arbitrary use of the Lambda role.
+    Backend semantics and response content are required for a principal edge.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-customer-profiles-privesc/README.md#associatestreamforsegments--iampassrole
+  technique: profile:AssociateStreamForSegments + iam:PassRole
+  reason: Bounded Kinesis delivery via a passed role; association alone does not deliver and no full role session is
+    gained. A bounded delegated-operation target is needed; do not infer a full role session.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-customer-profiles-privesc/README.md#createintegrationworkflow--iampassrole
+  technique: profile:CreateIntegrationWorkflow + iam:PassRole
+  reason: Bounded AppFlow/S3/KMS integration setup via a passed role; no full role session is gained. A bounded
+    delegated-operation target is needed; do not infer a full role session.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-customer-profiles-privesc/README.md#createsegmentsnapshot--iampassrole
+  technique: profile:CreateSegmentSnapshot + iam:PassRole
+  reason: Bounded segment export to S3/KMS via a passed role; no full role session is gained. A bounded
+    delegated-operation target is needed; do not infer a full role session.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#fleet-role-read-credentials
+  technique: deadline:AssumeFleetRoleForRead
+  reason: Read-scoped fleet-role credentials are returned, but a full-role graph edge would overstate effective
+    permissions.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-documentdb-privesc/README.md#post-exploitation-reset-an-elastic-cluster-administrator-password
+  technique: docdb-elastic:UpdateCluster
+  reason: UpdateCluster resets a PLAIN_TEXT Elastic cluster admin password; cluster-admin target and cluster facts are
+    unsupported. A service-plane identity target is needed.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#dynamodbputresourcepolicy-and-optionally-dynamodbgetresourcepolicy
+  technique: dynamodb:PutResourcePolicy
+  reason: PutResourcePolicy grants actions on one DynamoDB table, not all permissions of the named principal. A
+    resource-scoped privilege target is needed.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc/README.md#ec2createsnapshot
+  technique: ec2:CreateSnapshot
+  reason: CreateSnapshot alone does not yield AD credentials; DC disk content, mount/read, and hash extraction are
+    required.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2describelaunchtemplateversions-ec2describelaunchtemplates-optional
+  technique: ec2:DescribeLaunchTemplateVersions
+  reason: Launch-template UserData may contain a live IAM key, but permission alone cannot establish its contents or
+    validity.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2modifyimageattribute-ec2modifysnapshotattribute
+  technique: ec2:ModifyImageAttribute / ModifySnapshotAttribute
+  reason: AMI/snapshot sharing exposes contents; a live embedded credential and recipient extraction are needed for
+    identity gain.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrgetauthorizationtoken-ecrbatchgetimage-ecrgetdownloadurlforlayer
+  technique: ECR image pull
+  reason: ECR pull yields another identity only when a retrievable layer contains a live credential.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#backdoor-compute-in-cluster-via-ecs-anywhere-external-registration
+  technique: ECS Anywhere EXTERNAL registration
+  reason: The section demonstrates attacker-created EXTERNAL tasks, covered by
+    aws-ecs-passrole-registertaskdefinition-runtask; it does not show forced placement of existing victim tasks on the
+    attacker host.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemclientmount-and-client-action-combinations
+  source_revision: a53b46392c
+  technique: elasticfilesystem:ClientMount / ClientWrite / ClientRootAccess combinations
+  reason: ClientWrite/ClientRootAccess add bounded EFS filesystem privileges beyond ClientMount, not a full AWS role. A
+    resource-scoped privilege target is needed.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemcreateaccesspoint--elasticfilesystemclientmount
+  source_revision: a53b46392c
+  technique: elasticfilesystem:CreateAccessPoint + ClientMount
+  reason: An access point can choose UID/GID and cross POSIX modes on one filesystem/path. A resource-scoped privilege
+    target is needed.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemdeletefilesystempolicyelasticfilesystemputfilesystempolicy
+  source_revision: a53b46392c
+  technique: elasticfilesystem:DeleteFileSystemPolicy / PutFileSystemPolicy
+  reason: EFS policy mutation can grant client actions on one filesystem, not global AWS permissions. A resource-scoped
+    privilege target is needed.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkdescribeenvironmentresources-elasticloadbalancingmodifyloadbalancerattributes-s3putbucketpolicy-s3listbucket-s3getobject-to-enable-alb-access-logs-exfiltration
+  source_revision: a53b46392c
+  technique: ALB access-log exfiltration
+  reason: ALB log redirection may capture tokens, but future URL contents and token validity are not in configuration.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elasticache-privesc/README.md#privilege-escalation-take-over-and-widen-an-rbac-user-with-elasticachemodifyuser
+  technique: elasticache:ModifyUser
+  reason: ModifyUser resets and widens an attached cache RBAC identity; the evidence-gated challenge-v3 record does not
+    evaluate this configuration path. A service-plane identity target is needed.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputpermission--self-grant-publishing-through-a-bus-policy
+  technique: events:PutPermission
+  reason: PutPermission can add a durable event-bus resource-policy Allow for events:PutEvents to the caller or another
+    principal. This grants bus publishing authority, but no AWS principal or target-role execution follows without a
+    matching rule, authorized target, and event. A service-resource permission target and exact
+    bus-policy/effective-permission join are needed before this is a catalog edge.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsupdateapidestination--redirect-stored-connection-credentials
+  technique: events:UpdateApiDestination
+  reason: Changing a destination endpoint can expose its retained Connection API-key, Basic or OAuth credential to the
+    new HTTPS endpoint on a later matching event. This is a reusable external credential, but the catalog lacks an
+    external-service identity target and the destination-to-Connection plus event-delivery facts; do not infer exposure
+    from UpdateApiDestination permission alone.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventscreatesubscriber--iampassrole--execute-supported-aws-apis-through-an-enhanced-bus-universal-target
+  technique: Create an enhanced-bus subscriber with a universal target and a passed role
+  reason: The current entry checks events:CreateSubscriber on * and can match a different bus. A valid role edge needs
+    authorization on the same enhanced-bus ARN and the future name-scoped subscriber ARN, exact-role iam:PassRole, a
+    supported universal target, and a retained/live matching event. Until a joint bus/subscriber resource evaluator
+    exists, this path cannot produce a false-positive-free catalog edge.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamscreatestreamsessionadminshell-on-a-session-with-a-role
+  technique: Open an admin shell in a live stream session that has a role
+  reason: CreateStreamSessionAdminShell is authorized on the parent stream-group ARN. The current wildcard grant can
+    match an unrelated group; a valid edge needs a live role-bearing session joined to its exact parent stream group and
+    authorization on that group. Session inventory is not currently collected, so the role target must remain UNKNOWN.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamsetdefaultpolicyversion
+  technique: Switch the default version of a customer-managed policy attached to the source
+  reason: SetDefaultPolicyVersion escalates only if a non-default version of the same attached customer-managed policy
+    grants permissions the source lacks. The current account-admin target assumes such a version without reading and
+    comparing its document. Collect ListPolicyVersions and GetPolicyVersion for the exact attached policy and evaluate
+    the candidate version before restoring a role/permission edge.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateuser--iamupdategroup--moving-the-target-into-a-path-you-already-control
+  technique: Move another user into an IAM path where the source's credential permissions already apply
+  reason: The current rule matches CreateAccessKey/CreateLoginProfile/UpdateLoginProfile on any user ARN, even when it
+    cannot cover the same user after its path changes. A valid edge must choose one new path and verify UpdateUser on
+    both old and resulting ARN plus the follow-up permission on that resulting ARN; credential state or group membership
+    must also permit the final step.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateuser--iamupdategroup--moving-the-target-into-a-path-you-already-control
+  technique: Move a group into an IAM path where the source can add members
+  reason: The current rule matches AddUserToGroup on any group ARN, even when it cannot cover the same group after its
+    path changes. A valid edge must choose one new path and verify UpdateGroup on both old and resulting ARN plus the
+    follow-up permission on that resulting ARN; credential state or group membership must also permit the final step.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-invoicing-and-billing-privesc/README.md#enable-previously-granted-legacy-billing-permissions
+  technique: billing:UpdateIAMAccessPreference
+  reason: This can activate previously masked Billing console permissions for IAM identities with existing Billing
+    policy grants. A definite finding requires the preference to be disabled before the change and an exact
+    affected-principal/effective-policy join; the preference does not itself create IAM grants or affect Billing SDK
+    APIs.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailupdatecontainerservice
+  source_revision: a53b46392c
+  technique: lightsail:UpdateContainerService
+  reason: UpdateContainerService only activates the ECR image-puller role. Private repository authorization and a
+    separate ability to control or observe the workload are required; no identity or code control follows from this
+    action alone.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-macie-privesc/README.md#amazon-macie---bypass-reveal-sample-integrity-check
+  source_revision: a53b46392c
+  technique: Macie reveal-sample integrity bypass
+  reason: 'Historical sample integrity bypass is not a current escalation: the ETag/content-match check rejects a deleted
+    or replaced S3 object. A current bypass and credential-bearing sample would need independent verification.'
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  technique: finspace:CreateKxCluster + iam:PassRole (historical)
+  reason: AWS FinSpace ended support on 2026-10-07; no current environment or role execution exists. Historical only.
+    https://docs.aws.amazon.com/finspace/latest/management-api/amazon-finspace-end-of-support.html
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  technique: finspace:CreateKxUser / finspace:UpdateKxUser
+  reason: Setting iamRole on a FinSpace Kx user does not vend the role credentials; the connecting identity must already
+    assume that role. FinSpace ended support on 2026-10-07.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketpolicy
+  source_revision: a53b46392c
+  technique: s3:PutBucketPolicy
+  reason: Same-account PutBucketPolicy may self-grant bucket/object actions, but this is resource-scoped access. Object
+    contents or a privileged consumer must be known to infer another principal; Block Public Access and explicit denies
+    can block the grant. Do not infer unconditional PutObject.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getbucketacl-s3putbucketacl
+  source_revision: a53b46392c
+  technique: s3:GetBucketAcl + s3:PutBucketAcl
+  reason: PutBucketAcl can grant bucket ACL rights when ACLs are enabled, but this is resource-scoped access. Object
+    Ownership and Block Public Access may reject it; no other principal or code consumer follows from the ACL alone.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getobjectacl-s3putobjectacl
+  source_revision: a53b46392c
+  technique: s3:GetObjectAcl + s3:PutObjectAcl
+  reason: PutObjectAcl can grant access to one object when ACLs are enabled. Whether that object contains credentials or
+    executable code consumed by a stronger principal requires contents and consumer facts absent from the snapshot.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getobjectversionacl-s3putobjectversionacl
+  source_revision: a53b46392c
+  technique: s3:GetObjectVersionAcl + s3:PutObjectVersionAcl
+  reason: PutObjectVersionAcl can grant access to one historical version when ACLs are enabled. Whether the version has
+    a still-valid credential requires version contents and credential validity facts absent from the snapshot.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-tables-privesc/README.md#self-grant-access-through-a-table-or-table-bucket-policy
+  technique: s3tables:PutTablePolicy / PutTableBucketPolicy
+  reason: PutTablePolicy or PutTableBucketPolicy can self-grant table read/write and management actions within the
+    table-bucket boundary. This resource-scoped grant does not yield another principal or unrelated IAM privileges.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-vectors-privesc/README.md#s3vectorsputvectorbucketpolicy---self-grant-vector-bucketindex-access
+  technique: s3vectors:PutVectorBucketPolicy
+  reason: PutVectorBucketPolicy can self-grant vector read/write and index management within the vector-bucket boundary.
+    This resource-scoped grant does not yield another principal; explicit denies and KMS access still apply.
+  source_revision: 171e422299
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerstartpipelineexecution--inject-parameters-into-privileged-steps
+  source_revision: a53b46392c
+  technique: sagemaker:StartPipelineExecution
+  reason: StartPipelineExecution overrides parameter values. Privileged effects require a pipeline definition and step
+    code that pass those values into a sensitive command, resource or destination without safe validation; IAM
+    permission alone does not establish that data flow.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetresourcepolicy-secretsmanagerputresourcepolicy-secretsmanagerlistsecrets
+  source_revision: 0b36331
+  technique: secretsmanager:PutResourcePolicy
+  reason: PutResourcePolicy may grant a named external principal secret-value read when its own identity policy
+    and KMS policy permit it. Whether the plaintext is a usable credential for a particular principal requires secret-content
+    and account linkage; the policy alone does not prove identity takeover.
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md#sensitive-cloudformation-outputs-with-servicecataloggetprovisionedproductoutputs
+  source_revision: a53b46392c
+  technique: servicecatalog:GetProvisionedProductOutputs
+  reason: GetProvisionedProductOutputs returns data. Another identity follows only if an output is a live credential
+    accepted by a target system; output contents and validity are absent from the configuration snapshot.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssubscribe
+  source_revision: a53b46392c
+  technique: sns:Subscribe
+  reason: Subscribe can attach a Lambda endpoint as a later trigger, but the function must admit the topic, a later
+    publish must occur, and unchanged code must perform a sensitive effect; those runtime and code facts are not
+    established by Subscribe.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snsaddpermission
+  source_revision: a53b46392c
+  technique: sns:AddPermission
+  reason: AddPermission grants selected SNS actions to an account on this topic. The page documents topic
+    access/manipulation, not another principal or credential beyond topic-scoped permissions.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssettopicattributes--grant-subscribe-access-to-a-controlled-iam-user
+  technique: sns:SetTopicAttributes
+  reason: SetTopicAttributes can grant Publish and Subscribe to external principals on one topic; the page’s SourceOwner-conditioned
+    management statement is effective only for matching owner context. Topic-scoped actions are not IAM role authority.
+  source_revision: 0b36331
+- source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#invoke-a-lambda-by-abusing-wildcard-sns-permission-no-sourcearn
+  source_revision: a53b46392c
+  technique: Lambda invocation via wildcard SNS permission (no SourceArn)
+  reason: A wildcard SNS source permission can permit Lambda invocation, but attacker messages run unchanged code. A
+    privileged effect requires function code and runtime data-flow evidence not established by the policy alone.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md#sqsaddpermission
+  source_revision: a53b46392c
+  technique: sqs:AddPermission
+  reason: AddPermission grants selected SQS actions to an account on this queue. The page documents queue
+    access/manipulation only; no second identity follows without credential-bearing message contents.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md#sqssetqueueattributes--grant-queue-access-to-a-controlled-iam-user
+  technique: sqs:SetQueueAttributes
+  reason: SetQueueAttributes can grant queue-scoped send, receive, and management actions to a named or OrgID-matching
+    principal when its identity policy and KMS permissions allow them. The policy alone does not prove access to
+    credentials in messages or unrelated IAM authority.
+  source_revision: 0b36331

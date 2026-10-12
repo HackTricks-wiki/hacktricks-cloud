@@ -101,3 +101,67 @@
   mitigation: Restrict deploymentmanager.deployments.setIamPolicy (Owner, Deployment Manager Admin, Security Admin).
   references:
     - https://docs.cloud.google.com/deployment-manager/docs/access-control
+
+- id: gcp-pa-s03-1-deploymentmanager
+  provider: gcp
+  service: deploymentmanager
+  title: Recover a second identity credential from a Deployment Manager manifest
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-deployment-manager-post-exploitation.md#deploymentmanagermanifestsget--discovery-permissions--recover-configuration-and-unredacted-credentials
+  source_revision: 0b36331
+  summary: A manifest read may disclose a usable credential for a separately identified principal.
+  requires:
+    all_of:
+    - action: deploymentmanager.manifests.get
+      resource: '*'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-pa-s03-1-deploymentmanager
+    scope: any
+    aggregate_as: Exact externally verified target for Recover a second identity credential from a Deployment Manager
+      manifest
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Only a safely verified unredacted manifest credential with an exact, valid target identity yields a
+      conditional path.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict deploymentmanager.manifests.get to trusted operators and remove or narrow the underlying delegated
+    credential or operation.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-deployment-manager-post-exploitation.md
+  notes: Schema-valid provisional draft only. Requires credential-target inventory and exact source-to-manifest-to-target
+    join. Missing joined facts must evaluate UNKNOWN; do not emit an edge from permission alone.
+- id: gcp-deploymentmanager-manifest-credential
+  provider: gcp
+  service: deploymentmanager
+  title: Recover an unredacted credential from a deployment manifest
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-deployment-manager-enum.md#what-to-review
+  summary: A readable manifest with a verified embedded credential can expose the credential owner.
+  requires:
+    all_of:
+    - action: deploymentmanager.manifests.get
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: deploymentmanager_manifest_credential
+    scope: any
+    outcome: credentials
+    aggregate_as: Service accounts with verified live keys in readable Deployment Manager manifests
+  conditions:
+  - id: credential_evidence
+    description: The manifest must contain a live, unredacted GCP service-account private key, with the client
+      email verified; only that service account is a target.
+  confidence: conditional
+  severity: high
+  mitigation: Remove credentials from deployment templates and restrict manifest reads.
+  source_revision: 0b36331
+  blockers:
+  - gcp_deny_policy
+  references:
+  - https://docs.cloud.google.com/deployment-manager/docs/best-practices#including_credentials_in_your_deployment
+  notes: Discovery permissions are not required when the deployment and manifest names are known. Non-GCP credentials
+    require a separate target kind.

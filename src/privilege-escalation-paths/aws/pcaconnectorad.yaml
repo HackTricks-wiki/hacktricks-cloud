@@ -8,15 +8,17 @@
   provider: aws
   service: pca-connector-ad
   title: Publish a malicious certificate template through PCA Connector for AD and enroll as a domain admin
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adcreatetemplate--publish-a-malicious-certificate-template-esc1--esc9
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adcreatetemplate--publish-a-malicious-certificate-template-esc1--esc9
   source_revision: 171e422299
-  summary: The source can obtain a certificate authenticating as any domain principal (ESC1-style enrollee-supplied subject) by publishing a template on a connector and granting enrollment on it to an AD group it controls.
+  summary: The source can obtain a certificate authenticating as any domain principal (ESC1-style enrollee-supplied
+    subject) by publishing a template on a connector and granting enrollment on it to an AD group it controls.
   requires:
     all_of:
-      - action: pca-connector-ad:CreateTemplate
-        resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*"
-      - action: pca-connector-ad:CreateTemplateGroupAccessControlEntry
-        resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*/template/*"
+    - action: pca-connector-ad:CreateTemplate
+      resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*"
+    - action: pca-connector-ad:CreateTemplateGroupAccessControlEntry
+      resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*/template/*"
   target:
     kind: aws_directory_domain_admin
     selector:
@@ -24,33 +26,41 @@
     scope: same_account
     aggregate_as: "Active Directory domains served by PCA connectors in {account}"
   conditions:
-    - id: connector_exists
-      description: A PCA Connector for AD must exist in the account, joined to a directory (AWS Managed Microsoft AD or AD Connector) and backed by an active private CA.
-    - id: domain_context
-      description: Enrollment happens from a domain-joined context with an AD identity in the group granted enrollment; the source needs such an identity.
-    - id: pkinit_or_schannel
-      description: Using the certificate as a domain admin needs PKINIT or Schannel authentication against the domain controllers and no strong certificate mapping enforcement that blocks enrollee-supplied subjects.
+  - id: connector_exists
+    description: A PCA Connector for AD must exist in the account, joined to a directory (AWS Managed Microsoft AD or AD
+      Connector) and backed by an active private CA.
+  - id: domain_context
+    description: Enrollment happens from a domain-joined context with an AD identity in the group granted enrollment;
+      the source needs such an identity.
+  - id: pkinit_or_schannel
+    description: Using the certificate as a domain admin needs PKINIT or Schannel authentication against the domain
+      controllers and no strong certificate mapping enforcement that blocks enrollee-supplied subjects.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict pca-connector-ad:CreateTemplate / UpdateTemplate / CreateTemplateGroupAccessControlEntry to PKI administrators, enforce strong certificate mapping on domain controllers, and alert on connector template changes.
+  mitigation: Restrict pca-connector-ad:CreateTemplate / UpdateTemplate / CreateTemplateGroupAccessControlEntry to PKI
+    administrators, enforce strong certificate mapping on domain controllers, and alert on connector template changes.
   references:
-    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_pca-connector-ad.html
-    - https://docs.aws.amazon.com/privateca/latest/userguide/connector-for-ad.html
-  notes: CreateTemplateGroupAccessControlEntry alone only opens enrollment on an existing template and is kept as an exclusion; here it is the enrollment half of the chain. Further impact in the cloud account needs another hop (directory console-access roles, AD-federated SAML).
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_pca-connector-ad.html
+  - https://docs.aws.amazon.com/privateca/latest/userguide/connector-for-ad.html
+  notes: CreateTemplateGroupAccessControlEntry alone only opens enrollment on an existing template and is kept as an
+    exclusion; here it is the enrollment half of the chain. Further impact in the cloud account needs another hop
+    (directory console-access roles, AD-federated SAML).
 
 - id: aws-pca-connector-ad-updatetemplate
   provider: aws
   service: pca-connector-ad
   title: Weaken an existing PCA Connector for AD certificate template in place
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adupdatetemplate--weaken-an-existing-legitimate-template-in-place
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adupdatetemplate--weaken-an-existing-legitimate-template-in-place
   source_revision: 171e422299
-  summary: The source can obtain a certificate authenticating as any domain principal by changing an existing template it (or a group it belongs to) can already enroll in to accept an enrollee-supplied subject.
+  summary: The source can obtain a certificate authenticating as any domain principal by changing an existing template
+    it (or a group it belongs to) can already enroll in to accept an enrollee-supplied subject.
   requires:
     all_of:
-      - action: pca-connector-ad:UpdateTemplate
-        resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*/template/*"
+    - action: pca-connector-ad:UpdateTemplate
+      resource: "arn:aws:pca-connector-ad:*:{target.account}:connector/*/template/*"
   target:
     kind: aws_directory_domain_admin
     selector:
@@ -58,18 +68,54 @@
     scope: same_account
     aggregate_as: "Active Directory domains served by PCA connectors in {account}"
   conditions:
-    - id: connector_template_exists
-      description: A connector with at least one template must exist in the account.
-    - id: enrollment_rights
-      description: The source's AD identity must already be able to enroll in the template (or the source also holds CreateTemplateGroupAccessControlEntry on it).
-    - id: pkinit_or_schannel
-      description: Using the certificate as a domain admin needs PKINIT or Schannel authentication and no strong certificate mapping enforcement that blocks enrollee-supplied subjects.
+  - id: connector_template_exists
+    description: A connector with at least one template must exist in the account.
+  - id: enrollment_rights
+    description: The source's AD identity must already be able to enroll in the template (or the source also holds
+      CreateTemplateGroupAccessControlEntry on it).
+  - id: pkinit_or_schannel
+    description: Using the certificate as a domain admin needs PKINIT or Schannel authentication and no strong
+      certificate mapping enforcement that blocks enrollee-supplied subjects.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict pca-connector-ad:UpdateTemplate to PKI administrators, enforce strong certificate mapping, and alert on template updates.
+  mitigation: Restrict pca-connector-ad:UpdateTemplate to PKI administrators, enforce strong certificate mapping, and
+    alert on template updates.
   references:
-    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_pca-connector-ad.html
-    - https://docs.aws.amazon.com/privateca/latest/userguide/connector-for-ad.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_pca-connector-ad.html
+  - https://docs.aws.amazon.com/privateca/latest/userguide/connector-for-ad.html
   notes: Editing a legitimate template also affects its normal enrollees and is easier to miss than a new template.
+- id: aws-s05-83-pca-connector-ad-createtemplategroupaccesscontrolentry
+  provider: aws
+  service: pca-connector-ad
+  title: '`pca-connector-ad:CreateTemplateGroupAccessControlEntry` — grant enrollment to an attacker-chosen AD group'
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adcreatetemplategroupaccesscontrolentry--grant-enrollment-to-an-attacker-chosen-ad-group
+  source_revision: 0b36331
+  summary: 'Conditional gain: certificate as chosen AD principal.'
+  requires:
+    all_of:
+    - action: pca-connector-ad:CreateTemplateGroupAccessControlEntry
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-83-pca-connector-ad-createtemplategroupaccesscontrolentry
+    scope: same_account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing unsafe client-auth template with enrollee-controlled identity; attacker controls AD group;
+      enrollment and PKINIT/Schannel available.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to approved principals and exact resources.
+  references: []
+  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
+    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
+    remains UNKNOWN/unresolved.

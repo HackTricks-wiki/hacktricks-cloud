@@ -294,73 +294,55 @@
   mitigation: Grant roles/compute.osLogin only on specific VMs and keep privileged SAs off interactive VMs.
   notes: Non-root login; SA token access from an unprivileged shell is an inference, hence conditional.
 
-- id: gcp-compute-instancegroupmanagers-update-template
+- id: gcp-gke-pod-node-metadata-token
   provider: gcp
-  service: compute
-  title: Repoint an existing managed instance group to a new instance template
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancegroupmanagersupdate--templatevm-permissions--hijack-an-existing-managed-instance-group
-  source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which the project's Google APIs Service Agent holds iam.serviceAccounts.actAs (every project service account by default); the caller itself needs no actAs.
+  service: container
+  title: Compromised pod reads node SA token or legacy kube-env from metadata
+  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#federation-and-metadata-server-abuse
+  source_revision: 0b36331
+  summary: Compromised pod reads node SA token or legacy kube-env from metadata; emit only when exact source, target,
+    and prerequisite evidence is verified.
   requires:
-    all_of:
-      - action: compute.instanceGroupManagers.update
-        resource: "*"
-      - action: compute.instanceTemplates.create
-        resource: "*"
+    all_of: []
   target:
     kind: gcp_service_account
     selector:
-      gcp_actas_granted_to_service_agent: cloudservices
-      gcp_sa_in_scope_of_permission: true
-    scope: same_project
-    aggregate_as: "Service accounts usable by MIG-recreated VMs in {project}"
-  conditions:
-    - id: existing_mig
-      description: Needs an existing MIG covered by compute.instanceGroupManagers.update; the new template only applies to VMs created after a recreate/apply-updates/proactive update or self-healing.
-    - id: supporting_permissions
-      description: Setting the template can also require instanceTemplates get/useReadOnly, compute.instances.create, compute.disks.create, compute.images.useReadOnly, compute.instances.setMetadata and compute.subnetworks.use.
-    - id: service_agent_actas
-      description: Compute validates that the Google APIs Service Agent (not the caller) holds Service Account User on the template's SA; it has roles/editor by default.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict compute.instanceGroupManagers.update and compute.instanceTemplates.create (roles/compute.instanceAdmin.v1) and narrow the Google APIs Service Agent's Service Account User grants.
-  references:
-    - https://docs.cloud.google.com/compute/docs/access/iam
-    - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instanceGroupManagers/setInstanceTemplate
-  notes: Also reaches the SA already attached to the MIG's current template. Durable through self-healing and scale-out.
-
-- id: gcp-compute-images-create-family-poison
-  provider: gcp
-  service: compute
-  title: Publish a newer image into an image family consumed by instance templates
-  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-compute-persistence.md#poison-a-consumed-custom-image-family
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service accounts of VMs later created from image families it can publish to.
-  requires:
-    all_of:
-      - action: compute.images.create
-        resource: "{target.image_family_project}"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_image_family_consumer: true
+      gcp_challenge_fact: gcp-gke-pod-node-metadata-token
     scope: any
-    aggregate_as: "SAs of workloads booting from image families the source can publish to"
+    outcome: credentials
+    aggregate_as: Compromised pod reads node SA token or legacy kube-env from metadata
   conditions:
-    - id: later_boot
-      description: Only VMs created or recreated after the publish are affected (MIG scale-out, autohealing, rebuilds); running VMs and templates pinned to a concrete image are not.
-    - id: controlled_image_source
-      description: The source also needs read use of an image source it controls (compute.disks.useReadOnly, compute.images.useReadOnly or compute.snapshots.useReadOnly), usually in its own project; CMEK and source constraints must be satisfied.
-    - id: vm_scopes
-      description: The obtained token is bounded by the access scopes assigned to each new VM.
-  blockers:
-    - gcp_deny_policy
-    - id: org_policy_constraint
-      constraint: compute.trustedImageProjects
+  - id: exact_verified_prerequisites
+    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
   confidence: conditional
   severity: high
-  mitigation: Pin concrete image names in instance templates, restrict compute.images.create in image projects and enforce compute.trustedImageProjects.
-  notes: Targets are SAs of collected instance templates whose boot disk sourceImage is projects/<p>/global/images/family/<f>; MIG-only consumers resolve through their template.
+  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#federation-and-metadata-server-abuse
+  source_kind: gcp_challenge_foothold
+- id: gcp-compromised-vm-metadata-sa-token
+  provider: gcp
+  service: compute
+  title: Read attached VM SA token from metadata after host access
+  source: src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#service-accounts
+  source_revision: 0b36331
+  summary: Read attached VM SA token from metadata after host access; emit only when exact source, target, and prerequisite
+    evidence is verified.
+  requires:
+    all_of: []
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-compromised-vm-metadata-sa-token
+    scope: any
+    outcome: credentials
+    aggregate_as: Read attached VM SA token from metadata after host access
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#service-accounts
+  source_kind: gcp_challenge_foothold

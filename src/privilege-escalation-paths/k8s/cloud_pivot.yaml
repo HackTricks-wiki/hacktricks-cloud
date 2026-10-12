@@ -348,36 +348,69 @@
   title: Ordinary pod reaches the node metadata service
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#node-iam-role-to-cluster-admin
   source_revision: a66f094ede
-  summary: The source can obtain the privileges of the node cloud identity by creating any pod when pods can reach the instance metadata service.
+  summary: The source can obtain the privileges of the node cloud identity by creating any pod when pods can reach
+    the instance metadata service.
   requires:
     all_of:
-      - any_of:
-          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
-          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+    - any_of:
+      - verb: create
+        resource: pods
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: deployments
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: daemonsets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: statefulsets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: replicasets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: replicationcontrollers
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: jobs
+        api_group: batch
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: cronjobs
+        api_group: batch
+        namespace: '{pivot.namespace}'
   target:
     kind: cloud_identity
     selector:
       k8s_node_cloud_identity: true
     scope: any
-    aggregate_as: "Cloud identity of nodes in {cluster}"
+    aggregate_as: Cloud identity of nodes in {cluster}
   conditions:
-    - id: imds_reachable_from_pod
-      description: EKS needs an IMDS hop limit >= 2 (AL2023 managed node groups without a launch template and Auto Mode default to 1) and no disablePodIMDS; GKE needs node pools without Workload Identity/metadata concealment; AKS needs no network policy blocking 169.254.169.254.
-    - id: network_policy_blocks_imds
-      description: An egress NetworkPolicy denying the metadata address removes the edge.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  - id: imds_reachable_from_pod
+    description: EKS needs an IMDS hop limit >= 2 (AL2023 managed node groups without a launch template and Auto
+      Mode default to 1) and no disablePodIMDS; GKE needs node pools without Workload Identity/metadata concealment;
+      AKS needs no network policy blocking 169.254.169.254.
+  - id: network_policy_blocks_imds
+    description: An egress NetworkPolicy denying the metadata address removes the edge.
+  blockers:
+  - admission_policy
+  - admission_webhook
+  - kyverno_policy
+  - gatekeeper_constraint
   confidence: derived
   severity: high
-  mitigation: Block pod access to IMDS (hop limit 1, disablePodIMDS, GKE Workload Identity, egress policies) and use workload identities instead.
+  mitigation: Block pod access to IMDS (hop limit 1, disablePodIMDS, GKE Workload Identity, egress policies) and
+    use workload identities instead.
   references:
-    - https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html#restrict-access-to-the-instance-profile-assigned-to-the-worker-node
-  notes: Admission is not involved; only network reachability matters. Exec into existing pods gives the same reach and is modelled implicitly through the ServiceAccount chain.
+  - https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html#restrict-access-to-the-instance-profile-assigned-to-the-worker-node
+  notes: Creating a Pod or workload controller also requires the workload to pass admission; the admission_policy,
+    admission_webhook, kyverno_policy, and gatekeeper_constraint blockers above apply. Once an ordinary Pod is admitted,
+    IMDS hop limit and network reachability decide whether it can obtain node credentials. Exec into an existing
+    Pod gives the same network reach and is modelled implicitly through the ServiceAccount chain.
 
 - id: k8s-cloud-hostnetwork-pod-node-identity
   provider: k8s

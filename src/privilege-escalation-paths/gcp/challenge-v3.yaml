@@ -468,9 +468,7 @@
     Exact source, target, scope and prerequisite proof are required.
   requires:
     all_of: []
-  source_kind:
-  - gcp_user
-  - gcp_service_account
+  source_kind: gcp_challenge_foothold
   target:
     kind: gcp_group
     selector:
@@ -489,6 +487,7 @@
   mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
   notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
     verified evidence remains conditional.
+
 - id: gcp-v3-18-create-a-second-google-workspace-super-admin
   provider: gcp
   service: workspace
@@ -1199,7 +1198,17 @@
   summary: 'Pool/template update relaxes exact issuance restriction, then #40 trust chain. Exact source, target,
     scope and prerequisite proof are required.'
   requires:
-    all_of: []
+    any_of:
+    - - action: privateca.caPools.update
+        resource: '*'
+      - action: privateca.certificates.create
+        resource: '*'
+    - - action: privateca.certificateTemplates.update
+        resource: '*'
+      - action: privateca.certificates.create
+        resource: '*'
+      - action: privateca.certificateTemplates.use
+        resource: '*'
   source_kind:
   - gcp_user
   - gcp_service_account
@@ -1426,3 +1435,60 @@
   mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
   notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
     verified evidence remains conditional.
+
+- id: gcp-workspace-admin-password-reset-2sv-takeover
+  provider: gcp
+  service: workspace
+  title: Take over a Workspace user with password reset and 2SV control
+  source: src/pentesting-cloud/workspace-security/gws-admin-privesc.md#account-takeover-reset-password--strip-2-step-verification
+  summary: An admin able to reset a user password and disable 2SV or generate backup codes can sign in as that user.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-workspace-admin-password-reset-2sv-takeover
+    scope: any
+    aggregate_as: Exact verified target of Take over a Workspace user with password reset and 2SV control
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Join the exact admin, target user and OU; require effective User Management or Help Desk password-reset
+      privilege plus Security Manage 2SV privilege, and either disable-2SV or backup-code ability. Exclude super-admin
+      targets and unresolved login challenges. Sign-in remains conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the relevant Workspace or external-directory rights and monitor changes to the exact target.
+  references:
+  - https://support.google.com/a/answer/33319
+  - https://support.google.com/a/answer/9176734
+  notes: A missing or incomplete collector fact evaluates UNKNOWN; a verified fact remains conditional.
+
+- id: gcp-workspace-directory-sync-activation-mailbox
+  provider: gcp
+  service: workspace
+  title: Claim a newly synced Workspace user through its activation mailbox
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gws-admin-directory-sync.md#attacking-users
+  summary: An actor controlling the mapped activation mailbox of a newly synced user can set that user’s Google
+    password and inherit its group grants.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-workspace-directory-sync-activation-mailbox
+    scope: any
+    aggregate_as: Exact verified target of Claim a newly synced Workspace user through its activation mailbox
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Require exact new unactivated user selected by Directory Sync, enabled activation email, mapped
+      primary or recovery mailbox controlled by the source, and no SSO flow that prevents local password sign-in.
+      Existing-account mailbox access does not suffice. Activation and sign-in remain conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the relevant Workspace or external-directory rights and monitor changes to the exact target.
+  references:
+  - https://knowledge.workspace.google.com/admin/users/set-up-user-sync
+  - https://knowledge.workspace.google.com/admin/users/directory-sync-faq
+  notes: A missing or incomplete collector fact evaluates UNKNOWN; a verified fact remains conditional.

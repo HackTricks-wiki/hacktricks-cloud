@@ -1,0 +1,66 @@
+- id: aws-s05-abusing-workmail-to-bypass-ses-sandbox
+  provider: aws
+  service: workmail
+  title: Abusing WorkMail to bypass SES sandbox
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md#abusing-workmail-to-bypass-ses-sandbox
+  source_revision: 0b36331
+  summary: The source may obtain New WorkMail mailbox login identity when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: workmail:RegisterMailDomain
+      resource: '*'
+    - action: workmail:CreateUser
+      resource: '*'
+    - action: workmail:RegisterToWorkMail
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-abusing-workmail-to-bypass-ses-sandbox
+    scope: same_account
+    aggregate_as: Verified New WorkMail mailbox login identity in {account}
+    grants:
+    - New WorkMail mailbox login identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing WorkMail organization; attacker DNS control and domain verification; chosen mailbox password; optional CreateOrganization and its directory prerequisites for new org. This is newly created application identity, not existing mailbox takeover. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/workmail/latest/adminguide/workmail_limits.html
+  - https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-workmailmessageflowgetrawmessagecontent-putrawmessagecontent-steal-or
+  provider: aws
+  service: workmail
+  title: '`workmailmessageflow:GetRawMessageContent` / `PutRawMessageContent` — steal or rewrite in-transit email'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md#workmailmessageflowgetrawmessagecontent--putrawmessagecontent--steal-or-rewrite-in-transit-email
+  source_revision: 0b36331
+  summary: The source may obtain Identity associated with valid password-reset link or credential when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: workmailmessageflow:GetRawMessageContent
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-workmailmessageflowgetrawmessagecontent-putrawmessagecontent-steal-or
+    scope: same_account
+    aggregate_as: Verified Identity associated with valid password-reset link or credential in {account}
+    grants:
+    - Identity associated with valid password-reset link or credential
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Known valid message ID, matching message ARN, within 24-hour window; content actually contains usable identity material. PutRawMessageContent is an integrity path requiring synchronous flow and S3 object, not a prerequisite for theft. Existing exclusion ignores documented credentials/reset links. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/workmail/latest/adminguide/workmail_limits.html
+  - https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

@@ -162,59 +162,6 @@
     - https://learn.microsoft.com/en-us/azure/automation/shared-resources/credentials
   notes: User sibling of azure-automation-runbook-credential-assets (PSCredential assets usually hold user name/password pairs); MFA or Conditional Access on the user may block interactive reuse.
 
-- id: azure-automation-runbook-hybrid-worker
-  provider: azure
-  service: automation
-  title: Run runbook code on a Hybrid Runbook Worker VM and use the VM's managed identities
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#hybrid-workers-group
-  source_revision: a66f094ede
-  summary: Runbook jobs targeted at a Hybrid Worker group execute on the worker machine, so an Azure VM worker's managed identities become reachable through IMDS.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/jobs/write
-          scope: "{pivot}"
-      - - action: Microsoft.Automation/automationAccounts/runbooks/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/publish/action
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/jobs/write
-          scope: "{pivot}"
-      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/draft/content/write
-          scope: "{pivot}"
-        - action: Microsoft.Automation/automationAccounts/runbooks/draft/testJob/write
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.Automation/automationAccounts
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service:
-        - Microsoft.Compute/virtualMachines
-        - Microsoft.HybridCompute/machines
-      azure_host_linked_to_pivot: automation_hybrid_worker
-    scope: any
-    aggregate_as: "Managed identities of Hybrid Worker VMs / Arc machines of Automation account {pivot}"
-  conditions:
-    - id: worker_is_azure_vm
-      description: Only Hybrid Workers that are Azure VMs / Arc machines with managed identities expose cloud identities; on-prem workers yield OS context only.
-  blockers: []
-  confidence: derived
-  severity: high
-  mitigation: Restrict runbook authoring on accounts with Hybrid Worker groups and do not attach privileged managed identities to worker VMs.
-  references:
-    - https://learn.microsoft.com/en-us/azure/automation/automation-hrw-run-runbooks
-  notes: Jobs also run as SYSTEM/root on the worker. Arc-enabled server workers expose the Arc machine identity (worker vmResourceId is the Microsoft.HybridCompute/machines id), hence both host types in attached_to_service.
-
 - id: azure-automation-assign-user-assigned-identity
   provider: azure
   service: automation
@@ -432,3 +379,70 @@
   references:
     - https://learn.microsoft.com/en-us/azure/automation/shared-resources/variables
   notes: Same consumer-dependent class as azure-automation-trigger-existing-runbook; overwriting an encrypted variable with a known value is a side effect, not an identity gain.
+- id: azure-automation-job-output-credential
+  provider: azure
+  service: automation
+  title: Read tokens and credentials from prior Automation job output
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#harvest-secrets-from-prior-job-output-and-streams
+  source_revision: 0b36331
+  summary: Read a verified usable credential from historical Automation job output and gain its Entra service principal
+    permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Automation/automationAccounts/jobs/read
+      scope: '{pivot}'
+    any_of:
+    - - action: Microsoft.Automation/automationAccounts/jobs/output/read
+        scope: '{pivot}'
+    - - action: Microsoft.Automation/automationAccounts/jobs/streams/read
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: Draft requires azure.automation.job_output_credential_holders; the evaluator must join only verified holders,
+    and return UNKNOWN if that fact is missing or incomplete.
+- id: azure-automation-runbook-source-credential
+  provider: azure
+  service: automation
+  title: Read hardcoded credentials from runbook source
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#read-runbook-source-for-hardcoded-secrets
+  source_revision: 0b36331
+  summary: Read a verified usable credential from published Automation runbook source and gain its Entra service
+    principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Automation/automationAccounts/runbooks/content/read
+      scope: '{pivot}'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
+      this edge; uncollected, partial, or unverified content is UNKNOWN.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: Draft requires azure.automation.runbook_content_credential_holders; the evaluator must join only verified
+    holders, and return UNKNOWN if that fact is missing or incomplete.

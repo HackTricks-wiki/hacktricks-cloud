@@ -1,10 +1,3 @@
-# Azure Service Fabric techniques (declarative only).
-# Source: hacktricks-cloud az-service-fabric-privesc.md (rev 171e422).
-# Action names checked against the Azure RBAC permissions reference (Compute > Microsoft.ServiceFabric);
-# RBAC matching is case-insensitive (the reference spells managedclusters / nodetypes in lower case).
-# Cluster nodes are VM scale sets; the cluster -> node VMSS link is not collected, so node-identity
-# targets use azure_host_linked_to_pivot (unknown until collected).
-
 - id: azure-servicefabric-application-deploy-node-identity
   provider: azure
   service: service_fabric
@@ -49,7 +42,6 @@
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute#microsoftservicefabric
     - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-managed-cluster-virtual-machine-scale-sets
   notes: Template-based deployments additionally need Microsoft.Resources/deployments write. For managed clusters the node scale sets live in a service-managed resource group. Running code on a node also exposes the cluster certificate in the node certificate store (Service Fabric data-plane admin, not an Azure principal).
-
 - id: azure-servicefabric-application-user-assigned-identity
   provider: azure
   service: service_fabric
@@ -94,7 +86,6 @@
     - https://learn.microsoft.com/en-us/azure/service-fabric/concepts-managed-identity
     - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-service-fabric-app-code
   notes: Theft of an existing application's identity from other code on the node depends on per-activation secrets and process isolation and is not modelled separately; node scale-set identities are covered by azure-servicefabric-application-deploy-node-identity.
-
 - id: azure-servicefabric-managed-nodetype-user-assigned-identity
   provider: azure
   service: service_fabric
@@ -131,3 +122,33 @@
   references:
     - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-managed-cluster-virtual-machine-scale-sets
   notes: The classic-cluster variant changes the paired scale set directly and is covered by azure-vmss-model-write.
+- id: azure-audit-cluster-client-certificate-theft-data-plane-admin
+  provider: azure
+  service: service_fabric
+  title: Cluster / client certificate theft → data-plane admin
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#cluster--client-certificate-theft--data-plane-admin
+  summary: cluster certificate identity, able to deploy apps and reach node identity
+  requires:
+    all_of:
+    - action: Microsoft.KeyVault/vaults/secrets/getSecret/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Cluster / client certificate theft → data-plane admin on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-cluster-client-certificate-theft-data-plane-admin
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-security
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: serviceFabric.certSecretLinks.'

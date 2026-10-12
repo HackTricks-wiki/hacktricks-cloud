@@ -172,3 +172,39 @@
   references:
     - https://docs.aws.amazon.com/step-functions/latest/apireference/API_UpdateStateMachine.html
   notes: ""
+- id: aws-audit-exfiltrate-eventbridge-connection-credential-via-teststate-http-task
+  provider: aws
+  service: states
+  title: Exfiltrate EventBridge Connection credential via TestState HTTP Task
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#eventbridge-connection-credentials-without-statesrevealsecrets
+  source_revision: 0b36331
+  summary: The source can obtain reusable API key, Basic credential, or OAuth token only when the exact target and
+    prerequisites are verified.
+  requires:
+    all_of:
+    - action: states:TestState
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-exfiltrate-eventbridge-connection-credential-via-teststate-http-task
+    scope: same_account
+    aggregate_as: Verified Obtain reusable API key, Basic credential, or in {account}
+    grants:
+    - Obtain reusable API key, Basic credential, or OAuth token
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Evidence must bind the source, exact target, and these prerequisites: Passed Step Functions role
+      trusts states.amazonaws.com and permits InvokeHTTPEndpoint, RetrieveConnectionCredentials, GetSecretValue
+      and DescribeSecret on connection secret; known connection; attacker HTTPS endpoint; states:RevealSecrets unnecessary.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions to approved operators and review the exact target configuration.
+  notes: Evidence must bind actor, exact resource, target and all prerequisites; absent evidence is UNKNOWN, with
+    no definite privilege edge.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/

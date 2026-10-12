@@ -23,10 +23,12 @@
     outcome: workload_execution
   conditions:
   - id: job_queue_covered
-    description: batch:SubmitJob must cover both the job definition and a job queue (Resource includes both ARNs).
+    description: A usable job queue must exist, batch:SubmitJob must authorize that queue and the selected job-definition
+      revision together, and the queue must have a VALID, ENABLED compute environment compatible with the definition.
+      These queue and definition facts are unresolved unless collected and joined.
   blockers:
   - scp_or_boundary_deny
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Scope batch:SubmitJob to specific job definitions and queues; keep job roles least-privileged.
   references:
@@ -36,8 +38,6 @@
     task role (trusts ecs-tasks.amazonaws.com), so the selector resolves through the ECS task principal rather than
     batch.amazonaws.com; job definitions are not collected, so the attachment is unknown. EKS-backed jobs use a
     Kubernetes service account and are not covered.
-
-
 - id: aws-batch-registerjobdefinition-passrole-submitjob
   provider: aws
   service: batch

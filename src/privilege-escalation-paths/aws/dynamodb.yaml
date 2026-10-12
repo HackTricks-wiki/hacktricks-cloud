@@ -1,0 +1,34 @@
+- id: aws-dynamodb-deleteresourcepolicy-guardrail
+  provider: aws
+  service: dynamodb
+  title: Delete DynamoDB resource policy to lift a Deny
+  summary: Previously denied DynamoDB table action becomes effective for the source.
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#dynamodbputresourcepolicy-and-optionally-dynamodbgetresourcepolicy
+  source_revision: 0b36331
+  requires:
+    all_of:
+    - action: dynamodb:DeleteResourcePolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-dynamodb-deleteresourcepolicy-guardrail
+    scope: same_account
+  conditions:
+  - id: condition_1
+    description: Existing table policy has a Deny that blocks a source-controlled principal's independently allowed
+      table action.
+  - id: condition_2
+    description: Deletion removes the entire resource policy, not only the Deny; recompute effective IAM after the
+      deletion and do not assume access when no underlying allow exists.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the required actions to reviewed resources and principals.
+  references: []
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.

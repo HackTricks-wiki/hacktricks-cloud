@@ -136,3 +136,35 @@
   references:
     - https://docs.cloud.google.com/build/docs/iam-roles-permissions
   notes: Without a trigger consuming attacker-writable input the impact is SCM repository access only.
+- id: gcp-cloudbuild-log-credential
+  provider: gcp
+  service: cloudbuild
+  title: Recover credentials printed in stored Cloud Build logs
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-build-post-exploitation.md#read-stored-build-output
+  source_revision: 0b36331
+  summary: Identity authenticated by valid credential in build output; emit only for the exact verified source,
+    resource and target.
+  requires:
+    all_of:
+    - action: logging.logEntries.list
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-cloudbuild-log-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Recover credentials printed in stored Cloud Build logs
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Useful
+      retained log; alternate user-bucket route needs storage.objects.get, default-bucket helper needs cloudbuild.builds.get
+      and supported Viewer; content and target verified.
+  confidence: conditional
+  severity: high
+  mitigation: Limit logging.logEntries.list to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-build-post-exploitation.md#read-stored-build-output

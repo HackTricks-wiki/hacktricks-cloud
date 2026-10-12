@@ -83,3 +83,32 @@
     - https://docs.aws.amazon.com/codeconnections/latest/APIReference/API_UpdateRepositoryLink.html
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/git-sync-prereq.html
   notes: No iam:PassRole is needed because the sync configuration keeps its role. Complements aws-codeconnections-gitsync-passrole (new or updated sync configuration with a passed role).
+- id: aws-codeconnections-installation-consumer
+  provider: aws
+  service: codeconnections
+  title: Replace connection installation feeding a privileged deployment
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codeconnections-post-exploitation/README.md#complete-or-replace-a-connection-installation
+  source_revision: 0b36331
+  summary: Replace connection installation feeding a privileged deployment when exact source-to-target authority
+    is verified.
+  requires:
+    all_of:
+    - action: codeconnections:UpdateConnectionInstallation
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codeconnections-installation-consumer
+    scope: any
+    grants:
+    - consumer deployment role execution
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codeconnections-post-exploitation/README.md#complete-or-replace-a-connection-installation
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge.'
+  conditions:
+  - A provider installation changes source access, but privileged role execution requires a controlled repository
+    revision consumed by an exact deployment.

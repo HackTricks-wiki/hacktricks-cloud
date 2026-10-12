@@ -10,11 +10,12 @@
   title: Reset the master password of a DB instance that has associated IAM roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsmodifydbinstance
   source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges (S3/Lambda) of IAM roles associated with a non-Aurora DB instance it can modify.
+  summary: The source can obtain the integration-limited privileges (S3/Lambda) of IAM roles associated with a
+    non-Aurora DB instance it can modify.
   requires:
     all_of:
-      - action: rds:ModifyDBInstance
-        resource: "{target.resource_arn}"
+    - action: rds:ModifyDBInstance
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -23,34 +24,40 @@
     scope: same_account
     aggregate_as: "IAM roles associated with modifiable RDS instances in {account}"
   conditions:
-    - id: network_reachability
-      description: The source needs a network path to the database endpoint.
-    - id: integration_configured
-      description: The engine integration (e.g. aws_s3 / aws_lambda extensions, S3 load/export) must be supported and enabled for the associated role's feature.
-    - id: not_aurora_or_managed_password
-      description: Not applicable to Aurora instances (cluster-managed password) or instances whose master password is managed in Secrets Manager.
+  - id: network_reachability
+    description: The source needs a network path to the database endpoint.
+  - id: integration_configured
+    description: The engine integration (e.g. aws_s3 / aws_lambda extensions, S3 load/export) must be supported and
+      enabled for the associated role's feature.
+  - id: not_aurora_or_managed_password
+    description: Not applicable to Aurora instances (cluster-managed password) or instances whose master password is
+      managed in Secrets Manager.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict rds:ModifyDBInstance to DBAs, use Secrets Manager-managed master passwords, and keep RDS-associated roles least-privileged.
+  mitigation: Restrict rds:ModifyDBInstance to DBAs, use Secrets Manager-managed master passwords, and keep
+    RDS-associated roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBInstance.html
-  notes: HackTricks frames this as data access; the role edge is inferred from the page's "Abuse RDS Role IAM permissions" section. Pure data access belongs to exposure analysis, not this edge.
+  - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBInstance.html
+  notes: HackTricks frames this as data access; the role edge is inferred from the page's "Abuse RDS Role IAM
+    permissions" section. Pure data access belongs to exposure analysis, not this edge.
 
 - id: aws-rds-addroletodbcluster-passrole
   provider: aws
   service: rds
   title: Associate a passed IAM role with an Aurora DB cluster
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbcluster-iampassrole
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbcluster-iampassrole
   source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges of any passable role trusting rds.amazonaws.com through a cluster it can use.
+  summary: The source can obtain the integration-limited privileges of any passable role trusting rds.amazonaws.com
+    through a cluster it can use.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: rds:AddRoleToDBCluster
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: rds:AddRoleToDBCluster
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -59,32 +66,37 @@
     scope: same_account
     aggregate_as: "Roles trusting rds.amazonaws.com passable in {account}"
   conditions:
-    - id: database_session
-      description: The source needs a database login on the cluster with SQL privileges to invoke the integration, and network reachability.
-    - id: engine_configuration
-      description: Some engines (Aurora MySQL) also require the role ARN in the cluster parameter group, needing rds:ModifyDBClusterParameterGroup.
+  - id: database_session
+    description: The source needs a database login on the cluster with SQL privileges to invoke the integration, and
+      network reachability.
+  - id: engine_configuration
+    description: Some engines (Aurora MySQL) also require the role ARN in the cluster parameter group, needing
+      rds:ModifyDBClusterParameterGroup.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict iam:PassRole with iam:PassedToService=rds.amazonaws.com to specific roles and restrict rds:AddRoleToDBCluster.
+  mitigation: Restrict iam:PassRole with iam:PassedToService=rds.amazonaws.com to specific roles and restrict
+    rds:AddRoleToDBCluster.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_AddRoleToDBCluster.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_AddRoleToDBCluster.html
   notes: Covers the blue/green variant on the same page (CreateBlueGreenDeployment adds nothing to the reachable set).
 
 - id: aws-rds-addroletodbinstance-passrole
   provider: aws
   service: rds
   title: Associate a passed IAM role with an RDS DB instance
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbinstance-iampassrole
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbinstance-iampassrole
   source_revision: 171e422299
-  summary: The source can obtain the integration-limited privileges of any passable role trusting rds.amazonaws.com through an instance it can use.
+  summary: The source can obtain the integration-limited privileges of any passable role trusting rds.amazonaws.com
+    through an instance it can use.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: rds:AddRoleToDBInstance
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: rds:AddRoleToDBInstance
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -93,36 +105,39 @@
     scope: same_account
     aggregate_as: "Roles trusting rds.amazonaws.com passable in {account}"
   conditions:
-    - id: database_session
-      description: The source needs a database login with SQL privileges to invoke the integration, and network reachability.
-    - id: feature_supported
-      description: The engine must support the feature name (e.g. s3Import, Lambda); not applicable to RDS Custom.
+  - id: database_session
+    description: The source needs a database login with SQL privileges to invoke the integration, and network
+      reachability.
+  - id: feature_supported
+    description: The engine must support the feature name (e.g. s3Import, Lambda); not applicable to RDS Custom.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
   mitigation: Restrict iam:PassRole with iam:PassedToService=rds.amazonaws.com and restrict rds:AddRoleToDBInstance.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_AddRoleToDBInstance.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_AddRoleToDBInstance.html
   notes: ""
 
 - id: aws-rds-custom-createdbinstance-passrole
   provider: aws
   service: rds
   title: Create an RDS Custom instance with a passed AWSRDSCustom instance profile
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdscreatedbinstance-iampassrole-kms-key-use-permissions
+  source:
+    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdscreatedbinstance-iampassrole-kms-key-use-permissions
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable EC2-trusting roles whose role and instance-profile names start with AWSRDSCustom.
+  summary: The source can obtain the privileges of passable EC2-trusting roles whose role and instance-profile names
+    start with AWSRDSCustom.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: rds:CreateDBInstance
-        resource: "*"
-      - action: kms:CreateGrant
-        resource: "*"
-      - action: kms:DescribeKey
-        resource: "*"
+    - action: iam:PassRole
+      resource: "{target.arn}"
+    - action: rds:CreateDBInstance
+      resource: "*"
+    - action: kms:CreateGrant
+      resource: "*"
+    - action: kms:DescribeKey
+      resource: "*"
   target:
     kind: aws_role
     selector:
@@ -133,19 +148,26 @@
     scope: same_account
     aggregate_as: "AWSRDSCustom* instance-profile roles passable in {account}"
   conditions:
-    - id: host_access
-      description: Credentials are only exposed if the source can obtain code execution or administrative access on the RDS Custom host (e.g. via SSM or the EC2 key pair).
-    - id: rds_custom_prerequisites
-      description: RDS Custom prerequisites (custom engine version, networking, customer managed symmetric KMS key usable by the source) must be met. For RDS Custom for Oracle the creator also needs s3:CreateBucket, s3:PutBucketPolicy, s3:PutBucketObjectLockConfiguration and s3:PutBucketVersioning on do-not-delete-rds-custom-* buckets, iam:SimulatePrincipalPolicy, and cloudtrail:CreateTrail and cloudtrail:StartLogging on do-not-delete-rds-custom-* trails (not modelled as requirements because they are engine-specific).
+  - id: host_access
+    description: Credentials are only exposed if the source can obtain code execution or administrative access on the
+      RDS Custom host (e.g. via SSM or the EC2 key pair).
+  - id: rds_custom_prerequisites
+    description: RDS Custom prerequisites (custom engine version, networking, customer managed symmetric KMS key usable
+      by the source) must be met. For RDS Custom for Oracle the creator also needs s3:CreateBucket, s3:PutBucketPolicy,
+      s3:PutBucketObjectLockConfiguration and s3:PutBucketVersioning on do-not-delete-rds-custom-* buckets,
+      iam:SimulatePrincipalPolicy, and cloudtrail:CreateTrail and cloudtrail:StartLogging on do-not-delete-rds-custom-*
+      trails (not modelled as requirements because they are engine-specific).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict iam:PassRole on AWSRDSCustom* roles and restrict RDS Custom instance creation to DBAs.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/custom-creating.html
-    - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/custom-setup-orcl.html
-  notes: The RDS Custom setup guide confirms kms:CreateGrant and kms:DescribeKey on "*" for the creating principal, and the default AWSRDSCustomInstanceRole-<region> trusts ec2.amazonaws.com. RDS Custom for Oracle reaches end of support on March 31, 2027.
+  - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/custom-creating.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/custom-setup-orcl.html
+  notes: The RDS Custom setup guide confirms kms:CreateGrant and kms:DescribeKey on "*" for the creating principal, and
+    the default AWSRDSCustomInstanceRole-<region> trusts ec2.amazonaws.com. RDS Custom for Oracle reaches end of support
+    on March 31, 2027.
 
 - id: aws-rds-dbconnect-iam-auth-associated-roles
   provider: aws
@@ -153,11 +175,13 @@
   title: Authenticate to an RDS instance with IAM database authentication and use its associated IAM roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rds-dbconnect
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the integration-limited privileges (S3/Lambda) of IAM roles associated with a DB instance by signing in as an IAM-mapped database user that may call the engine's S3 and Lambda integration functions.
+  summary: The source can obtain the integration-limited privileges (S3/Lambda) of IAM roles associated with a DB
+    instance by signing in as an IAM-mapped database user that may call the engine's S3 and Lambda integration
+    functions.
   requires:
     all_of:
-      - action: rds-db:connect
-        resource: "arn:aws:rds-db:*:{target.account}:dbuser:*/*"
+    - action: rds-db:connect
+      resource: "arn:aws:rds-db:*:{target.account}:dbuser:*/*"
   target:
     kind: aws_role
     selector:
@@ -167,35 +191,45 @@
     aggregate_as: "IAM roles associated with RDS instances reachable through IAM DB authentication in {account}"
     outcome: workload_execution
   conditions:
-    - id: iam_db_auth_enabled
-      description: IAM database authentication must be enabled on the instance, and an engine user mapped to IAM authentication (rds_iam grant or AWSAuthenticationPlugin) must exist that the rds-db:connect resource covers.
-    - id: db_user_can_use_integration
-      description: That database user needs SQL privileges on the engine's AWS integration features (for example aws_s3 / aws_lambda extensions or S3 load/export) bound to the associated role.
-    - id: network_reachability
-      description: The source needs a network path to the database endpoint.
-    - id: resource_scope_overapproximated
-      description: The requirement is evaluated account-wide; a policy limited to specific DbiResourceId/user pairs grants this only for those instances and users.
+  - id: iam_db_auth_enabled
+    description: IAM database authentication must be enabled on the instance, and an engine user mapped to IAM
+      authentication (rds_iam grant or AWSAuthenticationPlugin) must exist that the rds-db:connect resource covers.
+  - id: db_user_can_use_integration
+    description: That database user needs SQL privileges on the engine's AWS integration features (for example aws_s3 /
+      aws_lambda extensions or S3 load/export) bound to the associated role.
+  - id: network_reachability
+    description: The source needs a network path to the database endpoint.
+  - id: resource_scope_overapproximated
+    description: The requirement is evaluated account-wide; a policy limited to specific DbiResourceId/user pairs grants
+      this only for those instances and users.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Scope rds-db:connect to exact DbiResourceId and database-user pairs, grant the engine's S3 and Lambda integration functions only to dedicated DB roles, and keep RDS-associated IAM roles least-privileged.
+  mitigation: Scope rds-db:connect to exact DbiResourceId and database-user pairs, grant the engine's S3 and Lambda
+    integration functions only to dedicated DB roles, and keep RDS-associated IAM roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html
-    - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Integrating.Authorizing.html
-  notes: The page frames rds-db:connect as authentication without a password into an existing IAM-mapped DB user; the role edge follows the page's "Abuse RDS Role IAM permissions" section, as in aws-rds-modifydbinstance-master-password-associated-roles. The resource uses the Redshift WithIAM account-wide over-approximation precedent because there is no per-instance dbuser placeholder. Aurora cluster-level role associations (rds_db_cluster) are not collected and are not covered.
+  - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html
+  - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Integrating.Authorizing.html
+  notes: The page frames rds-db:connect as authentication without a password into an existing IAM-mapped DB user; the
+    role edge follows the page's "Abuse RDS Role IAM permissions" section, as in
+    aws-rds-modifydbinstance-master-password-associated-roles. The resource uses the Redshift WithIAM account-wide
+    over-approximation precedent because there is no per-instance dbuser placeholder. Aurora cluster-level role
+    associations (rds_db_cluster) are not collected and are not covered.
 
 - id: aws-rds-modifydbcluster-master-password-associated-roles
   provider: aws
   service: rds
   title: Reset the master password of an Aurora DB cluster that has associated IAM roles
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#out-of-band-sql-via-rds-data-api-by-enabling-http-endpoint--resetting-master-password
+  source:
+    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#out-of-band-sql-via-rds-data-api-by-enabling-http-endpoint--resetting-master-password
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the integration-limited privileges (S3 import/export, Lambda invocation, other engine integrations) of IAM roles associated with an Aurora cluster whose master password it can reset.
+  summary: The source can obtain the integration-limited privileges (S3 import/export, Lambda invocation, other engine
+    integrations) of IAM roles associated with an Aurora cluster whose master password it can reset.
   requires:
     all_of:
-      - action: rds:ModifyDBCluster
-        resource: "{target.resource_arn}"
+    - action: rds:ModifyDBCluster
+      resource: "{target.resource_arn}"
   target:
     kind: aws_role
     selector:
@@ -205,32 +239,41 @@
     aggregate_as: "IAM roles associated with modifiable Aurora clusters in {account}"
     outcome: workload_execution
   conditions:
-    - id: sql_path
-      description: The source needs a network path to the cluster endpoint, or the Data API path documented on the page (HTTP endpoint enabled via rds:ModifyDBCluster or rds:EnableHttpEndpoint, a Secrets Manager secret it can create and read, and rds-data:ExecuteStatement).
-    - id: integration_configured
-      description: The engine integration (aws_s3 / aws_lambda extensions, LOAD DATA FROM S3, SELECT INTO OUTFILE S3, invoke Lambda) must be supported and enabled for the associated role's feature; Aurora MySQL may also need the role ARN in the cluster parameter group.
-    - id: not_managed_password
-      description: Clusters whose master password is managed in Secrets Manager need the managed-secret path instead.
+  - id: sql_path
+    description: The source needs a network path to the cluster endpoint, or the Data API path documented on the page
+      (HTTP endpoint enabled via rds:ModifyDBCluster or rds:EnableHttpEndpoint, a Secrets Manager secret it can create
+      and read, and rds-data:ExecuteStatement).
+  - id: integration_configured
+    description: The engine integration (aws_s3 / aws_lambda extensions, LOAD DATA FROM S3, SELECT INTO OUTFILE S3,
+      invoke Lambda) must be supported and enabled for the associated role's feature; Aurora MySQL may also need the
+      role ARN in the cluster parameter group.
+  - id: not_managed_password
+    description: Clusters whose master password is managed in Secrets Manager need the managed-secret path instead.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Restrict rds:ModifyDBCluster and rds:EnableHttpEndpoint to DBAs, use Secrets Manager-managed master passwords, and keep cluster-associated roles least-privileged.
+  mitigation: Restrict rds:ModifyDBCluster and rds:EnableHttpEndpoint to DBAs, use Secrets Manager-managed master
+    passwords, and keep cluster-associated roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBCluster.html
-  notes: Aurora counterpart of aws-rds-modifydbinstance-master-password-associated-roles, which explicitly excludes Aurora (cluster-managed password). rds_db_cluster is not collected, so attachment falls back to roles trusting rds.amazonaws.com with unknown confidence.
+  - https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_ModifyDBCluster.html
+  notes: Aurora counterpart of aws-rds-modifydbinstance-master-password-associated-roles, which explicitly excludes
+    Aurora (cluster-managed password). rds_db_cluster is not collected, so attachment falls back to roles trusting
+    rds.amazonaws.com with unknown confidence.
 
 - id: aws-rds-managed-master-secret-associated-roles
   provider: aws
   service: rds
   title: Read an RDS-managed master password secret of a DB with associated IAM roles
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#read-the-rds-managed-master-password-from-secrets-manager-rdsdescribedb--secretsmanagergetsecretvalue
+  source:
+    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#read-the-rds-managed-master-password-from-secrets-manager-rdsdescribedb--secretsmanagergetsecretvalue
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the integration-limited privileges of IAM roles associated with RDS instances or Aurora clusters whose RDS-managed master secret it can read.
+  summary: The source can obtain the integration-limited privileges of IAM roles associated with RDS instances or Aurora
+    clusters whose RDS-managed master secret it can read.
   requires:
     all_of:
-      - action: secretsmanager:GetSecretValue
-        resource: "arn:aws:secretsmanager:*:{target.account}:secret:rds!*"
+    - action: secretsmanager:GetSecretValue
+      resource: "arn:aws:secretsmanager:*:{target.account}:secret:rds!*"
   target:
     kind: aws_role
     selector:
@@ -240,17 +283,88 @@
     aggregate_as: "IAM roles associated with RDS databases using managed master secrets in {account}"
     outcome: workload_execution
   conditions:
-    - id: managed_master_password
-      description: The database must use ManageMasterUserPassword (secret named rds!db-* or rds!cluster-*); the secret ARN is disclosed by DescribeDBInstances/DescribeDBClusters (MasterUserSecret).
-    - id: kms_decrypt
-      description: When the secret uses a customer managed KMS key, the source also needs kms:Decrypt and the key policy must allow it.
-    - id: sql_path_and_integration
-      description: The source needs a network path to the endpoint (or the Data API for Aurora) and the engine integration for the associated role must be enabled.
+  - id: managed_master_password
+    description: The database must use ManageMasterUserPassword (secret named rds!db-* or rds!cluster-*); the secret ARN
+      is disclosed by DescribeDBInstances/DescribeDBClusters (MasterUserSecret).
+  - id: kms_decrypt
+    description: When the secret uses a customer managed KMS key, the source also needs kms:Decrypt and the key policy
+      must allow it.
+  - id: sql_path_and_integration
+    description: The source needs a network path to the endpoint (or the Data API for Aurora) and the engine integration
+      for the associated role must be enabled.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: medium
-  mitigation: Scope secretsmanager:GetSecretValue on rds!-prefixed secrets to DBAs and break-glass roles, and keep RDS-associated roles least-privileged.
+  mitigation: Scope secretsmanager:GetSecretValue on rds!-prefixed secrets to DBAs and break-glass roles, and keep
+    RDS-associated roles least-privileged.
   references:
-    - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html
-  notes: The secret resource is an account-level approximation (no database-to-secret placeholder), so a grant on one rds! secret over-reports all RDS-associated roles of the account.
+  - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html
+  notes: The secret resource is an account-level approximation (no database-to-secret placeholder), so a grant on one
+    rds! secret over-reports all RDS-associated roles of the account.
+- id: aws-rds-dbconnect-aurora-role
+  provider: aws
+  service: rds
+  title: IAM DB authentication plus Aurora cluster role association
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#postgresql-aurora
+  source_revision: 0b36331
+  summary: Exercise the integration-limited IAM privileges of an Aurora cluster associated role.
+  requires:
+    all_of:
+    - action: rds-db:connect
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-rds-dbconnect-aurora-role
+    scope: same_account
+  conditions:
+  - id: condition_1
+    description: Exact dbuser and active cluster role association required. Missing cluster or SQL facts yield UNKNOWN.
+  - id: condition_2
+    description: SQL integration use and network path required.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
+      runtime prerequisites; without it the result is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict rds-db:connect to authorized identities and exact resources.
+  references:
+  - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Integrating.Authorizing.html
+  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+- id: aws-pa-s03-4-rds-proxy-auth-secret
+  provider: aws
+  service: rds
+  title: Read RDS Proxy backend database credentials
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
+  source_revision: 0b36331
+  summary: The source obtains the backend database principal stored in a proxy authentication secret.
+  requires:
+    all_of:
+    - action: rds:DescribeDBProxies
+      resource: '*'
+    - action: secretsmanager:GetSecretValue
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-pa-s03-4-rds-proxy-auth-secret
+    scope: same_account
+    aggregate_as: Verified proxy backend database identities in {account}
+  conditions:
+  - id: proxy_secret_match
+    description: Exact proxy Auth.SecretArn must equal the readable secret ARN; secret contains a usable backend
+      username/password and is not an end-to-end IAM proxy.
+  - id: kms_and_route
+    description: CMK-encrypted secrets also require kms:Decrypt; using SQL needs a network path.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict GetSecretValue on proxy auth secrets and use least-privileged backend users.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md
+  notes: Must remain UNKNOWN until the proxy-to-secret-to-database-principal evidence has been collected and bound
+    to the source.

@@ -1,30 +1,35 @@
-# Azure Confidential Ledger techniques (declarative only).
-# Source: hacktricks-cloud az-confidential-ledger-privesc.md (rev 171e422).
-
 - id: azure-confidentialledger-ledgers-write-principal
   provider: azure
   service: confidential_ledger
   title: Add a principal as ledger Administrator through ledgers/write
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-confidential-ledger-privesc.md#data-plane-role-self-grant-via-ledgerswrite
   source_revision: 171e422
-  summary: The ledger's aadBasedSecurityPrincipals list is part of the ARM resource, so ledgers/write grants the Administrator data-plane role.
+  summary: Reading the existing ledger configuration and writing a principal list that contains an Administrator
+    lets the source grant itself the ledger Administrator data-plane role.
   requires:
     all_of:
-      - action: Microsoft.ConfidentialLedger/ledgers/write
-        scope: "{target.scope}"
+    - action: Microsoft.ConfidentialLedger/ledgers/read
+      scope: '{target.scope}'
+    - action: Microsoft.ConfidentialLedger/ledgers/write
+      scope: '{target.scope}'
   target:
     kind: azure_dataplane_admin
     selector:
       any_principal_in_scope: true
     scope: inherited_scope
-    aggregate_as: "Confidential Ledger administrators of {target.scope}"
-  conditions: []
+    aggregate_as: Confidential Ledger administrators of {target.scope}
+  conditions:
+  - id: administrator_retained
+    description: The submitted aadBasedSecurityPrincipals/certBasedSecurityPrincipals list must contain at least
+      one Administrator. Adding the source itself as Administrator satisfies this constraint; preserving current
+      principals requires reading the list first.
   blockers:
-    - azure_deny_assignment
+  - azure_deny_assignment
   confidence: derived
   severity: medium
-  mitigation: Restrict ledgers/write and monitor aadBasedSecurityPrincipals changes.
+  mitigation: Restrict ledgers/read and ledgers/write; monitor aadBasedSecurityPrincipals and certBasedSecurityPrincipals
+    changes.
   references:
-    - https://learn.microsoft.com/en-us/rest/api/confidentialledger/ledger/update
-    - https://learn.microsoft.com/en-us/azure/confidential-ledger/manage-azure-ad-users
-  notes: ""
+  - https://learn.microsoft.com/en-us/rest/api/confidentialledger/ledger/update
+  - https://learn.microsoft.com/en-us/azure/confidential-ledger/manage-azure-ad-users
+  notes: ''

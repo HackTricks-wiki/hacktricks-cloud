@@ -36,3 +36,36 @@
   references:
     - https://docs.aws.amazon.com/omics/latest/dev/permissions-service.html
   notes: No credentials are disclosed directly; the escalation is code execution in a managed workflow with the role's access.
+
+- id: aws-healthomics-cloudtrail-workflow-zip-credential
+  provider: aws
+  service: omics
+  title: Recover another identity credential from a logged HealthOmics workflow ZIP
+  source: src/pentesting-cloud/aws-security/aws-services/aws-healthomics-enum.md#cloudtrail-and-stealth
+  source_revision: 0b36331
+  summary: Credential of the exact distinct identity found in the inline workflow ZIP when exact source, object,
+    credential, and target evidence is verified.
+  requires:
+    any_of:
+    - - action: cloudtrail:LookupEvents
+        resource: '*'
+    - - action: s3:GetObject
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-healthomics-cloudtrail-workflow-zip-credential
+    scope: same_account
+    grants:
+    - Credential of the exact distinct identity found in the inline workflow ZIP
+  conditions:
+  - id: verified_credential
+    description: A readable CreateWorkflow event contains definitionZip with a valid credential for a distinct identity.
+      For S3 trail objects, verify log-object access and any required kms:Decrypt; bind the exact event or object
+      and owner.
+  confidence: conditional
+  severity: high
+  mitigation: Do not put reusable credentials in workflow archives; restrict CloudTrail and trail-object readers.
+  references:
+  - https://docs.aws.amazon.com/omics/latest/dev/omics-permissions.html
+  notes: Exact aws_privesc_challenge_evidence is required. Missing or incomplete evidence remains UNKNOWN.

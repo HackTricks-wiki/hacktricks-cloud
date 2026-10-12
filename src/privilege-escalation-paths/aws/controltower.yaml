@@ -36,3 +36,32 @@
     - https://docs.aws.amazon.com/controltower/latest/userguide/account-factory.html
     - https://docs.aws.amazon.com/controltower/latest/userguide/provision-and-manage-accounts.html
   notes: Provisioning a brand-new account (servicecatalog:ProvisionProduct) grants admin only over that new, empty account, which is not an existing principal in the snapshot.
+- id: aws-controltower-preventive-scp-disable
+  provider: aws
+  service: controltower
+  title: Disable a preventive Control Tower control that enforces an SCP deny
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-control-tower-post-exploitation/README.md#enable--disable-controls
+  source_revision: 0b36331
+  summary: Disable a preventive Control Tower control that enforces an SCP deny when exact source-to-target authority
+    is verified.
+  requires:
+    all_of:
+    - action: controltower:DisableControl
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-controltower-preventive-scp-disable
+    scope: same_account
+    grants:
+    - specific formerly blocked action
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the source permission and verify downstream authority.
+  references:
+  - src/pentesting-cloud/aws-security/aws-post-exploitation/aws-control-tower-post-exploitation/README.md#enable--disable-controls
+  notes: 'Draft: missing exact source, target, or usable-authority evidence evaluates UNKNOWN; emit no speculative
+    edge.'
+  conditions:
+  - Only a preventive control that actually enforces an SCP Deny can activate a pre-existing Allow; detective controls
+    do not.
