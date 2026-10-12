@@ -36,6 +36,8 @@ TARGET_KINDS = {
     "gcp_group": ("gcp", "principal"),
     "gcp_workspace_user": ("gcp", "principal"),
     "gcp_scope_owner": ("gcp", "entity"),
+    "gcp_verified_authority": ("gcp", "entity"),
+    "gcp_challenge_foothold": ("gcp", "principal"),
     "azure_managed_identity": ("azure", "principal"),
     "azure_service_principal": ("azure", "principal"),
     "azure_user": ("azure", "principal"),
@@ -167,6 +169,9 @@ SELECTOR_KEYS = {
         "{target.trust_anchor_arn}); dropped when the account's rolesanywhere_trust_anchor inventory is collected and "
         "empty, otherwise unknown (profiles not collected)."),
     # ---- GCP -------------------------------------------------------------
+    "gcp_challenge_fact": (("gcp",), "string",
+        "Exact reviewed technique/source/target/scope evidence from gcp_privesc_challenge_evidence. "
+        "Only verified preconditions produce a conditional path; missing or incomplete evidence is unresolved."),
     "gcp_actas_granted_on_target": (("gcp",), "bool_true",
         "Source holds iam.serviceAccounts.actAs on the target SA (SA policy or project/folder/org inheritance)."),
     "gcp_sa_in_scope_of_permission": (("gcp",), "bool_true",
@@ -402,6 +407,8 @@ SOURCE_SELECTOR_KEYS = {
 }
 # Collection types/fields a selector or requirement needs; reported in coverage when missing.
 FACTS_NEEDED = {
+    "gcp_challenge_fact": "gcp_privesc_challenge_evidence with TechniqueId, SourceId, TargetKind, TargetId, "
+                          "TargetScope, Status and VerifiedPreconditions for the exact exploit preconditions",
     "aws_challenge_fact": "aws_privesc_challenge_evidence with exact TechniqueId, SourceArn, TargetKind, TargetId, TargetAccount, Status and VerifiedPreconditions",
     "via_resource_type": "AWS: per-type workload inventories carrying the role (ecs task definitions, glue jobs, sagemaker, ...), "
                          "fully collected in every region: imagebuilder_pipeline (imagebuilder:ListImagePipelines + "
@@ -1158,6 +1165,20 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: AWS v3 challenge entries need an exact evidence selector")
         if kind == "aws_challenge_foothold":
             errors.append(f"{where}: aws_challenge_foothold is a source kind, not a target")
+        if kind == "gcp_challenge_foothold":
+            errors.append(f"{where}: gcp_challenge_foothold is a source kind, not a target")
+        if kind == "gcp_verified_authority" and not selector.get("gcp_challenge_fact"):
+            errors.append(f"{where}: gcp_verified_authority needs selector gcp_challenge_fact")
+        if str(entry.get("id", "")).startswith("gcp-v3-") and not selector.get("gcp_challenge_fact"):
+            errors.append(f"{where}: GCP v3 challenge entries need an exact evidence selector")
+        if selector.get("gcp_challenge_fact"):
+            if selector["gcp_challenge_fact"] != entry.get("id"):
+                errors.append(f"{where}: gcp_challenge_fact must equal the technique id")
+            if kind not in ("gcp_service_account", "gcp_user", "gcp_workspace_user", "gcp_group",
+                            "k8s_service_account", "gcp_verified_authority"):
+                errors.append(f"{where}: gcp_challenge_fact needs a bounded identity or authority target")
+            if entry.get("confidence") != "conditional":
+                errors.append(f"{where}: gcp_challenge_fact must remain conditional")
         if selector.get("aws_challenge_fact") and selector["aws_challenge_fact"] != entry.get("id"):
             errors.append(f"{where}: aws_challenge_fact must equal the technique id")
         if selector.get("aws_challenge_fact"):
@@ -1227,7 +1248,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
                 errors.append(f"{where}: GCP running-pod KSA selector needs k8s_service_account in cluster scope")
             if {"k8s_sa_in_cluster", "k8s_sa_has_token_secret"} & set(selector):
                 errors.append(f"{where}: GCP running-pod KSA selector cannot combine with other KSA selectors")
-        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster", "k8s_sa_used_by_running_pod"} & set(selector):
+        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster", "k8s_sa_used_by_running_pod", "gcp_challenge_fact"} & set(selector):
             errors.append(f"{where}: gcp k8s_service_account targets need selector k8s_sa_has_token_secret, k8s_sa_in_cluster, or k8s_sa_used_by_running_pod")
         rolebound_uses = [r for r in _requirements(requires) if any(
             "source_rolebound_clusterrole" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []

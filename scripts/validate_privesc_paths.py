@@ -133,9 +133,11 @@ def main():
             print(f'... {len(errors) - 50} more errors', file=sys.stderr)
         return 1
     evidence_bound = sum(entry.get('id', '').startswith('aws-v3-') for entry in result['entries'])
+    gcp_evidence_bound = sum(entry.get('id', '').startswith('gcp-v3-') for entry in result['entries'])
     print(f"Privilege-escalation paths are valid: {len(result['files'])} files, "
           f"{len(result['entries'])} techniques, {result['excluded']} reviewed exclusions, "
-          f"{evidence_bound} evidence-bound AWS challenge techniques")
+          f"{evidence_bound} evidence-bound AWS challenge techniques, "
+          f"{gcp_evidence_bound} evidence-bound GCP challenge techniques")
     return 0
 
 
