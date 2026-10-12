@@ -29,14 +29,20 @@ TARGET_KINDS = {
     "aws_account_admin": ("aws", "entity"),
     "aws_directory_domain_admin": ("aws", "entity"),
     "aws_service_plane_admin": ("aws", "entity"),
+    "aws_verified_authority": ("aws", "entity"),
+    "aws_challenge_foothold": ("aws", "principal"),
     "gcp_service_account": ("gcp", "principal"),
     "gcp_user": ("gcp", "principal"),
     "gcp_group": ("gcp", "principal"),
     "gcp_workspace_user": ("gcp", "principal"),
     "gcp_scope_owner": ("gcp", "entity"),
+    "gcp_verified_authority": ("gcp", "entity"),
+    "gcp_challenge_foothold": ("gcp", "principal"),
     "azure_managed_identity": ("azure", "principal"),
     "azure_service_principal": ("azure", "principal"),
     "azure_user": ("azure", "principal"),
+    "azure_challenge_foothold": ("azure", "principal"),
+    "azure_verified_authority": ("azure", "entity"),
     "azure_scope_owner": ("azure", "entity"),
     "azure_dataplane_admin": ("azure", "entity"),
     "entra_role": ("azure", "entity"),
@@ -57,7 +63,8 @@ SERVICE_PLANES = ("amplifybackend", "connect", "grafana", "quicksight", "scn")
 # k8s_admission_control: one entity per cluster meaning "admission enforcement can be lifted"; the entry names the
 # lifted blockers in target.removes_blockers. k8s_remote_cluster: a credential to ANOTHER cluster held in a Secret.
 # Kinds that more than one provider's catalog may target (AKS cluster-admin from Azure RBAC, ...).
-EXTRA_KIND_PROVIDERS = {"k8s_cluster_admin": ("azure", "gcp", "aws"), "k8s_service_account": ("gcp",)}
+EXTRA_KIND_PROVIDERS = {"k8s_cluster_admin": ("azure", "gcp", "aws"),
+                        "k8s_service_account": ("gcp", "azure")}
 ADMIN_KINDS = ("aws_account_admin", "gcp_scope_owner", "azure_scope_owner", "k8s_cluster_admin", "entra_role")
 
 
@@ -69,6 +76,8 @@ def kind_allowed(kind, provider):
 # bool, string, string_or_list, namespace, action, any.
 SELECTOR_KEYS = {
     # ---- generic ---------------------------------------------------------
+    "azure_challenge_fact": (("azure",), "string", "Exact reviewed Azure technique/source/target/scope evidence; never a definite path."),
+    "k8s_challenge_fact": (("k8s",), "string", "Exact reviewed Kubernetes technique/source/target/scope evidence."),
     "attached_to_service": (("aws", "gcp", "azure"), "string_or_list",
         "Identity is attached to a collected resource of that service (Lambda Role, EC2 instance profile, "
         "GCE/GKE service account, Azure resource identity incl. full ARM types). Uncollected attachment "
@@ -80,6 +89,9 @@ SELECTOR_KEYS = {
     "any_principal_in_scope": (("gcp", "azure", "k8s", "aws"), "bool_true",
         "Entity target covering every principal of the scope where the requirement holds (scope owner / cluster-admin / account admin)."),
     # ---- AWS -------------------------------------------------------------
+    "aws_challenge_fact": (("aws",), "string",
+        "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
+        "Missing or incomplete evidence is unresolved; a different source or target never matches."),
     "trust_allows_service": (("aws",), "string_or_list",
         "Role trust policy has an Allow for sts:AssumeRole* whose Principal.Service includes the value."),
     "trust_allows_principal_of_source": (("aws",), "bool_true",
@@ -162,6 +174,9 @@ SELECTOR_KEYS = {
         "{target.trust_anchor_arn}); dropped when the account's rolesanywhere_trust_anchor inventory is collected and "
         "empty, otherwise unknown (profiles not collected)."),
     # ---- GCP -------------------------------------------------------------
+    "gcp_challenge_fact": (("gcp",), "string",
+        "Exact reviewed technique/source/target/scope evidence from gcp_privesc_challenge_evidence. "
+        "Only verified preconditions produce a conditional path; missing or incomplete evidence is unresolved."),
     "gcp_actas_granted_on_target": (("gcp",), "bool_true",
         "Source holds iam.serviceAccounts.actAs on the target SA (SA policy or project/folder/org inheritance)."),
     "gcp_sa_in_scope_of_permission": (("gcp",), "bool_true",
@@ -397,6 +412,11 @@ SOURCE_SELECTOR_KEYS = {
 }
 # Collection types/fields a selector or requirement needs; reported in coverage when missing.
 FACTS_NEEDED = {
+    "azure_challenge_fact": "azure_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
+    "k8s_challenge_fact": "k8s_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
+    "gcp_challenge_fact": "gcp_privesc_challenge_evidence with TechniqueId, SourceId, TargetKind, TargetId, "
+                          "TargetScope, Status and VerifiedPreconditions for the exact exploit preconditions",
+    "aws_challenge_fact": "aws_privesc_challenge_evidence with exact TechniqueId, SourceArn, TargetKind, TargetId, TargetAccount, Status and VerifiedPreconditions",
     "via_resource_type": "AWS: per-type workload inventories carrying the role (ecs task definitions, glue jobs, sagemaker, ...), "
                          "fully collected in every region: imagebuilder_pipeline (imagebuilder:ListImagePipelines + "
                          "ListInfrastructureConfigurations {instanceProfileName}), sagemaker_user_profile (sagemaker:ListUserProfiles + "
@@ -690,6 +710,7 @@ BLOCKER_ALIASES = {"pod_security_admission": {"pivot_namespace_psa_enforce_basel
 # Placeholders that resolve on entity targets (account admin, scope owner, cluster-admin, ...). Any other
 # {target.*} placeholder on an entity target can never resolve and would silently make every edge unknown.
 ENTITY_TARGET_PLACEHOLDERS = {
+    "aws_verified_authority": {"target.scope", "target.account", "target.resource_arn", "target.arn"},
     "aws_account_admin": {"target.scope", "target.account"},
     "aws_identity_center_permission_set": {"target.scope", "target.account", "target.arn", "target.id"},
     "gcp_scope_owner": {"target.scope", "target.project", "target.id", "target.name"},
@@ -1145,6 +1166,50 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: aws_service_plane_admin targets need selector service_plane ({'|'.join(SERVICE_PLANES)})")
         if "service_plane" in selector and kind != "aws_service_plane_admin":
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
+        if kind == "aws_verified_authority" and not selector.get("aws_challenge_fact"):
+            errors.append(f"{where}: aws_verified_authority needs selector aws_challenge_fact")
+        if str(entry.get("id", "")).startswith("aws-v3-") and not selector.get("aws_challenge_fact"):
+            errors.append(f"{where}: AWS v3 challenge entries need an exact evidence selector")
+        if kind == "aws_challenge_foothold":
+            errors.append(f"{where}: aws_challenge_foothold is a source kind, not a target")
+        if kind == "gcp_challenge_foothold":
+            errors.append(f"{where}: gcp_challenge_foothold is a source kind, not a target")
+        if kind == "azure_challenge_foothold":
+            errors.append(f"{where}: azure_challenge_foothold is a source kind, not a target")
+        for evidence_provider in ("azure", "k8s"):
+            fact_key = evidence_provider + "_challenge_fact"
+            if selector.get(fact_key):
+                if selector[fact_key] != entry.get("id"):
+                    errors.append(f"{where}: {fact_key} must equal the technique id")
+                if entry.get("confidence") != "conditional":
+                    errors.append(f"{where}: {fact_key} must remain conditional")
+                if kind in ("azure_challenge_foothold",):
+                    errors.append(f"{where}: {fact_key} needs a bounded target")
+        if kind == "azure_verified_authority" and not selector.get("azure_challenge_fact"):
+            errors.append(f"{where}: verified authority needs an exact evidence selector")
+        if kind == "gcp_verified_authority" and not selector.get("gcp_challenge_fact"):
+            errors.append(f"{where}: gcp_verified_authority needs selector gcp_challenge_fact")
+        if str(entry.get("id", "")).startswith("gcp-v3-") and not selector.get("gcp_challenge_fact"):
+            errors.append(f"{where}: GCP v3 challenge entries need an exact evidence selector")
+        if selector.get("gcp_challenge_fact"):
+            if selector["gcp_challenge_fact"] != entry.get("id"):
+                errors.append(f"{where}: gcp_challenge_fact must equal the technique id")
+            if kind not in ("gcp_service_account", "gcp_user", "gcp_workspace_user", "gcp_group",
+                            "k8s_service_account", "gcp_verified_authority"):
+                errors.append(f"{where}: gcp_challenge_fact needs a bounded identity or authority target")
+            if entry.get("confidence") != "conditional":
+                errors.append(f"{where}: gcp_challenge_fact must remain conditional")
+        if selector.get("aws_challenge_fact") and selector["aws_challenge_fact"] != entry.get("id"):
+            errors.append(f"{where}: aws_challenge_fact must equal the technique id")
+        if selector.get("aws_challenge_fact"):
+            if kind not in ("aws_role", "aws_user", "aws_verified_authority"):
+                errors.append(f"{where}: aws_challenge_fact needs an IAM role/user or bounded authority target")
+            if entry.get("confidence") != "conditional":
+                errors.append(f"{where}: aws_challenge_fact must remain conditional")
+            if entry.get("source_kind") == "aws_challenge_foothold" and not re.fullmatch(
+                    r"aws_challenge_foothold:\*:(anonymous|runtime|local|application|endpoint)",
+                    str((entry.get("source_selector") or {}).get("source_id_glob", ""))):
+                errors.append(f"{where}: challenge foothold source must be restricted to one class")
         for key, wanted in (("k8s_secret_holds_cloud_credential", "cloud_identity"),
                             ("k8s_secret_holds_remote_cluster_credential", "k8s_remote_cluster"),
                             ("k8s_node_hosting_pod_of_source", "k8s_node"), ("k8s_sa_used_by_pending_pod", "k8s_service_account"),
@@ -1183,13 +1248,17 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
         aws_v2 = "via_assumable_role_attached_policy_covered_by" in selector
         aws_uses = [r for r in _requirements(requires) if any(
             "source.assumable_role_attached_policy_arn" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []
-        aws_ph = bool(aws_uses) and all(r.get("resource") == "{source.assumable_role_attached_policy_arn}" for r in aws_uses)
+        aws_ph = bool(aws_uses) and all(r.get("resource") == "{source.assumable_role_attached_policy_arn}"
+                                        and r.get("action") == "iam:CreatePolicyVersion" for r in aws_uses)
         if aws_v2 or aws_uses:
             expected = {"action": "iam:CreatePolicyVersion", "resource": "{source.assumable_role_attached_policy_arn}"}
             if not (aws_v2 and aws_ph and provider == "aws" and kind == "aws_account_admin"
+                    and target.get("scope") == "same_account"
                     and selector.get("via_assumable_role_attached_policy_covered_by") == "iam:CreatePolicyVersion"
                     and any(all(r.get(k) == v for k, v in expected.items()) for r in _requirements(requires))):
                 errors.append(f"{where}: assumable-role policy selector and CreatePolicyVersion placeholder requirement must occur together on aws_account_admin")
+            if aws_v2 and any(r.get("action") == "iam:SetDefaultPolicyVersion" for r in _requirements(requires)):
+                errors.append(f"{where}: SetDefaultPolicyVersion cannot satisfy the assumable-role policy selector")
             if aws_v2 and any(not any(r.get("action") == "iam:CreatePolicyVersion" and
                                       r.get("resource") == "{source.assumable_role_attached_policy_arn}"
                                       for r in alt) for alt in alternatives):
@@ -1199,7 +1268,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
                 errors.append(f"{where}: GCP running-pod KSA selector needs k8s_service_account in cluster scope")
             if {"k8s_sa_in_cluster", "k8s_sa_has_token_secret"} & set(selector):
                 errors.append(f"{where}: GCP running-pod KSA selector cannot combine with other KSA selectors")
-        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster", "k8s_sa_used_by_running_pod"} & set(selector):
+        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster", "k8s_sa_used_by_running_pod", "gcp_challenge_fact"} & set(selector):
             errors.append(f"{where}: gcp k8s_service_account targets need selector k8s_sa_has_token_secret, k8s_sa_in_cluster, or k8s_sa_used_by_running_pod")
         rolebound_uses = [r for r in _requirements(requires) if any(
             "source_rolebound_clusterrole" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []
@@ -1208,8 +1277,13 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             if not (provider == "k8s" and kind == "k8s_service_account" and target.get("scope") == "same_namespace"
                     and selector.get("k8s_sa_in_namespace") == "{target.namespace}"):
                 errors.append(f"{where}: source_rolebound_clusterrole needs a same-namespace K8s SA target")
-            if any(r.get("resource_name") != "{source_rolebound_clusterrole}" for r in rolebound_uses):
-                errors.append(f"{where}: source_rolebound_clusterrole is only valid as resource_name")
+            if any(r.get("resource_name") != "{source_rolebound_clusterrole}"
+                   or r.get("resource") != "clusterroles"
+                   or r.get("api_group") != "rbac.authorization.k8s.io"
+                   or r.get("namespace") != "*"
+                   or r.get("verb") not in ("escalate", "update", "patch")
+                   for r in rolebound_uses):
+                errors.append(f"{where}: source_rolebound_clusterrole requires named clusterroles escalate/update/patch in cluster scope")
             for alt in alternatives:
                 leaves = [r for r in alt if r.get("resource_name") == "{source_rolebound_clusterrole}"
                           and r.get("resource") == "clusterroles" and r.get("api_group") == "rbac.authorization.k8s.io"

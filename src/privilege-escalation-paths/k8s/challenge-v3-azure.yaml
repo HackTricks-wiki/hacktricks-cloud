@@ -1,0 +1,31 @@
+# Azure challenge review: exact attested facts only; no broad permission-based identity inference.
+- id: k8s-v3-33-missing-configmap-name-squatting
+  provider: k8s
+  service: challenge
+  title: Missing ConfigMap name squatting
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#configmap-name-squatting-and-live-update
+  summary: A missing ConfigMap may only block the pod. The narrow executable-path variant has an observable configuration
+    route and remains conditional on a future start.
+  requires:
+    all_of: []
+  source_kind:
+  - k8s_user
+  - k8s_service_account
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_challenge_fact: k8s-v3-33-missing-configmap-name-squatting
+    scope: any
+    outcome: workload_execution
+    aggregate_as: Exact reviewed target for Missing ConfigMap name squatting
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Only a scoped attestation of the exact actor, action, resource and target join may resolve this
+      edge. missing ConfigMap ref -> mounted key path -> container command/args executes that path -> pod SA; pod_created_or_retried_and_executes_projected_script
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and remove the exact unsafe resource or trust relationship.
+  notes: Requires a complete, reviewed k8s_privesc_challenge_evidence collection. Missing, partial or conflicting
+    facts are UNKNOWN/unresolved; verified facts remain conditional. A false join emits no edge. Missing, denied,
+    or unsupported facts emit only an unresolved target or UNKNOWN. An unverified precondition flag caps confidence
+    at conditional.

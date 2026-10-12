@@ -132,8 +132,18 @@ def main():
         if len(errors) > 50:
             print(f'... {len(errors) - 50} more errors', file=sys.stderr)
         return 1
+    evidence_bound = sum(entry.get('id', '').startswith('aws-v3-') for entry in result['entries'])
+    gcp_evidence_bound = sum(entry.get('id', '').startswith('gcp-v3-') for entry in result['entries'])
+    azure_evidence_bound = sum('azure_challenge_fact' in (entry.get('target', {}).get('selector') or {})
+                               for entry in result['entries'])
+    k8s_evidence_bound = sum('k8s_challenge_fact' in (entry.get('target', {}).get('selector') or {})
+                             for entry in result['entries'])
     print(f"Privilege-escalation paths are valid: {len(result['files'])} files, "
-          f"{len(result['entries'])} techniques, {result['excluded']} reviewed exclusions")
+          f"{len(result['entries'])} techniques, {result['excluded']} reviewed exclusions, "
+          f"{evidence_bound} evidence-bound AWS challenge techniques, "
+          f"{gcp_evidence_bound} evidence-bound GCP challenge techniques, "
+          f"{azure_evidence_bound} evidence-bound Azure challenge techniques, "
+          f"{k8s_evidence_bound} evidence-bound Kubernetes challenge techniques")
     return 0
 
 

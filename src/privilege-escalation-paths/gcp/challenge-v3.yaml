@@ -1,0 +1,1428 @@
+# GCP v3 challenge: every path needs exact reviewed evidence. No general IAM action alone is a finding.
+- id: gcp-v3-01-unpatched-apigee-hybrid-metadata-and-analytics-worker-cred
+  provider: gcp
+  service: gcp
+  title: Unpatched Apigee Hybrid metadata and analytics-worker credential chain
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-apigee-post-exploitation.md#historical--unpatched-hybrid-cve-2025-13292-gatewaytoheaven
+  summary: Proxy deployment write -> Apigee Hybrid processor SA; dependency artifact write + configured Dataflow
+    autoscale -> analytics-worker SA. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-01-unpatched-apigee-hybrid-metadata-and-analytics-worker-cred
+    scope: any
+    aggregate_as: Exact targets for Unpatched Apigee Hybrid metadata and analytics-worker credential chain
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcp_hybrid_runtime_identity and exact proxy/dependency/workload
+      joins; evaluate vulnerable version, deployed proxy right and artifact path. Both links conditional on exploit
+      success; cross-tenant analytics data is not a principal edge.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-02-copy-source-cluster-credential-secrets-with-backup-for-gke
+  provider: gcp
+  service: gcp
+  title: Copy source-cluster credential Secrets with Backup for GKE
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-backup-and-dr-post-exploitation.md#backup-and-restore-gke-secrets-into-an-attacker-accessible-cluster
+  summary: Backup/restore of exact Secret into attacker-readable cluster -> KSA or GCP SA represented by that Secret.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: k8s_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-02-copy-source-cluster-credential-secrets-with-backup-for-gke
+    scope: any
+    aggregate_as: Exact targets for Copy source-cluster credential Secrets with Backup for GKE
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add cross-cluster gkebackup_secret_restore selector.
+      Join source backup plan, included Secret namespace/name/type/annotation, target restore plan, readable destination
+      and named SA. Secret credential usability is an explicit conditional flag.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-03-recover-another-cloud-sql-login-by-exporting-and-cracking
+  provider: gcp
+  service: gcp
+  title: Recover another Cloud SQL login by exporting and cracking SQL Server password hashes
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-sql-post-exploitation.md#export-sql-server-login-password-hashes-with-sp_help_revlogin
+  summary: SQL Server proc EXECUTE -> named login password verifier -> potential login after offline recovery. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-03-recover-another-cloud-sql-login-by-exporting-and-cracking
+    scope: any
+    aggregate_as: Exact targets for Recover another Cloud SQL login by exporting and cracking SQL Server password
+      hashes
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcp_sql_login principal kind and password_verifier_recovery
+      condition. Never imply the hash is a usable credential or that a password will crack; no GCP IAM edge unless
+      the DB login is separately mapped to GCP identity.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:application
+- id: gcp-v3-04-forge-an-application-session-or-api-identity-with-a-kms-ma
+  provider: gcp
+  service: gcp
+  title: Forge an application session or API identity with a KMS MAC key
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-kms-post-exploitation.md#usetosign-on-mac--hmac-keys--forge-hmacs
+  summary: KMS MAC signing -> application principal that verifies this exact key. Exact source, target, scope and
+    prerequisite proof are required.
+  requires:
+    all_of:
+    - action: cloudkms.cryptoKeyVersions.useToSign
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-04-forge-an-application-session-or-api-identity-with-a-kms-ma
+    scope: any
+    aggregate_as: Exact targets for Forge an application session or API identity with a KMS MAC key
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Never infer any app principal from a MAC key alone. The key-to-verifier and token-to-principal
+      mappings must be explicit, and token acceptance is conditional. Add application_mac_trust target/pivot with
+      explicit key-version, MAC algorithm, message format, audience and principal mapping supplied by an application
+      configuration adapter; cloudkms.cryptoKeyVersions.useToSign must cover the enabled MAC key. Unknown app trust/claims
+      means UNKNOWN; valid MAC only yields application-plane access.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-05-steal-another-google-user-s-locally-stored-gcloud-access-o
+  provider: gcp
+  service: gcp
+  title: Steal another Google user’s locally stored gcloud access or refresh token
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistence.md#authenticated-user-tokens
+  summary: Host read of another account’s gcloud credential store -> that named Google user, potential until token
+    validity verified. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-05-steal-another-google-user-s-locally-stored-gcloud-access-o
+    scope: any
+    aggregate_as: Exact targets for Steal another Google user’s locally stored gcloud access or refresh token
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add host_credential_read source capability and gcp_user
+      target mapping. Require readable concrete credential record path/account identifier, not mere VM control;
+      token validity and scope explicit conditional flags.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-06-steal-a-service-account-private-key-or-access-token-from-a
+  provider: gcp
+  service: gcp
+  title: Steal a service-account private key or access token from a host
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistence.md#service-accounts
+  summary: Host read of service-account key/token file -> exact SA named by file metadata, conditional on usable
+    secret. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-06-steal-a-service-account-private-key-or-access-token-from-a
+    scope: any
+    aggregate_as: Exact targets for Steal a service-account private key or access token from a host
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add host_credential_read source and keyfile_to_gcp_sa
+      selector; require file identity metadata and reader authority.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-07-fetch-an-attached-service-account-s-token-after-gaining-gu
+  provider: gcp
+  service: gcp
+  title: Fetch an attached service account’s token after gaining guest code execution
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-non-svc-persistence.md#metadata
+  summary: Existing guest code execution on a resource -> its attached SA through metadata token endpoint. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-07-fetch-an-attached-service-account-s-token-after-gaining-gu
+    scope: any
+    aggregate_as: Exact targets for Fetch an attached service account’s token after gaining guest code execution
+  conditions:
+  - id: exact_verified_prerequisites
+    description: A mere attached SA is never a source edge. The source must already reach code execution on that
+      exact host, and scope restrictions apply. Add gcp_host_code_execution source foothold (or map existing proven
+      execution edge to a host node), then exact host->attached-SA relation from Compute/Run/GKE facts. On Compute,
+      record OAuth access scopes and cap reachable API permissions accordingly; metadata reachability remains conditional
+      for constrained environments.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-08-assign-a-stronger-workspace-administrator-role-to-a-contro
+  provider: gcp
+  service: workspace
+  title: Assign a stronger Workspace administrator role to a controlled account
+  source: src/pentesting-cloud/workspace-security/gws-admin-privesc.md#grant-yourselfan-account-a-privileged-admin-role
+  summary: Workspace roleAssignments.insert authority -> controlled account with a specific stronger admin role.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-08-assign-a-stronger-workspace-administrator-role-to-a-contro
+    scope: any
+    aggregate_as: Exact targets for Assign a stronger Workspace administrator role to a controlled account
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add Workspace admin privilege requirement (roleAssignments.insert)
+      resolved from collected workspace_role.rolePrivileges, assignment scope and OU. Target controlled gcp_workspace_user
+      or actor-created user; allow only assignable roles and actual target scope. No generic GCP IAM permission
+      stand-in.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-09-authorize-an-attacker-controlled-service-account-oauth-cli
+  provider: gcp
+  service: workspace
+  title: Authorize an attacker-controlled service-account OAuth client for Workspace domain-wide delegation
+  source: src/pentesting-cloud/workspace-security/gws-admin-persistence.md#domain-wide-delegation-grant-to-an-attacker-service-account
+  summary: Workspace DWD grant mutation + attacker-controlled signing client -> scoped user impersonation. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-09-authorize-an-attacker-controlled-service-account-oauth-cli
+    scope: any
+    aggregate_as: Exact targets for Authorize an attacker-controlled service-account OAuth client for Workspace
+      domain-wide delegation
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add workspace_dwd_grant_write authority and mutation
+      target with exact client ID/scopes; require proven signer/key control and tenant membership. Target Workspace
+      users only for authorized scopes, conditional on token exchange. Workspace Admin DWD grant is not exposed
+      by the existing cloud IAM evaluator; accept a separately attested Admin console capability/fact with UNKNOWN
+      if absent.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-10-install-or-trust-an-attacker-oauth-app-across-a-workspace
+  provider: gcp
+  service: workspace
+  title: Install or trust an attacker OAuth app across a Workspace domain
+  source: src/pentesting-cloud/workspace-security/gws-admin-persistence.md#marketplace-app-domain-install--oauth-app-trusted-allow-listing
+  summary: Domain-installed OAuth app or Trusted app + user scope eligibility -> potential delegated user access.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-10-install-or-trust-an-attacker-oauth-app-across-a-workspace
+    scope: any
+    aggregate_as: Exact targets for Install or trust an attacker OAuth app across a Workspace domain
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add workspace_oauth_app_install/trust setting, app
+      ownership, OU assignment and scope selector. Domain install can create a grant; Trusted alone only permits
+      later user consent and must carry user_consent_required condition. Never infer granted tokens merely from
+      app trust.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-11-point-workspace-sso-at-an-attacker-controlled-identity-pro
+  provider: gcp
+  service: workspace
+  title: Point Workspace SSO at an attacker-controlled identity provider
+  source: src/pentesting-cloud/workspace-security/gws-admin-persistence.md#sso--saml-sign-in-profile-tampering
+  summary: Workspace SSO profile write + assignment to target user + attacker-controlled IdP signing key -> potential
+    victim sign-in as target. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-11-point-workspace-sso-at-an-attacker-controlled-identity-pro
+    scope: any
+    aggregate_as: Exact targets for Point Workspace SSO at an attacker-controlled identity provider
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add workspace_sso_profile/assignment and controlled_idp
+      source facts; evaluate exact OU/group assignment, SP-initiated flow and target auth policy. Flag future_user_signin
+      and accepted_assertion as conditional; a profile URL alone gives no identity.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-12-modify-a-bound-apps-script-that-later-runs-under-its-owner
+  provider: gcp
+  service: workspace
+  title: Modify a bound Apps Script that later runs under its owner’s authorization
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/gws-app-scripts.md#shared-document-script-ownership
+  summary: Drive editor on bound script + existing owner-executed trigger/web-app deployment -> owner’s Workspace
+    identity. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-12-modify-a-bound-apps-script-that-later-runs-under-its-owner
+    scope: any
+    aggregate_as: Exact targets for Modify a bound Apps Script that later runs under its owner’s authorization
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Do not emit from document editor access or bound-script ownership alone. An exact executable trigger
+      or deployment and effective runner must be known. Add Apps Script project/deployment/trigger facts, editor
+      permission, executeAs and authorized OAuth scopes. Distinguish mere container ownership (no edge) from owner-created
+      installable trigger or execute-as-owner web app. Future trigger/run conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-13-recover-gcds-administrator-oauth-and-directory-credentials
+  provider: gcp
+  service: workspace
+  title: Recover GCDS administrator OAuth and directory credentials from host configuration
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcds-google-cloud-directory-sync.md#gcds---disk-tokens--ad-credentials
+  summary: Host-readable GCDS config plus decryptable key material -> configured Workspace/AD account, potential.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-13-recover-gcds-administrator-oauth-and-directory-credentials
+    scope: any
+    aggregate_as: Exact targets for Recover GCDS administrator OAuth and directory credentials from host configuration
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add GCDS credential-store type and exact configured
+      account target; secret decryption/validity conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-14-recover-another-gcpw-user-s-google-refresh-token-or-passwo
+  provider: gcp
+  service: workspace
+  title: Recover another GCPW user’s Google refresh token or password
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---registry-refresh-tokens
+  summary: Read GCPW user registry credential and DPAPI context -> named Google user, potential. Exact source, target,
+    scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-14-recover-another-gcpw-user-s-google-refresh-token-or-passwo
+    scope: any
+    aggregate_as: Exact targets for Recover another GCPW user’s Google refresh token or password
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcpw_registry_token selector, effective HKCU/DPAPI
+      access and token-validity condition.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-15-intercept-a-gcpw-user-s-google-authorization-response-duri
+  provider: gcp
+  service: workspace
+  title: Intercept a GCPW user’s Google authorization response during sign-in
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---mitm
+  summary: Control workstation interception path + GCPW configured OAuth sign-in -> potential victim token on future
+    sign-in. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-15-intercept-a-gcpw-user-s-google-authorization-response-duri
+    scope: any
+    aggregate_as: Exact targets for Intercept a GCPW user’s Google authorization response during sign-in
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcpw_login_interception source capability tied
+      to exact workstation/user and OAuth client; explicit victim_signin, transport_interception and code_exchange_success
+      conditions. GCPW installation alone is not an edge.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-16-recover-password-sync-administrator-oauth-or-ad-credential
+  provider: gcp
+  service: workspace
+  title: Recover Password Sync administrator OAuth or AD credentials from its host
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gps-google-password-sync.md#gps---dumping-password-and-token-from-disk
+  summary: Read Password Sync registry/config and decryption context -> configured Google admin or AD bind account,
+    potential. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-16-recover-password-sync-administrator-oauth-or-ad-credential
+    scope: any
+    aggregate_as: Exact targets for Recover Password Sync administrator OAuth or AD credentials from its host
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gps_credential_store selector with account target
+      and conditional secret decryptability/validity.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-17-join-a-gcp-iam-bound-workspace-group-by-changing-its-synch
+  provider: gcp
+  service: workspace
+  title: Join a GCP IAM-bound Workspace group by changing its synchronized external-directory group
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gws-admin-directory-sync.md#attacking-groups
+  summary: External directory group-member write + configured Directory Sync mapping -> IAM-bound Google group membership.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_group
+    selector:
+      gcp_challenge_fact: gcp-v3-17-join-a-gcp-iam-bound-workspace-group-by-changing-its-synch
+    scope: any
+    aggregate_as: Exact targets for Join a GCP IAM-bound Workspace group by changing its synchronized external-directory
+      group
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add cross-directory source principal and exact sync
+      rule join; new effective group membership is conditional on next successful sync, and only existing IAM-bound
+      Google group is target.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-18-create-a-second-google-workspace-super-admin
+  provider: gcp
+  service: workspace
+  title: Create a second Google Workspace Super Admin
+  source: src/pentesting-cloud/workspace-security/gws-admin-privesc.md#create-a-new-super-admin
+  summary: Workspace users.insert plus roleAssignments.insert -> new controlled Super Admin user. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-18-create-a-second-google-workspace-super-admin
+    scope: any
+    aggregate_as: Exact targets for Create a second Google Workspace Super Admin
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add actor_created_workspace_user target and exact
+      two-operation Workspace privilege check; require tenant setting permits new user and Super Admin assignment.
+      This is an actor-created identity path, not an edge to every existing admin.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-19-edit-a-shared-apps-script-that-still-has-another-user-s-in
+  provider: gcp
+  service: workspace
+  title: Edit a shared Apps Script that still has another user’s installable trigger
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/gws-app-scripts.md#abusing-shared-with-me-documents
+  summary: Editor of exact Apps Script + another user’s existing installable trigger -> trigger owner. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-19-edit-a-shared-apps-script-that-still-has-another-user-s-in
+    scope: any
+    aggregate_as: Exact targets for Edit a shared Apps Script that still has another user’s installable trigger
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add owner-trigger binding (script ID, trigger creator,
+      function, schedule/event source, granted scopes) and editor check. Future firing conditional. Google Apps
+      Script cannot list another user’s triggers from editor context, so accept owner-side inventory/attestation;
+      absent binding is UNKNOWN, not all script owners.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-20-extract-gcds-oauth-or-ad-credentials-from-process-memory
+  provider: gcp
+  service: workspace
+  title: Extract GCDS OAuth or AD credentials from process memory
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcds-google-cloud-directory-sync.md#gcds---dumping-tokens-from-memory
+  summary: GCDS process-memory read -> configured Google/AD account, potential credential extraction. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-20-extract-gcds-oauth-or-ad-credentials-from-process-memory
+    scope: any
+    aggregate_as: Exact targets for Extract GCDS OAuth or AD credentials from process memory
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add host_process_credential source with explicit
+      process owner/target config mapping; token residency and validity conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-21-recover-chrome-profile-refresh-tokens-on-a-gcpw-workstatio
+  provider: gcp
+  service: workspace
+  title: Recover Chrome profile refresh tokens on a GCPW workstation
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---disk-refresh-tokens
+  summary: Read Chrome profile token DB and Local State under GCPW workstation user -> profile Google account, potential.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-21-recover-chrome-profile-refresh-tokens-on-a-gcpw-workstatio
+    scope: any
+    aggregate_as: Exact targets for Recover Chrome profile refresh tokens on a GCPW workstation
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add browser_profile_token target mapping and conditional
+      decryptability/validity.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-22-recover-google-tokens-from-browser-process-memory-on-a-gcp
+  provider: gcp
+  service: workspace
+  title: Recover Google tokens from browser process memory on a GCPW workstation
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---dumping-tokens-from-processes-memory
+  summary: Read Chrome process memory on GCPW workstation -> configured signed-in user, potential. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-22-recover-google-tokens-from-browser-process-memory-on-a-gcp
+    scope: any
+    aggregate_as: Exact targets for Recover Google tokens from browser process memory on a GCPW workstation
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add browser_process_credential source/target mapping;
+      residency and validity explicit conditions.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-23-recover-a-gcpw-account-password-from-the-windows-lsa-secre
+  provider: gcp
+  service: workspace
+  title: Recover a GCPW account password from the Windows LSA secret
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---recovering-clear-text-password
+  summary: Read GCPW LSA recovery secret plus permitted escrow OAuth flow -> named Windows/Google user, potential.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-23-recover-a-gcpw-account-password-from-the-windows-lsa-secre
+    scope: any
+    aggregate_as: Exact targets for Recover a GCPW account password from the Windows LSA secret
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcpw_password_recovery relation with SID, encrypted
+      recovery record, OAuthLogin-scoped token precondition; recovered password and account reuse conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-24-extract-password-sync-oauth-or-ad-credentials-from-process
+  provider: gcp
+  service: workspace
+  title: Extract Password Sync OAuth or AD credentials from process memory
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gps-google-password-sync.md#gps---dumping-tokens-from-memory
+  summary: Password Sync process-memory read -> configured Google/AD account, potential. Exact source, target, scope
+    and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-24-extract-password-sync-oauth-or-ad-credentials-from-process
+    scope: any
+    aggregate_as: Exact targets for Extract Password Sync OAuth or AD credentials from process memory
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gps_process_credential mapping; token residency
+      and validity conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-25-phish-a-workspace-user-into-issuing-and-disclosing-an-app
+  provider: gcp
+  service: workspace
+  title: Phish a Workspace user into issuing and disclosing an app password
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/README.md#app-password-phishing
+  summary: Attacker-controlled lure + victim-created/disclosed app password -> that user’s legacy Workspace service
+    access. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-25-phish-a-workspace-user-into-issuing-and-disclosing-an-app
+    scope: any
+    aggregate_as: Exact targets for Phish a Workspace user into issuing and disclosing an app password
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add external_actor and workspace_legacy_app_password
+      target kind/scopes; record explicit victim_creates_and_discloses_secret condition and supported legacy protocol.
+      No GCP IAM principal edge because an app password is service-specific.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:user_interaction
+- id: gcp-v3-26-obtain-delegated-user-tokens-through-consent-to-an-attacke
+  provider: gcp
+  service: workspace
+  title: Obtain delegated user tokens through consent to an attacker OAuth app
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/README.md#oauth-apps-phishing
+  summary: Attacker-controlled OAuth client + eligible victim + later consent -> delegated user token for exact
+    scopes. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-26-obtain-delegated-user-tokens-through-consent-to-an-attacke
+    scope: any
+    aggregate_as: Exact targets for Obtain delegated user tokens through consent to an attacker OAuth app
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add external_oauth_client source, consent policy
+      and target user/scope; future_user_consent and token_issued conditions cap to MANUAL. No edge from client
+      registration or allowed app alone.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:user_interaction
+- id: gcp-v3-27-relay-a-victim-s-oauth-authorization-code-or-callback-url
+  provider: gcp
+  service: workspace
+  title: Relay a victim’s OAuth authorization code or callback URL
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/README.md#manual-authorization-response-relay
+  summary: Attacker-controlled OAuth client/redirect and victim-relayed short-lived code -> delegated target user
+    token. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-27-relay-a-victim-s-oauth-authorization-code-or-callback-url
+    scope: any
+    aggregate_as: Exact targets for Relay a victim’s OAuth authorization code or callback URL
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add authorization_code_relay conditional source/target
+      with client ID, redirect URI, requested scopes and eligible victim; explicit victim_relays_code and timely_exchange
+      conditions. A registered redirect alone proves no code receipt.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:user_interaction
+- id: gcp-v3-28-exfiltrate-an-apps-script-oauth-token-after-victim-authori
+  provider: gcp
+  service: workspace
+  title: Exfiltrate an Apps Script OAuth token after victim authorization
+  source: src/pentesting-cloud/workspace-security/gws-google-platforms-phishing/gws-app-scripts.md#leak-token
+  summary: Writable Apps Script code running under a known effective user -> that user’s short-lived OAuth token,
+    within granted scopes. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_challenge_fact: gcp-v3-28-exfiltrate-an-apps-script-oauth-token-after-victim-authori
+    scope: any
+    aggregate_as: Exact targets for Exfiltrate an Apps Script OAuth token after victim authorization
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add script execution binding and scopes from manifest/authorization;
+      leak-token effect conditional on a trigger/deployment or victim authorization/run. Never infer token scope
+      from source code alone.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:user_interaction
+- id: gcp-v3-29-recover-another-user-s-gcpw-refresh-token-or-stored-google
+  provider: gcp
+  service: workspace
+  title: Recover another user’s GCPW refresh token or stored Google password
+  source: src/pentesting-cloud/workspace-security/gws-workspace-sync-attacks-gcpw-gcds-gps-directory-sync-with-ad-and-entraid/gcpw-google-credential-provider-for-windows.md#gcpw---get-tokens
+  summary: GCPW stored token/password retrieval, using the concrete registry, Chrome DB or LSA credential subcase.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-29-recover-another-user-s-gcpw-refresh-token-or-stored-google
+    scope: any
+    aggregate_as: Exact targets for Recover another user’s GCPW refresh token or stored Google password
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. Add parent source alias expanded into mutually
+      exclusive child selectors #14/#21/#23; each retains its exact account mapping and conditional secret validity.
+      Do not create a broad GCPW-installation edge.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:host
+- id: gcp-v3-30-projects-move-folders-move-into-a-parent-where-the-source
+  provider: gcp
+  service: gcp
+  title: projects.move / folders.move into a parent where the source holds inherited admin
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#projectsmove--foldersmove--change-inherited-security-controls
+  summary: Authorized project/folder move -> newly inherited exact IAM permission on moved subtree. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-30-projects-move-folders-move-into-a-parent-where-the-source
+    scope: any
+    aggregate_as: Exact targets for projects.move / folders.move into a parent where the source holds inherited
+      admin
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F10: simulate one move, recompute allow/deny/PAB/org
+      constraints, emit only newly effective named permission; never assume destination owner gains source identity.
+      Require resourcemanager.projects.update on project and projects.move on project/current/destination parents
+      for project move, or folders.move on both parents for folder move; cross-org migration is a separate case.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-31-projects-deletepolicybinding-updatepolicybinding-pab-escap
+  provider: gcp
+  service: gcp
+  title: projects.deletePolicyBinding / updatePolicyBinding PAB escape
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#projectsdeletepolicybinding--projectsupdatepolicybinding--escape-a-pab
+  summary: Remove exact PAB binding that blocks an existing grant -> unblock named preexisting technique. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-31-projects-deletepolicybinding-updatepolicybinding-pab-escap
+    scope: any
+    aggregate_as: Exact targets for projects.deletePolicyBinding / updatePolicyBinding PAB escape
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F11: add gcp_exact_pab_blocker_removed and blocker_removal
+      outcome. Recompute effective grant after one authorized delete/update; no standalone principal edge. Deletion
+      also requires iam.principalaccessboundarypolicies.unbind on the owning organization; conditional update requires
+      iam.principalaccessboundarypolicies.bind. Every remaining applicable PAB must be recomputed.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-32-createtagbinding-deletetagbinding-condition-flip
+  provider: gcp
+  service: gcp
+  title: createTagBinding / deleteTagBinding condition flip
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#createtagbinding--deletetagbinding--flip-tag-gated-security-conditions
+  summary: Create/delete exact tag binding -> activate existing tag-conditioned IAM grant. Exact source, target,
+    scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-32-createtagbinding-deletetagbinding-condition-flip
+    scope: any
+    aggregate_as: Exact targets for createTagBinding / deleteTagBinding condition flip
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F12: evaluate resource.matchTag/matchTagId against
+      before/after effective tags and one authorized binding change; unsupported CEL UNKNOWN. Attachment requires
+      target-side createTagBinding plus value-side tagValueBindings.create (or the corresponding delete rights);
+      tag policy self-grant is a separate precursor.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-33-orgpolicy-policy-set-lifts-org-policy-constraints
+  provider: gcp
+  service: gcp
+  title: orgpolicy.policy.set lifts org policy constraints
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md#orgpolicypolicyset
+  summary: Org Policy v1 set lifts exact blocker on an otherwise authorized action. Exact source, target, scope
+    and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: orgpolicy.policy.set
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-33-orgpolicy-policy-set-lifts-org-policy-constraints
+    scope: any
+    aggregate_as: Exact targets for orgpolicy.policy.set lifts org policy constraints
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F13: add gcp_exact_org_constraint_removed blocker_removal,
+      allowlist constraint semantics, re-evaluate only named existing path.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-34-disable-cross-project-sa-usage-constraint-plus-actas
+  provider: gcp
+  service: gcp
+  title: Disable cross-project SA usage constraint plus actAs
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md#orgpolicypolicyset-iamserviceaccountsactas
+  summary: Disable cross-project SA usage constraint -> existing deploy+actAs chain becomes usable. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: orgpolicy.policy.set
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-34-disable-cross-project-sa-usage-constraint-plus-actas
+    scope: any
+    aggregate_as: Exact targets for Disable cross-project SA usage constraint plus actAs
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F13: permit only iam.disableCrossProjectServiceAccountUsage,
+      recompute same-project/cross-project restrictions, service agent actAs and deploy rights before emitting target
+      SA.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-35-org-policy-v2-policies-create-update-delete
+  provider: gcp
+  service: gcp
+  title: Org Policy v2 policies.create / update / delete
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-orgpolicy-privesc.md#orgpolicypoliciescreate--orgpolicypoliciesupdate-v2-api--disable-guardrails-at-project-scope
+  summary: Org Policy v2 create/update/delete lifts exact constraint blocking named path. Exact source, target,
+    scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-35-org-policy-v2-policies-create-update-delete
+    scope: any
+    aggregate_as: Exact targets for Org Policy v2 policies.create / update / delete
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F13: one-operation blocker-removal simulation
+      with exact v2 authority and allowlisted constraint; no generic admin edge.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-36-service-perimeter-update
+  provider: gcp
+  service: gcp
+  title: Service perimeter update
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md#accesscontextmanagerserviceperimetersupdate--defeat-vpc-sc-data-exfil-protection
+  summary: Perimeter update lifts VPC-SC block on an already IAM-authorized target API call. Exact source, target,
+    scope and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: accesscontextmanager.servicePerimeters.update
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-36-service-perimeter-update
+    scope: any
+    aggregate_as: Exact targets for Service perimeter update
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add gcp_vpc_sc_exact_blocker_removed; simulate ingress/egress/status
+      mutation for one API request context. Emit only activated existing identity path, not identity from perimeter
+      edit.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-37-bulk-replaceall-of-access-levels-perimeters
+  provider: gcp
+  service: gcp
+  title: Bulk replaceAll of access levels / perimeters
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md#accesslevelsreplaceall--serviceperimetersreplaceall--atomic-bulk-overwrite-distinct-audit-method
+  summary: replaceAll removes exact access-level/perimeter block on existing identity path. Exact source, target,
+    scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-37-bulk-replaceall-of-access-levels-perimeters
+    scope: any
+    aggregate_as: Exact targets for Bulk replaceAll of access levels / perimeters
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Same gcp_vpc_sc_exact_blocker_removed with atomic
+      replacement and full policy snapshot; require permission for chosen replaceAll RPC. Dry-run-only replacement
+      has no effect.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-38-dry-run-spec-staging-and-enforcement-flip
+  provider: gcp
+  service: gcp
+  title: Dry-run spec staging and enforcement flip
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md#dry-run-spec-vs-enforced-status--stealth-staging--one-call-flip
+  summary: Commit staged dry-run perimeter spec -> activate an otherwise blocked IAM-authorized request. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: accesscontextmanager.servicePerimeters.update
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-38-dry-run-spec-staging-and-enforcement-flip
+    scope: any
+    aggregate_as: Exact targets for Dry-run spec staging and enforcement flip
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add status/spec state and commit simulation; staging
+      alone has no edge. After authorized commit, recompute one exact request; conditional on commit completion
+      and request context.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-39-authorized-orgs-injection
+  provider: gcp
+  service: gcp
+  title: Authorized orgs injection
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md#authorizedorgsdescs-authorized-orgs--cross-org-trust-injection
+  summary: Authorized org descriptor write changes an exact device/credential-strength access-level predicate and
+    thereby unblocks a named path. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-39-authorized-orgs-injection
+    scope: any
+    aggregate_as: Exact targets for Authorized orgs injection
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add authorizedOrgDesc->accessLevel->perimeter dependency.
+      Only when a referenced access level changes its decision for a concrete request can an existing IAM path activate;
+      descriptor alone is no edge.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-40-issue-a-certificate-for-another-identity
+  provider: gcp
+  service: gcp
+  title: Issue a certificate for another identity
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-certificate-authority-service-privesc.md#privatecacertificatescreate--issue-a-certificate-for-a-more-privileged-identity
+  summary: CA issuance of cert whose Subject/SAN maps through exact X.509 WIF provider -> bound GCP principal/SA.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: privateca.certificates.create
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-40-issue-a-certificate-for-another-identity
+    scope: any
+    aggregate_as: Exact targets for Issue a certificate for another identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F14: parse active CA chain, pool/template policy,
+      WIF trust/mapping and IAM binding; actor-chosen CSR must satisfy all constraints.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-41-ca-pool-setiampolicy
+  provider: gcp
+  service: gcp
+  title: CA pool setIamPolicy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-certificate-authority-service-privesc.md#privatecacapoolssetiampolicy--grant-certificate-issuance-on-a-ca-pool
+  summary: 'Pool setIamPolicy self-grants certificate issuance, then #40 exact trust chain. Exact source, target,
+    scope and prerequisite proof are required.'
+  requires:
+    all_of:
+    - action: privateca.caPools.setIamPolicy
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-41-ca-pool-setiampolicy
+    scope: any
+    aggregate_as: Exact targets for CA pool setIamPolicy
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F14: simulate valid policy write subject to constraints;
+      then run issuance/X.509 WIF mapping. Never infer project-level IAM from pool policy itself.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-42-relax-issuance-constraints
+  provider: gcp
+  service: gcp
+  title: Relax issuance constraints
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-certificate-authority-service-privesc.md#privatecacapoolsupdate-or-privatecacertificatetemplatesupdate--issuance--relax-certificate-constraints
+  summary: 'Pool/template update relaxes exact issuance restriction, then #40 trust chain. Exact source, target,
+    scope and prerequisite proof are required.'
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-42-relax-issuance-constraints
+    scope: any
+    aggregate_as: Exact targets for Relax issuance constraints
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F14: simulate one authorized update and required
+      certificateTemplates.use/issuance. Other remaining restrictions must still pass.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-43-kms-usetosign-on-a-key-that-backs-a-trusted-jwt-oidc-issue
+  provider: gcp
+  service: gcp
+  title: KMS useToSign on a key that backs a trusted JWT/OIDC issuer
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-kms-post-exploitation.md#signature--jwt--oidc-forgery-with-only-usetosign
+  summary: KMS asymmetric signer used by a trusted OIDC WIF provider -> exact bound GCP principal. Exact source,
+    target, scope and prerequisite proof are required.
+  requires:
+    all_of:
+    - action: cloudkms.cryptoKeyVersions.useToSign
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-v3-43-kms-usetosign-on-a-key-that-backs-a-trusted-jwt-oidc-issue
+    scope: any
+    aggregate_as: Exact targets for KMS useToSign on a key that backs a trusted JWT/OIDC issuer
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F15: compare KMS public key/version and algorithm
+      with provider JWKS; prove issuer/audience/claim mapping and IAM binding. Sign permission on same enabled version.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-44-workspace-admin-resets-a-tenant-user-s-password-or-adds-it
+  provider: gcp
+  service: gcp
+  title: Workspace admin resets a tenant user's password or adds itself to a tenant group to obtain that identity's
+    GCP roles
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#access-privileged-gcp-users
+  summary: Workspace admin password reset or group membership mutation -> exact managed user/group with GCP IAM
+    roles. Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_user
+    selector:
+      gcp_challenge_fact: gcp-v3-44-workspace-admin-resets-a-tenant-user-s-password-or-adds-it
+    scope: any
+    aggregate_as: Exact targets for Workspace admin resets a tenant user's password or adds itself to a tenant group
+      to obtain that identity's GCP roles
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F16: exact Workspace privilege/OU/suspension
+      rules and group management authority. Reset edge conditional on login/MFA challenge; group mutation targets
+      exact IAM-bound group.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-45-abuse-an-over-broad-existing-workload-workforce-identity-f
+  provider: gcp
+  service: gcp
+  title: Abuse an over-broad existing workload/workforce identity federation binding from an external identity
+  source: src/pentesting-cloud/gcp-security/gcp-basic-information/gcp-federation-abuse.md#gcp
+  summary: Controllable external issuer subject meeting an existing WIF provider and IAM binding -> bound GCP SA/principal.
+    Exact source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-45-abuse-an-over-broad-existing-workload-workforce-identity-f
+    scope: any
+    aggregate_as: Exact targets for Abuse an over-broad existing workload/workforce identity federation binding
+      from an external identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add external_federated_source kind and claim-satisfiability
+      evaluator for provider mapping/condition and exact principalSet binding. GitHub public-repository claim control
+      may be declared with issuer evidence; arbitrary issuer/source control absent means UNKNOWN, not every local
+      principal.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:external
+- id: gcp-v3-46-abuse-an-over-broad-existing-workload-workforce-identity-f
+  provider: gcp
+  service: gcp
+  title: Abuse an over-broad existing workload/workforce identity federation binding from an external identity
+  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#federation-and-metadata-server-abuse
+  summary: 'Unpinned GitHub OIDC federation -> #45; GKE metadata SSRF variant requires a separate proven pod-to-node-metadata
+    reachability edge. Exact source, target, scope and prerequisite proof are required.'
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-46-abuse-an-over-broad-existing-workload-workforce-identity-f
+    scope: any
+    aggregate_as: Exact targets for Abuse an over-broad existing workload/workforce identity federation binding
+      from an external identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing or
+      unsupported facts are UNKNOWN, never a derived/FAIL path. Add external_federated_source for GitHub claim control
+      and k8s_pod_metadata_reachable selector for exact node SA with metadata mode/legacy endpoints. No edge from
+      GKE cluster existence or pool-wide binding alone.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:external
+- id: gcp-v3-47-abuse-an-over-broad-existing-workload-workforce-identity-f
+  provider: gcp
+  service: gcp
+  title: Abuse an over-broad existing workload/workforce identity federation binding from an external identity
+  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/iam-and-service-account-impersonation-attacks.md#workload--workforce-identity-federation-confused-deputy
+  summary: External AWS/Azure/GitHub identity with controllable qualifying claims -> exact WIF-bound target. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_challenge_foothold
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-47-abuse-an-over-broad-existing-workload-workforce-identity-f
+    scope: any
+    aggregate_as: Exact targets for Abuse an over-broad existing workload/workforce identity federation binding
+      from an external identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. Same external_federated_source/claim evaluator
+      as #45, with issuer-specific ownership evidence. Unsupported CEL or unproven external credential control is
+      UNKNOWN; pool-wide trust is conditional exposure only.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Requires reviewed configuration or runtime evidence. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+  source_selector:
+    source_id_glob: gcp_challenge_foothold:*:external
+- id: gcp-v3-48-open-an-iam-bound-google-group-to-later-self-join-by-a-con
+  provider: gcp
+  service: gcp
+  title: Open an IAM-bound Google Group to later self-join by a controlled identity
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-cloud-identity-persistence.md#open-an-iam-bound-groups-join-policy--durable-self-service-re-entry
+  summary: Group owner/manager changes join setting and controlled user later self-joins IAM-bound group. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind: gcp_user
+  target:
+    kind: gcp_group
+    selector:
+      gcp_challenge_fact: gcp-v3-48-open-an-iam-bound-google-group-to-later-self-join-by-a-con
+    scope: any
+    aggregate_as: Exact targets for Open an IAM-bound Google Group to later self-join by a controlled identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F17: new gcp_group_join_policy_editable_by_source
+      selector, exact group and controlled joiner, tenant policy. Future self-join conditional; only actual IAM-bound
+      group target.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.
+- id: gcp-v3-49-deploy-caller-controlled-infrastructure-as-a-selected-serv
+  provider: gcp
+  service: gcp
+  title: Deploy caller-controlled infrastructure as a selected service account through Application Design Center
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-application-design-center-enum.md#remote-mcp-server
+  summary: Design Center editable IaC plus deploy permission and exact selected SA/agent actAs -> selected SA. Exact
+    source, target, scope and prerequisite proof are required.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-v3-49-deploy-caller-controlled-infrastructure-as-a-selected-serv
+    scope: any
+    aggregate_as: Exact targets for Deploy caller-controlled infrastructure as a selected service account through
+      Application Design Center
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'Emit only a conditional/MANUAL edge when the exact source, resource, and target join; missing
+      or unsupported facts are UNKNOWN, never a derived/FAIL path. F18: add gcp_design_center_deploys_as_sa; require
+      application update/deploy, mcp.tools.call if MCP route, caller and service-agent actAs, exact application/revision/IaC
+      and target SA. Conditional on deployment execution.'
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named capability and verify the exact execution, credential or trust relationship.
+  notes: Collector request recorded in privesc-v3-collector-requests.md. Absent or incomplete evidence is UNKNOWN/unresolved;
+    verified evidence remains conditional.

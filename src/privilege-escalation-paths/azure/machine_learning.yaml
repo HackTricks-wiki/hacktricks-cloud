@@ -369,3 +369,38 @@
   references:
     - https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/aiproject#connections
   notes: Data-plane counterpart of the ARM listsecrets actions in azure-ml-connection-secrets; uses an Entra token for the Foundry project endpoint.
+
+- id: azure-ml-compute-code-execution-marquee
+  provider: azure
+  service: machine_learning
+  title: Submit code to existing managed-identity-bearing ML compute (marquee source)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#compute-as-identity-rce-marquee-privesc
+  summary: The source can obtain the privileges of the compute target's managed identities.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.MachineLearningServices/workspaces/jobs/write
+        scope: '{target.host_resource.workspace}'
+    - - action: Microsoft.MachineLearningServices/workspaces/experiments/runs/write
+        scope: '{target.host_resource.workspace}'
+    - - action: Microsoft.MachineLearningServices/workspaces/notebooks/vm/write
+        scope: '{target.host_resource.workspace}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/computes
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+    outcome: workload_execution
+  conditions:
+  - id: target_reads
+    description: Read permissions on the selected compute, environment and workspace are typically required by clients.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict jobs/write and keep compute identities least-privileged.
+  references:
+  - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-identity-based-service-authentication
+  notes: 'Source alias for azure-ml-jobs-write-compute-identity; same target and actions. A successful run on the
+    selected compute remains conditional. '
