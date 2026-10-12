@@ -102,6 +102,8 @@ SELECTOR_KEYS = {
         "A customer-managed policy attached to the source ({source.attached_policy_arn}) is covered by the action."),
     "via_assumable_role_covered_by": (("aws",), "action",
         "The source can assume a role on which it also holds the action (two-step self-escalation)."),
+    "via_assumable_role_attached_policy_covered_by": (("aws",), "action",
+        "An assumable same-account role becomes admin after the source creates a default version of an attached customer policy."),
     "via_resource_type": (("aws",), "string_or_list",
         "Target role is attached to an existing resource of that type ({target.resource_arn}); lambda_function, "
         "ec2_instance, codebuild_project, glue_job, redshift_cluster, rds_db_instance, sagemaker_notebook_instance and "
@@ -280,7 +282,7 @@ SELECTOR_KEYS = {
     "k8s_node_hosting_pods_with_sa": (("k8s",), "bool_true",
         "Service account is mounted by a scheduled pod (k8s_service_account) or node hosts pods (k8s_node); "
         "with a k8s_node source, the SAs of pods scheduled on that node."),
-    "k8s_sa_used_by_running_pod": (("k8s",), "bool_true", "Service account is used by at least one collected running pod."),
+    "k8s_sa_used_by_running_pod": (("k8s", "gcp"), "bool_true", "Service account is used by a running pod with an available token."),
     "k8s_sa_used_by_controller_managed_pod": (("k8s",), "bool_true",
         "Service account is used by a pod owned by a controller (ownerReferences)."),
     "k8s_node_schedulable": (("k8s",), "bool_true", "Node is not cordoned (spec.unschedulable is not true)."),
@@ -663,10 +665,11 @@ PLACEHOLDERS = {
     "target.domain_registration", "target.image_family_project",
     "source", "source.account", "source.arn", "source.id", "source.email", "source.namespace", "source.name",
     "source.scope", "source.attached_policy_arn", "source.group_arn", "source.assumable_role_arn",
+    "source.assumable_role_attached_policy_arn",
     "source.controlled_user", "target.user",
     "pivot", "pivot.namespace",
     "account", "project", "scope", "namespace", "cluster",
-    "admin_equivalent_clusterrole", "source_bound_clusterrole", "source_bound_role", "host_scc",
+    "admin_equivalent_clusterrole", "source_bound_clusterrole", "source_bound_role", "source_rolebound_clusterrole", "host_scc",
 }
 ENTRY_FIELDS = {"id", "provider", "service", "title", "source", "source_revision", "summary", "requires", "target",
                 "conditions", "blockers", "confidence", "severity", "mitigation", "references", "notes",
@@ -1043,6 +1046,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: source file not found in hacktricks-cloud: {source.split('#', 1)[0]}")
     requires = entry.get("requires")
     groups = 0
+    alternatives = []
     if not isinstance(requires, dict) or set(requires) - {"all_of", "any_of"}:
         errors.append(f"{where}: requires must be a mapping with all_of/any_of")
     else:
@@ -1176,8 +1180,44 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             if bad:
                 errors.append(f"{where}: placeholders {bad} cannot resolve on entity target kind {kind} "
                               f"(only {sorted(allowed)}); use a source.* placeholder or a principal target kind")
-        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster"} & set(selector):
-            errors.append(f"{where}: gcp k8s_service_account targets need selector k8s_sa_has_token_secret or k8s_sa_in_cluster")
+        aws_v2 = "via_assumable_role_attached_policy_covered_by" in selector
+        aws_uses = [r for r in _requirements(requires) if any(
+            "source.assumable_role_attached_policy_arn" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []
+        aws_ph = bool(aws_uses) and all(r.get("resource") == "{source.assumable_role_attached_policy_arn}" for r in aws_uses)
+        if aws_v2 or aws_uses:
+            expected = {"action": "iam:CreatePolicyVersion", "resource": "{source.assumable_role_attached_policy_arn}"}
+            if not (aws_v2 and aws_ph and provider == "aws" and kind == "aws_account_admin"
+                    and selector.get("via_assumable_role_attached_policy_covered_by") == "iam:CreatePolicyVersion"
+                    and any(all(r.get(k) == v for k, v in expected.items()) for r in _requirements(requires))):
+                errors.append(f"{where}: assumable-role policy selector and CreatePolicyVersion placeholder requirement must occur together on aws_account_admin")
+            if aws_v2 and any(not any(r.get("action") == "iam:CreatePolicyVersion" and
+                                      r.get("resource") == "{source.assumable_role_attached_policy_arn}"
+                                      for r in alt) for alt in alternatives):
+                errors.append(f"{where}: every alternative using the assumable-role policy selector needs its CreatePolicyVersion requirement")
+        if "k8s_sa_used_by_running_pod" in selector and provider == "gcp":
+            if kind != "k8s_service_account" or target.get("scope") != "cluster":
+                errors.append(f"{where}: GCP running-pod KSA selector needs k8s_service_account in cluster scope")
+            if {"k8s_sa_in_cluster", "k8s_sa_has_token_secret"} & set(selector):
+                errors.append(f"{where}: GCP running-pod KSA selector cannot combine with other KSA selectors")
+        if kind == "k8s_service_account" and provider == "gcp" and not {"k8s_sa_has_token_secret", "k8s_sa_in_cluster", "k8s_sa_used_by_running_pod"} & set(selector):
+            errors.append(f"{where}: gcp k8s_service_account targets need selector k8s_sa_has_token_secret, k8s_sa_in_cluster, or k8s_sa_used_by_running_pod")
+        rolebound_uses = [r for r in _requirements(requires) if any(
+            "source_rolebound_clusterrole" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []
+        rolebound = bool(rolebound_uses)
+        if rolebound:
+            if not (provider == "k8s" and kind == "k8s_service_account" and target.get("scope") == "same_namespace"
+                    and selector.get("k8s_sa_in_namespace") == "{target.namespace}"):
+                errors.append(f"{where}: source_rolebound_clusterrole needs a same-namespace K8s SA target")
+            if any(r.get("resource_name") != "{source_rolebound_clusterrole}" for r in rolebound_uses):
+                errors.append(f"{where}: source_rolebound_clusterrole is only valid as resource_name")
+            for alt in alternatives:
+                leaves = [r for r in alt if r.get("resource_name") == "{source_rolebound_clusterrole}"
+                          and r.get("resource") == "clusterroles" and r.get("api_group") == "rbac.authorization.k8s.io"
+                          and r.get("namespace") == "*"]
+                if not (any(r.get("verb") == "escalate" for r in leaves)
+                        and any(r.get("verb") in ("update", "patch") for r in leaves)):
+                    errors.append(f"{where}: every alternative needs escalate and update/patch on the same rolebound ClusterRole")
+                    break
         if kind == "k8s_service_account" and provider == "k8s" and isinstance(requires, dict):
             text = repr(requires) + repr(selector)
             if "{target.namespace}" not in text and "k8s_sa_in_namespace" not in selector and target.get("scope") != "same_namespace":

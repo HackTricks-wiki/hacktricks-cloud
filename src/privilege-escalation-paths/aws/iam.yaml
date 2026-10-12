@@ -1044,3 +1044,28 @@
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
   notes: Complements aws-sts-assumerole-trusted (which needs sts:AssumeRole on the target in the source's own policy) and aws-iam-createrole-attach-assume (same-account admin). Same-account targets are left to aws-iam-createrole-attach-assume through target_in_other_account. A role trusting the source's account root, or "*" with an aws:PrincipalArn condition, is satisfiable by any new role in that account; trust conditions keep the edge conditional.
+
+- id: aws-iam-createpolicyversion-assumable-role
+  provider: aws
+  service: iam
+  title: Rewrite a managed policy attached to an assumable role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamcreatepolicyversion
+  source_revision: 8d6a341c8a
+  summary: A new default version of a customer-managed policy can grant administration to a role the source can assume.
+  requires:
+    all_of:
+      - action: iam:CreatePolicyVersion
+        resource: "{source.assumable_role_attached_policy_arn}"
+  target:
+    kind: aws_account_admin
+    selector:
+      via_assumable_role_attached_policy_covered_by: iam:CreatePolicyVersion
+    scope: same_account
+    outcome: scope_control
+  conditions:
+    - id: policy_version_capacity
+      description: A policy with five versions requires permission to delete a nondefault version before creation.
+  blockers: [scp_or_boundary_deny]
+  confidence: conditional
+  severity: critical
+  mitigation: Separate policy-version editing from role assumption and constrain the role with a boundary.

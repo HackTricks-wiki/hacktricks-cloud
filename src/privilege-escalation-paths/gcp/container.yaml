@@ -643,3 +643,51 @@
   references:
     - https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
   notes: HackTricks @6fb9ac51fd states the bind permission follows the referenced role kind, not whether the binding is namespaced. The cluster-wide variants are gcp-container-clusterroles-bind and gcp-container-clusterroles-escalate. GKE IAM container.* grants apply to every namespace of every cluster in the project.
+
+- id: gcp-container-pods-exec-running-ksa
+  provider: gcp
+  service: container
+  title: Reach the KSA of a running pod through GKE exec
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containerpodsexec
+  source_revision: 8d6a341c8a
+  summary: Exec reaches only KSAs whose tokens are available in running pods of the covered cluster.
+  requires:
+    all_of:
+      - action: container.pods.exec
+        resource: "{target.scope}"
+  target:
+    kind: k8s_service_account
+    selector: {k8s_sa_used_by_running_pod: true}
+    scope: cluster
+    outcome: credentials
+  conditions:
+    - id: pod_exec_usable
+      description: A running container must admit exec and expose its mounted token.
+  blockers: [gcp_deny_policy]
+  confidence: conditional
+  severity: high
+  mitigation: Restrict GKE pod exec and avoid broadly privileged workload service accounts.
+
+- id: gcp-container-nodes-proxy-running-ksa
+  provider: gcp
+  service: container
+  title: Reach the KSA of a running pod through the kubelet proxy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#containernodesproxy
+  source_revision: 8d6a341c8a
+  summary: A usable kubelet exec endpoint reaches tokens of KSAs mounted by running pods.
+  requires:
+    all_of:
+      - action: container.nodes.proxy
+        resource: "{target.scope}"
+  target:
+    kind: k8s_service_account
+    selector: {k8s_sa_used_by_running_pod: true}
+    scope: cluster
+    outcome: credentials
+  conditions:
+    - id: kubelet_exec_usable
+      description: The kubelet proxy must expose an exec path to the matched pod.
+  blockers: [gcp_deny_policy]
+  confidence: conditional
+  severity: high
+  mitigation: Restrict node proxy and isolate privileged workload service accounts.

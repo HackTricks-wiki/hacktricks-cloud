@@ -100,6 +100,8 @@ def layout_errors(root: Path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--book-root', type=Path, default=Path('.'))
+    parser.add_argument('--peaso-root', type=Path,
+                        help='optional Blue-CloudPEASS checkout to compare the loader and exported schema')
     args = parser.parse_args()
     book = args.book_root.resolve()
     root = book / PATH
@@ -115,6 +117,15 @@ def main():
     schema_path = root / SCHEMA_FILE
     if not schema_path.is_file() or schema_path.read_text() != exported:
         errors.append(f'{SCHEMA_FILE} is stale; regenerate it from scripts/privesc_paths_schema.py json_schema()')
+    if args.peaso_root is not None:
+        peaso = args.peaso_root.resolve() / 'peaso' / 'privesc'
+        copied = book / 'scripts' / 'privesc_paths_schema.py'
+        upstream = peaso / 'schema.py'
+        upstream_json = peaso / SCHEMA_FILE
+        if not upstream.is_file() or copied.read_bytes() != upstream.read_bytes():
+            errors.append('scripts/privesc_paths_schema.py differs from the PEASO loader')
+        if not upstream_json.is_file() or not schema_path.is_file() or schema_path.read_bytes() != upstream_json.read_bytes():
+            errors.append(f'{SCHEMA_FILE} differs from the PEASO exported JSON Schema')
     if errors:
         for error in errors[:50]:
             print(f'error: {error}', file=sys.stderr)

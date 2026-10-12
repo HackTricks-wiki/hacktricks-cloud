@@ -918,3 +918,38 @@
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects
   notes: k8s_sa_namespace_absent targets ServiceAccounts referenced by a binding subject or SCC users[] whose namespace is absent from a complete namespace inventory (unknown if the inventory is incomplete). The serviceaccount and pod grants must be cluster-wide (namespace "*") because the namespace does not exist yet. Complements k8s-rbac-dangling-serviceaccount-reference (namespace exists).
+
+- id: k8s-rbac-escalate-rolebound-clusterrole-namespace
+  provider: k8s
+  service: rbac
+  title: Escalate a ClusterRole bound in one namespace
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#escalate
+  source_revision: 8d6a341c8a
+  summary: Editing a ClusterRole bound through a RoleBinding can grant the source workload and token rights in that namespace.
+  requires:
+    all_of:
+      - verb: escalate
+        resource: clusterroles
+        api_group: rbac.authorization.k8s.io
+        namespace: "*"
+        resource_name: "{source_rolebound_clusterrole}"
+    any_of:
+      - - verb: update
+          resource: clusterroles
+          api_group: rbac.authorization.k8s.io
+          namespace: "*"
+          resource_name: "{source_rolebound_clusterrole}"
+      - - verb: patch
+          resource: clusterroles
+          api_group: rbac.authorization.k8s.io
+          namespace: "*"
+          resource_name: "{source_rolebound_clusterrole}"
+  target:
+    kind: k8s_service_account
+    selector: {k8s_sa_in_namespace: "{target.namespace}"}
+    scope: same_namespace
+    outcome: identity
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Do not combine escalate and edit authority on roles bound to the editor.
