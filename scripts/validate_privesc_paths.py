@@ -4,8 +4,9 @@
 Layout: src/privilege-escalation-paths/<provider>/<service>.yaml (provider: aws, gcp, azure, k8s),
 plus README.md and the exported JSON Schema at the directory root. scripts/privesc_paths_schema.py
 is a copy of Blue-CloudPEASS peaso/privesc/schema.py, the evaluator's strict loader: it rejects
-unknown fields, target kinds, selector keys and placeholders, duplicate ids, and `source` pages
-that do not exist in this book. The JSON Schema must match the one the loader exports.
+unknown fields, target kinds, selector keys and placeholders, and duplicate ids. This script
+also checks pages and heading anchors for both techniques and reviewed exclusions.
+The JSON Schema must match the one the loader exports.
 
 Usage: python scripts/validate_privesc_paths.py --book-root .   (requires PyYAML)
 """
@@ -15,12 +16,68 @@ import json
 from pathlib import Path
 import re
 import sys
+from collections import Counter
+
+import yaml
 
 PATH = 'src/privilege-escalation-paths'
 PROVIDERS = ('aws', 'gcp', 'azure', 'k8s')
 FILE_NAME = re.compile(r'^_?[a-z0-9][a-z0-9_.-]*\.yaml$')
 ROOT_EXTRAS = re.compile(r'^(README\.md|[A-Za-z0-9_.-]+\.schema\.json)$')
 SCHEMA_FILE = 'privesc-technique.schema.json'
+HEADING = re.compile(r'^(#{1,6})\s+(.*?)\s*#*\s*$')
+
+
+def heading_slug(title):
+    """Use the same heading slug rules as the Blue-CloudPEASS source audit."""
+    title = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', title)
+    title = re.sub(r'<[^>]+>', '', title).strip().lower()
+    return ''.join(ch if ch.isalnum() or ch in '_-' else '-' if ch.isspace() else '' for ch in title)
+
+
+def heading_anchors(page):
+    anchors, seen, in_code = set(), Counter(), False
+    for line in page.read_text(encoding='utf-8', errors='replace').splitlines():
+        if line.lstrip().startswith('```'):
+            in_code = not in_code
+            continue
+        match = None if in_code else HEADING.match(line)
+        if match:
+            slug = heading_slug(match.group(2))
+            anchors.add(slug if seen[slug] == 0 else f'{slug}-{seen[slug]}')
+            seen[slug] += 1
+    return anchors
+
+
+def source_errors(book, catalog_root):
+    """Check every source against this book, including _excluded YAML records."""
+    errors, cache = [], {}
+    for path in sorted(catalog_root.rglob('*.yaml')):
+        try:
+            records = yaml.safe_load(path.read_text(encoding='utf-8')) or []
+        except yaml.YAMLError:
+            continue  # The schema loader reports malformed YAML.
+        if not isinstance(records, list):
+            continue
+        for index, record in enumerate(records):
+            if not isinstance(record, dict):
+                continue
+            sources = record.get('source')
+            sources = sources if isinstance(sources, list) else [sources]
+            for source in sources:
+                if not isinstance(source, str) or not source.startswith('src/'):
+                    continue  # The schema loader reports invalid source fields.
+                page_name, _, anchor = source.partition('#')
+                page = book / page_name
+                where = f'{path.relative_to(catalog_root)}[{index}]'
+                if not page.is_file():
+                    errors.append(f'{where}: source page not found: {page_name}')
+                elif anchor:
+                    if page not in cache:
+                        cache[page] = heading_anchors(page)
+                    if anchor not in cache[page]:
+                        errors.append(f'{where}: source anchor not found: {source}')
+    return errors
 
 
 def layout_errors(root: Path):
@@ -53,6 +110,7 @@ def main():
     errors = layout_errors(root)
     result = schema.load_catalog(root, hacktricks_root=book)
     errors += result['errors']
+    errors += source_errors(book, root)
     exported = json.dumps(schema.json_schema(), indent=2, sort_keys=True) + '\n'
     schema_path = root / SCHEMA_FILE
     if not schema_path.is_file() or schema_path.read_text() != exported:
