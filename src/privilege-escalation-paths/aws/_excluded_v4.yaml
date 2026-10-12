@@ -229,12 +229,12 @@
   reason: StartPipelineExecution overrides parameter values. Privileged effects require a pipeline definition and step
     code that pass those values into a sensitive command, resource or destination without safe validation; IAM
     permission alone does not establish that data flow.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetresourcepolicy-secretsmanagerputresourcepolicy-secretsmanagerlistsecrets
-  source_revision: a53b46392c
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetresourcepolicy-secretsmanagerputresourcepolicy-secretsmanagerlistsecrets
+  source_revision: 0b36331
   technique: secretsmanager:PutResourcePolicy
-  reason: PutResourcePolicy can self-grant secret read to a same-account IAM user. Another identity follows only if the
-    secret contains a live usable credential and KMS allows decrypt; policy metadata alone does not reveal those facts.
+  reason: PutResourcePolicy may grant a named external principal secret-value read when its own identity policy
+    and KMS policy permit it. Whether the plaintext is a usable credential for a particular principal requires secret-content
+    and account linkage; the policy alone does not prove identity takeover.
 - source:
     src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md#sensitive-cloudformation-outputs-with-servicecataloggetprovisionedproductoutputs
   source_revision: a53b46392c
@@ -252,12 +252,11 @@
   technique: sns:AddPermission
   reason: AddPermission grants selected SNS actions to an account on this topic. The page documents topic
     access/manipulation, not another principal or credential beyond topic-scoped permissions.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssettopicattributes--grant-subscribe-access-to-a-controlled-iam-user
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssettopicattributes--grant-subscribe-access-to-a-controlled-iam-user
   technique: sns:SetTopicAttributes
-  reason: SetTopicAttributes can grant a same-account user Subscribe on this topic and future message delivery. This
-    resource-scoped grant does not itself identify a credential or another principal.
-  source_revision: 171e422299
+  reason: SetTopicAttributes can grant Publish and Subscribe to external principals on one topic; the page’s SourceOwner-conditioned
+    management statement is effective only for matching owner context. Topic-scoped actions are not IAM role authority.
+  source_revision: 0b36331
 - source:
     src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#invoke-a-lambda-by-abusing-wildcard-sns-permission-no-sourcearn
   source_revision: a53b46392c
@@ -269,9 +268,9 @@
   technique: sqs:AddPermission
   reason: AddPermission grants selected SQS actions to an account on this queue. The page documents queue
     access/manipulation only; no second identity follows without credential-bearing message contents.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md#sqssetqueueattributes--grant-queue-access-to-a-controlled-iam-user
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md#sqssetqueueattributes--grant-queue-access-to-a-controlled-iam-user
   technique: sqs:SetQueueAttributes
-  reason: SetQueueAttributes can grant a same-account user ReceiveMessage on this queue. This resource-scoped grant does
-    not identify a live credential in its messages.
-  source_revision: 171e422299
+  reason: SetQueueAttributes can grant queue-scoped send, receive, and management actions to a named or OrgID-matching
+    principal when its identity policy and KMS permissions allow them. The policy alone does not prove access to
+    credentials in messages or unrelated IAM authority.
+  source_revision: 0b36331

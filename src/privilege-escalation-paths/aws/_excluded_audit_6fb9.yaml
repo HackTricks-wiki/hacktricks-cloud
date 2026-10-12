@@ -80,14 +80,13 @@
   reason: Resource-policy backdoors are persistence/data sharing for an external principal; lures depend on a victim
     workload choosing an attacker-supplied resource (application logic).
   source_revision: 6fb9ac51fd
-- source:
-    src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#high-value-service-matrix
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#high-value-service-matrix
   technique: Cross-account resource sharing matrix (S3, KMS, Secrets Manager, SNS/SQS, RAM, snapshots, models, ...)
-  reason: Rows are data exposure, injection or persistence. Role-bearing rows are modelled by their service entries
-    (aws-sts-assumerole-trusted, aws-ecr-push-consumed-tag, aws-lambda-updatefunctionconfiguration,
-    aws-ssm-updatedocument-defaultversion, CodeArtifact entries). A Service Catalog portfolio share provisions in the
-    recipient account under that account's own launch role, and ds:ShareDirectory only lets the consumer domain-join its
-    own workloads.
+  reason: Most matrix rows grant data access, injection, or persistence rather than a new principal. AMIs, snapshots,
+    and golden images may contain credentials, but the snapshot does not reveal their contents or prove any embedded
+    key is live and belongs to a privileged identity. AWS Signer profile sharing can delegate signing authority;
+    model it separately when the catalog can target a trusted signing profile. Existing role-bearing routes remain
+    covered by their service entries.
   source_revision: 6fb9ac51fd
 - source:
     src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#messaging-and-event-injection
@@ -166,10 +165,11 @@
   technique: Claim an unactivated DataSync agent with datasync:CreateAgent
   reason: Gains a network position (appliance ownership) in the victim network; no IAM principal or role is obtained.
   source_revision: 6fb9ac51fd
-- source:
-    src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-appconfig-unauthenticated-access/README.md#appconfig-agent-configuration-reads
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-appconfig-unauthenticated-access/README.md#appconfig-agent-configuration-reads
   technique: Querying a reachable AppConfig Agent
-  reason: Configuration data read through the agent role; no credentials or code execution as the role.
+  reason: The reachable agent proxies configuration reads without handing over its IAM role credentials. Returned
+    configuration may contain embedded secrets; obtaining a separate identity requires inspecting those bytes and
+    validating a specific credential, which the snapshot cannot infer.
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-basic-information/aws-federation-abuse.md#oidc---github-actions-abuse
   technique: GitHub Actions OIDC over-broad trust
@@ -290,3 +290,182 @@
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-directory-service-persistence/README.md#using-an-ad-user
   technique: AD user creation/change and IAM console role assignment
   reason: The paragraph describes an authorized operator, not a specific AWS API permission path. Gaining a mapped role requires AD/LDAP user-write or password rights, group-membership or console role-assignment rights, an effective user/group-to-role mapping, and a working directory sign-in; those host/directory facts are not present in the IAM snapshot. The password-reset subpath is already aws-ds-resetuserpassword.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-flink-persistence/README.md#runtime-property-configuration-implant
+  technique: Flink runtime-property configuration implant
+  reason: The property change yields role or credential authority only if the deployed application code reads the
+    exact property and routes a privileged operation or credential to the attacker. DescribeApplication exposes
+    values but not the code path or runtime effect; an arbitrary property has no effect.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-api-gateway-unauthenticated-enum/README.md#api-invoke-bypass
+  technique: Lambda-authorizer execution-ARN wildcard accepts routes, verbs, stages, or APIs beyond intended application
+    grant
+  reason: The overbroad execute-api policy is returned by Lambda authorizer code at request time, and the attacker
+    must pass its other checks. Static API/Lambda configuration cannot prove the returned policy, intended route
+    boundaries, or a privilege gain.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-appsync-unauthenticated-enum/README.md#appsync-api-keys
+  technique: Leaked AppSync API key grants that GraphQL API's authorized operations
+  reason: A regex hit in an owned artifact does not prove a complete, unexpired AppSync key, API binding, allowed
+    field, or successful authentication. Requires artifact content, key validity, and resolver authorization facts
+    beyond the configuration snapshot.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-appsync-unauthenticated-enum/README.md#appsync-key-assignments
+  technique: Contextual x-api-key/appsync_apiKey assignment exposes the same scoped API capability
+  reason: This contextual assignment is another detector for the same AppSync API-key exposure as gap-04. The header
+    can belong to another service; artifact context, live key validity, and allowed operations are needed.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-connect-participant-unauthenticated-enum/README.md#connect-participantconnection-tokens
+  technique: Leaked live participant or connection token grants one chat participant's transcript/message/attachment
+    capability
+  reason: The page documents a bearer capability for one chat participant, but the complete token, expiry, contact
+    binding, and permitted operations are runtime facts. The cloud configuration snapshot cannot infer that an attacker
+    has a live token.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-device-farm-unauthenticated/README.md#remote-access-and-testgrid-endpoint-urls
+  technique: Leaked live signed Device Farm endpoint URL grants a scoped device/browser session
+  reason: Only a complete active signed Device Farm URL authorizes a specific session. URL leakage, expiry, and
+    session binding require content/runtime evidence; project or session ARNs alone confer nothing. aws-v3-16 uses
+    an IAM GetRemoteAccessSession path, so it is not equivalent.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ec2-unauthenticated-enum/README.md#public-amis--ebs-snapshots
+  technique: Public AMI or EBS snapshot can be copied/restored and inspected for embedded credentials
+  reason: Public AMI/snapshot sharing permits disk-data access. Identity gain requires an embedded credential and
+    proof it is still valid; neither follows from the public-share configuration. This matches the content limitation
+    in the EBS direct-snapshot-read exclusion.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ecr-unauthenticated-enum/README.md#public-registry-repositories-images
+  technique: Anonymous pull of public image may expose embedded credentials
+  reason: Anonymous public ECR pull grants image data only. Recovering another identity requires scanning image
+    layers/metadata and validating a specific embedded credential; publication alone is insufficient.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-edge-origin-bypass/README.md#aws-waf-x-forwarded-for-client-ip-spoofing
+  technique: Client-supplied first X-Forwarded-For IP can cross a WAF IP allowlist for protected application paths
+  reason: The page specifically gives an admin/staging path protected only by a WAF forwarded-IP allowlist. A spoofed
+    header can cross that application gate, but the exact WAF rule, proxy sanitization, path authorization, and
+    successful route access need application/request facts outside the principal snapshot.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-eks-unauthenticated-enum/README.md#kubeconfig-credentials
+  technique: Leaked kubeconfig with a static bearer token or client certificate/private key authenticates as its
+    K8s identity
+  reason: A kubeconfig yields a Kubernetes identity only when it contains a complete valid static token or client
+    certificate/private key accepted by the cluster. Artifact leak, authenticator binding, expiry, and RBAC grant
+    are not inferable from EKS configuration; an exec-plugin or server URL is insufficient.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-eks-unauthenticated-enum/README.md#bearer-identity-tokens
+  technique: Leaked valid bearer token authenticates only as the represented scoped Kubernetes identity
+  reason: A JWT-shaped match is not proof of signature, audience, expiry, or Kubernetes identity. Only a validated
+    leaked bearer token accepted by the exact cluster could confer the represented scoped identity; the content
+    and runtime facts are unavailable.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-dynamodb-unauthenticated-access/README.md#cognito-guest-identities-for-dynamodb
+  technique: Cognito guest role DynamoDB access
+  reason: The guest IAM-role acquisition is already covered by aws-v3-59-anonymous-cognito-guest-role. DynamoDB
+    access is a subsequent ordinary signed action limited by that role policies and Cognito session scope-down;
+    it creates no second identity edge.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elb-unauthenticated-access/README.md#listener-rule-shadowing--auth-bypass
+  technique: Earlier broad ALB listener rule shadows authenticate-oidc/cognito rule
+  reason: The earlier forwarding rule can bypass ALB authentication for a route; a privilege edge needs the backend
+    route to grant an application identity, secret or privileged action, which requires handler and session behavior
+    absent from the snapshot.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elb-unauthenticated-access/README.md#source-ip-restrictions-can-be-bypassed-through-alternate-paths
+  technique: Reach restricted backend through alternate listener/LB/direct IP
+  reason: An alternate route can bypass one listener rule’s IP filter; whether this grants privilege depends on
+    the backend’s authorization and the live network path, not on the listener rule alone.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-elb-unauthenticated-access/README.md#client-controlled-x-forwarded-for-trust
+  technique: Spoof client IP through preserved X-Forwarded-For
+  reason: Preserving X-Forwarded-For allows header spoofing; a privilege edge needs the application to trust that
+    value for authorization and expose a privileged action, which requires application logic and request behavior.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-gamelift-streams-unauthenticated-access/README.md#gamelift-streams-stream-urls
+  technique: Use leaked active stream URL
+  reason: The full active stream URL must leak and remain valid; a stream-group identifier and static IAM/configuration
+    facts cannot prove possession of this session bearer credential.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-invoicing-and-billing-unauthenticated-access/README.md#s3-presigned-urls
+  technique: Use leaked invoice S3 presigned URL
+  reason: The full signed URL must leak and remain valid for the specific S3 object and HTTP method; the URL grants
+    only document access and cannot be inferred from a configuration snapshot.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-invoicing-and-billing-unauthenticated-access/README.md#procurement-integration-shared-secrets
+  technique: Use leaked ProcurementPortalSharedSecret
+  reason: The actual ProcurementPortalSharedSecret must leak and the external portal must accept it; its protocol,
+    activation and network controls are external runtime facts, and it does not authenticate the AWS Invoicing API.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ivs-unauthenticated-access/README.md#ivs-stream-keys
+  technique: Use leaked IVS stream key
+  reason: The full active IVS stream key must leak; a channel identifier or static configuration cannot prove possession
+    of a media-plane publishing credential or its current validity.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ivs-unauthenticated-access/README.md#ivs-participantplayback-tokens
+  technique: Use leaked IVS participant token
+  reason: The signed participant token must leak and its stage, capability and expiry must validate; static IAM/configuration
+    does not establish possession of this media-plane token.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-kinesis-video-unauthenticated-enum/README.md#kinesis-playback-session-urls
+  technique: Use leaked HLS/DASH SessionToken URL
+  reason: The full URL and live SessionToken must leak; an endpoint hostname does not authorize playback, and the
+    token is runtime session state.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-kinesis-video-unauthenticated-enum/README.md#iceturn-credentials
+  technique: Use leaked ICE/TURN username and password
+  reason: Both temporary TURN username and password must leak and remain valid for the relay allocation; the endpoint
+    and configuration alone establish neither fact.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-location-service-unauthenticated-enum/README.md#amazon-location-api-keys
+  technique: Use leaked Location API key
+  reason: The actual Location API key must be disclosed and valid for the requested action, resource, region and
+    restrictions; client-side key exposure can be intentional and grants no IAM identity.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-managed-blockchain-unauthenticated-enum/README.md#managed-blockchain-accessor-tokens
+  technique: Use leaked BILLING_TOKEN accessor
+  reason: The active full BILLING_TOKEN must leak and remain usable; an accessor ID or configuration inventory cannot
+    prove possession of this blockchain API bearer credential.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-memorydb-unauthenticated-access/README.md#passwordless-access-through-the-open-access-acl
+  technique: Read MemoryDB through open-access ACL and recover stored credentials
+  reason: The open-access ACL permits unauthenticated data access only with a live private-network route and security-group
+    access. Credential escalation further requires a stored, valid secret mapped to a stronger principal; arbitrary
+    MemoryDB key contents and external credential validity are unavailable from AWS configuration APIs.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-quicksight-unauthenticated-enum/README.md#quicksight-anonymous-viewer-embed-urls
+  technique: Use a leaked QuickSight anonymous-viewer embed URL
+  reason: A private embed URL is a bearer session, but actual URL disclosure, expiry, authorized dashboard scope,
+    and private versus public sharing are runtime facts; a URL pattern or QuickSight policy cannot prove them.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-quicksight-unauthenticated-enum/README.md#q-business-web-experience-session-urls
+  technique: Use a leaked Q Business web-experience session URL
+  reason: A generated URL can be a Q Business session credential, but disclosure, validity, application scope, and
+    whether the experience is already public require runtime URL and application evidence.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-security-incident-response-unauthenticated-access/README.md#s3-presigned-urls
+  technique: Use a leaked Security IR S3 attachment presigned URL
+  reason: The presigned URL is a bearer capability for one S3 object and method; its disclosure, signature validity,
+    expiry, signer permissions, and object scope are runtime facts.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-subdomain-takeover/README.md#elastic-beanstalk-environment-takeover
+  technique: Claim a dangling Elastic Beanstalk CNAME
+  reason: Taking the victim hostname requires a live dangling CNAME and an available matching Beanstalk environment
+    name; gaining sessions additionally requires victim traffic and exposed session material, none of which follows
+    from IAM configuration.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-subdomain-takeover/README.md#s3-bucket--static-website-takeover
+  technique: Claim a dangling S3 bucket or website endpoint
+  reason: Taking the victim hostname requires a dangling DNS record, deleted matching bucket, and successful bucket
+    claim in the original region; session theft further requires victim traffic and session material.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-subdomain-takeover/README.md#route53-ns-delegation--dangling-hosted-zone-takeover
+  technique: Match dangling Route 53 NS delegation
+  reason: Delegated DNS control requires stale parent NS records, an unclaimed or deleted hosted zone, and assignment
+    of the matching nameserver set; credential gain through email interception also requires delivered sensitive
+    messages.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-subdomain-takeover/README.md#ec2-elastic-ip-re-allocation-takeover
+  technique: Reacquire an IP targeted by a dangling A record
+  reason: Taking the victim hostname requires a stale A record, released address, and successful reallocation of
+    that exact regional IP; gaining a session further requires victim traffic and exposed session material.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-timestream-influxdb-unauthenticated-enum/README.md#endpoint-discovery-and-authenticated-database-access
+  technique: Guess a weak Timestream for InfluxDB native credential
+  reason: The public endpoint and health/version response only prove reachability and reconnaissance. Native InfluxDB
+    access requires an actually valid guessed, weak, or leaked token/password and successful authentication, which
+    are runtime facts.
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-timestream-influxdb-unauthenticated-enum/README.md#influxdb-token-and-password-assignments
+  technique: Use a leaked InfluxDB token or password
+  reason: The regex finds candidate InfluxDB token/password assignments; artifact content, disclosure to the attacker,
+    token validity, native permissions, and network reachability require runtime evidence.

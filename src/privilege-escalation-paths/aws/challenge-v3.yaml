@@ -131,15 +131,19 @@
 - id: aws-v3-05-add-or-replace-a-workspaces-web-portal-saml-oidc-identi
   provider: aws
   service: workspaces-web
-  title: Add or replace a WorkSpaces Web portal SAML/OIDC identity provider
+  title: Add a WorkSpaces Web portal SAML/OIDC identity provider
   source: src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-an-attacker-controlled-portal-identity-provider
-  summary: Controlled IdP trusted by an exact standard-federation portal -> portal access plane. Exact source, target and prerequisite proof are required.
+  summary: Controlled IdP trusted by an exact standard-federation portal -> portal access plane. Exact source, target
+    and prerequisite proof are required.
   requires:
     any_of:
     - - action: workspaces-web:CreateIdentityProvider
         resource: '*'
     - - action: workspaces-web:UpdateIdentityProvider
         resource: '*'
+    all_of:
+    - action: workspaces-web:CreateIdentityProvider
+      resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -150,13 +154,15 @@
     - portal access plane.
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target; IdP write alone is insufficient; only that portal and its federated session are targets.
+    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
+      IdP write alone is insufficient; only that portal and its federated session are targets.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-06-use-independent-cognito-replica-lockout-counters-to-gue
   provider: aws
   service: challenge-evidence
@@ -1251,15 +1257,14 @@
   provider: aws
   service: memorydb
   title: MemoryDB full-access ACL user
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-memorydb-persistence/README.md#memorydbcreateuser-memorydbcreateacl--memorydbupdateacl--plant-a-full-access-acl-user
-  summary: 'Add `service_plane: memorydb` and exact cluster selector; require row-specific `memorydb:CreateUser/UpdateUser/UpdateACL`.
-    Exact source, target and prerequisite proof are required.'
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-memorydb-persistence/README.md#memorydbcreateuser-memorydbcreateacl--memorydbupdateacl--plant-a-full-access-acl-user
+  summary: Create a full-access MemoryDB user and add it to an ACL already attached to a cluster; the exact user,
+    ACL and cluster must be verified.
   requires:
     all_of:
     - action: memorydb:CreateUser
       resource: '*'
-    - action: memorydb:CreateACL
+    - action: memorydb:UpdateACL
       resource: '*'
   target:
     kind: aws_verified_authority
@@ -1268,18 +1273,19 @@
     scope: same_account
     aggregate_as: Verified MemoryDB full-access ACL user targets in {account}
     grants:
-    - 'Add `service_plane: memorydb` and exact cluster selector; require row-specific `memorydb:C'
+    - MemoryDB cluster data-plane authority through a new ACL user
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Existing cluster ACL, user membership change, and known actor-set credential.
+    description: Evidence must bind an attacker-known user credential to the exact ACL already attached to the target
+      cluster, and show network access. The separate new-ACL route needs CreateACL and UpdateCluster and is not
+      claimed by this entry.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-44-memorydb-attached-user-takeover
   provider: aws
   service: memorydb
@@ -1631,10 +1637,9 @@
   provider: aws
   service: es
   title: OpenSearch domain policy
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-opensearch-access-policy-persistence/README.md#esupdatedomainconfig--domain-access-policy-takeover
-  summary: 'Add `service_plane: opensearch` and domain selector; require `es:UpdateDomainConfig` for exact domain policy.
-    Exact source, target and prerequisite proof are required.'
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-opensearch-access-policy-persistence/README.md#esupdatedomainconfig--domain-access-policy-takeover
+  summary: 'Add `service_plane: opensearch` and domain selector; require `es:UpdateDomainConfig` for exact domain
+    policy. Exact source, target and prerequisite proof are required.'
   requires:
     all_of:
     - action: es:UpdateDomainConfig
@@ -1646,18 +1651,19 @@
     scope: same_account
     aggregate_as: Verified OpenSearch domain policy targets in {account}
     grants:
-    - 'Add `service_plane: opensearch` and domain selector; require `es:UpdateDomainConfig` for e'
+    - OpenSearch HTTP data access allowed by both domain policy and fine-grained access control
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Exact domain and FGAC-disabled state; if FGAC enabled, no engine-admin edge.
+    description: Evidence must bind the exact domain, controlled IAM principal, allowed ESHttp action, reachable
+      endpoint and effective domain policy. If fine-grained access control is enabled, prove that its role mapping
+      also permits the requested index/action; explicit denies and KMS can still block access.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-56-marketplace-seller-entity-policy
   provider: aws
   service: aws-marketplace
@@ -1755,10 +1761,9 @@
   provider: aws
   service: challenge-evidence
   title: Anonymous Cognito guest role
-  source:
-    src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-unauthenticated-enum/README.md#guest-identity-credentials
-  summary: Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IAM source anonymous;
-    row 83/84 then use a normal role-to-resource permission edge. Exact external source and target proof are required.
+  source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-unauthenticated-enum/README.md#guest-identity-credentials
+  summary: Known identity-pool ID and enabled guest access can issue temporary credentials for the exact unauthenticated
+    role when its mapping and trust permit. Enhanced-flow session policies scope down the effective permissions.
   requires: {}
   source_kind: aws_challenge_foothold
   source_selector:
@@ -1770,7 +1775,8 @@
     scope: same_account
     aggregate_as: Verified Anonymous Cognito guest role targets in {account}
     grants:
-    - Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IA
+    - Temporary credentials for the exact mapped unauthenticated IAM role, limited by the role policies and Cognito
+      enhanced-flow session policies.
   conditions:
   - id: exact_external_foothold
     description: Pool AllowUnauthenticatedIdentities, actual unauth role mapping, role trust, and scope-down. Source
@@ -1778,16 +1784,15 @@
   confidence: conditional
   severity: high
   mitigation: Restrict access to the source primitive and revoke exposed credentials or sessions.
-  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal is
-    inferred from configuration.
+  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal
+    is inferred from configuration.
 - id: aws-v3-60-cognito-classic-flow
   provider: aws
   service: challenge-evidence
   title: Cognito classic flow
-  source:
-    src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-unauthenticated-enum/README.md#enhanced-and-basic-authentication-flows
-  summary: Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IAM source anonymous;
-    row 83/84 then use a normal role-to-resource permission edge. Exact external source and target proof are required.
+  source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-unauthenticated-enum/README.md#enhanced-and-basic-authentication-flows
+  summary: Enabled classic flow can exchange a guest identity-pool OIDC token through STS for the exact trusted
+    IAM role without Cognito enhanced-flow scope-down.
   requires: {}
   source_kind: aws_challenge_foothold
   source_selector:
@@ -1799,22 +1804,22 @@
     scope: same_account
     aggregate_as: Verified Cognito classic flow targets in {account}
     grants:
-    - Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IA
+    - STS temporary credentials for the exact trusted guest IAM role; no Cognito enhanced-flow scope-down policy,
+      while role and other session policies still apply.
   conditions:
   - id: exact_external_foothold
-    description: Basic flow enabled, exact role mapping, OIDC trust, and STS authorization. Source evidence must prove
-      anonymous control for the exact target.
+    description: Require AllowUnauthenticatedIdentities, AllowClassicFlow, an exact guest-role trust accepting the
+      identity-pool token, no unsupported role mapping, and verified STS exchange. Missing evidence remains UNKNOWN.
   confidence: conditional
   severity: high
   mitigation: Restrict access to the source primitive and revoke exposed credentials or sessions.
-  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal is
-    inferred from configuration.
+  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal
+    is inferred from configuration.
 - id: aws-v3-61-public-signup-cognito-role
   provider: aws
   service: challenge-evidence
   title: Public SignUp Cognito role
-  source:
-    src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-user-pool-unauthenticated-access/README.md#registration
+  source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-user-pool-unauthenticated-access/README.md#registration
   summary: Public SignUp -> authenticated identity-pool role for exact user-pool client, conditional on completing
     confirmation/challenges. Exact external source and target proof are required.
   requires: {}
@@ -1828,45 +1833,18 @@
     scope: same_account
     aggregate_as: Verified Public SignUp Cognito role targets in {account}
     grants:
-    - authenticated identity-pool role for exact user-pool client, conditional on completing con
+    - Temporary credentials for the exact authenticated identity-pool IAM role mapped from the confirmed Cognito
+      user-pool identity; effective permissions remain limited by role and session policies.
   conditions:
   - id: exact_external_foothold
-    description: Public SignUp alone never yields usable tokens or IAM credentials. Source evidence must prove anonymous
-      control for the exact target.
+    description: Require self-service signup enabled, a usable public app client, writable required attributes,
+      completed confirmation and authentication challenges, a valid provider token, exact identity-pool provider/role
+      mapping, and target role trust. Public SignUp alone is insufficient; missing proof remains UNKNOWN.
   confidence: conditional
   severity: high
   mitigation: Restrict access to the source primitive and revoke exposed credentials or sessions.
-  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal is
-    inferred from configuration.
-- id: aws-v3-62-cognito-guest-to-dynamodb
-  provider: aws
-  service: challenge-evidence
-  title: Cognito guest to DynamoDB
-  source:
-    src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-dynamodb-unauthenticated-access/README.md#cognito-guest-identities-for-dynamodb
-  summary: Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IAM source anonymous;
-    row 83/84 then use a normal role-to-resource permission edge. Exact external source and target proof are required.
-  requires: {}
-  source_kind: aws_challenge_foothold
-  source_selector:
-    source_id_glob: aws_challenge_foothold:*:anonymous
-  target:
-    kind: aws_role
-    selector:
-      aws_challenge_fact: aws-v3-62-cognito-guest-to-dynamodb
-    scope: same_account
-    aggregate_as: Verified Cognito guest to DynamoDB targets in {account}
-    grants:
-    - Add a **source entry point** `aws_cognito_anonymous_pool_role` rather than making every IA
-  conditions:
-  - id: exact_external_foothold
-    description: Same proven guest role as row 80, then effective DynamoDB action on the exact table. Source evidence
-      must prove anonymous control for the exact target.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict access to the source primitive and revoke exposed credentials or sessions.
-  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal is
-    inferred from configuration.
+  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal
+    is inferred from configuration.
 - id: aws-v3-63-cognito-guest-to-lex
   provider: aws
   service: challenge-evidence
@@ -2259,3 +2237,379 @@
   - https://docs.aws.amazon.com/acm/latest/APIReference/API_GetAcmeExternalAccountBindingCredentials.html
   - https://docs.aws.amazon.com/acm/latest/userguide/security-iam-acme.html
   notes: 'Draft only: exact source and target evidence is required; absent evidence evaluates UNKNOWN.'
+- id: aws-peaso-mint-an-accessor-bearer-credential
+  provider: aws
+  service: managedblockchain
+  title: Create AMB billing bearer credential
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-blockchain-persistence/README.md#mint-an-accessor-bearer-credential
+  source_revision: 0b36331
+  summary: independent victim-billed Ethereum/Polygon RPC bearer credential; the exact source, resource, controlled
+    recipient and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: managedblockchain:CreateAccessor
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-mint-an-accessor-bearer-credential
+    scope: same_account
+    aggregate_as: Create AMB billing bearer credential in {account}
+    grants:
+    - independent victim-billed Ethereum/Polygon RPC bearer credential
+  conditions:
+  - id: exact_verified_prerequisites
+    description: CreateAccessor is authorized on * with BILLING_TOKEN and the bearer token is returned by creation;
+      no tags are supplied.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict managedblockchain:CreateAccessor to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/managed-blockchain/latest/APIReference/API_CreateAccessor.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-establish-an-attacker-owned-consortium-member
+  provider: aws
+  service: managedblockchain
+  title: Join Fabric consortium with controlled member
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-blockchain-persistence/README.md#establish-an-attacker-owned-consortium-member
+  source_revision: 0b36331
+  summary: external Fabric member and CA/peer service identity; the exact source, resource, controlled recipient
+    and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: managedblockchain:CreateProposal
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-establish-an-attacker-owned-consortium-member
+    scope: same_account
+    aggregate_as: Join Fabric consortium with controlled member in {account}
+    grants:
+    - external Fabric member and CA/peer service identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: A network invitation proposal for the controlled account is approved; the external account accepts
+      and creates a member with attacker-known bootstrap credentials.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict managedblockchain:CreateProposal to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/managed-blockchain/latest/APIReference/API_CreateAccessor.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-backdoor-a-workspace-with-its-resource-policy
+  provider: aws
+  service: aps
+  title: Grant controlled principal AMP workspace data access
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-prometheus-persistence/README.md#backdoor-a-workspace-with-its-resource-policy
+  source_revision: 0b36331
+  summary: AMP workspace QueryMetrics/GetLabels/GetSeries/RemoteWrite authority; the exact source, resource, controlled
+    recipient and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: aps:PutResourcePolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-backdoor-a-workspace-with-its-resource-policy
+    scope: same_account
+    aggregate_as: Grant controlled principal AMP workspace data access in {account}
+    grants:
+    - AMP workspace QueryMetrics/GetLabels/GetSeries/RemoteWrite authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact workspace policy is ACTIVE and grants a controlled principal supported Prometheus actions;
+      cross-account use also has identity allow and any required KMS/network access.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict aps:PutResourcePolicy to approved operators and review exact resource policies and recipients.
+  references:
+  - https://docs.aws.amazon.com/prometheus/latest/userguide/security_iam_resource-based-policy-examples.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-grant-a-cross-account-flow-entitlement
+  provider: aws
+  service: mediaconnect
+  title: Grant controlled account MediaConnect flow entitlement
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-mediaconnect-persistence/README.md#grant-a-cross-account-flow-entitlement
+  source_revision: 0b36331
+  summary: cross-account subscription authority to a victim transport stream; the exact source, resource, controlled
+    recipient and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: mediaconnect:GrantFlowEntitlements
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-grant-a-cross-account-flow-entitlement
+    scope: same_account
+    aggregate_as: Grant controlled account MediaConnect flow entitlement in {account}
+    grants:
+    - cross-account subscription authority to a victim transport stream
+  conditions:
+  - id: exact_verified_prerequisites
+    description: GrantFlowEntitlements covers parent flow and prospective entitlement; enabled entitlement lists
+      a controlled account, which has its own CreateFlow authority.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mediaconnect:GrantFlowEntitlements to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/mediaconnect/latest/ug/entitlements.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-share-a-core-network-with-an-external-account-through-aws-ram
+  provider: aws
+  service: ram
+  title: Share Cloud WAN core network with controlled account
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-network-manager-persistence/README.md#share-a-core-network-with-an-external-account-through-aws-ram
+  source_revision: 0b36331
+  summary: cross-account Cloud WAN attachment creation authority; the exact source, resource, controlled recipient
+    and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: ram:CreateResourceShare
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-share-a-core-network-with-an-external-account-through-aws-ram
+    scope: same_account
+    aggregate_as: Share Cloud WAN core network with controlled account in {account}
+    grants:
+    - cross-account Cloud WAN attachment creation authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Core-network share permits external principals, invitation is accepted or org-shared, and live
+      managed permission grants the particular attachment action.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ram:CreateResourceShare to approved operators and review exact resource policies and recipients.
+  references:
+  - https://docs.aws.amazon.com/network-manager/latest/cloudwan/cloudwan-share-network.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-add-an-external-engagement-member-for-permanent-snapshot-access
+  provider: aws
+  service: partnercentral
+  title: Invite controlled Partner into Engagement
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-partner-central-selling-persistence/README.md#add-an-external-engagement-member-for-permanent-snapshot-access
+  source_revision: 0b36331
+  summary: external Partner membership and shared snapshot-read authority; the exact source, resource, controlled
+    recipient and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: partnercentral:CreateEngagementInvitation
+      resource: '*'
+    - action: partnercentral:GetEngagement
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-add-an-external-engagement-member-for-permanent-snapshot-access
+    scope: same_account
+    aggregate_as: Invite controlled Partner into Engagement in {account}
+    grants:
+    - external Partner membership and shared snapshot-read authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Sender is an Engagement member; connected eligible Partner accepts through documented task workflow
+      and gains membership and snapshot permissions.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict partnercentral:CreateEngagementInvitation to approved operators and review exact resource
+    policies and recipients.
+  references:
+  - https://docs.aws.amazon.com/partner-central/latest/developer-guide/working-with-multi-partner-opportunities.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-persist-cross-account-key-access-with-a-resource-policy
+  provider: aws
+  service: payment-cryptography
+  title: Grant controlled role Payment Cryptography key use
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-payment-cryptography-persistence/README.md#persist-cross-account-key-access-with-a-resource-policy
+  source_revision: 0b36331
+  summary: cross-account cryptographic operation authority on exact primary key; the exact source, resource, controlled
+    recipient and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: payment-cryptography:PutResourcePolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-persist-cross-account-key-access-with-a-resource-policy
+    scope: same_account
+    aggregate_as: Grant controlled role Payment Cryptography key use in {account}
+    grants:
+    - cross-account cryptographic operation authority on exact primary key
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Primary key policy grants a controlled role a supported action; recipient identity policy allows
+      the same action and key attributes/state permit it.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict payment-cryptography:PutResourcePolicy to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/payment-cryptography/latest/userguide/security_iam_resource-based-policies.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-cross-account-data-accessor-persistence
+  provider: aws
+  service: qbusiness
+  title: Create Q Business cross-account data accessor
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-q-business-persistence/README.md#cross-account-data-accessor-persistence
+  source_revision: 0b36331
+  summary: supported ISV tenant SearchRelevantContent authority; the exact source, resource, controlled recipient
+    and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: qbusiness:CreateDataAccessor
+      resource: '*'
+    - action: qbusiness:AssociatePermission
+      resource: '*'
+    - action: qbusiness:PutResourcePolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-cross-account-data-accessor-persistence
+    scope: same_account
+    aggregate_as: Create Q Business cross-account data accessor in {account}
+    grants:
+    - supported ISV tenant SearchRelevantContent authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Supported registered ISV tenant is controlled; accessor, application resource policy and Identity
+      Center assignment are effective; end-user ACLs allow the requested documents.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict qbusiness:CreateDataAccessor to approved operators and review exact resource policies and
+    recipients.
+  references:
+  - https://docs.aws.amazon.com/amazonq/latest/qbusiness-ug/doc-history.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-grant-external-ingest-mediapackagev2putchannelpolicy
+  provider: aws
+  service: mediapackagev2
+  title: Grant anonymous MediaPackage channel ingest
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-mediapackage-v2-policy-persistence/README.md#grant-external-ingest--mediapackagev2putchannelpolicy
+  source_revision: 0b36331
+  summary: unauthenticated PutObject ingest authority; the exact source, resource, controlled recipient and effective
+    prerequisites must be verified.
+  requires:
+    all_of:
+    - action: mediapackagev2:PutChannelPolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-grant-external-ingest-mediapackagev2putchannelpolicy
+    scope: same_account
+    aggregate_as: Grant anonymous MediaPackage channel ingest in {account}
+    grants:
+    - unauthenticated PutObject ingest authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact channel policy permits Principal:* PutObject under attacker-satisfiable source IP and channel
+      ingest endpoint accepts it.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mediapackagev2:PutChannelPolicy to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awselementalmediapackagev2.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-publish-a-private-origin-endpoint-mediapackagev2putoriginendpointpolicy
+  provider: aws
+  service: mediapackagev2
+  title: Grant anonymous MediaPackage origin read
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-mediapackage-v2-policy-persistence/README.md#publish-a-private-origin-endpoint--mediapackagev2putoriginendpointpolicy
+  source_revision: 0b36331
+  summary: unauthenticated GetObject/GetHeadObject origin authority; the exact source, resource, controlled recipient
+    and effective prerequisites must be verified.
+  requires:
+    all_of:
+    - action: mediapackagev2:PutOriginEndpointPolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-publish-a-private-origin-endpoint-mediapackagev2putoriginendpointpolicy
+    scope: same_account
+    aggregate_as: Grant anonymous MediaPackage origin read in {account}
+    grants:
+    - unauthenticated GetObject/GetHeadObject origin authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact endpoint policy permits Principal:* reads and endpoint is reachable.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mediapackagev2:PutOriginEndpointPolicy to approved operators and review exact resource policies
+    and recipients.
+  references:
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awselementalmediapackagev2.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.
+- id: aws-peaso-cross-account-cluster-access-with-kafkaputclusterpolicy
+  provider: aws
+  service: kafka
+  title: Grant controlled account MSK data access
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-msk-policy-persistence/README.md#cross-account-cluster-access-with-kafkaputclusterpolicy
+  source_revision: 0b36331
+  summary: external Kafka cluster/topic/group authority; the exact source, resource, controlled recipient and effective
+    prerequisites must be verified.
+  requires:
+    all_of:
+    - action: kafka:PutClusterPolicy
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-peaso-cross-account-cluster-access-with-kafkaputclusterpolicy
+    scope: same_account
+    aggregate_as: Grant controlled account MSK data access in {account}
+    grants:
+    - external Kafka cluster/topic/group authority
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact cluster policy covers cluster, topic and group ARNs; multi-VPC private connectivity and broker
+      authentication work; external identity policy allows matching actions.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict kafka:PutClusterPolicy to approved operators and review exact resource policies and recipients.
+  references:
+  - https://docs.aws.amazon.com/msk/latest/developerguide/what-is-msk.html
+  notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
+    TargetId and TargetAccount and prove all prerequisites.

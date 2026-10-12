@@ -161,22 +161,6 @@
   reason: Persistence/configuration of Redirect the output — `medialive:UpdateChannel`; the section does not identify
     a new AWS principal whose privileges the caller gains from this action alone.
   source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-persistence/aws-mediapackage-v2-policy-persistence/README.md#grant-external-ingest--mediapackagev2putchannelpolicy
-  technique: Grant external ingest — `mediapackagev2:PutChannelPolicy`
-  reason: Persistence/configuration of Grant external ingest — `mediapackagev2:PutChannelPolicy`; the section does
-    not identify a new AWS principal whose privileges the caller gains from this action alone.
-  source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-persistence/aws-mediapackage-v2-policy-persistence/README.md#publish-a-private-origin-endpoint--mediapackagev2putoriginendpointpolicy
-  technique: Publish a private origin endpoint — `mediapackagev2:PutOriginEndpointPolicy`
-  reason: Persistence/configuration of Publish a private origin endpoint — `mediapackagev2:PutOriginEndpointPolicy`;
-    the section does not identify a new AWS principal whose privileges the caller gains from this action alone.
-  source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-persistence/aws-msk-policy-persistence/README.md#cross-account-cluster-access-with-kafkaputclusterpolicy
-  technique: Cross-account cluster access with `kafka:PutClusterPolicy`
-  reason: 'Documented impact: Grants an external account cross-account connectivity and Kafka actions on the named
-    cluster, topics, and groups, subject to broker authentication and network prerequisites. This section does not
-    establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-q-in-connect-persistence/README.md#wisdomupdateassistantaiagent--persist-a-custom-ai-agent-as-the-assistant-default
   technique: '`wisdom:UpdateAssistantAIAgent` — persist a custom AI agent as the assistant default'
   reason: 'Documented impact: persistently alter customer-facing answers, agent recommendations, summaries, knowledge
@@ -186,10 +170,10 @@
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-ram-persistence/README.md#ramcreateresourceshare--ramassociateresourceshare--share-internal-resources-with-an-attacker-account
   technique: '`ram:CreateResourceShare` (+ `ram:AssociateResourceShare`) — share internal resources with an attacker
     account'
-  reason: 'Documented impact: Durable cross-account access to internal resources — most dangerously a network foothold
-    inside the victim''s VPC via a shared subnet or Transit Gateway — that persists independently of the attacker''s
-    IAM credentials. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: The share can give an external account resource-specific network/use rights after an invitation is accepted.
+    Current principal graph cannot represent RAM-shared subnet/TGW authority or infer another IAM role; requires
+    exact share, recipient and permission-version joins.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence/README.md#make-instance-publicly-accessible-rdsmodifydbinstance
   technique: 'Make instance publicly accessible: `rds:ModifyDBInstance`'
   reason: 'Persistence/configuration of Make instance publicly accessible: `rds:ModifyDBInstance`; the section does
@@ -220,17 +204,16 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-s3-files-persistence/README.md#s3filesputfilesystempolicy--cross-account-access-to-the-file-system-and-its-bucket-data
   technique: '`s3files:PutFileSystemPolicy` — cross-account access to the file system (and its bucket data)'
-  reason: 'Documented impact: Cross-account / public exposure of a file system and the S3 data behind it by rewriting
-    its resource policy; or removal of a restrictive policy as defense evasion. This section does not establish
-    another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: PutFileSystemPolicy can give an external principal file-system and bucket-data access, but this is a resource-scoped
+    data-plane grant. Usable access depends on a mount/network path, effective recipient authorization, backing
+    bucket role and KMS; no IAM role takeover follows from the write alone.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-s3-persistence/README.md#s3-access-point-backdoor--s3createaccesspoint-s3putaccesspointpolicy
   technique: S3 Access Point backdoor — `s3:CreateAccessPoint`, `s3:PutAccessPointPolicy`
-  reason: 'Documented impact: Durable, low-visibility access to the bucket''s objects that survives review of the
-    bucket policy and IAM policies, and can be granted to an external account so it outlives cleanup of the attacker''s
-    principals inside the victim... This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: CreateAccessPoint plus PutAccessPointPolicy can grant external object access only when the bucket delegates
+    to the access point and recipient IAM, network and KMS checks pass. This is object-scoped authority, not a generic
+    IAM principal takeover.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#canvas-cross-account-model-registry-backdoor-updateuserprofilemodelregistersettings
   technique: Canvas cross-account model registry backdoor (UpdateUserProfile.ModelRegisterSettings)
   reason: Persistence/configuration of Canvas cross-account model registry backdoor (UpdateUserProfile.ModelRegisterSettings);
@@ -238,15 +221,16 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#model-registry-resource-policy-putmodelpackagegrouppolicy
   technique: Model Registry resource policy (PutModelPackageGroupPolicy)
-  reason: Persistence/configuration of Model Registry resource policy (PutModelPackageGroupPolicy); the section
-    does not identify a new AWS principal whose privileges the caller gains from this action alone.
-  source_revision: a66f094ede
+  reason: PutModelPackageGroupPolicy can grant a valid external principal group-level read/write rights when its
+    identity policy also allows them. Artifact S3/ECR/KMS access and execution by a deployment role do not follow
+    from the group policy alone.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#blind-organization-wide-share-with-sagemakerputmodelpackagegrouppolicy-alone
   technique: Blind organization-wide share with `sagemaker:PutModelPackageGroupPolicy` alone
-  reason: Persistence/configuration of Blind organization-wide share with `sagemaker:PutModelPackageGroupPolicy`
-    alone; the section does not identify a new AWS principal whose privileges the caller gains from this action
-    alone.
-  source_revision: a66f094ede
+  reason: The org-conditioned policy grants eligible principals group-scoped UpdateModelPackage if their identity
+    policy allows it. Execution under a deployment role requires an existing auto-deploy pipeline, an approved package
+    transition and trusted artifact; those runtime/configuration facts are not established by the policy alone.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-secrets-manager-persistence/README.md#secretsmanagerrotatesecret--invoke-the-existing-rotation-lambda
   technique: '`secretsmanager:RotateSecret` — invoke the existing rotation Lambda'
   reason: Persistence/configuration of `secretsmanager:RotateSecret` — invoke the existing rotation Lambda; the
@@ -260,9 +244,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-security-agent-persistence/README.md#securityagentcreatemembership--retain-agent-space-web-application-access
   technique: '`securityagent:CreateMembership` — retain Agent Space web-application access'
-  reason: 'Documented impact: Service-level persistence into the assigned Agent Space. This section does not establish
-    another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: CreateMembership grants an existing controlled Identity Center user MEMBER access to one Agent Space web
+    application. It does not grant IAM authority; current snapshots do not bind attacker control, SSO user, membership
+    and space.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-security-incident-response-persistence/README.md#security-irupdatemembership--persist-as-an-incident-response-teammate
   technique: '`security-ir:UpdateMembership` — persist as an incident-response teammate'
   reason: Persistence/configuration of `security-ir:UpdateMembership` — persist as an incident-response teammate;
@@ -280,9 +265,9 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-ssm-persistence/README.md#using-ssmcreateassociation-for-persistence
   technique: Using ssm:CreateAssociation for persistence
-  reason: 'Documented impact: A scheduled backdoor that re-executes on every targeted managed node indefinitely,
-    surviving reboots, reimaging of the payload on disk, and termination of the attacker''s own sessions. This section
-    does not establish another AWS principal or attacker-controlled role execution.'
+  reason: The scheduled association is the persistence aspect of aws-ssm-createassociation. The command-execution
+    path to a managed instance profile is already cataloged there; no separate privilege edge is introduced by the
+    schedule.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-support-authorization-persistence/README.md#supportauthzcreatesupportpermit--leave-a-no-expiry-regional-support-authorization
   technique: '`supportauthz:CreateSupportPermit` — leave a no-expiry regional Support authorization'
@@ -3124,3 +3109,42 @@
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-data-firehose-persistence/README.md#firehoseupdatedestination--persistently-redirect-future-records
   technique: firehose:UpdateDestination retained HTTP access key
   reason: The update may send a stored X-Amz-Firehose-Access-Key to a new endpoint, but credential reuse against the original vendor depends on the vendor and requires a successful later delivery to an attacker-controlled HTTP endpoint. Stream configuration and UpdateDestination permission alone cannot establish a usable new identity or privilege.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-secrets-manager-persistence/README.md#swap-the-rotation-lambda-to-an-attacker-controlled-function-via-rotatesecret
+  technique: Rebind secret rotation to controlled Lambda that reads/exfiltrates secret
+  reason: Rotation Lambda code and runtime behavior must actually read/exfiltrate the secret; configured Lambda
+    ARN and role permissions alone cannot prove code execution, exfiltration or a credential in the secret.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-secrets-manager-persistence/README.md#cross-region-replica-promotion-backdoor-replicate--promote--permissive-policy
+  technique: Replicate, promote and share standalone secret in second Region
+  reason: The replica policy can expose secret data, but identity escalation depends on the plaintext being a usable
+    credential and on recipient KMS/IAM permissions and successful promotion; neither secret contents nor credential
+    validity is in a configuration snapshot.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-step-functions-persistence/README.md#backdooring-aliases
+  technique: Repoint an alias to a backdoored version
+  reason: An alias update only selects an existing immutable version. The snapshot must identify an attacker-useful
+    privileged state in that version and a caller that later invokes this alias; IAM permission to update alias
+    alone does not establish either content or execution. The separate definition-edit path is aws-stepfunctions-updatestatemachine-existing-role.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-verified-permissions-persistence/README.md#persist-an-attacker-controlled-oidc-trust-source
+  technique: Attacker-issued OIDC JWT impersonates application principal/group
+  reason: Application integration and token decision facts are absent from the AWS snapshot; the store configuration
+    alone cannot prove a token is accepted as a privileged application principal.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-verified-permissions-persistence/README.md#persist-application-access-with-a-cedar-policy
+  technique: Permit controlled application principal to perform privileged application action
+  reason: The AWS snapshot does not contain the application-to-store binding, a controlled login principal, requested
+    action/resource, and complete effective Cedar decision including forbids.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-verified-permissions-persistence/README.md#persist-through-a-policy-store-alias-mapping
+  technique: Redirect application alias to attacker-selected permissive store
+  reason: The AWS snapshot can show an alias mapping but cannot establish which application resolves the alias or
+    that the selected store permits a privileged action for an attacker-controlled principal.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-a-hostile-extension-in-every-secure-browser-session
+  technique: Create and associate hostile browser settings
+  reason: CreateBrowserSettings plus AssociateBrowserSettings can attach a policy, but extension code and manifest
+    permissions at the external update endpoint, later portal sessions, and privileged pages visited by those sessions
+    are not established by AWS configuration. aws-v3-04 covers the distinct UpdateBrowserSettings route with verified
+    evidence.
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#shared-artifacts-and-supply-chains
+  technique: Recover IAM credentials from a shared AMI, snapshot, or golden image
+  reason: Whether an artifact contains a usable credential, which IAM principal it identifies, whether that credential
+    remains valid, and whether the recipient can decrypt and inspect the content are host/content and runtime facts
+    unavailable in the configuration snapshot. A share permission alone does not prove privilege gain.
