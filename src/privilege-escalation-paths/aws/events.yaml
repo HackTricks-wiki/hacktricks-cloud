@@ -1,4 +1,37 @@
 # Amazon EventBridge privilege escalation techniques.
 # Source: hacktricks-cloud aws-eventbridge-privesc/README.md (rev 171e422299).
 
-[]
+- id: aws-events-listtargets-static-credential
+  provider: aws
+  service: events
+  title: Recover another identity credential from static rule target Input
+  source: src/pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md#eventbridge-rule-targets
+  source_revision: 0b36331
+  summary: Recover another identity credential from static rule target Input when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: events:ListTargetsByRule
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-events-listtargets-static-credential
+    scope: same_account
+    aggregate_as: Verified Recover another identity credential from static rule target Input targets in {account}
+    grants:
+    - exact identity authenticated by the literal credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: A known rule must return literal static Input containing a credential verified as usable for a
+      distinct identity; InputPath, future events and RoleArn do not qualify.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_ListTargetsByRule.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.

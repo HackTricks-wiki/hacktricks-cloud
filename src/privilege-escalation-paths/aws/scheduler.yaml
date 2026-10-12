@@ -38,3 +38,37 @@
     - https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html
     - https://docs.aws.amazon.com/scheduler/latest/UserGuide/setting-up.html
   notes: Universal targets let the role call most AWS APIs (write-only, results are not returned), so reach equals the role's write permissions.
+- id: aws-scheduler-getschedule-static-credential
+  provider: aws
+  service: scheduler
+  title: Recover a distinct identity credential from Scheduler Target.Input
+  source: src/pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md#schedulergetschedule--target-input-disclosure
+  source_revision: 0b36331
+  summary: Recover a distinct identity credential from Scheduler Target.Input when the exact target and prerequisites
+    are verified.
+  requires:
+    all_of:
+    - action: scheduler:GetSchedule
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-scheduler-getschedule-static-credential
+    scope: same_account
+    aggregate_as: Verified Recover a distinct identity credential from Scheduler Target.Input targets in {account}
+    grants:
+    - exact identity authenticated by literal Target.Input credential
+    outcome: permission_grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact schedule Target.Input must contain a static, currently usable credential for a distinct
+      identity. Target.RoleArn and referenced secret/KMS ARNs do not qualify.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the exact read or mutation permission and remove exposed credentials.
+  references:
+  - https://docs.aws.amazon.com/scheduler/latest/APIReference/API_GetSchedule.html
+  notes: The required aws_privesc_challenge_evidence fact is not collected in current snapshots. Missing or incomplete
+    evidence evaluates UNKNOWN.

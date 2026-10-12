@@ -198,9 +198,9 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-route53-arc-readiness-persistence/README.md#route53-recovery-readinesscreatecrossaccountauthorization--durable-external-readiness-monitoring
   technique: '`route53-recovery-readiness:CreateCrossAccountAuthorization` — durable external readiness monitoring'
-  reason: 'Documented impact: Durable cross-account reconnaissance of application topology, resource existence,
-    failover readiness, configuration equivalence, capacity, runtime state, quotas, and routing properties. This
-    section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: 'Documented grant can add privilege, but this catalog cannot safely emit the edge until the evaluator
+    supports: Add aws_service_data_access target for recipient account and ARC readiness authorization; selector
+    must bind eligible known victim resource ARN and supported check type.'
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-s3-files-persistence/README.md#s3filesputfilesystempolicy--cross-account-access-to-the-file-system-and-its-bucket-data
   technique: '`s3files:PutFileSystemPolicy` — cross-account access to the file system (and its bucket data)'
@@ -1942,11 +1942,8 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
   technique: Harvest DB credentials via RDS Proxy auth secrets (`rds:DescribeDBProxies` + `secretsmanager:GetSecretValue`)
-  reason: RDS Proxy backend Secrets Manager auth secrets contain a database username/password, so a DB identity
-    can be gained. Current schema has no database-user target or proxy-auth secret binding. Add aws_database_user
-    and bind DescribeDBProxies Auth.SecretArn to the exact backend user; collect DescribeDBProxies and DescribeDBProxyTargets
-    (IAM rds:DescribeDBProxies, rds:DescribeDBProxyTargets), snapshot key rds_proxy_auth {proxy_arn,secret_arn,db_user,target_db_arn};
-    UNKNOWN until collected and GetSecretValue/KMS rights are resolved.
+  reason: Documented proxy auth secret yields a reusable DB username/password. Pending proxy-to-secret collector
+    and exact GetSecretValue/KMS evaluation; do not infer credentials from DescribeDBProxies alone.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdsdownloaddblogfileportion
   technique: '`rds:DownloadDBLogFilePortion`'
@@ -2752,18 +2749,21 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-simpledb-enum.md#read-one-known-item--sdbgetattributes
   technique: Read one known item — `sdb:GetAttributes`
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: sdb:GetAttributes can return token-bearing attributes from a known domain and item. Whether the item exists
+    and contains a valid reusable token, and which identity owns that token, require item-content and owner evidence
+    unavailable from IAM configuration; no deterministic identity edge follows from the permission alone.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-simpledb-enum.md#query-or-enumerate-a-domain--sdbselect
   technique: Query or enumerate a domain — `sdb:Select`
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: sdb:Select can enumerate items and attributes in a known domain, including possible reusable tokens. Actual
+    token contents, validity and owning identity are unavailable from IAM configuration; no deterministic identity
+    edge exists without verified content and owner mapping.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-transfer-family-enum.md#permission-and-iampassrole-boundaries
   technique: Permission and `iam:PassRole` boundaries
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: This enumeration table indexes existing Transfer escalation paths aws-transfer-importsshpublickey, aws-transfer-passrole-createuser-access,
+    aws-transfer-secret-backed-idp-record, aws-transfer-custom-idp-takeover, and aws-transfer-workflow-passrole-updateserver
+    in transfer.yaml. The table adds no separate technique.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-translate-enum.md#translategetterminology--download-a-custom-terminology-file
   technique: '`translate:GetTerminology` — download a custom terminology file'
@@ -2777,8 +2777,8 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md#schedulergetschedule--target-input-disclosure
   technique: '`scheduler:GetSchedule` — target-input disclosure'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: Target.Input may hold a usable credential for a distinct identity; RoleArn and other ARNs are locators.
+    UNKNOWN until literal content and authentication are verified.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md#pipesupdatepipe-revalidates-iampassrole
   technique: '`pipes:UpdatePipe` revalidates `iam:PassRole`'
@@ -3363,3 +3363,13 @@
     identity; these response/content facts are absent from the configuration snapshot. Authorization also requires
     GetConnection on both catalog and exact connection ARN.
   source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-services/aws-managed-flink-enum.md#enumerate-applications-and-complete-configuration
+  technique: Read current cleartext runtime properties containing reusable credentials
+  reason: Current runtime property values must actually contain an active reusable credential and its owner/authority
+    must be verified; the configuration snapshot exposes only arbitrary strings, not credential validity or target
+    identity.
+- source: src/pentesting-cloud/aws-security/aws-services/aws-managed-flink-enum.md#enumerate-historical-versions-and-operations
+  technique: Read historical cleartext runtime properties containing reusable credentials
+  reason: Historical runtime property values must actually contain an active reusable credential and its owner/authority
+    must be verified; the configuration snapshot exposes only arbitrary strings, not credential validity or target
+    identity.

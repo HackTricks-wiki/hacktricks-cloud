@@ -1,0 +1,35 @@
+- id: aws-payment-cryptography-crossaccount-key-policy
+  provider: aws
+  service: payment-cryptography
+  title: Grant a controlled external principal payment-key operations
+  source: src/pentesting-cloud/aws-security/aws-services/aws-payment-cryptography-enum.md#resource-and-authorization-model
+  source_revision: 0b36331
+  summary: A primary-key policy editor can give a controlled external IAM principal compatible operations on the
+    exact payment key.
+  requires:
+    all_of:
+    - action: payment-cryptography:PutResourcePolicy
+      resource: '{target.resource_arn}'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-payment-cryptography-crossaccount-key-policy
+    scope: any
+    outcome: permission_grant
+    grants:
+    - Compatible payment-cryptography key operations on the exact primary key
+    aggregate_as: Verified external payment-key authority
+  conditions:
+  - id: exact_external_principal
+    description: The evidence must identify a source-controlled external IAM principal with its own effective identity
+      allow for the chosen key action.
+  - id: compatible_key_and_policy
+    description: The primary key must be enabled and compatible with the selected action, and the policy and all
+      effective guardrails must permit it.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict PutResourcePolicy on primary keys and review cross-account policy principals and operations.
+  references:
+  - https://docs.aws.amazon.com/payment-cryptography/latest/userguide/security_iam_resource-based-policies.html

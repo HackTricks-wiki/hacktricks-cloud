@@ -334,3 +334,37 @@
   references:
   - https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Integrating.Authorizing.html
   notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+- id: aws-pa-s03-4-rds-proxy-auth-secret
+  provider: aws
+  service: rds
+  title: Read RDS Proxy backend database credentials
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
+  source_revision: 0b36331
+  summary: The source obtains the backend database principal stored in a proxy authentication secret.
+  requires:
+    all_of:
+    - action: rds:DescribeDBProxies
+      resource: '*'
+    - action: secretsmanager:GetSecretValue
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-pa-s03-4-rds-proxy-auth-secret
+    scope: same_account
+    aggregate_as: Verified proxy backend database identities in {account}
+  conditions:
+  - id: proxy_secret_match
+    description: Exact proxy Auth.SecretArn must equal the readable secret ARN; secret contains a usable backend
+      username/password and is not an end-to-end IAM proxy.
+  - id: kms_and_route
+    description: CMK-encrypted secrets also require kms:Decrypt; using SQL needs a network path.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict GetSecretValue on proxy auth secrets and use least-privileged backend users.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md
+  notes: Must remain UNKNOWN until the proxy-to-secret-to-database-principal evidence has been collected and bound
+    to the source.

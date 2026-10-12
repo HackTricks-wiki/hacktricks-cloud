@@ -821,14 +821,15 @@
   provider: aws
   service: kinesisvideo
   title: Join Kinesis Video signaling as a master or viewer peer
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kinesis-video-streams-post-exploitation/README.md#recover-turn-credentials-and-impersonate-webrtc-peers
-  summary: Kinesis Video ConnectAsMaster/Viewer -> exact signaling-channel peer role. Exact source, target and
-    prerequisite proof are required.
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kinesis-video-streams-post-exploitation/README.md#recover-turn-credentials-and-impersonate-webrtc-peers
+  summary: Kinesis Video ConnectAsMaster/Viewer -> exact signaling-channel peer role. Exact source, target and prerequisite
+    proof are required.
   requires:
-    all_of:
-    - action: kinesisvideo:ConnectAsViewer
-      resource: '*'
+    any_of:
+    - - action: kinesisvideo:ConnectAsViewer
+        resource: '*'
+    - - action: kinesisvideo:ConnectAsMaster
+        resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -846,8 +847,8 @@
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-28-reach-a-lambda-execution-role-through-unsafe-workflow-i
   provider: aws
   service: states
@@ -1541,35 +1542,41 @@
 - id: aws-v3-52-network-security-manager-delegate
   provider: aws
   service: network-security-manager
-  title: Network Security Manager delegate
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-network-security-manager-persistence/README.md#network-security-managerputadminaccount--retain-delegated-network-security-administration
-  summary: Add exact organization-delegate service-plane target (`fms`, `network-security-manager`, `inspector2`) scoped
-    to a **controlled member account**; require row-specific delegate action. Exact source, target and prerequisite
-    proof are required.
+  title: Delegate regional Network Security Manager administration to a controlled member account
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-network-security-manager-persistence/README.md#network-security-managerputadminaccount--retain-delegated-network-security-administration
+  source_revision: 0b36331
+  summary: A management-account principal can designate a controlled member account to administer WAF and Shield
+    protections within its delegated Region and administrator scope.
   requires:
     all_of:
     - action: network-security-manager:PutAdminAccount
       resource: '*'
+  preconditions:
+  - source_in_org_management_account
   target:
     kind: aws_verified_authority
     selector:
       aws_challenge_fact: aws-v3-52-network-security-manager-delegate
-    scope: same_account
-    aggregate_as: Verified Network Security Manager delegate targets in {account}
+    scope: org
+    outcome: application_admin
     grants:
-    - Add exact organization-delegate service-plane target (`fms`, `network-security-manager`, `
+    - Network Security Manager WAF/Shield administration for the verified Region, account/OU and firewall-type scope
+    aggregate_as: Verified Network Security Manager delegated authority
   conditions:
-  - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Controlled member account and exact NSM delegation state.
+  - id: verified_delegation
+    description: Evidence must bind the controlled member account and identity, Region, exact scope, administrator
+      priority, all-features organization and trusted-access/delegated-administrator state.
+  - id: first_time_setup
+    description: If setup is absent, organizations:EnableAWSServiceAccess, organizations:RegisterDelegatedAdministrator
+      and iam:CreateServiceLinkedRole may also be needed.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  mitigation: Restrict PutAdminAccount in the management account and audit regional administrator accounts, priorities
+    and scopes.
+  references:
+  - https://docs.aws.amazon.com/network-security-manager/latest/APIReference/API_PutAdminAccount.html
 - id: aws-v3-53-influxdb-admin-credentials
   provider: aws
   service: secretsmanager
@@ -1635,34 +1642,35 @@
 - id: aws-v3-55-opensearch-domain-policy
   provider: aws
   service: es
-  title: OpenSearch domain policy
+  title: Grant signed OpenSearch HTTP operations through a domain access policy
   source: src/pentesting-cloud/aws-security/aws-persistence/aws-opensearch-access-policy-persistence/README.md#esupdatedomainconfig--domain-access-policy-takeover
-  summary: 'Add `service_plane: opensearch` and domain selector; require `es:UpdateDomainConfig` for exact domain
-    policy. Exact source, target and prerequisite proof are required.'
+  source_revision: 0b36331
+  summary: A domain configuration editor can add its own IAM principal to the exact domain policy and gain signed
+    HTTP read or write operations permitted by the domain.
   requires:
     all_of:
     - action: es:UpdateDomainConfig
-      resource: '*'
+      resource: '{target.resource_arn}'
   target:
     kind: aws_verified_authority
     selector:
       aws_challenge_fact: aws-v3-55-opensearch-domain-policy
     scope: same_account
-    aggregate_as: Verified OpenSearch domain policy targets in {account}
+    outcome: permission_grant
     grants:
-    - OpenSearch HTTP data access allowed by both domain policy and fine-grained access control
+    - es:ESHttpGet or other explicitly verified es:ESHttp* operations on the exact domain
+    aggregate_as: Verified OpenSearch domain data-plane authority
   conditions:
-  - id: exact_verified_prerequisites
-    description: Evidence must bind the exact domain, controlled IAM principal, allowed ESHttp action, reachable
-      endpoint and effective domain policy. If fine-grained access control is enabled, prove that its role mapping
-      also permits the requested index/action; explicit denies and KMS can still block access.
+  - id: effective_domain_access
+    description: Evidence must bind the exact domain ARN and HTTP action, policy processing completion, endpoint
+      reachability, FGAC authorization and absence of effective denies.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
-    is UNKNOWN/unresolved; verified evidence never creates a definite path.
+  mitigation: Restrict es:UpdateDomainConfig on exact domains and alert on domain access-policy changes.
+  references:
+  - https://docs.aws.amazon.com/opensearch-service/latest/APIReference/API_UpdateDomainConfig.html
 - id: aws-v3-56-marketplace-seller-entity-policy
   provider: aws
   service: aws-marketplace
@@ -2676,3 +2684,258 @@
   references:
   - https://docs.aws.amazon.com/chime-sdk/latest/APIReference/API_media-pipelines_GetMediaPipeline.html
   notes: Absent or stale evidence must evaluate UNKNOWN; do not store the credential value in the snapshot.
+- id: aws-payment-cryptography-sameaccount-key-policy
+  provider: aws
+  service: payment-cryptography
+  title: Grant the source new operations on a primary payment key
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-payment-cryptography-privesc/README.md#payment-cryptographyputresourcepolicy
+  source_revision: 0b36331
+  summary: A policy editor can grant its own same-account IAM identity compatible operations on an exact primary
+    payment key.
+  requires:
+    all_of:
+    - action: payment-cryptography:PutResourcePolicy
+      resource: '{target.resource_arn}'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-payment-cryptography-sameaccount-key-policy
+    scope: same_account
+    outcome: permission_grant
+    grants:
+    - Verified compatible payment-key operation on the exact primary key
+    aggregate_as: Verified same-account payment-key authority
+  conditions:
+  - id: exact_key_and_operation
+    description: Evidence must bind source identity, primary key ARN, chosen compatible operation and absence of
+      effective explicit denies; export also requires exportability and wrapping setup.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict PutResourcePolicy on primary keys and review new same-account principal grants.
+  references:
+  - https://docs.aws.amazon.com/payment-cryptography/latest/userguide/security_iam_resource-based-policies.html
+- id: aws-ssm-sap-hana-admin-secret
+  provider: aws
+  service: ssm-sap
+  title: Read a registered SAP HANA ADMIN secret
+  source: src/pentesting-cloud/aws-security/aws-services/aws-systems-manager-for-sap-enum.md#applications-components-and-databases
+  summary: GetDatabase identifies an ADMIN SecretId; reading that exact secret may yield the HANA administrator
+    credential.
+  requires:
+    all_of:
+    - action: secretsmanager:GetSecretValue
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-ssm-sap-hana-admin-secret
+    scope: same_account
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Native SAP HANA ADMIN login
+  conditions:
+  - id: exact_verified_prerequisites
+    description: ssm-sap:GetDatabase (Resource *) and secretsmanager:GetSecretValue on the returned SecretId; kms:Decrypt
+      on its KMS key if needed. Evidence must bind this IAM source, exact target and usable privilege; absent evidence
+      remains UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict secretsmanager:GetSecretValue to trusted administrators at the exact resource scope.
+  references:
+  - https://docs.aws.amazon.com/ssmsap/latest/APIReference/API_GetDatabase.html
+  - https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
+- id: aws-transfer-connector-remote-credential
+  provider: aws
+  service: transfer
+  title: Read a Transfer connector remote SFTP credential
+  source: src/pentesting-cloud/aws-security/aws-services/aws-transfer-family-enum.md#main-resource-relationships
+  summary: DescribeConnector identifies UserSecretId; reading the exact secret may yield the configured remote SFTP
+    credential.
+  requires:
+    all_of:
+    - action: secretsmanager:GetSecretValue
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-transfer-connector-remote-credential
+    scope: any
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Remote SFTP user identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: transfer:DescribeConnector for discovery and secretsmanager:GetSecretValue on UserSecretId; kms:Decrypt
+      where needed. Evidence must bind this IAM source, exact target and usable privilege; absent evidence remains
+      UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict secretsmanager:GetSecretValue to trusted administrators at the exact resource scope.
+  references:
+  - https://docs.aws.amazon.com/transfer/latest/APIReference/API_DescribeConnector.html
+  - https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
+- id: aws-verifiedpermissions-policy-app-admin
+  provider: aws
+  service: verifiedpermissions
+  title: Grant application privileges through a Cedar policy
+  source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#exact-iam-boundaries
+  summary: A policy or template writer can add a Cedar permit for an attacker-controlled application principal where
+    a consuming application honors that decision.
+  requires:
+    any_of:
+    - - action: verifiedpermissions:CreatePolicy
+        resource: '*'
+    - - action: verifiedpermissions:UpdatePolicy
+        resource: '*'
+    - - action: verifiedpermissions:UpdatePolicyTemplate
+        resource: '*'
+    - - action: verifiedpermissions:CreatePolicyTemplate
+        resource: '*'
+      - action: verifiedpermissions:CreatePolicy
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-verifiedpermissions-policy-app-admin
+    scope: same_account
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Exact application administrator privilege represented by Cedar action/resource
+  conditions:
+  - id: exact_verified_prerequisites
+    description: CreatePolicy or UpdatePolicy on exact store; UpdatePolicyTemplate for existing linked policies;
+      CreatePolicyTemplate plus CreatePolicy for a new linked policy. Evidence must bind this IAM source, exact
+      target and usable privilege; absent evidence remains UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict verifiedpermissions:CreatePolicy to trusted administrators at the exact resource scope.
+  references:
+  - https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policies-create.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_verifiedpermissions.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
+- id: aws-verifiedpermissions-identity-source-impersonation
+  provider: aws
+  service: verifiedpermissions
+  title: Redirect application token trust to an attacker-controlled identity
+  source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#identity-source-and-cross-account-boundaries
+  summary: Changing the identity source can map a valid attacker token into a privileged Cedar principal or group
+    used by an application.
+  requires:
+    any_of:
+    - - action: verifiedpermissions:UpdateIdentitySource
+        resource: '*'
+    - - action: verifiedpermissions:CreateIdentitySource
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-verifiedpermissions-identity-source-impersonation
+    scope: same_account
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Privileged application principal or group
+  conditions:
+  - id: exact_verified_prerequisites
+    description: UpdateIdentitySource or CreateIdentitySource on exact store. Evidence must bind this IAM source,
+      exact target and usable privilege; absent evidence remains UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict verifiedpermissions:UpdateIdentitySource to trusted administrators at the exact resource
+    scope.
+  references:
+  - https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/identity-sources.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_verifiedpermissions.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
+- id: aws-verifiedpermissions-alias-rebind
+  provider: aws
+  service: verifiedpermissions
+  title: Rebind a production alias to a permissive policy store
+  source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#enumerate-stores-and-aliases
+  summary: Deleting and recreating a policy-store alias can cause an application to use a different store that permits
+    attacker actions.
+  requires:
+    all_of:
+    - action: verifiedpermissions:DeletePolicyStoreAlias
+      resource: '*'
+    - action: verifiedpermissions:CreatePolicyStoreAlias
+      resource: '*'
+    - action: verifiedpermissions:CreatePolicyStoreAlias
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-verifiedpermissions-alias-rebind
+    scope: same_account
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Application action/resource denied by original store
+  conditions:
+  - id: exact_verified_prerequisites
+    description: DeletePolicyStoreAlias on alias and CreatePolicyStoreAlias on alias and destination store; optional
+      CreatePolicyStore/policy writes if destination must be built. Evidence must bind this IAM source, exact target
+      and usable privilege; absent evidence remains UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict verifiedpermissions:DeletePolicyStoreAlias to trusted administrators at the exact resource
+    scope.
+  references:
+  - https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policy-store-aliases-using.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_verifiedpermissions.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
+- id: aws-waf-sampled-request-session-replay
+  provider: aws
+  service: wafv2
+  title: Replay a session recovered from WAF request samples
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
+  summary: GetSampledRequests can expose an unmasked, still-valid session credential for an exact victim identity.
+  requires:
+    all_of:
+    - action: wafv2:GetSampledRequests
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-waf-sampled-request-session-replay
+    scope: any
+    aggregate_as: Verified affected identities in {account}
+    grants:
+    - Exact victim application or AWS session
+  conditions:
+  - id: exact_verified_prerequisites
+    description: GetSampledRequests on exact Web ACL; no list permission if ARN and metric are known. Evidence must
+      bind this IAM source, exact target and usable privilege; absent evidence remains UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict wafv2:GetSampledRequests to trusted administrators at the exact resource scope.
+  references:
+  - https://docs.aws.amazon.com/waf/latest/APIReference/API_GetSampledRequests.html
+  - https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-data-protection.html
+  notes: Requires an exact aws_privesc_challenge_evidence record proving IAM authorization on the specific source
+    resource and all external prerequisites. Missing or incomplete evidence is UNKNOWN; a verified record yields
+    only a conditional edge.
