@@ -41,6 +41,8 @@ TARGET_KINDS = {
     "azure_managed_identity": ("azure", "principal"),
     "azure_service_principal": ("azure", "principal"),
     "azure_user": ("azure", "principal"),
+    "azure_challenge_foothold": ("azure", "principal"),
+    "azure_verified_authority": ("azure", "entity"),
     "azure_scope_owner": ("azure", "entity"),
     "azure_dataplane_admin": ("azure", "entity"),
     "entra_role": ("azure", "entity"),
@@ -61,7 +63,8 @@ SERVICE_PLANES = ("amplifybackend", "connect", "grafana", "quicksight", "scn")
 # k8s_admission_control: one entity per cluster meaning "admission enforcement can be lifted"; the entry names the
 # lifted blockers in target.removes_blockers. k8s_remote_cluster: a credential to ANOTHER cluster held in a Secret.
 # Kinds that more than one provider's catalog may target (AKS cluster-admin from Azure RBAC, ...).
-EXTRA_KIND_PROVIDERS = {"k8s_cluster_admin": ("azure", "gcp", "aws"), "k8s_service_account": ("gcp",)}
+EXTRA_KIND_PROVIDERS = {"k8s_cluster_admin": ("azure", "gcp", "aws"),
+                        "k8s_service_account": ("gcp", "azure")}
 ADMIN_KINDS = ("aws_account_admin", "gcp_scope_owner", "azure_scope_owner", "k8s_cluster_admin", "entra_role")
 
 
@@ -73,6 +76,8 @@ def kind_allowed(kind, provider):
 # bool, string, string_or_list, namespace, action, any.
 SELECTOR_KEYS = {
     # ---- generic ---------------------------------------------------------
+    "azure_challenge_fact": (("azure",), "string", "Exact reviewed Azure technique/source/target/scope evidence; never a definite path."),
+    "k8s_challenge_fact": (("k8s",), "string", "Exact reviewed Kubernetes technique/source/target/scope evidence."),
     "attached_to_service": (("aws", "gcp", "azure"), "string_or_list",
         "Identity is attached to a collected resource of that service (Lambda Role, EC2 instance profile, "
         "GCE/GKE service account, Azure resource identity incl. full ARM types). Uncollected attachment "
@@ -407,6 +412,8 @@ SOURCE_SELECTOR_KEYS = {
 }
 # Collection types/fields a selector or requirement needs; reported in coverage when missing.
 FACTS_NEEDED = {
+    "azure_challenge_fact": "azure_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
+    "k8s_challenge_fact": "k8s_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
     "gcp_challenge_fact": "gcp_privesc_challenge_evidence with TechniqueId, SourceId, TargetKind, TargetId, "
                           "TargetScope, Status and VerifiedPreconditions for the exact exploit preconditions",
     "aws_challenge_fact": "aws_privesc_challenge_evidence with exact TechniqueId, SourceArn, TargetKind, TargetId, TargetAccount, Status and VerifiedPreconditions",
@@ -1167,6 +1174,19 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: aws_challenge_foothold is a source kind, not a target")
         if kind == "gcp_challenge_foothold":
             errors.append(f"{where}: gcp_challenge_foothold is a source kind, not a target")
+        if kind == "azure_challenge_foothold":
+            errors.append(f"{where}: azure_challenge_foothold is a source kind, not a target")
+        for evidence_provider in ("azure", "k8s"):
+            fact_key = evidence_provider + "_challenge_fact"
+            if selector.get(fact_key):
+                if selector[fact_key] != entry.get("id"):
+                    errors.append(f"{where}: {fact_key} must equal the technique id")
+                if entry.get("confidence") != "conditional":
+                    errors.append(f"{where}: {fact_key} must remain conditional")
+                if kind in ("azure_challenge_foothold",):
+                    errors.append(f"{where}: {fact_key} needs a bounded target")
+        if kind == "azure_verified_authority" and not selector.get("azure_challenge_fact"):
+            errors.append(f"{where}: verified authority needs an exact evidence selector")
         if kind == "gcp_verified_authority" and not selector.get("gcp_challenge_fact"):
             errors.append(f"{where}: gcp_verified_authority needs selector gcp_challenge_fact")
         if str(entry.get("id", "")).startswith("gcp-v3-") and not selector.get("gcp_challenge_fact"):
