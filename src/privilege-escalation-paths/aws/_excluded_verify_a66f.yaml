@@ -1433,11 +1433,6 @@
     attacker-controlled subnet and mounting it — no access to the original file system required. This section does
     not establish another AWS principal or attacker-controlled role execution.'
   source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-post-exploitation/README.md#anywhere-server-impersonation-with-gameliftgetcomputeauthtoken
-  technique: Anywhere server impersonation with `gamelift:GetComputeAuthToken`
-  reason: This heading concerns reading or exporting data via Anywhere server impersonation with `gamelift:GetComputeAuthToken`;
-    it does not itself authorize a different AWS principal or execute code as its role.
-  source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-global-accelerator-post-exploitation/README.md#globalacceleratorupdateendpointgroup---redirect-or-suppress-application-traffic
   technique: '`globalaccelerator:UpdateEndpointGroup` - Redirect or suppress application traffic'
   reason: The section documents the resource or service effect of `globalaccelerator:UpdateEndpointGroup` - Redirect
@@ -1575,55 +1570,41 @@
   reason: 'Documented impact: Disruption of resource organization, cost allocation, or tag-driven security automation.
     This section does not establish another AWS principal or attacker-controlled role execution.'
   source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-interconnect-post-exploitation/README.md#interconnectgetconnection--steal-a-pending-connections-partner-activation-key
-  technique: '`interconnect:GetConnection` — steal a pending connection''s partner activation key'
-  reason: 'Documented impact: Complete or interfere with a pending multicloud/last-mile connection from the victim''s
-    Direct Connect gateway to the selected remote network. This section does not establish another AWS principal
-    or attacker-controlled role execution.'
-  source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-core-post-exploitation/README.md#iotgetjobdocument--read-plaintext-fleet-job-payloads
   technique: '`iot:GetJobDocument` — read plaintext fleet job payloads'
-  reason: 'Documented impact: Disclosure of fleet commands, internal configuration, device bootstrap material, or
-    reusable private artifact/firmware URLs embedded directly in job documents. This section does not establish
-    another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: The document read can disclose a bootstrap token, but a specific readable job document must contain a
+    currently usable token or private bearer URL; configuration does not establish content.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-core-post-exploitation/README.md#take-over-an-existing-tunnel-with-iotrotatetunnelaccesstoken
   technique: Take over an existing tunnel with `iot:RotateTunnelAccessToken`
-  reason: 'Documented impact: Revocation of the legitimate operator''s current bearer token and takeover of the
-    remaining tunnel lifetime, enabling the same mapped remote-device access as the original source client. This
-    section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: Rotation returns a tunnel bearer token, but privileged device access requires a live tunnel, SOURCE token
+    acceptance, and an actual privileged service behind its mapping.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-core-post-exploitation/README.md#iotcreatetopicrule--iampassrole--durable-fleet-wide-mqtt-exfiltration
   technique: '`iot:CreateTopicRule` + `iam:PassRole` — durable fleet-wide MQTT exfiltration'
-  reason: 'Documented impact: Continuous, fleet-wide exfiltration of all IoT MQTT traffic (device telemetry, shadow
-    updates, commands — frequently containing secrets, tokens, and PII) to an attacker sink, server-side and with
-    no live connection, persisting... This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: The rule can capture secrets, but a matching future MQTT message must contain a usable credential and
+    the configured destination must be attacker-readable; the rule write alone proves neither.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kendra-post-exploitation/README.md#kendracreatedatasource--updatedatasource--iampassrole--poison-or-repoint-ingestion
   technique: '`kendra:CreateDataSource` / `UpdateDataSource` (+ `iam:PassRole`) — poison or repoint ingestion'
-  reason: 'Documented impact: Adds attacker-controlled material to search/RAG results or causes Kendra to ingest
-    repository content reachable by the connector role. This section does not establish another AWS principal or
-    attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: Kendra ingestion may expose repository credentials, but the connector must reach such content and Query/Retrieve
+    with the supplied user context must reveal it; PassRole is not connector-role impersonation.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kendra-post-exploitation/README.md#kendraputprincipalmapping--alter-group-resolution-for-acl-filtered-queries
   technique: '`kendra:PutPrincipalMapping` — alter group resolution for ACL-filtered queries'
-  reason: 'Documented impact: Expands the Kendra search results visible to the mapped identity, exposing answer
-    excerpts, passages, titles, URIs, and metadata from ACL-restricted indexed content. This section does not establish
-    another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: The mapping changes Kendra ACL group resolution, but a controlled querying identity, matching allowed
+    documents, and absence of a DENY ACL are needed to prove added content privilege.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-keyspaces-post-exploitation/README.md#read-sensitive-table-rows-with-cassandraselect
   technique: Read sensitive table rows with `cassandra:Select`
-  reason: 'Documented impact: theft of credentials, tokens, customer records, application configuration and any
-    other material stored in the selected table. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: A selected Keyspaces row may contain a reusable token, but table contents and token validity are not established
+    by cassandra:Select alone.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-keyspaces-post-exploitation/README.md#blindly-poison-or-delete-rows-with-cassandramodify
   technique: Blindly poison or delete rows with `cassandra:Modify`
-  reason: 'Documented impact: application compromise through poisoned configuration, account takeover through token/session
-    manipulation, fraudulent records, integrity loss or destructive deletion without the ability to read the victim
-    data. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: A blind write can take over an application session only when the targeted row is security-sensitive and
+    the application trusts its new value; schema and handler behavior require inspection.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kinesis-video-streams-post-exploitation/README.md#inject-or-replace-camera-evidence-with-putmedia
   technique: Inject or replace camera evidence with `PutMedia`
   reason: 'Documented impact: forge or contaminate surveillance evidence, trigger downstream Rekognition/analytics
@@ -1632,10 +1613,9 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kms-post-exploitation/README.md#impersonation-via-kmssign
   technique: Impersonation via kms:Sign
-  reason: 'Documented impact: Produce signatures that verify against the organisation''s trusted public key — forge
-    JWTs, signed documents, code-signing artefacts or any assertion that key vouches for. This section does not
-    establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: kms:Sign produces a valid signature, but impersonation needs a verifier that trusts this key for an authorization
+    assertion and accepts the attacker-chosen message and algorithm.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kms-post-exploitation/README.md#delete-keys-via-kmsdeleteimportedkeymaterial
   technique: Delete Keys via kms:DeleteImportedKeyMaterial
   reason: 'Documented impact: Instantly render all data under a BYOK CMK undecryptable — no waiting period at all,
@@ -1644,48 +1624,45 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#lakeformationputdatalakesettings--add-a-data-lake-administrator
   technique: '`lakeformation:PutDataLakeSettings` — add a data lake administrator'
-  reason: 'Documented impact: Obtain Regional LF grant authority and weaken the permission model for new resources.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: Adding a controlled DataLakeAdmins principal grants Lake Formation administration, but a principal the
+    actor controls and an accepted regional settings replacement must be established; data access needs further
+    IAM and engine rights.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#lakeformationgrantpermissions--grant-catalog-or-table-access-to-self
   technique: '`lakeformation:GrantPermissions` — grant catalog or table access to self'
-  reason: 'Documented impact: Grant controlled metadata or governed-data access. This section does not establish
-    another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: Self-grant can increase LF permissions, but the caller must have LF administrator or matching grant-option
+    authority and the specific Glue resource must be eligible; data reads need separate gates.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#lakeformationgetdataaccess--abuse-an-authorized-external-engine-session
   technique: '`lakeformation:GetDataAccess` — abuse an authorized external-engine session'
-  reason: 'Documented impact: Read raw objects within the vended prefix through a compromised authorized engine
-    session. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: GetDataAccess can vend scoped S3 credentials, but an authorized external-engine session, registered table,
+    matching LF grant and permission type, and usable path are required.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#lakeformationupdatelftagexpression--widen-existing-lf-tbac-grants
   technique: '`lakeformation:UpdateLFTagExpression` — widen existing LF-TBAC grants'
-  reason: This widens Lake Formation data grants through a saved tag expression, subject to existing grant and LF
-    permissions; it does not provide an IAM role session or AWS-account administrator authority.
-  source_revision: a66f094ede
+  reason: An existing named expression must be referenced by a grant to a controlled principal and the replacement
+    tags must cover newly sensitive resources; LF grant-option checks also apply.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lakeformation-post-exploitation/README.md#glueputresourcepolicy--expose-data-catalog-metadata-cross-account
   technique: '`glue:PutResourcePolicy` — expose Data Catalog metadata cross-account'
-  reason: 'Documented impact: Expose metadata or catalog mutation APIs permitted by the inserted statement, but
-    not the underlying S3 objects by itself. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: A Glue catalog policy can grant an external principal new metadata authority, but the exact external identity
+    must be actor-controlled and its identity policy plus LF checks must permit the target APIs.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdalistfunctions-and-lambdalistversionsbyfunction--read-plaintext-environment-variables
   technique: '`lambda:ListFunctions` and `lambda:ListVersionsByFunction` — read plaintext environment variables'
-  reason: 'Documented impact: Account-wide or per-function disclosure of credentials, tokens, endpoints, and other
-    secrets stored directly in Lambda environment variables. This section does not establish another AWS principal
-    or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: ListFunctions or ListVersionsByFunction can disclose credentials only when a returned environment variable
+    contains a currently reusable secret; endpoints or ordinary configuration are not escalation.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdacreatemicrovmauthtoken--reach-lambda-microvm-application-ports
   technique: '`lambda:CreateMicrovmAuthToken` — reach Lambda MicroVM application ports'
-  reason: 'Documented impact: Authenticated access to otherwise protected services on an existing Lambda MicroVM,
-    potentially disclosing workload data or reaching a privileged debug/admin interface; the concrete impact is
-    application-dependent. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: The token grants access to a MicroVM port, but escalation needs a live admin/debug listener that accepts
+    it and performs a stronger operation; port configuration and handler behavior are runtime facts.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdagetdurableexecutionhistory--disclose-durable-workflow-data
   technique: '`lambda:GetDurableExecutionHistory` — disclose durable workflow data'
-  reason: 'Documented impact: Disclosure of business inputs, secrets, personal data, intermediate decisions, errors,
-    callback payloads, and final results retained in a long-running workflow. This section does not establish another
-    AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: History read may expose a secret or live callback ID, but a specific execution must retain a reusable
+    credential or pending callback; ordinary workflow data is not escalation.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaupdatenetworkconnector--change-lambda-microvm-private-network-egress
   technique: '`lambda:UpdateNetworkConnector` — change Lambda MicroVM private-network egress'
   reason: 'Documented impact: Redirect the private egress path of MicroVM workloads that use the connector into
@@ -1708,23 +1685,19 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-efs-mount-injection.md#aws-lambda--efs-mount-injection-via-updatefunctionconfiguration-data-theft
   technique: AWS Lambda – EFS Mount Injection via UpdateFunctionConfiguration (Data Theft)
-  reason: 'Documented impact: Read and exfiltrate shared configuration and secrets stored on in-VPC EFS file systems
-    that the target function previously could not reach, by mounting an arbitrary EFS Access Point into a function
-    you can reconfigure and invoke. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: EFS injection reaches files only when VPC, mount, POSIX and execution-role gates pass and the mounted
+    directory contains a usable credential; file content is not inventory.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-event-source-mapping-hijack.md#lambdacreateeventsourcemapping--attach-a-source-to-an-existing-privileged-function
   technique: '`lambda:CreateEventSourceMapping` — attach a source to an existing privileged function'
-  reason: 'Documented impact: Trigger a privileged, unchanged victim function against an attacker-chosen (but role-reachable)
-    source, causing its fixed sensitive behavior to run on attacker-influenced records without code execution, source
-    read, or... This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: A new mapping triggers an unchanged function, but escalation needs compatible source polling and a handler
+    whose fixed behavior performs a privileged action on the arriving record.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-event-source-mapping-hijack.md#lambdaupdateeventsourcemapping--redirect-an-existing-mapping
   technique: '`lambda:UpdateEventSourceMapping` — redirect an existing mapping'
-  reason: 'Documented impact: Divert live records from an existing DynamoDB Streams/Kinesis/SQS source into an attacker-controlled
-    Lambda, obtaining continuous read (and tampering) of the victim''s in-flight data without modifying producers
-    or the original... This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: A redirected mapping diverts source records, but escalation requires a controlled receiver able to poll
+    and records with usable credentials or other privileged content.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-runtime-pinning-abuse.md#aws-lambda--runtime-pinningrollback-abuse-via-putruntimemanagementconfig
   technique: AWS Lambda – Runtime Pinning/Rollback Abuse via PutRuntimeManagementConfig
   reason: The section documents the resource or service effect of AWS Lambda – Runtime Pinning/Rollback Abuse via
@@ -1760,9 +1733,12 @@
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-macie-post-exploitation/README.md#macie2getsensitivedataoccurrences--updaterevealconfiguration--retrieve-the-actual-sensitive-values
   technique: '`macie2:GetSensitiveDataOccurrences` (+ `UpdateRevealConfiguration`) — retrieve the actual sensitive
     values'
-  reason: 'Documented impact: Direct exfiltration of the sensitive samples (PII, credentials, financial/health data)
-    referenced by a valid finding. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
+  reason: 'Macie reveal can expose plaintext credentials from a finding, including an S3 object the requester cannot
+    read directly when ASSUME_ROLE is configured. GetSensitiveDataOccurrences alone proves neither a credential
+    nor a new identity: the finding and detailed result must contain a still-usable secret, the reveal role must
+    be able to read that object, and the requester needs the reveal-key KMS permissions. Changing the reveal configuration
+    additionally requires UpdateRevealConfiguration and PassRole. These finding-content, role-use and credential-validity
+    facts are not established by the snapshot.'
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-macie-post-exploitation/README.md#macie2putclassificationexportconfiguration--redirect-the-sensitive-data-discovery-map-to-an-attacker-bucket
   technique: '`macie2:PutClassificationExportConfiguration` — redirect the sensitive-data discovery map to an attacker
@@ -1811,9 +1787,11 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-marketplace-post-exploitation/README.md#aws-marketplaceputdeploymentparameter--poison-buyer-quick-launch-secrets
   technique: '`aws-marketplace:PutDeploymentParameter` — Poison buyer Quick Launch secrets'
-  reason: The section documents the resource or service effect of `aws-marketplace:PutDeploymentParameter` — Poison
-    buyer Quick Launch secrets, without a reusable AWS principal credential or arbitrary execution under another
-    role.
+  reason: PutDeploymentParameter changes a seller-owned product parameter for a buyer agreement. Credential interception
+    or vendor impersonation is conditional on the exact Quick Launch template or product integration consuming an
+    attacker-controlled endpoint or credential, later buyer traffic, and a usable intercepted credential. Seller
+    write permission alone proves parameter tampering, not a new buyer identity; these integration and runtime facts
+    are not in the snapshot.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-marketplace-post-exploitation/README.md#aws-marketplacebatchmeterusage--inflate-or-duplicate-saas-customer-usage
   technique: '`aws-marketplace:BatchMeterUsage` — inflate or duplicate SaaS customer usage'
@@ -1840,33 +1818,40 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-memorydb-data-access-post-exploitation/README.md#authenticate-directly-with-memorydbconnect
   technique: Authenticate directly with `memorydb:Connect`
-  reason: 'Documented impact: Read, modify or delete every key and invoke every command granted by the targeted
-    MemoryDB user''s access string, potentially exposing session tokens, credentials, PII and application state.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: memorydb:Connect directly authorizes IAM authentication as a named IAM-enabled MemoryDB ACL user, with
+    authorization required on both the cluster and user ARN. It does not by itself yield another AWS principal or
+    a reusable secret; effective data-plane access also needs the user attached to the cluster ACL, an allowed network
+    route and commands permitted by the access string. Any downstream credential gain depends on exact key contents
+    and credential validity, which the snapshot cannot establish.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-memorydb-data-access-post-exploitation/README.md#export-a-snapshot-to-s3-with-memorydbcopysnapshot
   technique: Export a snapshot to S3 with `memorydb:CopySnapshot`
-  reason: 'Documented impact: Full exfiltration of a MemoryDB cluster''s dataset (all keys/values) to attacker-controlled
-    S3, with no route to the cluster endpoint and no ACL/AUTH credential. This section does not establish another
-    AWS principal or attacker-controlled role execution.'
+  reason: CopySnapshot can export the MemoryDB dataset to S3 without a cluster route or ACL password. Exported keys
+    may contain session tokens or application credentials, but no target identity follows from CopySnapshot permission
+    alone. The exact RDB contents, a usable credential and downstream acceptance are needed; snapshot existence
+    or CreateSnapshot permission and an export-compatible bucket are separate prerequisites.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-memorydb-post-exploitation/README.md#memorydbupdatecluster---remove-authentication-andor-replace-the-network-perimeter
   technique: '`memorydb:UpdateCluster` - remove authentication and/or replace the network perimeter'
-  reason: 'Documented impact: Full unauthenticated read, modification and deletion of the reachable cluster dataset,
-    including session tokens, credentials, PII and application state. This section does not establish another AWS
-    principal or attacker-controlled role execution.'
+  reason: Changing a MemoryDB cluster to the open-access ACL can remove its data-plane authentication boundary,
+    but UpdateCluster permission alone does not prove a reachable cluster or a newly gained identity. The service-linked
+    role must exist, the ACL change must be accepted, and the attacker needs a VPC route and admitted security group.
+    Security-group-only replacement does not bypass the ACL. Any downstream credential gain also depends on cluster
+    data contents and validity; these reachability and content facts are absent from the snapshot.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-neptune-post-exploitation/README.md#query-a-neptune-database-with-only-neptune-dbreaddataviaquery
   technique: Query a Neptune database with only `neptune-db:ReadDataViaQuery`
-  reason: 'Documented impact: Read graph vertices, edges, and properties accessible to the query, including application
-    data or secrets stored in the graph. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
+  reason: ReadDataViaQuery is direct IAM-authorized Neptune data reading when DB IAM authentication and network
+    reachability permit it. A separate identity is gained only if an exact returned graph property contains a still-usable
+    credential accepted by that identity. Graph content, credential validity and endpoint reachability are not established
+    by the configuration snapshot.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-neptune-post-exploitation/README.md#recover-the-change-log-with-only-neptune-dbgetstreamrecords
   technique: Recover the change log with only `neptune-db:GetStreamRecords`
-  reason: 'Documented impact: Read retained graph changes, including deleted or modified property values that may
-    no longer be returned by a current-state query. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
+  reason: GetStreamRecords can read retained Neptune graph changes when Streams is enabled and the endpoint is reachable.
+    A separate identity is gained only if a retained record contains a credential that is still usable after the
+    change. Record contents, retention, credential validity and endpoint reachability are not established by the
+    configuration snapshot.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-neptune-post-exploitation/README.md#query-a-neptune-analytics-graph-with-only-neptune-graphreaddataviaquery
   technique: Query a Neptune Analytics graph with only `neptune-graph:ReadDataViaQuery`
@@ -1935,8 +1920,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-odb-post-exploitation/README.md#odbcreateautonomousdatabasewallet--export-fresh-database-client-material
   technique: '`odb:CreateAutonomousDatabaseWallet` — export fresh database client material'
-  reason: 'Documented impact: Recover fresh TLS client keys/certificates and database connection configuration.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: CreateAutonomousDatabaseWallet returns fresh mTLS client material, but the wallet alone does not authenticate
+    as an Oracle database user. A separate valid Oracle username/password or other authentication path, database
+    reachability, and successful wallet generation are needed; customer-managed-secret mode can also require PassRole.
+    These held-credential and network facts are absent from the snapshot.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-opensearch-cross-account-post-exploitation/README.md#escreateoutboundconnection-esauthorizevpcendpointaccess--cross-account-data-plane-reach
   technique: '`es:CreateOutboundConnection`, `es:AuthorizeVpcEndpointAccess` — cross-account data-plane reach'
@@ -1964,11 +1951,6 @@
     verification-completion link. This section does not establish another AWS principal or attacker-controlled role
     execution.'
   source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-pcs-post-exploitation/README.md#pcsgetcluster-secretsmanagergetsecretvalue--forge-slurm-rest-jwts
-  technique: '`pcs:GetCluster`, `secretsmanager:GetSecretValue` — Forge Slurm REST JWTs'
-  reason: This heading concerns reading or exporting data via `pcs:GetCluster`, `secretsmanager:GetSecretValue`
-    — Forge Slurm REST JWTs; it does not itself authorize a different AWS principal or execute code as its role.
-  source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-pinpoint-post-exploitation/README.md#sms-voicesendtextmessage--sendvoicemessage--smishing--vishing-from-a-trusted-origination-identity
   technique: '`sms-voice:SendTextMessage` / `SendVoiceMessage` — smishing / vishing from a trusted origination identity'
   reason: 'Documented impact: Send phishing SMS / automated voice calls from the victim''s trusted, deliverability-warmed
@@ -1989,32 +1971,38 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-q-in-connect-post-exploitation/README.md#wisdomlistmessages--wisdomlistspans--read-conversations-and-ai-agent-traces
   technique: '`wisdom:ListMessages` / `wisdom:ListSpans` — Read conversations and AI-agent traces'
-  reason: This heading concerns reading or exporting data via `wisdom:ListMessages` / `wisdom:ListSpans` — Read
-    conversations and AI-agent traces; it does not itself authorize a different AWS principal or execute code as
-    its role.
+  reason: Session messages or spans might contain a live reusable secret, but the snapshot has no message/span contents,
+    secret validity, or target identity binding. A ListMessages/ListSpans allow alone proves only conversation read;
+    an exact credential-content collector would be needed and must leave missing content UNKNOWN.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
   technique: Harvest DB credentials via RDS Proxy auth secrets (`rds:DescribeDBProxies` + `secretsmanager:GetSecretValue`)
-  reason: This heading concerns reading or exporting data via Harvest DB credentials via RDS Proxy auth secrets
-    (`rds:DescribeDBProxies` + `secretsmanager:GetSecr; it does not itself authorize a different AWS principal or
-    execute code as its role.
+  reason: RDS Proxy backend Secrets Manager auth secrets contain a database username/password, so a DB identity
+    can be gained. Current schema has no database-user target or proxy-auth secret binding. Add aws_database_user
+    and bind DescribeDBProxies Auth.SecretArn to the exact backend user; collect DescribeDBProxies and DescribeDBProxyTargets
+    (IAM rds:DescribeDBProxies, rds:DescribeDBProxyTargets), snapshot key rds_proxy_auth {proxy_arn,secret_arn,db_user,target_db_arn};
+    UNKNOWN until collected and GetSecretValue/KMS rights are resolved.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdsdownloaddblogfileportion
   technique: '`rds:DownloadDBLogFilePortion`'
-  reason: 'Documented impact: Access to sensitive information or unauthorized actions using leaked credentials.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Downloaded engine logs may contain live reusable credentials, but this requires actual runtime log content,
+    secret validity, and the mapped target identity. Without content evidence, DownloadDBLogFilePortion is only
+    log read; evaluate UNKNOWN if a credential-content collector is later added.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdscreatebluegreendeployment-rdsmodifydbinstance
   technique: '`rds:CreateBlueGreenDeployment`, `rds:ModifyDBInstance`'
-  reason: 'Documented impact: A full clone of the production topology the attacker can reconfigure freely (public
-    access, new master password), and — if switchover is available — the ability to make that reconfigured clone
-    become production. This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Blue/green plus ModifyDBInstance can reset the green master password, creating access as a database user;
+    current graph has no aws_database_user target or clone-to-master binding. Add that target and collect DescribeBlueGreenDeployments
+    plus DescribeDBInstances (IAM rds:DescribeBlueGreenDeployments, rds:DescribeDBInstances), snapshot key rds_blue_green
+    {deployment_arn,source_db_arn,green_db_arn,master_user,managed_password}; UNKNOWN without eligible deployment
+    and resettable green instance.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdscreatedbsnapshot-rdsrestoredbinstancefromdbsnapshot-rdsmodifydbinstance
   technique: '`rds:CreateDBSnapshot`, `rds:RestoreDBInstanceFromDBSnapshot`, `rds:ModifyDBInstance`'
-  reason: 'Documented impact: A fully attacker-controlled, internet-reachable copy of the production database with
-    a password the attacker sets — total read/write access to every row, without ever authenticating to the original
-    instance. This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Snapshot restore plus ModifyDBInstance can set the restored instance master password and obtain its DB
+    identity. Add aws_database_user target and snapshot-restored-DB binding; collect DescribeDBSnapshots and DescribeDBInstances
+    (IAM rds:DescribeDBSnapshots, rds:DescribeDBInstances), snapshot key rds_restorable_snapshots {snapshot_arn,source_db_arn,engine,restorable}
+    and rds_db_instances {db_arn,master_user,managed_password}. Missing backup or reachability is UNKNOWN.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdsrestore
   technique: '`rds:Restore*`'
@@ -2047,15 +2035,18 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#cross-region-automated-backups-replication-for-stealthy-restore-rdsstartdbinstanceautomatedbackupsreplication
   technique: Cross-Region Automated Backups Replication for Stealthy Restore (`rds:StartDBInstanceAutomatedBackupsReplication`)
-  reason: 'Documented impact: A continuously-updated copy of the database''s backups in a region the defender may
-    not monitor, restorable at will — durable data access that survives remediation in the primary region. This
-    section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Cross-Region backup replication and point-in-time restore can yield a new DB master identity only with
+    a subsequent ModifyDBInstance password reset. Add aws_database_user target and replicated-backup-to-restored-instance
+    binding; collect DescribeDBInstanceAutomatedBackups in destination Region and DescribeDBInstances (IAM rds:DescribeDBInstanceAutomatedBackups,
+    rds:DescribeDBInstances), snapshot key rds_replicated_backups {source_db_arn,destination_region,backup_arn,restorable,master_user}.
+    Missing destination inventory is UNKNOWN.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdscreatedbinstancereadreplica-rdsmodifydbinstance
   technique: '`rds:CreateDBInstanceReadReplica`, `rds:ModifyDBInstance`'
-  reason: 'Documented impact: A live, continuously-synced replica of production under an identifier the attacker
-    controls, optionally public — full read access to current data, and after promotion a writable copy. This section
-    does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Read-replica creation plus ModifyDBInstance can give access as the replica master DB user if engine/version
+    permits credential reset. Add aws_database_user target and source-to-replica binding; collect DescribeDBInstances
+    (IAM rds:DescribeDBInstances), snapshot key rds_replica_candidates {source_db_arn,engine,replica_supported,master_user,managed_password}.
+    Missing eligibility or network path is UNKNOWN.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#stealthy-continuous-exfiltration-via-aurora-zeroetl-to-amazon-redshift-rdscreateintegration
   technique: Stealthy continuous exfiltration via Aurora zero‑ETL to Amazon Redshift (rds:CreateIntegration)
@@ -2081,9 +2072,9 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdsmodify
   technique: '`rds:Modify*`'
-  reason: 'Documented impact: Depending on the sub-action: reset the master password to gain DB access, expose the
-    instance publicly, disable backups/encryption-in-transit, or point the instance at an attacker-controlled parameter
-    or option group. This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: Most auxiliary rds:Modify* calls only change configuration; ModifyDBInstance or ModifyDBCluster with a
+    resettable master password can confer the database master identity. Model these two concrete actions under aws_database_user
+    with a database/master binding and viable login path; do not infer a generic Modify* privilege edge.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-redshift-post-exploitation/README.md#redshift-dataexecutestatement---run-sql-without-a-database-network-route
   technique: '`redshift-data:ExecuteStatement` - run SQL without a database network route'
@@ -2110,9 +2101,11 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-refactor-spaces-post-exploitation/README.md#refactor-spacescreateservice--refactor-spacescreateroute---intercept-selected-application-requests
   technique: '`refactor-spaces:CreateService` + `refactor-spaces:CreateRoute` - Intercept selected application requests'
-  reason: The section documents the resource or service effect of `refactor-spaces:CreateService` + `refactor-spaces:CreateRoute`
-    - Intercept selected application req, without a reusable AWS principal credential or arbitrary execution under
-    another role.
+  reason: Route creation can forward HTTP headers and bodies to an attacker endpoint. It becomes credential escalation
+    only if intercepted runtime traffic contains a live reusable bearer token mapped to another application principal.
+    Existing environment/application ownership, healthy endpoint, and exact path/method match are also required;
+    the configuration snapshot alone cannot prove token content, so keep this excluded until content evidence is
+    collected.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-refactor-spaces-post-exploitation/README.md#refactor-spacesupdateroute---disable-a-specific-route-and-force-default-route-fallback
   technique: '`refactor-spaces:UpdateRoute` - Disable a specific route and force default-route fallback'
@@ -2157,9 +2150,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-global-resolver-post-exploitation/README.md#route53globalresolvergetaccesstoken--recover-a-dohdot-client-token
   technique: '`route53globalresolver:GetAccessToken` — recover a DoH/DoT client token'
-  reason: 'Documented impact: High-impact credential disclosure. This section does not establish another AWS principal
-    or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: The API returns a reusable DNS bearer token. Its exact view and validity must be joined to a target Global
+    Resolver service identity; no DNS-view token target kind or token-to-view binding is currently evaluated. A
+    different IAM principal is not required for the disclosed credential to matter.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-profiles-post-exploitation/README.md#associateresourcetoprofile--updateprofileresourceassociation--propagate-malicious-dns-configuration
   technique: '`AssociateResourceToProfile` / `UpdateProfileResourceAssociation` — propagate malicious DNS configuration'
   reason: 'Documented impact: DNS-based traffic redirection or denial, bulk query-name disclosure, bypass or weakening
@@ -2226,16 +2220,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3restoreobject
   technique: '`s3:RestoreObject`'
-  reason: 'Documented impact: Recovery and theft of archived data (backups, old snapshots, historical logs) that
-    is otherwise offline, including secrets long removed from current objects. This section does not establish another
-    AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
-- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3putobject-on-an-ssm-aws-runremotescript-payload
-  technique: '`s3:PutObject` on an SSM `AWS-RunRemoteScript` payload'
-  reason: 'Documented impact: Local root/SYSTEM command execution on targeted managed nodes and access to the AWS
-    permissions exposed through each node''s credential chain. This section does not establish another AWS principal
-    or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: RestoreObject only makes an archived object temporarily readable. A separate GetObject grant (and KMS
+    decrypt when applicable), a live credential in that object, and its owner are required; restoration alone gains
+    no identity.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3putbucketnotification--wire-future-objects-into-a-pre-authorized-lambda
   technique: '`s3:PutBucketNotification` — wire future objects into a pre-authorized Lambda'
   reason: The bucket notification only routes later objects to an already authorized Lambda. Code execution further
@@ -2244,10 +2232,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3putbucketwebsite--hijack-a-static-sites-traffic-via-redirect-config
   technique: '`s3:PutBucketWebsite` — hijack a static site''s traffic via redirect config'
-  reason: 'Documented impact: redirect a static site''s visitors (or a specific callback path) to an attacker host
-    for phishing, defacement, or theft of any secret carried in the request URL/query string, without modifying
-    a single object. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: PutBucketWebsite affects only traffic through the S3 website endpoint or a website-origin distribution.
+    Credential gain further requires a later visitor to put a usable token in a redirected URL and an exact account
+    binding; REST/OAC origins ignore this configuration.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3delete
   technique: '`s3:Delete*`'
   reason: 'Documented impact: Destruction of the bucket''s objects and, with versioning suspended or version deletion
@@ -2257,21 +2245,20 @@
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-configuration-access-post-exploitation/README.md#sagemakerdescribeappimageconfig-and-sagemakerlistappimageconfigs--read-plaintext-container-variables
   technique: '`sagemaker:DescribeAppImageConfig` and `sagemaker:ListAppImageConfigs` — read plaintext container
     variables'
-  reason: 'Documented impact: Disclosure of tokens, credentials, internal endpoints, or proprietary application
-    settings placed directly in custom-image environment variables. This section does not establish another AWS
-    principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: DescribeAppImageConfig or ListAppImageConfigs can return plaintext container environment variables. Identity
+    gain requires a live credential in an exact config and a mapped owner; endpoints and ordinary settings alone
+    are not credentials.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-configuration-access-post-exploitation/README.md#sagemakerdescribemodel--inference-environment-secret-disclosure
   technique: '`sagemaker:DescribeModel` — inference-environment secret disclosure'
-  reason: This heading concerns reading or exporting data via `sagemaker:DescribeModel` — inference-environment
-    secret disclosure; it does not itself authorize a different AWS principal or execute code as its role.
-  source_revision: a66f094ede
+  reason: DescribeModel returns plaintext container Environment values, which can contain a live application credential.
+    It does not disclose the model execution-role credential; an exact value-to-identity and validity check is needed.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-configuration-access-post-exploitation/README.md#sagemakerdescribetrainingjob--read-training-configuration-and-environment-values
   technique: '`sagemaker:DescribeTrainingJob` — Read training configuration and environment values'
-  reason: 'Documented impact: Disclosure of ML deployment configuration, plaintext job variables, proprietary hyperparameters,
-    and sensitive dataset/model locations. This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: DescribeTrainingJob returns plaintext Environment and HyperParameters values. Only a live credential bound
+    to a specific identity would be an escalation; job metadata alone is not.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md#sagemaker-endpoint-data-siphon-via-updateendpoint-datacaptureconfig
   technique: SageMaker endpoint data siphon via UpdateEndpoint DataCaptureConfig
   reason: The section documents the resource or service effect of SageMaker endpoint data siphon via UpdateEndpoint
@@ -2307,16 +2294,16 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-security-agent-post-exploitation/README.md#securityagentlistactormessages--recover-email-mfa-codes-and-verification-links
   technique: '`securityagent:ListActorMessages` — recover email MFA codes and verification links'
-  reason: 'Documented impact: Obtain a live email OTP or verification link and complete the corresponding application''s
-    second-factor or account-verification step when the attacker also controls the required primary credential/session.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: ListActorMessages can reveal a live OTP or verification link, but the attacker must also possess the primary
+    credential or session and redeem the token within the 24-hour retention and application validity window. Message
+    metadata cannot prove takeover.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-security-agent-post-exploitation/README.md#securityagentgetartifact--batchgetfindings--recover-assessment-context-and-exploit-material
   technique: '`securityagent:GetArtifact` / `BatchGetFindings` — recover assessment context and exploit material'
-  reason: 'Documented impact: Recover application architecture/configuration, vulnerable file/line locations, confirmed
-    exploit logic, reproducible attack scripts, authentication/test environment values, endpoint inventory and repository/remediation
-    metadata. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: GetArtifact or BatchGetFindings can return authentication environment values or a usable script URL. Only
+    exact still-valid values mapped to an application or repository identity would escalate; architecture and exploit
+    notes alone do not.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-security-agent-post-exploitation/README.md#securityagentstartcoderemediation--trigger-trusted-remediation-pull-requests
   technique: '`securityagent:StartCodeRemediation` — trigger trusted remediation pull requests'
   reason: 'Documented impact: Cause trusted automated branches/pull requests, consume reviewer/CI capacity, and
@@ -2331,9 +2318,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-security-lake-post-exploitation/README.md#securitylakecreatesubscriber--updatesubscriber--external-cross-account-access
   technique: '`securitylake:CreateSubscriber` / `UpdateSubscriber` — external cross-account access'
-  reason: 'Documented impact: Cross-account exfiltration of the selected centralized security telemetry and disclosure
-    of defender visibility. This section does not establish another AWS principal or attacker-controlled role execution.'
-  source_revision: a66f094ede
+  reason: CreateSubscriber can create an assumable S3 subscriber role for another account, while UpdateSubscriber
+    can reassign an existing subscriber; this is delegated data access. The exact generated role/share, prerequisites,
+    external-ID trust, source scope and consuming account must be resolved before emitting a principal edge.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-service-catalog-appregistry-post-exploitation/README.md#recover-application-metadata--servicecataloggetattributegroup
   technique: Recover application metadata — `servicecatalog:GetAttributeGroup`
   reason: 'Documented impact: recover application ownership, contacts, department, runtime, SLA, compliance/data-sensitivity
@@ -2386,11 +2374,10 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ses-post-exploitation/README.md#sesputidentitypolicy--sesv2putemailidentitypolicy--cross-account-sending-authorization-backdoor
   technique: '`ses:PutIdentityPolicy` / `sesv2:PutEmailIdentityPolicy` — cross-account sending-authorization backdoor'
-  reason: 'Documented impact: Persistent cross-account ability to send email as the victim''s verified domain (passing
-    SPF/DKIM/DMARC) — high-fidelity phishing/BEC and brand impersonation that outlives the attacker''s original
-    access and burns the victim''s... This section does not establish another AWS principal or attacker-controlled
-    role execution.'
-  source_revision: a66f094ede
+  reason: A policy on a verified SES identity can delegate SendEmail/SendRawEmail to an attacker account. This gains
+    the identity-specific sending privilege, although it does not grant IAM identity impersonation. The catalog
+    needs an SES sending-identity target and verified-identity/policy join.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-simpledb-post-exploitation/README.md#sdbstartdomainexport--export-a-complete-domain-to-s3
   technique: '`sdb:StartDomainExport` — export a complete domain to S3'
   reason: The section documents the resource or service effect of `sdb:StartDomainExport` — export a complete domain
@@ -3084,3 +3071,183 @@
   reason: A returned EMR configuration or Kerberos field must contain a live reusable credential for a distinct
     identity; cluster metadata and describe permission alone cannot prove its value or owner.
   source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-streams-post-exploitation/README.md#export-all-modified-session-files
+  technique: Export session files containing credentials
+  reason: The exported ZIP may contain credentials, but file contents, credential validity and readable S3 output
+    are runtime facts; configuration alone cannot identify a gained account.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-streams-post-exploitation/README.md#recover-bearer-stream-urls-and-frozen-session-configuration
+  technique: Recover an active bearer stream URL
+  reason: A stream URL gives access to an application session, but the page does not establish a stronger logged-in
+    identity; remaining uses, expiry and application login are runtime facts.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-streams-post-exploitation/README.md#recover-bearer-stream-urls-and-frozen-session-configuration
+  technique: Recover credential in stream URL environment or arguments
+  reason: Environment variables or arguments may contain secrets; the exact value and successful external authentication
+    require content inspection and live validation.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-streams-post-exploitation/README.md#recover-stream-session-arguments-signaling-data-and-destinations
+  technique: Recover session environment or argument secret
+  reason: Session parameters may expose a secret, but neither a credential nor its acceptance by a destination is
+    established by configuration.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-glue-post-exploitation/README.md#read-secrets-accidentally-placed-in-jobs-and-workflows
+  technique: Read embedded job or workflow secrets
+  reason: Job and workflow arguments only sometimes contain secrets; identifying a target account and whether the
+    value works requires content inspection and destination authentication.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-glue-post-exploitation/README.md#read-stored-connection-credentials
+  technique: Read a Glue connection password
+  reason: GetConnection can expose a stored password, but whether it is present, current and accepted by a reachable
+    JDBC or SaaS endpoint is a runtime fact.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-greengrass-post-exploitation/README.md#related-iot-device-fleet-primitives-same-archetype
+  technique: IoT Managed Integrations OTA task
+  reason: CreateOtaTask schedules firmware; code execution depends on image content, device download, verification
+    and installation, and no specific stronger device identity is established.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-greengrass-post-exploitation/README.md#related-iot-device-fleet-primitives-same-archetype
+  technique: IoT Wireless firmware task on gateways
+  reason: Gateway task creation is not proof that attacker firmware is accepted and executed on a particular gateway;
+    firmware content and device state are required.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-healthomics-post-exploitation/README.md#export-private-workflow-source-and-run-secrets
+  technique: Recover run parameter or task-log secret
+  reason: A GetRun response or task log may contain a secret; the actual content, target identity and current validity
+    are runtime facts.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-healthomics-post-exploitation/README.md#export-private-workflow-source-and-run-secrets
+  technique: Recover secret embedded in private workflow export
+  reason: A workflow export is source disclosure; an embedded usable credential is contingent on source content
+    and external acceptance.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-healthomics-post-exploitation/README.md#poison-or-destroy-genomic-and-workflow-state
+  technique: Plant a workflow version executed later with a stronger role
+  reason: Creating a version only plants content. Escalation depends on later selection by another operator, executable
+    content and execution under a stronger run role.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-invoicing-and-billing-post-exploitation/README.md#steal-or-sabotage-a-procurement-portal-connection
+  technique: Redirect procurement connection to attacker endpoint
+  reason: PutProcurementPortalPreference changes configuration, but portal verification, connection testing and
+    receipt of an accepted integration identity depend on external runtime workflow; no credential transfer follows
+    from the write alone.
+  source_revision: 0b36331
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lex-v2-post-exploitation/README.md#read-or-poison-another-runtime-session
+  technique: Poison another Lex runtime session to impersonate application workflow authority
+  reason: PutSession can impersonate victim workflow authority only if a victim session ID is known or predictable
+    and application code trusts attacker-set session attributes as authorization. Those runtime and code facts are
+    absent from an AWS configuration snapshot; GetSession alone reads data and DeleteSession disrupts availability.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-managed-flink-post-exploitation/README.md#read-current-and-historical-runtime-secrets
+  technique: Read Flink current or historical runtime secrets
+  reason: DescribeApplication and DescribeApplicationVersion can reveal current or historical property values, but
+    the snapshot cannot establish that a particular value is a still-usable credential for an identity the reader
+    does not already hold. This requires the returned property content and downstream credential validation; application
+    read permission alone proves disclosure, not a privilege edge.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-managed-flink-post-exploitation/README.md#retrieve-and-inspect-application-code-and-dependencies
+  technique: Recover credentials embedded in Flink artifact
+  reason: Reading a Flink code artifact with s3:GetObject exposes bytes, not necessarily another identity. A privilege
+    edge requires the exact retained JAR or dependency to contain a credential and proof that the credential still
+    authenticates; these are artifact-content and downstream runtime facts absent from the configuration snapshot.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-marketplace-post-exploitation/README.md#marketplace
+  technique: Redeem SaaS registration token from Marketplace agreement
+  reason: GetAgreementEntitlements may return a SaaS registration token, but a privilege edge requires a current
+    unredeemed token for the exact agreement and proof that the seller onboarding endpoint accepts it as a separate
+    buyer identity. Token issuance, 30-minute validity and seller-side redemption state are runtime facts absent
+    from the snapshot.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-migration-hub-strategy-recommendations-post-exploitation/README.md#harvest-credentials-from-a-compromised-collector-host
+  technique: Harvest collector non-AWS administration credentials
+  reason: The section begins with local root, Docker or equivalent access to the configured collector, rather than
+    a Strategy Recommendations IAM permission. A separate vCenter, OS or repository identity is gained only if local
+    files contain a still-valid credential; host access, file contents and downstream acceptance are not in the
+    AWS configuration snapshot. The distinct collector AWS-key case is aws-v3-11-harvest-the-strategy-recommendations-collector-aws-keys.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-migration-hub-strategy-recommendations-post-exploitation/README.md#abuse-captured-collector-aws-credentials
+  technique: Read database credentials from collector-reachable secrets
+  reason: The migrationhub-strategy-* secret prefix and secretsmanager:GetSecretValue allow a read, but do not establish
+    that a specific secret holds a usable database credential or which database identity it represents. The secret
+    payload, any KMS grant and database acceptance are exact content/runtime facts; aws-v3-11-harvest-the-strategy-recommendations-collector-aws-keys
+    covers only the earlier collector-key theft.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md#mwaa-serverless-sensitive-workflow-reads
+  technique: Recover secret from MWAA Serverless workflow definition
+  reason: GetWorkflow returns a workflow definition and code locations; it does not guarantee an embedded credential
+    or role-derived authorization. The exact definition content, credential validity and target identity would be
+    needed to infer a privilege edge.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md#mwaa-serverless-sensitive-workflow-reads
+  technique: Recover secret from MWAA Serverless run override parameters
+  reason: GetWorkflowRun returns run override parameters, but a run may have no credential-bearing override. The
+    exact run response, a still-usable credential and its target identity are content/runtime facts absent from
+    the configuration snapshot.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mwaa-post-exploitation/README.md#mwaa-serverless-sensitive-workflow-reads
+  technique: Recover secret from MWAA Serverless task XCom
+  reason: GetTaskInstance can expose task XCom values, but XCom may contain ordinary results or unusable tokens.
+    The exact task response, credential validity and identity that accepts it are content/runtime facts absent from
+    the configuration snapshot.
+  source_revision: 0b36331174
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#enable-full-sql-logging-via-db-parameter-groups-and-exfiltrate-via-rds-log-apis
+  technique: Enable full SQL logging via DB parameter groups and exfiltrate via RDS log APIs
+  reason: SQL-log theft would become credential escalation only if future engine log contents actually contain a
+    live reusable credential for a distinct database, application, or cloud identity. The configuration snapshot
+    cannot establish that runtime log content, validity, or principal mapping; ModifyDBParameterGroup plus DownloadDBLogFilePortion
+    alone proves data access.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-dns-takeover-post-exploitation/README.md#cross-service-interception-of-a-fixed-privileged-http-consumer
+  source_revision: 0b36331
+  technique: Cross-service interception of a fixed privileged HTTP consumer
+  reason: DNS control can expose a credential only if a particular privileged HTTP client later resolves the changed
+    name and sends reusable authentication material without independently validated TLS. The page names no client,
+    credential, or authenticated channel; DNS records alone cannot establish this path.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#sensitive-information
+  source_revision: 0b36331
+  technique: Sensitive Information
+  reason: The page gives Terraform state secrets only as an example. A specific readable object must contain a still-valid
+    credential and its owner must be identified from content; S3 object metadata and s3:GetObject permission cannot
+    establish that binding.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#pivoting
+  source_revision: 0b36331
+  technique: Pivoting
+  reason: The Airflow/MWAA DAG branch is covered by aws-mwaa-s3-putobject-dag, with other exact S3 code consumers
+    covered by aws-sagemaker-s3-putobject-job-code, aws-glue-s3-putobject-job-script, aws-codebuild-s3-source-poisoning
+    and aws-s3-putobject-ec2-userdata-object. The remaining browser-session branch needs the exact script-to-site
+    binding, a later authenticated browser load, and a usable session; a generic writable bucket does not identify
+    a target user.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-secrets-manager-post-exploitation/README.md#read-secrets
+  source_revision: 0b36331
+  technique: Read Secrets
+  reason: GetSecretValue reveals an identity only when the exact secret contains a live credential and the credential
+    owner is known. Secret metadata does not prove content or validity; a customer-managed KMS key may also require
+    kms:Decrypt. The page does not identify a fixed target.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-secrets-manager-post-exploitation/README.md#mass-secret-exfiltration-via-batchgetsecretvalue-up-to-20-per-call
+  source_revision: 0b36331
+  technique: Mass Secret Exfiltration via BatchGetSecretValue (up to 20 per call)
+  reason: BatchGetSecretValue expands secret reads but does not identify a credential holder. Each returned secret
+    must contain a live credential mapped to a target; filters additionally require ListSecrets, and customer-managed
+    keys can require kms:Decrypt. Secret metadata alone is insufficient.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-security-incident-response-post-exploitation/README.md#download-or-poison-forensic-attachments-without-direct-s3-permission
+  source_revision: 0b36331
+  technique: Download or poison forensic attachments without direct S3 permission
+  reason: The attachment download URL grants evidence access, not an identity by itself. A specific forensic attachment
+    would need to contain a still-valid credential and identify its holder; upload only poisons evidence. Attachment
+    metadata does not prove this.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ses-post-exploitation/README.md#bulk-exfiltration-of-a-mail-manager-archive
+  source_revision: 0b36331
+  technique: Bulk exfiltration of a Mail Manager archive
+  reason: Archive search/content reads expose mail, but account takeover requires an actual retained message with
+    a still-valid credential or recovery token and its associated application account. An archive inventory does
+    not establish either fact; export also needs an attacker-readable destination.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ses-post-exploitation/README.md#inbound-email-interception-with-receipt-rules
+  source_revision: 0b36331
+  technique: Inbound email interception with receipt rules
+  reason: Receipt-rule interception can yield an account only if the targeted SES receiving path is active, a later
+    message contains a usable recovery token, and that token redeems for a named account. A rule and bucket policy
+    alone do not establish the future message or token validity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ses-post-exploitation/README.md#inbound-email-interception-with-mail-manager-rule-sets
+  source_revision: 0b36331
+  technique: Inbound email interception with Mail Manager rule sets
+  reason: A Mail Manager rule-set change can yield an account only if a target ingress point uses that rule set,
+    the exfiltration destination receives a later message with a usable token, and that token redeems for a named
+    account. Configuration alone cannot prove the future content or redemption.

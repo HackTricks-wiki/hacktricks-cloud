@@ -404,33 +404,42 @@
   provider: aws
   service: lex
   title: Trigger privileged business actions through a Lex fulfillment hook
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lex-v2-post-exploitation/README.md#abuse-an-existing-code-hook-through-runtime-access
-  summary: Lex runtime call -> exact configured hook role, conditional on a verified privileged intent/slot behavior.
-    Exact source, target and prerequisite proof are required.
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lex-v2-post-exploitation/README.md#abuse-an-existing-code-hook-through-runtime-access
+  summary: A Lex runtime request can reach a verified privileged business action exposed by an existing fulfillment
+    hook; it does not grant arbitrary Lambda role access.
   requires:
-    all_of:
-    - action: lex:RecognizeText
-      resource: '*'
+    any_of:
+    - - action: lex:RecognizeText
+        resource: '{target.resource_arn}'
+    - - action: lex:RecognizeUtterance
+        resource: '{target.resource_arn}'
+    - - action: lex:PutSession
+        resource: '{target.resource_arn}'
+    - - action: lex:StartConversation
+        resource: '{target.resource_arn}'
   target:
     kind: aws_verified_authority
     selector:
       aws_challenge_fact: aws-v3-14-trigger-privileged-business-actions-through-a-lex-fulfi
     scope: same_account
-    aggregate_as: Verified Trigger privileged business actions through a Lex fulfillment hook targets in {account}
+    aggregate_as: Verified privileged Lex hook actions in {account}
     grants:
-    - exact configured hook role, conditional on a verified privileged intent/slot behavior.
+    - Only the business action verified for the exact bot alias, intent, and slot path
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target; A
-      hook invocation without application authorization analysis is no principal edge.
+    description: Evidence must bind the acting IAM principal, exact bot-alias ARN, reachable intent and slot values,
+      configured fulfillment hook, and missing or bypassable application authorization. The hook execution role
+      is not directly controlled.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  mitigation: Restrict Lex runtime actions to the required bot aliases and authorize each privileged fulfillment
+    action in the application.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
+  references:
+  - https://docs.aws.amazon.com/lexv2/latest/APIReference/welcome.html
 - id: aws-v3-15-replay-a-victim-application-session-recovered-from-waf
   provider: aws
   service: logs
@@ -1993,14 +2002,12 @@
   provider: aws
   service: evs
   title: EVS connector secret
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-connector-credentials-for-an-existing-vcf-appliance
-  summary: 'Add `service_plane: evs-vmware-appliance` and exact environment/appliance account selector; require `evs:GetEnvironment`
-    or service credential-read action plus `secretsmanager:GetSecretValue` on exact linked secret. Exact source, target and
-    prerequisite proof are required.'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-connector-credentials-for-an-existing-vcf-appliance
+  summary: Read the exact connector secret ARN returned for an EVS environment and recover the connector appliance
+    account.
   requires:
     all_of:
-    - action: evs:GetEnvironment
+    - action: evs:ListEnvironmentConnectors
       resource: '*'
     - action: secretsmanager:GetSecretValue
       resource: '*'
@@ -2011,18 +2018,18 @@
     scope: same_account
     aggregate_as: Verified EVS connector secret targets in {account}
     grants:
-    - 'Add `service_plane: evs-vmware-appliance` and exact environment/appliance account selector'
+    - Exact VCF connector account privileges, never assumed VMware administrator
   conditions:
-  - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Same exact connector account/secret join, without inferring VMware admin from connector credentials.
+  - id: connector_secret
+    description: Join environment, connector, FQDN and secret ARN; require kms:Decrypt for a customer key, a valid
+      secret and appliance network access.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-68-firewall-manager-admin-action
   provider: aws
   service: fms
@@ -2090,14 +2097,19 @@
   provider: aws
   service: inspector2
   title: Inspector delegated administrator
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-inspector-post-exploitation/README.md#inspector2disabledelegatedadminaccount-inspector2enabledelegatedadminaccount--organizationslistdelegatedadministrators--organizationsenableawsserviceaccess--iamcreateservicelinkedrole
-  summary: Add exact organization-delegate service-plane target (`fms`, `network-security-manager`, `inspector2`) scoped
-    to a **controlled member account**; require row-specific delegate action. Exact source, target and prerequisite
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-inspector-post-exploitation/README.md#inspector2disabledelegatedadminaccount-inspector2enabledelegatedadminaccount--organizationslistdelegatedadministrators--organizationsenableawsserviceaccess--iamcreateservicelinkedrole
+  summary: Add exact organization-delegate service-plane target (`fms`, `network-security-manager`, `inspector2`)
+    scoped to a **controlled member account**; require row-specific delegate action. Exact source, target and prerequisite
     proof are required.
   requires:
     all_of:
     - action: inspector2:EnableDelegatedAdminAccount
+      resource: '*'
+    - action: organizations:ListDelegatedAdministrators
+      resource: '*'
+    - action: organizations:EnableAWSServiceAccess
+      resource: '*'
+    - action: iam:CreateServiceLinkedRole
       resource: '*'
   target:
     kind: aws_verified_authority
@@ -2106,18 +2118,19 @@
     scope: same_account
     aggregate_as: Verified Inspector delegated administrator targets in {account}
     grants:
-    - Add exact organization-delegate service-plane target (`fms`, `network-security-manager`, `
+    - Inspector delegated administration from the controlled member account
   conditions:
-  - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Controlled member account, trusted access and actual Inspector delegate state.
+  - id: exact_delegate
+    description: Caller is in the Organizations management account; target is a controlled eligible member. If another
+      delegate exists, organizations:DeregisterDelegatedAdministrator is additionally required. Trusted access and
+      service-linked role state must be checked.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence
+    is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-71-workmail-resetpassword
   provider: aws
   service: workmail
