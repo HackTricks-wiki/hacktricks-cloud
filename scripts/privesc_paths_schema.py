@@ -30,6 +30,7 @@ TARGET_KINDS = {
     "aws_directory_domain_admin": ("aws", "entity"),
     "aws_service_plane_admin": ("aws", "entity"),
     "aws_verified_authority": ("aws", "entity"),
+    "aws_challenge_foothold": ("aws", "principal"),
     "gcp_service_account": ("gcp", "principal"),
     "gcp_user": ("gcp", "principal"),
     "gcp_group": ("gcp", "principal"),
@@ -1153,6 +1154,8 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
         if kind == "aws_verified_authority" and not selector.get("aws_challenge_fact"):
             errors.append(f"{where}: aws_verified_authority needs selector aws_challenge_fact")
+        if kind == "aws_challenge_foothold":
+            errors.append(f"{where}: aws_challenge_foothold is a source kind, not a target")
         if selector.get("aws_challenge_fact") and selector["aws_challenge_fact"] != entry.get("id"):
             errors.append(f"{where}: aws_challenge_fact must equal the technique id")
         for key, wanted in (("k8s_secret_holds_cloud_credential", "cloud_identity"),
