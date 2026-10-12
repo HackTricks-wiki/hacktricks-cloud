@@ -253,3 +253,30 @@
   - https://cloud.google.com/workflows/docs/authenticate-workflow
   - https://cloud.google.com/workflows/docs/access-control
   - https://cloud.google.com/workflows/docs/creating-callback-endpoints
+- id: gcp-workflows-execution-sa-credential
+  provider: gcp
+  service: workflows
+  title: Read credential from workflow execution arguments or results of a GCP service account
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-workflows-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable workflow execution content contains a verified reusable credential belonging to another GCP
+    service account.
+  requires:
+    all_of:
+    - action: workflows.executions.get
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-workflows-execution-sa-credential
+    scope: any
+    outcome: credentials
+  conditions:
+  - id: verified_content
+    description: Emit only for exact source, resource, target and scope evidence after verifying credential validity;
+      absent or incomplete content is UNKNOWN, and metadata or secret names alone do not qualify.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workflows.executions.get on sensitive resources; rotate exposed service-account credentials.
+  references:
+  - https://docs.cloud.google.com/workflows/docs/access-execution-results

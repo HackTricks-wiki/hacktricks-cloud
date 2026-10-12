@@ -9,9 +9,6 @@
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-certificate-manager-post-exploitation.md#public-ca-publiccagoogleapiscom
   technique: Public CA section introduction
   reason: The heading names the Public CA endpoint and introduces the ACME account section; creating an ACME account is reviewed under its own heading and does not grant a GCP IAM identity.
-- source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-integration-connectors-privesc.md#connectorsconnectionssetiampolicy--resource-level-self-grant-to-use-a-connection
-  technique: Connection IAM self-grant for stored backend credentials
-  reason: The grant permits connector operations with a stored external backend credential; the page does not identify an attached GCP service account or grant its IAM permissions. The former GCP-SA attachment bypass is documented as fixed.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataproc-privesc.md#--scopescloud-platform-at-cluster-create--oauth-scope-amplification-of-a-stolen-node-token
   technique: Dataproc cloud-platform scopes at cluster creation
   reason: The same dataproc.clusters.create plus iam.serviceAccounts.actAs combination and chosen service-account target are modeled by gcp-dataproc-clusters-batches-create-actas; its access_scopes condition covers the create-time cloud-platform flag.
@@ -801,7 +798,8 @@
   reason: Service introduction; no technique.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-discovery-engine-privesc.md#discoveryengineenginesdatastorescollectionssetiampolicy--self-grant-app-or-corpus-access
   technique: Discovery Engine engines/dataStores/collections setIamPolicy self-grant
-  reason: "Grants use or administration of one Gemini Enterprise app or corpus (indexed data); data access, no new cloud identity."
+  reason: Grants a new administrative or use role on the exact Gemini Enterprise app or corpus, but the GCP evaluator
+    lacks a resource-scoped privilege target and the linked-resource/persona join; do not infer project-wide access.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-discovery-engine-privesc.md#discoveryengineidentitymappingstoresimportidentitymappings--inject-an-identity-mapping-to-bypass-per-document-acls
   technique: importIdentityMappings ACL bypass
   reason: "Maps an attacker identity into a group for per-document search ACLs; data access, no new cloud identity."
@@ -829,9 +827,6 @@
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#cloud-healthcare-api
   technique: Page intro
   reason: Service introduction; no technique.
-- source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
-  technique: "healthcare.*.setIamPolicy clinical-data self-grant"
-  reason: "Grants FHIR/DICOM/HL7v2/consent data roles on one dataset or store; data access, no new identity (the Healthcare service agent is not reachable)."
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iap-privesc.md#iap
   technique: Page intro
   reason: Service introduction; no technique.
@@ -947,7 +942,8 @@
   reason: "Resource-bounded publish/consume/redirect control of one topic or subscription; data access, no new identity."
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md#pubsubsubscriptionscreate--pubsubsubscriptionsupdate--iamserviceaccountsactas--obtain-oidc-tokens-as-a-service-account
   technique: Authenticated push subscription OIDC token
-  reason: "Audience-bound OIDC identity token, not an OAuth access token; excluded like iam.serviceAccounts.getOpenIdToken."
+  reason: Audience-bound OIDC can authenticate as the selected SA to a trusting receiver, but delivery, capture,
+    audience and receiver trust require evidence; it is not OAuth access to arbitrary Google APIs.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md#pubsubsubscriptionscreate--pubsubsubscriptionsupdate--write-through-a-more-privileged-export-identity
   technique: Export subscription write through a privileged delivery identity
   reason: "Confused-deputy write of topic messages into a protected bucket/table; data write within a fixed schema, no token or impersonation."
@@ -968,13 +964,16 @@
   reason: Service introduction; no technique.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md#secretmanagersecretsenablemanagedrotation--reset-a-cloud-sql-users-password-through-the-secret-identity
   technique: enableManagedRotation Cloud SQL password reset
-  reason: "Yields a Cloud SQL database user credential through the secret identity; database access, not a cloud IAM identity."
+  reason: Managed rotation can set a known Cloud SQL database-user password through the secret identity; model the
+    exact DB user and first-enable prerequisites.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secure-source-manager-privesc.md#malicious-webhooks--event-exfiltration--authenticated-calls--persistence
   technique: Malicious webhooks / service-account-authenticated delivery
-  reason: Event exfiltration and an audience-bound OIDC token for the repository SA; excluded like getOpenIdToken.
+  reason: Event exfiltration is data access; authenticated delivery may carry a scoped SA OIDC token only with signing
+    authority, a matching event and a trusting receiver.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secure-source-manager-privesc.md#securesourcemanagersshkeyscreateany--implant-an-ssh-key-on-a-service-accounts-git-identity-pushfetch-as-the-sa
-  technique: "sshkeys.createAny on a service account's git identity"
-  reason: Requires actAs on the SA and yields only its SSM repository roles (git push/fetch); the push-to-pipeline consequence is covered by gcp-securesourcemanager-push-cicd.
+  technique: sshkeys.createAny on a service account's git identity
+  reason: createAny plus actAs can grant Git fetch/push as the SA; repository IAM and key registration must be verified,
+    and this is not general Google API impersonation.
 - source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-security-command-center-privesc.md#security-command-center
   technique: Page intro
   reason: Service introduction; no technique.
@@ -1072,9 +1071,6 @@
     but it is not a general Google API OAuth token. The current SA target means general impersonation and would
     be a false positive. A sound edge requires an audience-bound assertion target, exact relying-service trust
     and gateway invocation facts, none represented here.
-- source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-managed-microsoft-ad-post-exploitation.md#managedidentitiesdomainsresetpassword--obtain-the-delegated-administrator-credential
-  technique: Reset the Managed Microsoft AD delegated administrator password
-  reason: Yields an Active Directory account in the managed domain, not a GCP/Workspace principal; out of the GCP identity graph.
 - source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-cloud-tasks-persistence.md#queue-urioverride---passive-capture-of-every-task-the-application-enqueues
   technique: Queue uriOverride passive capture of application tasks
   reason: Documented as payload/header exfiltration with no token override; capture of per-task OAuth tokens attached by enqueuers is not documented (privesc-page twin also excluded).
@@ -1186,8 +1182,8 @@
   reason: recon; reveals targets or data but grants no identity.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-parameter-manager-post-exploitation.md#parameterversionsrender--read-secret-manager-secrets-you-dont-have-access-to
   technique: parameterVersions.render — read Secret Manager secrets you don't have access to
-  reason: Returns secret values through a parameter identity; the payload is arbitrary data, so no configuration-derived target
-    identity.
+  reason: Render returns referenced secret values. An identity edge requires validated credential content and an
+    exact stronger-principal mapping; arbitrary payloads remain data.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-developer-connect-post-exploitation.md#developerconnectusersfetchaccesstoken---recover-the-callers-own-linked-oauth-token
   technique: developerconnect.users.fetchAccessToken - recover the caller's own linked OAuth token
   reason: This method is self-only for the Google user, but it can return that user’s linked external-provider
@@ -1299,9 +1295,8 @@
   reason: 'No configuration-derived second identity: detection evasion.'
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-workflows-post-exploitation.md#workflowsworkflowsget--recover-workflow-source-and-its-execution-identity
   technique: workflows.workflows.get — recover workflow source and its execution identity
-  reason: The section allows sourceContents to contain a hardcoded credential, but presence, usability and downstream
-    identity are content facts absent from the configuration snapshot; the service-account email alone is reconnaissance.
-  source_revision: 0b36331
+  reason: Workflow serviceAccount metadata is reconnaissance; sourceContents can disclose a reusable credential
+    only when content and owner are verified. workflows.workflows.get alone does not establish an identity edge.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-discovery-engine-post-exploitation.md#discoveryengineservingconfigssearch--read-a-periodic-bigquery-copy-whose-imported-acls-are-not-enforced
   technique: discoveryengine.servingConfigs.search — Read a Periodic BigQuery Copy Whose Imported ACLs Are Not Enforced
   reason: 'No configuration-derived second identity: indexed data read.'
@@ -1310,8 +1305,8 @@
   reason: 'No configuration-derived second identity: indexed data read.'
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secure-source-manager-post-exploitation.md#repositoriesfetch--read-apis--harvest-private-source-and-unmerged-review-intelligence
   technique: repositories.fetch + read APIs — harvest private source and unmerged review intelligence
-  reason: Repository history and review diffs may contain valid credentials. Their identity, validity, and downstream
-    permissions are runtime content and cannot be inferred from repository read permission alone.
+  reason: Repository fetch is data access unless committed content contains a validated stronger credential mapped
+    to an exact principal.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-web-security-scanner-post-exploitation.md#create-and-run-a-custom-scan-to-map-a-projects-public-application
   technique: Create and run a custom scan to map a project's public application
   reason: app vulnerability recon; reveals targets or data but grants no identity.
@@ -1393,8 +1388,8 @@
   reason: 'No configuration-derived second identity: DoS.'
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md#secretmanagerversionsaccess
   technique: secretmanager.versions.access
-  reason: Secret payload may contain a key, but identity and validity are runtime data, not derivable from the secret resource
-    configuration.
+  reason: A secret version can hold a stronger credential, but its content, validity and exact principal mapping
+    must be verified; metadata or permission alone is data read.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-secretmanager-post-exploitation.md#secretmanagerversionsadd
   technique: secretmanager.versions.add
   reason: Changes a secret value consumed by an application; no documented deterministic execution-as-SA path.
@@ -1424,7 +1419,8 @@
   reason: Removes an application tool guardrail but gives no new IAM grant; follow-on tool authority must already exist.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-oracle-database-post-exploitation.md#oracledatabaseautonomousdatabasesgeneratewallet--pull-the-connection-wallet--full-db-access
   technique: oracledatabase.autonomousDatabases.generateWallet — pull the connection wallet → full DB access
-  reason: credential/secret disclosure (data); no configuration-derived target principal or execution path.
+  reason: Wallet retrieval can grant a database-user credential; current catalog lacks a DB-user target and wallet
+    authentication facts. It does not confer GCP IAM identity.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-oracle-database-post-exploitation.md#oracledatabaseautonomousdatabasesclone--restore--offline-copy-exfil
   technique: oracledatabase.autonomousDatabases.clone / .restore — offline copy exfil
   reason: data read/exfil; no configuration-derived target principal or execution path.
@@ -1451,8 +1447,8 @@
   reason: control weakening / defense evasion; changes availability or detection, not another principal's privileges.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-source-repositories-post-exploitation.md#sourcereposget--clone-private-source-and-inspect-all-reachable-history
   technique: source.repos.get — clone private source and inspect all reachable history
-  reason: Repository history may contain valid committed credentials. Their identity, validity, and downstream permissions
-    are runtime content and cannot be inferred from source.repos.get alone.
+  reason: Repository read can expose a reusable service-account key in reachable Git history, but that requires
+    validated content and key-owner evidence; source.repos.get alone does not identify a gained principal.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pub-sub-post-exploitation.md#bigquery-export-subscription-exfil-sink---pubsubsubscriptionscreate--pubsubtopicsattachsubscription
   technique: BigQuery export subscription exfil sink - pubsub.subscriptions.create + pubsub.topics.attachSubscription
   reason: data read/exfil; no configuration-derived target principal or execution path.
@@ -1518,7 +1514,8 @@
   reason: Context, data access, control tampering, or recon; no independently documented identity gain.
 - source: src/pentesting-cloud/gcp-security/gcp-services/gcp-parameter-manager-enum.md#parameter-manager-parametermanagergoogleapiscom
   technique: Parameter Manager (parametermanager.googleapis.com)
-  reason: Context, data access, control tampering, or recon; no independently documented identity gain.
+  reason: Render returns referenced secret values. An identity edge requires validated credential content and an
+    exact stronger-principal mapping; arbitrary payloads remain data.
 - source: src/pentesting-cloud/gcp-security/gcp-services/gcp-telemetry-enum.md#telemetry-otlp-api-telemetrygoogleapiscom
   technique: Telemetry (OTLP) API (telemetry.googleapis.com)
   reason: Context, data access, control tampering, or recon; no independently documented identity gain.
@@ -1530,7 +1527,8 @@
   reason: Context, data access, control tampering, or recon; no independently documented identity gain.
 - source: src/pentesting-cloud/gcp-security/gcp-services/gcp-sensitive-data-protection-dlp-enum.md#sensitive-data-protection--dlp-dlpgoogleapiscom
   technique: Sensitive Data Protection / DLP (dlp.googleapis.com)
-  reason: Context, data access, control tampering, or recon; no independently documented identity gain.
+  reason: Service overview. DLP findings can quote a reusable credential only when includeQuote and the output content
+    support it; IAM/job metadata alone cannot identify a gained principal.
 - source: src/pentesting-cloud/gcp-security/gcp-services/gcp-web-security-scanner-enum.md#web-security-scanner-websecurityscannergoogleapiscom
   technique: Web Security Scanner (websecurityscanner.googleapis.com)
   reason: Context, data access, control tampering, or recon; no independently documented identity gain.
@@ -1562,7 +1560,9 @@
   reason: Changes monitoring or application controls; no GCP IAM principal or role is gained.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-integration-connectors-post-exploitation.md#rolesconnectorsinvoker--rolesconnectorslistener--use-a-connections-stored-credentials
   technique: roles/connectors.invoker / roles/connectors.listener — use a connection's stored credentials
-  reason: Connection uses a configured third-party backend credential for data operations; no GCP IAM principal is obtained.
+  reason: The caller may act under a distinct stored backend credential, but current backend authorization, credential
+    validity, exact action/entity support, and successful execution are external runtime facts not established by
+    the GCP configuration snapshot. Listener only receives the configured event stream.
 - source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-firebase-data-connect-post-exploitation.md#connectorsimpersonatequery--impersonatemutation--run-operations-as-any-end-user
   technique: connectors.impersonateQuery / .impersonateMutation — run operations as any end-user
   reason: Impersonation of a selected application user for a deployed connector operation is an identity gain
@@ -2347,8 +2347,10 @@
     IAM principal's roles.
 - source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-cloud-tasks-unauthenticated-enum.md#queues-granted-cloudtaskstaskscreate-to-allusers--allauthenticatedusers
   technique: Queues granted cloudtasks.tasks.create to allUsers / allAuthenticatedUsers
-  reason: A public queue binding permits unauthenticated task enqueueing; without actAs on the queue token service account
-    it does not supply that account's IAM privileges.
+  reason: A queue binding to allUsers or allAuthenticatedUsers permits task enqueueing by any Google-authenticated
+    caller without a victim-project grant; the Cloud Tasks API still requires a valid Google bearer token. Creating
+    a task with an OAuth/OIDC token for a service account additionally requires iam.serviceAccounts.actAs on that
+    account, so the queue grant alone does not confer its IAM privileges.
 - source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-iap-unauthenticated-enum.md#allusers--rolesiaphttpsresourceaccessor-bypass
   technique: allUsers → roles/iap.httpsResourceAccessor bypass
   reason: The allUsers IAP binding exposes the protected application to the public; it does not impersonate the application
@@ -2717,3 +2719,41 @@
   reason: NFS access depends on the compromised host network, export rule, and POSIX permissions. A stronger
     identity is gained only if readable file content contains a live credential; Filestore instance metadata
     does not identify one.
+- source: src/pentesting-cloud/gcp-security/gcp-services/gcp-integration-connectors-enum.md#enumerate-connections
+  technique: Invoke a connection using stored backend credentials
+  reason: The connection inventory and GCP Invoker permission do not establish that a specific action or SQL statement
+    succeeds as a distinct backend identity. That requires the current external backend account permissions, credential
+    validity, connector action schema, and execution result; the GCP snapshot cannot determine them without false
+    positive identity edges.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/README.md#service-account-private-keys
+  technique: Use a leaked service-account private key found in public material
+  reason: A valid leaked service-account private key authenticates as its service account, but the public repository,
+    log, bundle, or artifact containing it and the key's validity and owner are content and runtime facts absent
+    from the configuration snapshot.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/README.md#bearer-identity-tokens
+  technique: Reuse a leaked bearer identity token
+  reason: A valid bearer token can confer a session as its represented identity, but signature validity, audience,
+    scopes, expiry, and token owner depend on the token and accepting service at runtime, not IAM configuration.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-api-keys-unauthenticated-enum.md#service-account-private-keys
+  technique: Use a leaked service-account private key from public client material
+  reason: A valid private key in public client material authenticates as its service account, but the material's
+    contents, key validity, and target service account cannot be inferred from IAM policy or API-key configuration.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-artifact-registry-unauthenticated-enum.md#anonymous-pull-from-a-public-repository
+  technique: Pull public image layers that may contain credentials
+  reason: Anonymous Artifact Registry read exposes image bytes; an identity gain requires a valid service-account
+    key or other credential actually embedded in an image layer, plus its owner and current validity, none of which
+    the repository IAM grant establishes.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-compute-unauthenticated-enum.md#ssrf---server-side-request-forgery
+  technique: Use header-capable SSRF to read a VM service-account metadata token
+  reason: The VM metadata token would authenticate as its attached service account, but a reachable web application
+    with header-capable SSRF and a successful request to the metadata server are runtime application and network
+    facts absent from the snapshot.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-gke-kubelet-unauthenticated-access.md#historical-kubelet-read-only-metadata
+  technique: Read legacy kubelet /pods metadata that may expose environment credentials
+  reason: The legacy read-only kubelet port provides pod metadata; a credential gain requires a reachable port 10255
+    and a usable credential actually present in a /pods environment value, with owner and validity determined from
+    live response content.
+- source: src/pentesting-cloud/gcp-security/gcp-unauthenticated-enum-and-access/gcp-google-groups-unauthenticated-enum.md#read-a-publicly-visible-group-archive
+  technique: Read public Google Groups messages that may contain pasted secrets
+  reason: A public Google Groups archive discloses messages, not group membership; a credential gain requires a
+    usable secret actually pasted in a message and validation of its owner and current validity.

@@ -59,3 +59,66 @@
   confidence: conditional
   severity: high
   mitigation: Restrict setIamPolicy (roles/securesourcemanager.instanceOwner, repoAdmin, roles/owner).
+- id: gcp-securesourcemanager-hook-oidc-token
+  provider: gcp
+  service: securesourcemanager
+  title: Capture repository webhook OIDC token
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-secure-source-manager-enum.md#relevant-permissions
+  summary: A service-account-authenticated hook sends an identity token for the repository SA to the selected URI.
+  requires:
+    any_of:
+    - - action: securesourcemanager.hooks.create
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+    - - action: securesourcemanager.hooks.update
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-securesourcemanager-hook-oidc-token
+  conditions:
+  - Repository SA association, service-agent Token Creator, hook event, reachable endpoint and matching downstream
+    audience.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict hook writes/actAs; review authenticated hook destinations.
+  references:
+  - https://docs.cloud.google.com/secure-source-manager/docs/set-up-webhooks
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. This is an
+    audience-bound OIDC identity token, not general OAuth access.
+  source_revision: 0b36331
+- id: gcp-securesourcemanager-fetch-committed-credential
+  provider: gcp
+  service: securesourcemanager
+  title: Clone a repository containing a stronger cloud credential
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-secure-source-manager-enum.md#relevant-permissions
+  summary: Repository fetch exposes source files; when a committed file contains a usable stronger credential, the
+    caller can acquire it.
+  requires:
+    all_of:
+    - action: securesourcemanager.repositories.fetch
+      resource: '*'
+    - action: securesourcemanager.instances.access
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-securesourcemanager-fetch-committed-credential
+  conditions:
+  - Repository content contains a valid credential for a stronger principal.
+  - Credential-to-principal relation requires content evidence; repository IAM and instance access must permit clone.
+  confidence: conditional
+  severity: high
+  mitigation: Scan and revoke committed credentials; restrict repository fetch.
+  references:
+  - https://docs.cloud.google.com/secure-source-manager/docs/access-control
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. Only a validated
+    stronger service-account credential qualifies; arbitrary content is data.
+  source_revision: 0b36331

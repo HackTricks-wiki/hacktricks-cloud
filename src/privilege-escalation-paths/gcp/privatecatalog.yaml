@@ -11,9 +11,11 @@
   source_revision: 171e422
   summary: The source can make the Google APIs Service Agent of consumer projects that later deploy a shared solution version it can update create attacker-chosen resources.
   requires:
-    all_of:
-      - action: cloudprivatecatalogproducer.products.update
-        resource: "*"
+    any_of:
+      - - action: cloudprivatecatalogproducer.products.update
+          resource: "*"
+      - - action: cloudprivatecatalogproducer.products.setIamPolicy
+          resource: "*"
   target:
     kind: gcp_service_account
     selector:
@@ -25,8 +27,6 @@
       description: A consumer must explicitly preview, deploy or update the poisoned version in their project; nothing runs at update time.
     - id: attached_catalog
       description: The product must already be attached to a catalog associated with the consumer hierarchy, and the modified asset must pass validation.
-    - id: terraform_solutions
-      description: Terraform-based solutions run as the configured or default Cloud Build identity instead of the cloudservices agent.
   blockers:
     - gcp_deny_policy
   confidence: conditional
@@ -34,7 +34,7 @@
   mitigation: Restrict cloudprivatecatalogproducer editor/admin roles and review solution versions before consumers deploy them.
   references:
     - https://docs.cloud.google.com/service-catalog/docs/create-solutions
-  notes: Deployment Manager solutions run as the consumer project's Google APIs Service Agent (roles/editor by default), like gcp-deploymentmanager-deployments-create.
+  notes: Deployment Manager branch only; Terraform uses the consumer Cloud Build SA (gap-04). Product setIamPolicy can self-grant update on the same existing product.
 - id: gcp-privatecatalog-terraform-version-poison
   provider: gcp
   service: cloudprivatecatalogproducer
