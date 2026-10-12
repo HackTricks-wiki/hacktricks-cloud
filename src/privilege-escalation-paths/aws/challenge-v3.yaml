@@ -132,14 +132,14 @@
   provider: aws
   service: workspaces-web
   title: Add or replace a WorkSpaces Web portal SAML/OIDC identity provider
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-an-attacker-controlled-portal-identity-provider
-  summary: Controlled IdP trusted by an exact standard-federation portal -> portal access plane. Exact source, target
-    and prerequisite proof are required.
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-an-attacker-controlled-portal-identity-provider
+  summary: Controlled IdP trusted by an exact standard-federation portal -> portal access plane. Exact source, target and prerequisite proof are required.
   requires:
-    all_of:
-    - action: workspaces-web:CreateIdentityProvider
-      resource: '*'
+    any_of:
+    - - action: workspaces-web:CreateIdentityProvider
+        resource: '*'
+    - - action: workspaces-web:UpdateIdentityProvider
+        resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -150,15 +150,13 @@
     - portal access plane.
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target; IdP
-      write alone is insufficient; only that portal and its federated session are targets.
+    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target; IdP write alone is insufficient; only that portal and its federated session are targets.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-06-use-independent-cognito-replica-lockout-counters-to-gue
   provider: aws
   service: challenge-evidence
@@ -444,14 +442,18 @@
   provider: aws
   service: logs
   title: Replay a victim application session recovered from WAF records
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
-  summary: Readable WAF log destination -> exact application session identified by a captured replayable header,
-    conditional only. Exact source, target and prerequisite proof are required.
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
+  summary: Readable WAF log destination -> exact application session identified by a captured replayable header, conditional only. Exact source, target and prerequisite proof are required.
   requires:
-    all_of:
-    - action: logs:FilterLogEvents
-      resource: '*'
+    any_of:
+    - - action: logs:FilterLogEvents
+        resource: '*'
+    - - action: logs:GetLogEvents
+        resource: '*'
+    - - action: wafv2:GetSampledRequests
+        resource: '*'
+    - - action: s3:GetObject
+        resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -462,16 +464,13 @@
     - exact application session identified by a captured replayable header, conditional only.
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Readable logging is only a necessary proxy; no victim principal is constructed until the external evidence
-      identifies that exact session.
+    description: The exact WAF record must contain an unredacted, unexpired replayable credential for the named victim; logging access alone is insufficient.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-16-redeem-a-device-farm-session-endpoint-and-control-a-log
   provider: aws
   service: devicefarm
@@ -539,14 +538,14 @@
   provider: aws
   service: workspaces-web
   title: Attach an attacker IdP to a WorkSpaces Secure Browser portal
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-web-post-exploitation/README.md#add-or-replace-an-attacker-controlled-identity-provider
-  summary: WorkSpaces Web IdP replacement -> exact portal federation access plane. Exact source, target and prerequisite
-    proof are required.
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-web-post-exploitation/README.md#add-or-replace-an-attacker-controlled-identity-provider
+  summary: WorkSpaces Web IdP replacement -> exact portal federation access plane. Exact source, target and prerequisite proof are required.
   requires:
-    all_of:
-    - action: workspaces-web:CreateIdentityProvider
-      resource: '*'
+    any_of:
+    - - action: workspaces-web:CreateIdentityProvider
+        resource: '*'
+    - - action: workspaces-web:UpdateIdentityProvider
+        resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -557,15 +556,13 @@
     - exact portal federation access plane.
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target; Do
-      not imply IAM access or Identity Center access from portal login.
+    description: The exact standard-federation portal must trust the newly created or updated attacker-controlled IdP; source and target must match reviewed evidence.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is UNKNOWN/unresolved; verified evidence never creates a definite path.
 - id: aws-v3-19-grant-a-controlled-identity-sitewise-monitor-administra
   provider: aws
   service: iotsitewise
@@ -1220,16 +1217,19 @@
   provider: aws
   service: elasticache
   title: ElastiCache full-access user group
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-elasticache-persistence/README.md#elasticachecreateuser-elasticachecreateusergroup--elasticachemodifyusergroup--plant-a-full-access-rbac-user
-  summary: 'Add `service_plane: elasticache` and exact replication-group selector; require row-specific ModifyUser/CreateUser/ModifyUserGroup
-    or ModifyReplicationGroup. Exact source, target and prerequisite proof are required.'
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-elasticache-persistence/README.md#elasticachecreateuser-elasticachecreateusergroup--elasticachemodifyusergroup--plant-a-full-access-rbac-user
+  summary: 'Add `service_plane: elasticache` and exact replication-group selector; require row-specific ModifyUser/CreateUser/ModifyUserGroup or ModifyReplicationGroup. Exact source, target and prerequisite proof are required.'
   requires:
     all_of:
     - action: elasticache:CreateUser
       resource: '*'
-    - action: elasticache:CreateUserGroup
-      resource: '*'
+    any_of:
+    - - action: elasticache:ModifyUserGroup
+        resource: '*'
+    - - action: elasticache:CreateUserGroup
+        resource: '*'
+      - action: elasticache:ModifyReplicationGroup
+        resource: '*'
   target:
     kind: aws_verified_authority
     selector:
@@ -1240,15 +1240,13 @@
     - 'Add `service_plane: elasticache` and exact replication-group selector; require row-specifi'
   conditions:
   - id: exact_verified_prerequisites
-    description: A reviewed evidence record must bind this technique, the acting IAM principal and the exact target;
-      Same group-to-replication-group join; create/modify actions on exact resources.
+    description: Exact verified evidence must bind the source, new user, affected user-group and replication group. ModifyUserGroup needs authorization on the existing group and every added/removed user; CreateUserGroup needs authorization on the new group and every initial user, plus ModifyReplicationGroup to attach it to an existing replication group. The user must be active with attacker-known password, full access string, and network reach.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
-  notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
-    UNKNOWN/unresolved; verified evidence never creates a definite path.
+  notes: Missing aws_privesc_challenge_evidence remains UNKNOWN. The current target has no exact user/group ARN placeholders, so scoped resource checks remain an evaluator/collector limitation; the challenge fact must prove them rather than report a definite path.
 - id: aws-v3-43-memorydb-full-access-acl-user
   provider: aws
   service: memorydb
@@ -2230,3 +2228,34 @@
   mitigation: Restrict the listed mutation or read permission and review its exact resource scope.
   notes: The required aws_privesc_challenge_evidence collection is absent from current snapshots. Missing evidence is
     UNKNOWN/unresolved; verified evidence never creates a definite path.
+- id: aws-pa-persist-s01-01
+  provider: aws
+  service: acm
+  title: Create EAB for an existing issuance role, recover binding, register ACME account
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-acm-persistence/README.md#register-an-attacker-controlled-acme-certificate-account
+  summary: Issue certificates for prevalidated names without retaining original IAM principal
+  requires:
+    all_of:
+    - action: acm:CreateAcmeExternalAccountBinding
+      resource: '*'
+    - action: acm:GetAcmeExternalAccountBindingCredentials
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-pa-persist-s01-01
+    scope: same_account
+    grants:
+    - Issue certificates for prevalidated names without retaining original IAM principal
+  conditions:
+  - id: exact_prerequisites
+    description: Exact endpoint and EAB; iam:PassedToService=acm-acme.amazonaws.com; Role trusts acm-acme.amazonaws.com for AssumeRole, TagSession and SetSourceIdentity; Active endpoint and validated domain; registered external account key; role can acm:RequestCertificate
+  confidence: conditional
+  severity: high
+  mitigation: Restrict these permissions on the exact resource and review the resulting service access.
+  references:
+  - https://docs.aws.amazon.com/acm/latest/APIReference/API_GetAcmeExternalAccountBindingCredentials.html
+  - https://docs.aws.amazon.com/acm/latest/userguide/security-iam-acme.html
+  notes: 'Draft only: exact source and target evidence is required; absent evidence evaluates UNKNOWN.'

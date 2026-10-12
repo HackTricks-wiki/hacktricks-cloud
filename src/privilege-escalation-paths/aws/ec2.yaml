@@ -479,3 +479,195 @@
   mitigation: Restrict access to sensitive resources and remove secrets from the artifact.
   references: []
   notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+- id: aws-s05-ec2getvpnconnectiondevicesampleconfiguration-disclose-site-to-site-vpn
+  provider: aws
+  service: ec2
+  title: '`ec2:GetVpnConnectionDeviceSampleConfiguration` — disclose Site-to-Site VPN pre-shared keys'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2getvpnconnectiondevicesampleconfiguration--disclose-site-to-site-vpn-pre-shared-keys
+  source_revision: 0b36331
+  summary: The source may obtain Site-to-Site VPN peer PSK credential when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: ec2:GetVpnConnectionDeviceSampleConfiguration
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2getvpnconnectiondevicesampleconfiguration-disclose-site-to-site-vpn
+    scope: same_account
+    aggregate_as: Verified Site-to-Site VPN peer PSK credential in {account}
+    grants:
+    - Site-to-Site VPN peer PSK credential
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact connection uses Standard PSK storage; usable tunnel additionally needs configured gateway IP/control and routing. Secrets Manager-backed PSKs require independent GetSecretValue. Existing exclusion denies credential gain by limiting itself to AWS principal. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-ec2modifyvpnconnection-ec2modifyvpntunneloptions-take-over-an-existing
+  provider: aws
+  service: ec2
+  title: '`ec2:ModifyVpnConnection` + `ec2:ModifyVpnTunnelOptions` — take over an existing Site-to-Site VPN peer'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2modifyvpnconnection--ec2modifyvpntunneloptions--take-over-an-existing-site-to-site-vpn-peer
+  source_revision: 0b36331
+  summary: The source may obtain Site-to-Site VPN customer peer identity when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: ec2:ModifyVpnConnection
+        resource: '*'
+    - - action: ec2:ModifyVpnConnection
+        resource: '*'
+      - action: ec2:ModifyVpnTunnelOptions
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2modifyvpnconnection-ec2modifyvpntunneloptions-take-over-an-existing
+    scope: same_account
+    aggregate_as: Verified Site-to-Site VPN customer peer identity in {account}
+    grants:
+    - Site-to-Site VPN customer peer identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing same-account customer gateway points to attacker-controlled public IP; tunnel PSKs known or rotated, compatible IKE and routes. Gateway-only change with known PSKs is a valid alternative. Existing exclusion ignores VPN peer takeover. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-ec2authorizeclientvpningress-broaden-an-authenticated-vpn-clients-netw
+  provider: aws
+  service: ec2
+  title: '`ec2:AuthorizeClientVpnIngress` — broaden an authenticated VPN client''s network access'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2authorizeclientvpningress--broaden-an-authenticated-vpn-clients-network-access
+  source_revision: 0b36331
+  summary: The source may obtain Private CIDR reachability for existing VPN client when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: ec2:AuthorizeClientVpnIngress
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2authorizeclientvpningress-broaden-an-authenticated-vpn-clients-netw
+    scope: same_account
+    aggregate_as: Verified Private CIDR reachability for existing VPN client in {account}
+    grants:
+    - Private CIDR reachability for existing VPN client
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing accepted VPN client identity plus matching endpoint association, authorization rule, route, security path and application access. This mutation expands network authorization but does not grant AWS IAM; existing exclusion wrongly uses only AWS-principal criterion. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-ec2associateclientvpntargetnetwork-ec2createclientvpnroute-attach-clie
+  provider: aws
+  service: ec2
+  title: '`ec2:AssociateClientVpnTargetNetwork` + `ec2:CreateClientVpnRoute` — attach Client VPN to a VPC and extend reachable networks'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2associateclientvpntargetnetwork--ec2createclientvpnroute--attach-client-vpn-to-a-vpc-and-extend-reachable-networks
+  source_revision: 0b36331
+  summary: The source may obtain VPC or routed-CIDR reachability for existing VPN client when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: ec2:AssociateClientVpnTargetNetwork
+        resource: '*'
+    - - action: ec2:CreateClientVpnRoute
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2associateclientvpntargetnetwork-ec2createclientvpnroute-attach-clie
+    scope: same_account
+    aggregate_as: Verified VPC or routed-CIDR reachability for existing VPN client in {account}
+    grants:
+    - VPC or routed-CIDR reachability for existing VPN client
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing accepted VPN client identity plus matching endpoint association, authorization rule, route, security path and application access. This mutation expands network authorization but does not grant AWS IAM; existing exclusion wrongly uses only AWS-principal criterion. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-ec2applysecuritygroupstoclientvpntargetnetwork-rebind-client-vpn-to-a
+  provider: aws
+  service: ec2
+  title: '`ec2:ApplySecurityGroupsToClientVpnTargetNetwork` — rebind Client VPN to a trusted security group'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2applysecuritygroupstoclientvpntargetnetwork--rebind-client-vpn-to-a-trusted-security-group
+  source_revision: 0b36331
+  summary: The source may obtain Trusted network path through selected Client VPN security group when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: ec2:ApplySecurityGroupsToClientVpnTargetNetwork
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2applysecuritygroupstoclientvpntargetnetwork-rebind-client-vpn-to-a
+    scope: same_account
+    aggregate_as: Verified Trusted network path through selected Client VPN security group in {account}
+    grants:
+    - Trusted network path through selected Client VPN security group
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing accepted VPN client identity plus matching endpoint association, authorization rule, route, security path and application access. This mutation expands network authorization but does not grant AWS IAM; existing exclusion wrongly uses only AWS-principal criterion. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-ec2modifyclientvpnendpoint-hijack-client-dnsrouting-and-suppress-conne
+  provider: aws
+  service: ec2
+  title: '`ec2:ModifyClientVpnEndpoint` — hijack client DNS/routing and suppress connection logs'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-vpn-post-exploitation/README.md#ec2modifyclientvpnendpoint--hijack-client-dnsrouting-and-suppress-connection-logs
+  source_revision: 0b36331
+  summary: The source may obtain Victim application credential submitted after DNS redirection when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: ec2:ModifyClientVpnEndpoint
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-ec2modifyclientvpnendpoint-hijack-client-dnsrouting-and-suppress-conne
+    scope: same_account
+    aggregate_as: Verified Victim application credential submitted after DNS redirection in {account}
+    grants:
+    - Victim application credential submitted after DNS redirection
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact endpoint accepts attacker-selected DNS server and victim clients reconnect; victim DNS queries are redirected to attacker-controlled destination and user submits reusable credentials. DNS change alone does not bypass TLS or application auth. Existing exclusion correctly rejects IAM escalation but overlooks conditional credential theft via phishing described on the page. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/SetUpVPNConnections.html
+  - https://docs.aws.amazon.com/vpn/latest/s2svpn/customer-gateway-device-windows.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

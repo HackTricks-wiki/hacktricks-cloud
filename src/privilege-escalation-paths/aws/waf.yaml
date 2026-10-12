@@ -1,0 +1,33 @@
+- id: aws-s05-wafv2tagresource-wafv2untagresource
+  provider: aws
+  service: waf
+  title: '**`wafv2:TagResource`, `wafv2:UntagResource`**'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#wafv2tagresource-wafv2untagresource
+  source_revision: 0b36331
+  summary: The source may obtain Additional WAF administration allowed by tag-conditioned policy when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: wafv2:TagResource
+        resource: '*'
+    - - action: wafv2:UntagResource
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-wafv2tagresource-wafv2untagresource
+    scope: same_account
+    aggregate_as: Verified Additional WAF administration allowed by tag-conditioned policy in {account}
+    grants:
+    - Additional WAF administration allowed by tag-conditioned policy
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Only when a policy or automation actually gates a stronger WAF action on mutable tags. Existing exclusion treats all tagging as harmless despite page warning that tags can gate access; absent ABAC evidence there is no edge. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/waf/latest/APIReference/API_DeleteWebACL.html
+  - https://docs.aws.amazon.com/waf/latest/developerguide/logging-fields.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

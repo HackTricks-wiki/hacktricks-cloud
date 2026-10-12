@@ -467,3 +467,30 @@
     self-managed StackSets only (their service_managed_stacksets / stackset_permission_model conditions). No
     iam:PassRole is involved. StackSet permission model, trusted-access state and delegated administrators are not
     collected, so the edge stays conditional.
+- id: aws-pa-persist-s01-30
+  provider: aws
+  service: cloudformation
+  title: Change CDKToolkit TrustedAccounts to attacker account and deploy role trust
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-cloudformation-persistence/README.md#cdk-bootstrap-stack
+  summary: Assume victim CDK bootstrap role from attacker account after trust update
+  requires:
+    all_of:
+    - action: cloudformation:UpdateStack
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      aws_challenge_fact: aws-pa-persist-s01-30
+    scope: same_account
+    grants:
+    - Assume victim CDK bootstrap role from attacker account after trust update
+  conditions:
+  - id: exact_prerequisites
+    description: Exact existing CDKToolkit stack and mutable TrustedAccounts parameter; Attacker controls listed external account; update changes bootstrap role trust; Execution policy and external account sts:AssumeRole determine gained permissions
+  confidence: conditional
+  severity: high
+  mitigation: Restrict these permissions on the exact resource and review the resulting service access.
+  references:
+  - https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-bootstrap.html
+  - https://docs.aws.amazon.com/cli/latest/reference/cloudformation/update-stack.html
+  notes: 'Draft only: exact source and target evidence is required; absent evidence evaluates UNKNOWN.'

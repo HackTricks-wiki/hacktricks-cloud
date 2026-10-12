@@ -236,3 +236,71 @@
     no definite privilege edge.
   references:
   - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/
+- id: aws-s05-connector-remote-directory-move-and-delete-capability-pivot
+  provider: aws
+  service: transfer
+  title: Connector remote-directory, move, and delete capability pivot
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#connector-remote-directory-move-and-delete-capability-pivot
+  source_revision: 0b36331
+  summary: The source may obtain Remote SFTP connector identity and its authorized remote directory capability when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: transfer:StartDirectoryListing
+        resource: '*'
+    - - action: transfer:StartRemoteMove
+        resource: '*'
+    - - action: transfer:StartRemoteDelete
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-connector-remote-directory-move-and-delete-capability-pivot
+    scope: same_account
+    aggregate_as: Verified Remote SFTP connector identity and its authorized remote directory capability in {account}
+    grants:
+    - Remote SFTP connector identity and its authorized remote directory capability
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Existing connector and stored credential, reachable remote path; listing also needs connector-role S3 output and attacker read access to result. StartRemoteMove and StartRemoteDelete are independent alternatives on the exact connector ARN. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  - https://docs.aws.amazon.com/transfer/latest/userguide/authentication-api-gateway.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
+  provider: aws
+  service: transfer
+  title: '`logs:FilterLogEvents` / `logs:GetLogEvents` — recover custom-IdP passwords from logs'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#logsfilterlogevents--logsgetlogevents--recover-custom-idp-passwords-from-logs
+  source_revision: 0b36331
+  summary: The source may obtain Transfer custom-IdP user identity when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: logs:FilterLogEvents
+        resource: '*'
+    - - action: logs:GetLogEvents
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
+    scope: same_account
+    aggregate_as: Verified Transfer custom-IdP user identity in {account}
+    grants:
+    - Transfer custom-IdP user identity
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Known Lambda/API Gateway custom-IdP log group actually contains plaintext passwords; GetLogEvents on a known stream is an alternative. Password login still must work. Existing exclusion is false for service identity takeover. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/transfer/latest/userguide/custom-lambda-idp.html
+  - https://docs.aws.amazon.com/transfer/latest/userguide/authentication-api-gateway.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

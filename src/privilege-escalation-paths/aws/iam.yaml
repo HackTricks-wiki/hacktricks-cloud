@@ -1102,3 +1102,46 @@
   confidence: conditional
   severity: critical
   mitigation: Separate policy-version editing from role assumption and constrain the role with a boundary.
+- id: aws-iam-createuser-policy-accesskey
+  provider: aws
+  service: iam
+  title: Create a privileged IAM user and obtain its access key
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence/README.md#common-iam-persistence
+  source_revision: 0b36331
+  summary: The source can create a new IAM user, grant it administrator permissions, and obtain credentials independent of the source identity.
+  requires:
+    all_of:
+    - action: iam:CreateUser
+      resource: arn:aws:iam::{source.account}:user/*
+      bind: new_user
+    - action: iam:CreateAccessKey
+      resource: arn:aws:iam::{source.account}:user/*
+      bind: new_user
+    any_of:
+    - - action: iam:PutUserPolicy
+        resource: arn:aws:iam::{source.account}:user/*
+        bind: new_user
+    - - action: iam:AttachUserPolicy
+        resource: arn:aws:iam::{source.account}:user/*
+        bind: new_user
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+    scope: same_account
+    outcome: scope_control
+    aggregate_as: Administrator of {account} through a newly created IAM user
+  conditions:
+  - id: new_user_policy
+    description: The caller can choose an administrator-equivalent inline policy or attach an administrator-equivalent managed policy to the same new user, and retains its access key.
+  - id: effective_permissions
+    description: SCPs, permissions boundaries, session conditions and policy attachment restrictions must permit the resulting administrator actions.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Separate user creation from policy grants and credential issuance; restrict each action to approved identity administration.
+  references:
+  - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateUser.html
+  - https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateAccessKey.html
+  notes: The same new user must be covered by every action; managed-policy attachment additionally requires a policy ARN that actually grants the desired permissions.

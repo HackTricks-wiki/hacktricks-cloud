@@ -97,22 +97,19 @@
 # --- API Gateway ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypost
   technique: apigateway:POST (API keys)
-  reason: Creates API keys for API access; application-level, no IAM identity.
+  reason: A new API key can be a bearer credential for a key-gated usage-plan method, without granting IAM authority.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayget
   technique: apigateway:GET
-  reason: Pure data read (API keys).
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayupdaterestapipolicy--apigatewaypatch
+  reason: A value-including API key read can disclose a reusable bearer credential, without granting IAM authority.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayupdaterestapipolicy--apigatewaypatch
   technique: apigateway:UpdateRestApiPolicy / PATCH
-  reason: Opens API invocation (resource policy); application access, not an IAM principal.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypatch-apigatewaypost
+  reason: A resource-policy grant can confer route invocation to an external principal after redeployment, subject to method/backend authorization.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypatch-apigatewaypost
   technique: apigateway:PATCH + POST (authorizer/integration changes)
-  reason: Bypasses API authorization of backend apps; application-level, no IAM identity gained.
-- source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#http-apis--apigatewayv2-variant
+  reason: Changing/removing an authorizer, apiKeyRequired or AWS_IAM authorization can grant previously denied API route invocation after deployment, subject to remaining authorization gates; these are scoped API privileges, not IAM role credentials.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#http-apis--apigatewayv2-variant
   technique: HTTP APIs (apigatewayv2) variant
-  reason: Same application-level authorizer/route manipulation as REST variant.
+  reason: Changing or removing an authorizer can grant previously denied route invocation after deployment, without granting an IAM role.
 - source:
     src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypatch-on-a-rest-vpc-link-does-not-permit-nlb-redirection
   technique: apigateway:PATCH on a REST VPC link

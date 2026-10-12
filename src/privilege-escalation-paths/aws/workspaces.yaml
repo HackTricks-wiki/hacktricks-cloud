@@ -48,3 +48,67 @@
   - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
   notes: Equivalent reach to ec2:RunInstances + iam:PassRole; the source still needs RunInstances on the AMI, network
     and instance resources.
+- id: aws-s05-workspacesupdateworkspaceimagepermission-share-a-custom-image-with-an
+  provider: aws
+  service: workspaces
+  title: '`workspaces:UpdateWorkspaceImagePermission` — share a custom image with an attacker account'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-post-exploitation/README.md#workspacesupdateworkspaceimagepermission--share-a-custom-image-with-an-attacker-account
+  source_revision: 0b36331
+  summary: The source may obtain Identity associated with valid secret in copied WorkSpace image when the exact documented prerequisite is verified.
+  requires:
+    all_of:
+    - action: workspaces:UpdateWorkspaceImagePermission
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-workspacesupdateworkspaceimagepermission-share-a-custom-image-with-an
+    scope: same_account
+    aggregate_as: Verified Identity associated with valid secret in copied WorkSpace image in {account}
+    grants:
+    - Identity associated with valid secret in copied WorkSpace image
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact custom image shared for copy to attacker account, attacker copies it, and disk actually holds still-valid secrets. Existing exclusion ignores documented secret and domain-credential theft; no definite IAM edge from share alone. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/workspaces/latest/api/API_UpdateWorkspaceImagePermission.html
+  - https://docs.aws.amazon.com/workspaces/latest/adminguide/share-custom-image.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+- id: aws-s05-workspacesmodifysamlproperties-modifycertificatebasedauthproperties-we
+  provider: aws
+  service: workspaces
+  title: '`workspaces:ModifySamlProperties` / `ModifyCertificateBasedAuthProperties` — weaken desktop authentication'
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-post-exploitation/README.md#workspacesmodifysamlproperties--modifycertificatebasedauthproperties--weaken-desktop-authentication
+  source_revision: 0b36331
+  summary: The source may obtain Victim WorkSpaces desktop session when the exact documented prerequisite is verified.
+  requires:
+    any_of:
+    - - action: workspaces:ModifySamlProperties
+        resource: '*'
+    - - action: workspaces:ModifyCertificateBasedAuthProperties
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-s05-workspacesmodifysamlproperties-modifycertificatebasedauthproperties-we
+    scope: same_account
+    aggregate_as: Verified Victim WorkSpaces desktop session in {account}
+    grants:
+    - Victim WorkSpaces desktop session
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact directory/workspace auth configuration accepts attacker-controlled IdP assertion or downgraded certificate path, and victim desktop access actually succeeds. ModifyCertificateBasedAuthProperties is an independent alternative; ModifyWorkspaceAccessProperties only changes device/network restrictions. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
+  references:
+  - https://docs.aws.amazon.com/workspaces/latest/api/API_UpdateWorkspaceImagePermission.html
+  - https://docs.aws.amazon.com/workspaces/latest/adminguide/share-custom-image.html
+  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.

@@ -431,3 +431,35 @@
     - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/container-instance-draining.html
     - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_UpdateContainerInstancesState.html
   notes: Unlike aws-ecs-registercontainerinstance-starttask this path needs no ecs:StartTask or iam:PassRole; it reaches the task roles of existing services. ecs:DeregisterContainerInstance is authorized on the cluster ARN.
+- id: aws-ecs-eventbridge-scheduled-task-role
+  provider: aws
+  service: ecs
+  title: Schedule attacker-controlled ECS code under a task role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-ecs-persistence/README.md#periodic-ecs-task-through-eventbridge
+  source_revision: 0b36331
+  summary: The source can arrange recurring execution of attacker-controlled ECS code with a task role through an EventBridge scheduled rule.
+  requires:
+    all_of:
+    - action: events:PutRule
+      resource: '*'
+    - action: events:PutTargets
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      aws_challenge_fact: aws-ecs-eventbridge-scheduled-task-role
+    scope: same_account
+    aggregate_as: Verified ECS task roles reachable through scheduled EventBridge targets in {account}
+  conditions:
+  - id: invocation_role_and_task
+    description: The EventBridge invocation role must trust events.amazonaws.com and authorize ecs:RunTask plus any required iam:PassRole; the selected task definition must have attacker-controlled code and the stronger taskRoleArn.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict scheduled ECS targets, invocation-role passing, and task-definition roles to approved deployment principals.
+  references:
+  - https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-run-ecs-schedule.html
+  notes: Provisional exact-evidence selector keeps the path UNKNOWN until the requested ECS/EventBridge joins are collected. RegisterTaskDefinition and PassRole on task/execution roles are additional requirements when creating a task definition; the existing-definition variant needs proof of attacker code control.

@@ -772,3 +772,45 @@
   notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
     fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
     remains UNKNOWN/unresolved.
+- id: aws-lambda-passrole-createfunction-eventbridge-trigger
+  provider: aws
+  service: lambda
+  title: Run a newly created Lambda with a passable role through EventBridge
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-lambda-persistence/README.md#cronevent-actuator
+  source_revision: 0b36331
+  summary: The source can run chosen code under a stronger Lambda-trusting role by creating a function and a scheduled EventBridge rule that invokes it.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+    - action: lambda:CreateFunction
+      resource: arn:aws:lambda:*:{source.account}:function:*
+      bind: new_function
+    - action: events:PutRule
+      resource: arn:aws:events:*:{source.account}:rule/*
+      bind: scheduled_rule
+    - action: events:PutTargets
+      resource: arn:aws:events:*:{source.account}:rule/*
+      bind: scheduled_rule
+    - action: lambda:AddPermission
+      resource: arn:aws:lambda:*:{source.account}:function:*
+      bind: new_function
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: lambda.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Passable Lambda roles reachable via EventBridge in {account}
+  conditions:
+  - id: scheduled_rule_invokes_function
+    description: The source must create an enabled scheduled rule targeting the newly created function and grant events.amazonaws.com invoke permission on that function; function and rule must be creatable in a common Region.
+  - id: passrole_condition_key
+    description: iam:PassedToService and iam:AssociatedResourceArn conditions must allow passing the role to this new Lambda function.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole, lambda:CreateFunction, events:PutRule, events:PutTargets, and lambda:AddPermission to approved deployment principals.
+  references: []
+  notes: The two page examples, creating IAM user keys and granting assume-role permissions, are payload effects of this one role-execution path. EventBridge schedule can supply the trigger without an external event source.
