@@ -300,3 +300,44 @@
   - https://docs.cloud.google.com/application-integration/docs/configure-authentication-profiles
   notes: Modelled like gcp-agentidentity-retrieve-credentials; the GET method returns the decrypted credential.
     Previously excluded as a plain secret read.
+
+- id: gcp-dns-managedzones-setiampolicy-workspace-admin-recovery
+  provider: gcp
+  service: dns
+  title: Self-grant DNS record-write permission on a Workspace domain zone and complete administrator recovery
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-dns-post-exploitation.md#scope-boundaries
+  source_revision: 0b36331
+  summary: The source can grant itself record-write authority on a public Cloud DNS zone and use the administrator-recovery
+    challenge to reach a Workspace super administrator of that domain.
+  pivot_resource_type: dns_managed_zone
+  requires:
+    all_of:
+    - action: dns.managedZones.setIamPolicy
+      resource: '{pivot}'
+  target:
+    kind: gcp_workspace_user
+    selector:
+      attached_to_service: workspace_super_admin_of_zone_domain
+    scope: any
+    aggregate_as: Workspace super administrators of domains served by {pivot}
+    outcome: identity
+  conditions:
+  - id: zone_self_grant
+    description: The source can add itself to a zone-scoped DNS role granting dns.changes.create plus dns.resourceRecordSets.create
+      or update and then write the challenge record.
+  - id: public_delegation
+    description: The zone is the publicly delegated authoritative zone for the Workspace primary domain.
+  - id: recovery_process
+    description: A live recovery challenge is available and Google accepts its DNS proof and any additional verification.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict dns.managedZones.setIamPolicy on zones serving Workspace primary domains and monitor zone IAM
+    changes, DNS challenges, and Workspace recovery.
+  references:
+  - https://docs.cloud.google.com/dns/docs/zones/iam-per-resource-zones
+  - https://docs.cloud.google.com/dns/docs/access-control
+  - https://knowledge.workspace.google.com/admin/users/recovering-administrator-access-to-your-account
+  notes: Distinct from gcp-workspace-cloud-dns-admin-recovery, which requires record-write permissions initially; this
+    path obtains those permissions through a zone IAM self-grant.

@@ -108,33 +108,38 @@
   title: Create the missing gcr.io-named repository to claim a redirected legacy namespace
   source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md#squat-the-legacy-gcrio-namespace-as-a-permanent-backdoor---artifactregistryrepositoriescreate
   source_revision: 171e422
-  summary: The source can obtain the privileges of the run-as service accounts of workloads that still pull gcr.io references of projects where it holds artifactregistry.repositories.create.
+  summary: The source can obtain the privileges of run-as service accounts of workloads pulling mutable gcr.io references
+    only when it can both create the missing host-named repository and push a malicious artifact into it.
   requires:
     all_of:
-      - action: artifactregistry.repositories.create
-        resource: "*"
+    - action: artifactregistry.repositories.create
+      resource: '*'
+    - action: artifactregistry.repositories.uploadArtifacts
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: artifact_consumer
       gcp_sa_in_scope_of_permission: true
+      gcp_challenge_fact: gcp-artifactregistry-gcrio-namespace-squat
     scope: same_project
-    aggregate_as: "Run-as SAs of workloads pulling gcr.io references of {project}"
+    aggregate_as: Run-as SAs of workloads pulling gcr.io references of {project}
   conditions:
-    - id: redirection_enabled
-      description: The project must have gcr.io redirection to Artifact Registry enabled and the host-named repository (gcr.io, us.gcr.io, eu.gcr.io, asia.gcr.io) must not exist yet.
-    - id: legacy_consumers
-      description: Workloads must still reference gcr.io/<project>/... by tag and repull after the squat.
-    - id: push_after_create
-      description: Pushing into the new repository additionally needs uploadArtifacts (the creator normally holds it).
+  - id: redirection_enabled
+    description: The project must have gcr.io redirection to Artifact Registry enabled and the host-named repository
+      (gcr.io, us.gcr.io, eu.gcr.io, asia.gcr.io) must not exist yet.
+  - id: legacy_consumers
+    description: Workloads must still reference gcr.io/<project>/... by tag and repull after the squat.
+  - id: same_new_repository_push
+    description: The uploadArtifacts grant must cover the specific newly created gcr.io-named repository; absent exact
+      same-repository evidence remains UNKNOWN.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Create the gcr.io-named repositories in every migrated project and restrict artifactregistry.repositories.create.
+  mitigation: Pre-create migrated gcr.io repositories and restrict both artifactregistry.repositories.create and uploadArtifacts.
   notes: roles/artifactregistry.createOnPushWriter can create the repository implicitly on first push.
-
 - id: gcp-artifactregistry-repositories-update-dependency-confusion
   provider: gcp
   service: artifactregistry
@@ -233,3 +238,35 @@
     use.
   references:
   - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-artifact-registry-post-exploitation.md#artifactregistryrepositoriesexportartifacts--copy-an-artifact-to-cloud-storage
+
+- id: gcp-create-attacker-upstream-remote-repository-consumed-directly
+  provider: gcp
+  service: artifact-registry
+  title: Create attacker-upstream remote repository consumed directly
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-artifact-registry-persistence.md#remote-repository-pointing-at-an-attacker-controlled-upstream-url
+  source_revision: 0b36331
+  summary: Code execution as artifact-consuming workload identity.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.create
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-create-attacker-upstream-remote-repository-consumed-directly
+      attached_to_service: artifact_consumer
+    scope: any
+    aggregate_as: gcp_service_account
+  conditions:
+  - id: exact_evidence
+    description: Draft only. Emit UNKNOWN unless every target, permission, and stated precondition is supported by collected
+      evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed permissions and review affected resource state.
+  notes: Unenabled draft. The bounded authority kind and gcp_challenge_fact are schema-valid placeholders; implement
+    the feature before activation.
+  references:
+  - https://cloud.google.com/artifact-registry/docs/repositories/virtual-overview
