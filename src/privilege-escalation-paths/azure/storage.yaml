@@ -210,3 +210,70 @@
   - https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob
   notes: Draft requires azure.storage.blob_credential_holders; the evaluator must join only verified holders, and
     return UNKNOWN if that fact is missing or incomplete.
+- id: azure-storage-hns-acl-takeover-and-blob-super-user-data-action
+  provider: azure
+  service: storage
+  title: Rewrite ADLS Gen2 path ACLs for new access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#hns-acl-takeover-and-blob-super-user-data-action
+  source_revision: 0b36331
+  summary: modifyPermissions can grant the caller previously denied file access when ancestor execute and a read grant are present; the exclusion treats the gain as ordinary data read.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/modifyPermissions/action
+        scope: '{target.scope}'
+        data_action: true
+    - - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/manageOwnership/action
+        scope: '{target.scope}'
+        data_action: true
+    - - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/runAsSuperUser/action
+        scope: '{target.scope}'
+        data_action: true
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-storage-hns-acl-takeover-and-blob-super-user-data-action
+    scope: inherited_scope
+    aggregate_as: Pending service authority for storage
+    outcome: application_admin
+    grants:
+    - Target ADLS Gen2 path whose POSIX ACL the principal can modify; access requires ancestor execute plus data read.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_adls_acl_paths inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md
+  notes: 'Collector fact required: azure_adls_acl_paths. UNKNOWN until path ACL, ancestors, and separate data-read grant are collected.'
+- id: azure-storage-microsoftstoragestorageaccountsfileservicesfilesharesfilesmodifypermissionsact
+  provider: azure
+  service: storage
+  title: Rewrite Azure Files NTFS ACLs for new access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsfileservicesfilesharesfilesmodifypermissionsaction
+  source_revision: 0b36331
+  summary: The action can rewrite NTFS ACLs to grant the caller previously denied file permissions; separate file read is required for content.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/modifypermissions/action
+      scope: '{target.scope}'
+      data_action: true
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-storage-microsoftstoragestorageaccountsfileservicesfilesharesfilesmodifypermissionsact
+    scope: inherited_scope
+    aggregate_as: Pending service authority for storage
+    outcome: application_admin
+    grants:
+    - Target Azure Files path whose NTFS ACL the principal can modify; access requires a separate file data read action.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_files_acls inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md
+  notes: 'Collector fact required: azure_files_acls. UNKNOWN until NTFS ACL and separate file read/write grant are collected.'

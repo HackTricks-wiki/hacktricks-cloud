@@ -157,3 +157,69 @@
   - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
   notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
     evaluate UNKNOWN. Collector fact required: springApps.builderBindings.'
+- id: azure-spring-apps-microsoftappplatformspringapmslistsecretkeysaction
+  provider: azure
+  service: spring_apps
+  title: Obtain Spring Apps APM integration credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringapmslistsecretkeysaction
+  source_revision: 0b36331
+  summary: returns the secret keys of a Spring Apps APM (Application Performance Monitor) integration. An APM config holds the credentials Spring Apps uses to ship telemetry to a monitoring backend — e.g. an Application Insights connection string, or a New Relic license key / Dynatrace API token / AppDynamics / Elastic APM secret. Stealing them grants access to the org's monitoring backend (read telemetry that itself often leaks internal hostnames, SQL, headers and tokens; inject or forge telemetry) and, for third-party SaaS APMs, a credential to pivot into that external account. Distinct from the config
+  requires:
+    all_of:
+    - action: Microsoft.AppPlatform/Spring/apms/listSecretKeys/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-spring-apps-microsoftappplatformspringapmslistsecretkeysaction
+    scope: inherited_scope
+    aggregate_as: Pending service authority for spring_apps
+    outcome: application_admin
+    grants:
+    - The named APM integration key or telemetry-backend token configured on the Spring Apps service.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_spring_apms inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md
+  notes: 'Collector fact required: azure_spring_apms. UNKNOWN until backend and credential type are known; telemetry ingestion-only keys are not privileged principals.'
+- id: azure-spring-apps-config-server-bindings-secret-exposure
+  provider: azure
+  service: spring_apps
+  title: Read Spring Apps environment and binding secrets
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#config-server--bindings--secret-exposure
+  source_revision: 0b36331
+  summary: The page explicitly describes environment-variable and binding secret exposure; a secret-bearing configuration is a credential target when present.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.AppPlatform/Spring/apps/read
+        scope: '{target.scope}'
+        data_action: true
+    - - action: Microsoft.AppPlatform/Spring/apps/bindings/read
+        scope: '{target.scope}'
+        data_action: true
+    - - action: Microsoft.AppPlatform/Spring/configService/read
+        scope: '{target.scope}'
+        data_action: true
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_challenge_fact: azure-spring-apps-config-server-bindings-secret-exposure
+    scope: inherited_scope
+    aggregate_as: Pending service authority for spring_apps
+    outcome: application_admin
+    grants:
+    - Actual configured application environment or binding credential; no target if no secret value exists.
+  conditions:
+  - id: collector_fact_required
+    description: The azure_spring_app_secrets inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md
+  notes: 'Collector fact required: azure_spring_app_secrets. UNKNOWN until actual secret-bearing configuration and its principal are identified; poisoned config requires runtime consumption.'
