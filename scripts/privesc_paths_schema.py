@@ -29,6 +29,7 @@ TARGET_KINDS = {
     "aws_account_admin": ("aws", "entity"),
     "aws_directory_domain_admin": ("aws", "entity"),
     "aws_service_plane_admin": ("aws", "entity"),
+    "aws_verified_authority": ("aws", "entity"),
     "gcp_service_account": ("gcp", "principal"),
     "gcp_user": ("gcp", "principal"),
     "gcp_group": ("gcp", "principal"),
@@ -80,6 +81,9 @@ SELECTOR_KEYS = {
     "any_principal_in_scope": (("gcp", "azure", "k8s", "aws"), "bool_true",
         "Entity target covering every principal of the scope where the requirement holds (scope owner / cluster-admin / account admin)."),
     # ---- AWS -------------------------------------------------------------
+    "aws_challenge_fact": (("aws",), "string",
+        "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
+        "Missing or incomplete evidence is unresolved; a different source or target never matches."),
     "trust_allows_service": (("aws",), "string_or_list",
         "Role trust policy has an Allow for sts:AssumeRole* whose Principal.Service includes the value."),
     "trust_allows_principal_of_source": (("aws",), "bool_true",
@@ -397,6 +401,7 @@ SOURCE_SELECTOR_KEYS = {
 }
 # Collection types/fields a selector or requirement needs; reported in coverage when missing.
 FACTS_NEEDED = {
+    "aws_challenge_fact": "aws_privesc_challenge_evidence with exact TechniqueId, SourceArn, TargetKind, TargetId, TargetAccount, Status and VerifiedPreconditions",
     "via_resource_type": "AWS: per-type workload inventories carrying the role (ecs task definitions, glue jobs, sagemaker, ...), "
                          "fully collected in every region: imagebuilder_pipeline (imagebuilder:ListImagePipelines + "
                          "ListInfrastructureConfigurations {instanceProfileName}), sagemaker_user_profile (sagemaker:ListUserProfiles + "
@@ -690,6 +695,7 @@ BLOCKER_ALIASES = {"pod_security_admission": {"pivot_namespace_psa_enforce_basel
 # Placeholders that resolve on entity targets (account admin, scope owner, cluster-admin, ...). Any other
 # {target.*} placeholder on an entity target can never resolve and would silently make every edge unknown.
 ENTITY_TARGET_PLACEHOLDERS = {
+    "aws_verified_authority": {"target.scope", "target.account", "target.resource_arn", "target.arn"},
     "aws_account_admin": {"target.scope", "target.account"},
     "aws_identity_center_permission_set": {"target.scope", "target.account", "target.arn", "target.id"},
     "gcp_scope_owner": {"target.scope", "target.project", "target.id", "target.name"},
@@ -1145,6 +1151,10 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: aws_service_plane_admin targets need selector service_plane ({'|'.join(SERVICE_PLANES)})")
         if "service_plane" in selector and kind != "aws_service_plane_admin":
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
+        if kind == "aws_verified_authority" and not selector.get("aws_challenge_fact"):
+            errors.append(f"{where}: aws_verified_authority needs selector aws_challenge_fact")
+        if selector.get("aws_challenge_fact") and selector["aws_challenge_fact"] != entry.get("id"):
+            errors.append(f"{where}: aws_challenge_fact must equal the technique id")
         for key, wanted in (("k8s_secret_holds_cloud_credential", "cloud_identity"),
                             ("k8s_secret_holds_remote_cluster_credential", "k8s_remote_cluster"),
                             ("k8s_node_hosting_pod_of_source", "k8s_node"), ("k8s_sa_used_by_pending_pod", "k8s_service_account"),
@@ -1183,13 +1193,17 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
         aws_v2 = "via_assumable_role_attached_policy_covered_by" in selector
         aws_uses = [r for r in _requirements(requires) if any(
             "source.assumable_role_attached_policy_arn" in _placeholders(v) for v in r.values())] if isinstance(requires, dict) else []
-        aws_ph = bool(aws_uses) and all(r.get("resource") == "{source.assumable_role_attached_policy_arn}" for r in aws_uses)
+        aws_ph = bool(aws_uses) and all(r.get("resource") == "{source.assumable_role_attached_policy_arn}"
+                                        and r.get("action") == "iam:CreatePolicyVersion" for r in aws_uses)
         if aws_v2 or aws_uses:
             expected = {"action": "iam:CreatePolicyVersion", "resource": "{source.assumable_role_attached_policy_arn}"}
             if not (aws_v2 and aws_ph and provider == "aws" and kind == "aws_account_admin"
+                    and target.get("scope") == "same_account"
                     and selector.get("via_assumable_role_attached_policy_covered_by") == "iam:CreatePolicyVersion"
                     and any(all(r.get(k) == v for k, v in expected.items()) for r in _requirements(requires))):
                 errors.append(f"{where}: assumable-role policy selector and CreatePolicyVersion placeholder requirement must occur together on aws_account_admin")
+            if aws_v2 and any(r.get("action") == "iam:SetDefaultPolicyVersion" for r in _requirements(requires)):
+                errors.append(f"{where}: SetDefaultPolicyVersion cannot satisfy the assumable-role policy selector")
             if aws_v2 and any(not any(r.get("action") == "iam:CreatePolicyVersion" and
                                       r.get("resource") == "{source.assumable_role_attached_policy_arn}"
                                       for r in alt) for alt in alternatives):
@@ -1208,8 +1222,13 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             if not (provider == "k8s" and kind == "k8s_service_account" and target.get("scope") == "same_namespace"
                     and selector.get("k8s_sa_in_namespace") == "{target.namespace}"):
                 errors.append(f"{where}: source_rolebound_clusterrole needs a same-namespace K8s SA target")
-            if any(r.get("resource_name") != "{source_rolebound_clusterrole}" for r in rolebound_uses):
-                errors.append(f"{where}: source_rolebound_clusterrole is only valid as resource_name")
+            if any(r.get("resource_name") != "{source_rolebound_clusterrole}"
+                   or r.get("resource") != "clusterroles"
+                   or r.get("api_group") != "rbac.authorization.k8s.io"
+                   or r.get("namespace") != "*"
+                   or r.get("verb") not in ("escalate", "update", "patch")
+                   for r in rolebound_uses):
+                errors.append(f"{where}: source_rolebound_clusterrole requires named clusterroles escalate/update/patch in cluster scope")
             for alt in alternatives:
                 leaves = [r for r in alt if r.get("resource_name") == "{source_rolebound_clusterrole}"
                           and r.get("resource") == "clusterroles" and r.get("api_group") == "rbac.authorization.k8s.io"
