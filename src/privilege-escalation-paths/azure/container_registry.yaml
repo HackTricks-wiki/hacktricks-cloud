@@ -1,6 +1,3 @@
-# Azure Container Registry techniques (declarative only).
-# Source: hacktricks-cloud az-container-registry-privesc.md (rev 171e422, re-verified).
-
 - id: azure-acr-task-write-existing-identity
   provider: azure
   service: container_registry
@@ -29,7 +26,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
   notes: A newly created system-assigned task identity has no roles; value comes from existing identity-bearing tasks.
-
 - id: azure-acr-task-assign-user-assigned-identity
   provider: azure
   service: container_registry
@@ -62,7 +58,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
   notes: ''
-
 - id: azure-acr-push-restart-aci-consumer
   provider: azure
   service: container_registry
@@ -117,7 +112,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-lock
   notes: The repository content pair (both read and write are required for the manifest PUT) applies to registries using ABAC repository permissions. Consumers that only re-pull on their own (scale-out, node replacement, scheduled jobs) are not modelled because the image-to-registry consumer link is not a selector yet.
-
 - id: azure-acr-push-restart-containerapp-consumer
   provider: azure
   service: container_registry
@@ -173,3 +167,38 @@
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-rbac-abac-repository-permissions
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-tag-version
   notes: HackTricks observed that replacing the tag does not hot-reload the running revision, while a revision restart pulled the new digest and ran it with the app identity.
+- id: azure-acr-verified-image-secret
+  provider: azure
+  service: container_registry
+  title: Pull ACR image with verified principal credential
+  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/historical-cross-tenant-vulnerabilities.md#cross-subscription-not-cross-tenant-abuse-worth-noting
+  source_revision: 0b36331
+  summary: Read an image layer containing a validated credential for another cloud principal.
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  - azure_managed_identity
+  requires:
+    all_of:
+    - action: Microsoft.ContainerRegistry/registries/pull/read
+      scope: '{pivot}'
+  target:
+    kind: azure_service_principal
+    selector:
+      azure_challenge_fact: azure-acr-verified-image-secret
+    scope: any
+    aggregate_as: Pull ACR image with verified principal credential targets
+  conditions:
+  - id: verified_runtime_evidence
+    description: Exact source, target and successful credential or token access must be attested; absent evidence
+      remains UNKNOWN.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Remove the vulnerable access path or exposed credential.
+  references:
+  - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-roles
+  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
+    absent => UNKNOWN.'

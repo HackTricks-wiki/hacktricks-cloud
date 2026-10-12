@@ -1,8 +1,3 @@
-# Azure Spring Apps techniques (declarative only).
-# Source: hacktricks-cloud az-spring-apps-privesc.md (rev 171e422).
-# Action names checked against Microsoft's Spring Apps custom-role permission lists (how-to-permissions).
-# App identities live on Microsoft.AppPlatform/Spring/apps; {target.host_resource} is that app.
-
 - id: azure-springapps-deployment-write-app-identity
   provider: azure
   service: spring_apps
@@ -34,7 +29,6 @@
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-enable-system-assigned-managed-identity
   notes: Covers system- and user-assigned app identities. Updating an existing deployment needs only deployments/write; apps/write is not required. Azure Spring Apps Basic/Standard/Enterprise are in a retirement period ending 2028.
-
 - id: azure-springapps-app-write-user-assigned-identity
   provider: azure
   service: spring_apps
@@ -70,3 +64,96 @@
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-manage-user-assigned-managed-identities
   notes: The pivot is a Spring Apps service instance; the new or updated app is its child.
+- id: azure-audit-listtestkeys-public-test-endpoints
+  provider: azure
+  service: spring_apps
+  title: listTestKeys / public test endpoints
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#listtestkeys--public-test-endpoints
+  summary: app endpoint key and, conditionally, application secrets
+  requires:
+    all_of:
+    - action: Microsoft.AppPlatform/Spring/listTestKeys/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: listTestKeys / public test endpoints on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-listtestkeys-public-test-endpoints
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: springApps.testEndpoints.'
+- id: azure-audit-microsoftappplatformspringregeneratetestkeyaction
+  provider: azure
+  service: spring_apps
+  title: Microsoft.AppPlatform/Spring/regenerateTestKey/action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringregeneratetestkeyaction
+  summary: replacement app endpoint key and conditional secrets
+  requires:
+    all_of:
+    - action: Microsoft.AppPlatform/Spring/regenerateTestKey/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Microsoft.AppPlatform/Spring/regenerateTestKey/action on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftappplatformspringregeneratetestkeyaction
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: springApps.testEndpoints.'
+- id: azure-audit-custom-container-build-service-supply-chain
+  provider: azure
+  service: spring_apps
+  title: Custom container / build-service supply chain
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#custom-container--build-service-supply-chain
+  summary: attacker code executes in future app deployment as its identity
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.AppPlatform/Spring/buildServices/builders/write
+        scope: '{target.scope}'
+    - - action: Microsoft.AppPlatform/Spring/buildServices/builders/buildpackBindings/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_challenge_fact: azure-audit-custom-container-build-service-supply-chain
+    scope: inherited_scope
+    aggregate_as: Custom container / build-service supply chain on {target.scope}
+    outcome: workload_execution
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: springApps.builderBindings.'

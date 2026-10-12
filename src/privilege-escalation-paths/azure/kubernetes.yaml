@@ -1,6 +1,3 @@
-# Azure Kubernetes Service / Arc Kubernetes control-plane -> cluster privilege techniques (declarative only).
-# Source: hacktricks-cloud az-kubernetes-privesc.md (rev 171e422, re-verified).
-
 - id: azure-aks-list-cluster-admin-credential
   provider: azure
   service: kubernetes
@@ -29,36 +26,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/aks/manage-local-accounts-managed-azure-ad
   notes: The clusterAdmin certificate maps to system:masters whether or not Entra integration or Azure RBAC for Kubernetes is enabled; only disableLocalAccounts removes it. From cluster-admin, workload identities and node identities are reachable through the k8s catalog.
-
-- id: azure-aks-list-cluster-user-credential
-  provider: azure
-  service: kubernetes
-  title: Retrieve the AKS clusterUser kubeconfig on a local-account cluster
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#aks-cluster-credentials
-  source_revision: 171e422
-  summary: On clusters without Entra integration the source can obtain Kubernetes cluster-admin.
-  requires:
-    all_of:
-      - action: Microsoft.ContainerService/managedClusters/listClusterUserCredential/action
-        scope: "{target.scope}"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-    scope: cluster
-    aggregate_as: "Cluster admin of AKS cluster {target.scope}"
-  conditions:
-    - id: cluster_without_entra_integration
-      description: Only on non-Entra local-account clusters is the user kubeconfig privileged; with Entra integration (Kubernetes RBAC or Azure RBAC for Kubernetes authorization) it is an exec-plugin kubeconfig and the caller's own bindings or Azure RBAC data actions apply.
-  blockers:
-    - aks_entra_integration_enabled
-  confidence: conditional
-  severity: critical
-  mitigation: Enable Entra ID integration and disable local accounts.
-  references:
-    - https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/list-cluster-user-credentials
-  notes: HackTricks (rev 171e422) states the user kubeconfig is broad only on non-Entra local-account clusters.
-
 - id: azure-hybrid-k8s-list-cluster-admin-credential
   provider: azure
   service: kubernetes
@@ -85,7 +52,6 @@
   mitigation: Restrict listClusterAdminCredential on hybrid clusters.
   references: []
   notes: User-credential actions on connected/provisioned clusters are identity-bound and not modelled as a gain.
-
 - id: azure-aks-azure-rbac-k8s-rbac-write
   provider: azure
   service: kubernetes
@@ -134,7 +100,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/aks/manage-azure-rbac
   notes: Exact data-action names taken from the Azure RBAC provider operations for Microsoft.ContainerService. Kubernetes RBAC escalation prevention means binding write alone is insufficient (bind on the referenced role is also checked), and escalate is useless without role write.
-
 - id: azure-aks-access-profile-list-credential
   provider: azure
   service: kubernetes
@@ -165,7 +130,6 @@
   references:
     - https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/get-access-profile
   notes: Only the clusterAdmin access profile is modelled. The fleet hub credential (fleets/listCredentials/action) is an Entra exec-plugin kubeconfig gated by Fleet RBAC, the managed-namespace credential is namespace-scoped, and the clusterMonitoringUser credential is bound to a read-mostly monitoring role, so none of them is a gain by itself.
-
 - id: azure-aks-run-command
   provider: azure
   service: kubernetes
@@ -199,7 +163,6 @@
     - https://learn.microsoft.com/en-us/azure/aks/access-private-cluster
     - https://learn.microsoft.com/en-us/rest/api/aks/managed-clusters/run-command
   notes: Action names verified on Microsoft Learn (access-private-cluster lists runcommand/action and commandResults/read). BloodHound models this as AZAKSContributor. Network reachability to the API server is not needed.
-
 - id: azure-aks-managedclusters-write-enable-local-accounts
   provider: azure
   service: kubernetes
@@ -229,7 +192,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/aks/manage-local-accounts-managed-azure-ad
   notes: Pairs with azure-aks-list-cluster-admin-credential; this entry removes the local-accounts blocker.
-
 - id: azure-aks-managedclusters-write-admin-group
   provider: azure
   service: kubernetes
@@ -259,7 +221,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/aks/enable-authentication-microsoft-entra-id
   notes: ""
-
 - id: azure-aks-vmss-node-run-command
   provider: azure
   service: kubernetes
@@ -289,47 +250,40 @@
     - https://learn.microsoft.com/en-us/azure/aks/manage-ssh-node-access
     - https://learn.microsoft.com/en-us/azure/aks/node-resource-group-lockdown
   notes: Applies to any Uniform scale set, including AKS node pools. Kubernetes privileges from node credentials (kubelet, projected tokens) are handled by the k8s catalog node edges and are not claimed here.
-
 - id: azure-aks-azure-rbac-impersonate
   provider: azure
   service: kubernetes
   title: Impersonate privileged Kubernetes groups, users or service accounts through Azure RBAC data actions
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
   source_revision: a66f094ede
-  summary: The source can send API requests as system:masters or another admin identity without creating any binding.
+  summary: The source can impersonate system:masters through the groups/impersonate data action.
   requires:
     all_of: []
     any_of:
-      - - action: Microsoft.ContainerService/managedClusters/groups/impersonate/action
-          data_action: true
-          scope: "{target.scope}"
-      - - action: Microsoft.ContainerService/managedClusters/users/impersonate/action
-          data_action: true
-          scope: "{target.scope}"
-      - - action: Microsoft.ContainerService/managedClusters/serviceaccounts/impersonate/action
-          data_action: true
-          scope: "{target.scope}"
+    - - action: Microsoft.ContainerService/managedClusters/groups/impersonate/action
+        data_action: true
+        scope: '{target.scope}'
   target:
     kind: k8s_cluster_admin
     selector:
       any_principal_in_scope: true
     scope: cluster
-    aggregate_as: "Cluster admin of AKS cluster {target.scope}"
+    aggregate_as: Cluster admin of AKS cluster {target.scope}
   conditions:
-    - id: azure_rbac_for_k8s_enabled
-      description: Only when Azure RBAC for Kubernetes authorization is enabled on the cluster.
-    - id: impersonated_identity_is_admin
-      description: groups impersonation reaches system:masters directly; users and serviceaccounts impersonation reaches cluster-admin only if an admin-bound user or service account exists.
-    - id: namespace_scoped_grant
-      description: Grants scoped to a namespace limit impersonation to that namespace's authorization checks.
+  - id: azure_rbac_for_k8s_enabled
+    description: Only when Azure RBAC for Kubernetes authorization is enabled on the cluster.
+  - id: namespace_scoped_grant
+    description: Grants scoped to a namespace limit impersonation to that namespace's authorization checks.
   blockers: []
   confidence: conditional
   severity: critical
-  mitigation: Do not grant impersonate data actions outside cluster administrators; review custom roles carrying Microsoft.ContainerService/managedClusters/*.
+  mitigation: Do not grant impersonate data actions outside cluster administrators; review custom roles carrying
+    Microsoft.ContainerService/managedClusters/*.
   references:
-    - https://learn.microsoft.com/en-us/azure/aks/manage-azure-rbac
-  notes: Fleet member equivalents (fleets/members/...) need a fleet-to-member-cluster mapping, and namespace-scoped RBAC Writer secret read (service-account token theft) needs azure-side k8s_service_account targets; neither is expressible in the current schema.
-
+  - https://learn.microsoft.com/en-us/azure/aks/manage-azure-rbac
+  notes: 'users/impersonate and serviceaccounts/impersonate are separate conditional paths: an impersonable subject
+    must have effective cluster-admin RBAC. Do not claim cluster admin from those actions without the subject-to-binding
+    join.'
 - id: azure-aro-list-credentials
   provider: azure
   service: kubernetes
@@ -359,7 +313,6 @@
   references:
     - https://learn.microsoft.com/en-us/azure/openshift/tutorial-connect-cluster
   notes: The hosted-control-plane preview (hcpOpenShiftClusters) is not modelled.
-
 - id: azure-aks-flux-configuration-write
   provider: azure
   service: kubernetes

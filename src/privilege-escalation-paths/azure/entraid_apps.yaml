@@ -1,19 +1,3 @@
-# Entra ID application / service-principal takeover (credential injection, ownership,
-# Graph app-role self-grant, Agent ID blueprints).
-# Source: hacktricks-cloud az-entraid-privesc/README.md, az-persistence/README.md,
-# az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md (rev 171e422; all entries re-verified against the page text at that revision).
-#
-# Requirement keys: see header of entraid_roles.yaml. Additionally:
-#   entra_owner_of: "{target.application_id}" | "{target.id}"   with object_type:
-#        application | servicePrincipal  (source is a registered owner of that object)
-#
-# Credential added to an APPLICATION object authenticates as that app's service
-# principal in this tenant (the home tenant). Credentials added to a SERVICE PRINCIPAL
-# object authenticate as that tenant-local service principal (works also for
-# multi-tenant apps registered elsewhere). Managed-identity service principals cannot
-# receive credentials. The resulting edge gives the target SP's directory roles, Graph /
-# API app roles and Azure RBAC.
-
 - id: azure-entraid-app-credentials-update
   provider: azure
   service: entraid
@@ -46,7 +30,6 @@
     - https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0
     - https://dirkjanm.io/azure-ad-privilege-escalation-application-admin/
   notes: Critical because the target set includes any app whose service principal holds Global Administrator, Privileged Role Administrator or RoleManagement.ReadWrite.Directory; Microsoft labels these permissions PRIVILEGED. The target set is exactly app registrations whose application object lives in this tenant (Microsoft first-party and other-tenant multi-tenant apps have no local application object). A role assignment scoped to a single app registration (directoryScopeId "/<appObjectId>") reaches only that app. allProperties/update includes the credential property set.
-
 - id: azure-entraid-app-myorg-credentials-update
   provider: azure
   service: entraid
@@ -78,7 +61,6 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
   notes: These permissions appear mostly in custom roles; single-tenant internal apps are frequently the ones holding privileged Graph app roles.
-
 - id: azure-entraid-app-owners-update
   provider: azure
   service: entraid
@@ -107,7 +89,6 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/application-post-owners?view=graph-rest-1.0
   notes: Ownership grants credential management but not the ability to consent new API permissions; the gain is limited to what the app's service principal already holds.
-
 - id: azure-entraid-app-owner-credentials
   provider: azure
   service: entraid
@@ -140,7 +121,6 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
   notes: Owners also include service principals that own other apps (e.g. via Application.ReadWrite.OwnedBy). Severity should be raised to critical when the owned app's SP holds privileged roles / Graph app roles. Source is the owners/update section, which states that ownership gives control of the app's credentials; az-oauth-apps-phishing.md#entra-id-applications-admin (the previous source) only covers redirect-URI and requested-permission changes, which stay excluded.
-
 - id: azure-entraid-sp-credentials-update
   provider: azure
   service: entraid
@@ -175,7 +155,6 @@
     - https://learn.microsoft.com/en-us/graph/api/resources/serviceprincipallockconfiguration?view=graph-rest-1.0
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#application-administrator
   notes: Managed-identity service principals are excluded (their credentials are platform-managed). The app instance property lock on the home application blocks credential changes on its service principals; disabling it requires update rights on the application object, which the evaluator should model through the application entries.
-
 - id: azure-entraid-sp-owners-update
   provider: azure
   service: entraid
@@ -205,7 +184,6 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-owners?view=graph-rest-1.0
   notes: Owners of a service principal can manage its credentials unless the app instance property lock (servicePrincipalLockConfiguration) blocks it.
-
 - id: azure-entraid-sp-owner-credentials
   provider: azure
   service: entraid
@@ -235,7 +213,6 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-delete-owners?view=graph-rest-1.0
   notes: Severity should be raised to critical when the owned service principal holds privileged directory roles or Graph app roles.
-
 - id: azure-entraid-graph-application-readwrite-all
   provider: azure
   service: entraid
@@ -265,7 +242,6 @@
     - https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0
     - https://learn.microsoft.com/en-us/graph/permissions-reference
   notes: Application.ReadWrite.OwnedBy limits this to objects the calling service principal owns (model via azure-entraid-app-owner-credentials). The lock configuration only blocks service-principal-object credentials; app-object credentials remain possible for apps registered in this tenant.
-
 - id: azure-entraid-graph-approleassignment-readwrite-all
   provider: azure
   service: entraid
@@ -293,7 +269,6 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-approleassignments?view=graph-rest-1.0
   notes: Microsoft explicitly warns this permission lets an app grant additional privileges to itself. The directory-role reach depends on chaining through RoleManagement.ReadWrite.Directory; newly granted app roles only appear in newly issued tokens.
-
 - id: azure-entraid-agent-blueprint-credentials
   provider: azure
   service: entraid
@@ -322,7 +297,6 @@
     - https://learn.microsoft.com/en-us/entra/agent-id/agent-blueprint
     - https://learn.microsoft.com/en-us/entra/agent-id/autonomous-agent-authentication-authorization-flow
   notes: The directory permission agentIdentityBlueprints/credentials/update is held by Agent ID Administrator, AI Administrator and Global Administrator (built-in role definitions, checked 2026-10). Blueprint owners who can manage the blueprint application are covered by the generic application owner entries; the extra child-agent reach applies to them as well. Entra Agent ID is a newer (preview-era) feature; validate behaviour per tenant.
-
 - id: azure-entraid-graph-delegatedpermissiongrant-allprincipals
   provider: azure
   service: entraid
@@ -349,3 +323,33 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/oauth2permissiongrant-post?view=graph-rest-1.0
   notes: Bypasses the admin-consent boundary but not user authentication; edges are conditional on user interaction and should not be treated as silent takeover.
+- id: azure-entraid-verified-premfa-broci-keyvault
+  provider: azure
+  service: entraid_apps
+  title: Verified pre-MFA broker token to Key Vault
+  source: src/pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md#pre-mfa-tokens-and-downstream-conditional-access-gaps
+  source_revision: 0b36331
+  summary: A broker token issued before MFA succeeds in obtaining Key Vault authority.
+  source_kind: azure_user
+  requires:
+    all_of: []
+  target:
+    kind: azure_verified_authority
+    selector:
+      azure_challenge_fact: azure-entraid-verified-premfa-broci-keyvault
+    scope: any
+    aggregate_as: Verified pre-MFA broker token to Key Vault targets
+  conditions:
+  - id: verified_runtime_evidence
+    description: Exact source, target and successful credential or token access must be attested; absent evidence
+      remains UNKNOWN.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Remove the vulnerable access path or exposed credential.
+  references:
+  - https://learn.microsoft.com/en-us/entra/identity/conditional-access/overview
+  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
+    absent => UNKNOWN.'

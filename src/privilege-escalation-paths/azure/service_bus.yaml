@@ -1,9 +1,3 @@
-# Azure Service Bus techniques (declarative only).
-# Source: hacktricks-cloud az-servicebus-privesc.md (re-reviewed at rev a66f094ede).
-# Second-order escalation through privileged consumers of the namespace, like consumer_poisoning.yaml:
-# until trigger bindings are collected, managed identities holding messages/receive/action on the namespace
-# are reported conditional (consumer_binding_not_collected) and every other identity unknown.
-
 - id: azure-servicebus-message-injection-consumer
   provider: azure
   service: service_bus
@@ -55,3 +49,139 @@
     - https://learn.microsoft.com/en-us/azure/service-bus-messaging/authenticate-application
     - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas
   notes: Rule-creation headings (authorizationRules/write) need a key read-back, which the listKeys alternatives cover. Receive headings are data access and stay excluded.
+- id: azure-audit-authorization-rule-key-disclosure-and-rotation
+  provider: azure
+  service: servicebus
+  title: Authorization-rule key disclosure and rotation
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#authorization-rule-key-disclosure-and-rotation
+  summary: new standalone SAS credential with rule-scoped rights
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.ServiceBus/namespaces/authorizationRules/listKeys/action
+        scope: '{target.scope}'
+    - - action: Microsoft.ServiceBus/namespaces/authorizationRules/regenerateKeys/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Authorization-rule key disclosure and rotation on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-authorization-rule-key-disclosure-and-rotation
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-python-how-to-use-topics-subscriptions?tabs=passwordless
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: serviceBus.rules.'
+- id: azure-audit-microsoftservicebusnamespacesdisasterrecoveryconfigsauthorizationrulesli
+  provider: azure
+  service: servicebus
+  title: Microsoft.ServiceBus/namespaces/disasterRecoveryConfigs/authorizationRules/listkeys/action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesdisasterrecoveryconfigsauthorizationruleslistkeysaction
+  summary: new alias credential with rule-scoped rights
+  requires:
+    all_of:
+    - action: Microsoft.ServiceBus/namespaces/disasterRecoveryConfigs/authorizationRules/listkeys/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Microsoft.ServiceBus/namespaces/disasterRecoveryConfigs/authorizationRules/listkeys/action on
+      {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftservicebusnamespacesdisasterrecoveryconfigsauthorizationrulesli
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-python-how-to-use-topics-subscriptions?tabs=passwordless
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: serviceBus.geoDrRules.'
+- id: azure-audit-microsoftservicebusnamespacesqueuestopicsauthorizationruleslistkeysactio
+  provider: azure
+  service: servicebus
+  title: Microsoft.ServiceBus/namespaces/[queues|topics]/authorizationRules/ListKeys/action OR Microsoft.ServiceBus/namespaces/[queues|topics]/authorizationRules/regenerateKeys/action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesqueuestopicsauthorizationruleslistkeysaction-or-microsoftservicebusnamespacesqueuestopicsauthorizationrulesregeneratekeysaction
+  summary: entity-scoped SAS credential
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.ServiceBus/namespaces/queues/authorizationRules/listKeys/action
+        scope: '{target.scope}'
+    - - action: Microsoft.ServiceBus/namespaces/queues/authorizationRules/regenerateKeys/action
+        scope: '{target.scope}'
+    - - action: Microsoft.ServiceBus/namespaces/topics/authorizationRules/listKeys/action
+        scope: '{target.scope}'
+    - - action: Microsoft.ServiceBus/namespaces/topics/authorizationRules/regenerateKeys/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Microsoft.ServiceBus/namespaces/[queues|topics]/authorizationRules/ListKeys/action OR Microsoft.ServiceBus/namespaces/[queues|topics]/authorizationRules/regenerateKeys/action
+      on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftservicebusnamespacesqueuestopicsauthorizationruleslistkeysactio
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-python-how-to-use-topics-subscriptions?tabs=passwordless
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: serviceBus.entityRules.'
+- id: azure-audit-microsoftservicebusnamespacesauthorizationruleswrite
+  provider: azure
+  service: servicebus
+  title: Microsoft.ServiceBus/namespaces/AuthorizationRules/write
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesauthorizationruleswrite
+  summary: new namespace SAS principal with attacker-selected Manage rights
+  requires:
+    all_of:
+    - action: Microsoft.ServiceBus/namespaces/authorizationRules/write
+      scope: '{target.scope}'
+    - action: Microsoft.ServiceBus/namespaces/authorizationRules/listKeys/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Microsoft.ServiceBus/namespaces/AuthorizationRules/write on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftservicebusnamespacesauthorizationruleswrite
+  conditions:
+  - id: same_resource_binding
+    description: All actions must apply to the same service resource and the referenced child object.
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-python-how-to-use-topics-subscriptions?tabs=passwordless
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: serviceBus.namespaces.'

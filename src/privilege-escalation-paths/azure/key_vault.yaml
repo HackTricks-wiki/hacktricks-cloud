@@ -1,6 +1,3 @@
-# Azure Key Vault techniques (declarative only).
-# Source: hacktricks-cloud az-key-vault-privesc.md (rev 171e422).
-
 - id: azure-keyvault-secret-read-sp-credentials
   provider: azure
   service: key_vault
@@ -11,13 +8,11 @@
   requires:
     all_of: []
     any_of:
-      - - action: Microsoft.KeyVault/vaults/accessPolicies/write
-          scope: '{pivot}'
-      - - action: Microsoft.KeyVault/vaults/write
-          scope: '{pivot}'
-      - - action: Microsoft.KeyVault/vaults/secrets/getSecret/action
-          data_action: true
-          scope: '{pivot}'
+    - - action: Microsoft.KeyVault/vaults/accessPolicies/write
+        scope: '{pivot}'
+    - - action: Microsoft.KeyVault/vaults/secrets/getSecret/action
+        data_action: true
+        scope: '{pivot}'
   pivot_resource_type: Microsoft.KeyVault/vaults
   target:
     kind: azure_service_principal
@@ -26,20 +21,24 @@
     scope: any
     aggregate_as: Service principals with credentials stored in {pivot}
   conditions:
-    - id: permission_model
-      description: accessPolicies/write and vaults/write (which can rewrite the vault's accessPolicies property) apply only when enableRbacAuthorization is false/null; getSecret applies only when it is true.
-    - id: credential_content_unknown
-      description: The vault must actually hold a client secret or certificate private key of a service principal; content is not visible from RBAC.
-    - id: network_reachable
-      description: Vault firewall/private endpoint must allow the source (vaults/write can change network ACLs).
+  - id: permission_model
+    description: accessPolicies/write and vaults/write (which can rewrite the vault's accessPolicies property) apply
+      only when enableRbacAuthorization is false/null; getSecret applies only when it is true.
+  - id: credential_content_unknown
+    description: The vault must actually hold a client secret or certificate private key of a service principal;
+      content is not visible from RBAC.
+  - id: network_reachable
+    description: Vault firewall/private endpoint must allow the source (vaults/write can change network ACLs).
   blockers: []
   confidence: conditional
   severity: high
-  mitigation: Use Azure RBAC vault permission model, restrict accessPolicies/write, vaults/write (Contributor, Key Vault Contributor) and Secrets User roles, and avoid storing SP secrets where managed identities suffice.
+  mitigation: Use Azure RBAC vault permission model, restrict accessPolicies/write, vaults/write (Contributor, Key
+    Vault Contributor) and Secrets User roles, and avoid storing SP secrets where managed identities suffice.
   references:
-    - https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-access-policy
-  notes: The getSecret alternative is the RBAC-model equivalent requested by the catalog semantics; HackTricks documents only the access-policy grant on this page. HackTricks rev 171e422 states vaults/write alone is not the access-policy write operation; the vaults/write branch relies on a full vault PUT replacing properties.accessPolicies (and on the enableRbacAuthorization toggle described on the same page), so treat that branch as the least certain. Certificates are read through secrets (the private key is only returned by the secret), which this entry already covers.
-
+  - https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-access-policy
+  notes: The vaults/write toggle is excluded from this entry until the evaluator can prove a stale access policy
+    for a source-controlled principal with secret read. Direct accessPolicies/write on an access-policy vault and
+    secrets/getSecret remain covered.
 - id: azure-keyvault-key-sign-sp-client-assertion
   provider: azure
   service: key_vault
@@ -77,7 +76,6 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity-platform/certificate-credentials
   notes: Exportable certificates are already reachable through secrets/getSecret (azure-keyvault-secret-read-sp-credentials); this entry covers the non-exportable/HSM case. Forgery against non-Entra consumers (custom JWT, SAML, code signing) stays excluded.
-
 - id: azure-keyvault-template-deployment-secret-reference
   provider: azure
   service: key_vault

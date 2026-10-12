@@ -1,5 +1,3 @@
-# Azure HackTricks techniques reviewed in the catalog refresh (group B) and intentionally NOT modelled as
-# principal -> principal privilege-escalation edges. Source rev 171e422.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-maps-privesc.md#azure-maps
   technique: Azure Maps introduction
   reason: Introductory section.
@@ -62,7 +60,9 @@
   reason: Introductory section.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewpolicyelementswrite--purview-access-policies-into-governed-sqlstorage
   technique: Purview access policies into governed sources
-  reason: Data action not granted by any built-in ARM role; it comes from the Purview data-plane Policy Author role, which a root collection admin can self-assign (see azure-purview-add-root-collection-admin). Access policies grant data access on registered SQL/Storage sources, not another identity's privileges.
+  reason: A credential or permission gain is documented, but it is deferred until the collector supplies purview.governedSources[{accountId,sourceId,policyAuthorIds,publisherIds,policyIds,serviceKind}].
+    Policy Author, registered source and separate publisher requirements decide whether a write can grant SQL/Storage
+    access.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewaccountskafkaconfigurationswrite--metadata-exfil--lineage-spoof
   technique: Kafka/Event Hubs notification rewiring
   reason: Metadata exfiltration / lineage spoofing; no identity gain.
@@ -77,7 +77,9 @@
   reason: Introductory section.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-redis-privesc.md#azure-managed-redis-database-keys
   technique: Managed Redis (redisEnterprise) database listKeys / regenerateKey
-  reason: Returns a Redis data-plane credential (cache read/alter, DoS); no Azure/Entra identity.
+  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
+    for a Managed Redis database key and machine-checked access-key authentication. The key is confined to one database
+    and both actions are alternatives.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-relay-privesc.md#azure-relay
   technique: Azure Relay introduction
   reason: Introductory section.
@@ -119,10 +121,14 @@
   reason: Data-plane message injection to clients; no Azure/Entra identity.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#microsoftsignalrservicesignalrserverconnectionwrite---impersonate-the-hub-application-server
   technique: Server connection as the hub application server
-  reason: Impersonates the application backend inside the SignalR data plane (message interception/injection); no Azure/Entra identity.
+  reason: A credential or permission gain is documented, but it is deferred until azure_application_server target
+    for SignalR server connection, with data_action requirement and signer pairing. ServerConnection/write alone
+    does not prove a usable signed server connection.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#microsoftsignalrservicewebpubsubauthaccesskeyaction---web-pubsub-temporary-signing-material
   technique: Web PubSub temporary signing material
-  reason: Data-plane signing material for client tokens; no Azure/Entra identity.
+  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
+    for Web PubSub temporary signing material, with service-specific auth endpoint. The report names the wrong provider
+    action; the heading names Microsoft.SignalRService/WebPubSub/auth/accessKey/action.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#live-trace-eavesdropping-with-signalrlivetraceread
   technique: Live trace eavesdropping
   reason: Read-only connection and traffic metadata disclosure.
@@ -140,25 +146,32 @@
   reason: Same requirement (apps/deployments/write) and same app identities as azure-springapps-deployment-write-app-identity, whose code_source condition includes this settings-only path.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#listtestkeys--public-test-endpoints
   technique: listTestKeys public test endpoints
-  reason: Unauthenticated HTTP reach to apps and possible secret disclosure through exposed actuator routes; content-dependent, no Azure/Entra identity derivable from RBAC.
+  reason: A credential or permission gain is documented, but it is deferred until the collector supplies springApps.testEndpoints[{serviceId,appId,enabled,url,authRequired}].
+    A key is useful only where the test endpoint is enabled; secrets exposure additionally depends on app routes/content.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringregeneratetestkeyaction
   technique: regenerateTestKey
-  reason: Same test-endpoint key as listTestKeys (returned on rotation) plus DoS; no Azure/Entra identity.
+  reason: A credential or permission gain is documented, but it is deferred until the collector supplies springApps.testEndpoints[{serviceId,appId,enabled,url,authRequired}].
+    Rotation returns a key but no app identity gain when the test endpoint is disabled.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringapmslistsecretkeysaction
   technique: APM integration secret keys
-  reason: Telemetry-backend credentials (Application Insights connection string or third-party APM keys); data access, no Azure/Entra identity.
+  reason: A credential or permission gain is documented, but it is deferred until external_service_credential target
+    keyed by APM backend and returned credential type. APM backend rights vary; a generic Azure data-plane admin
+    target would overstate access.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#config-server--bindings--secret-exposure
   technique: Config server repoint / bindings / environment secrets
   reason: Configuration poisoning and secret disclosure whose result depends on application behaviour and secret contents; no code runs as the app identity through these actions alone and nothing is derivable from RBAC.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#custom-container--build-service-supply-chain
   technique: Custom container deploy / build-service tampering
-  reason: Custom container deployment is a code_source of azure-springapps-deployment-write-app-identity. Enterprise builder / buildpack-binding tampering only affects future builds of other apps (timing- and pipeline-dependent supply chain), not modelled.
+  reason: A credential or permission gain is documented, but it is deferred until the collector supplies springApps.builderBindings[{builderId,appId,deploymentId,consumesFutureBuild,managedIdentityId}].
+    A poisoned buildpack reaches an app identity only if a future build consumes that builder.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md#sql
   technique: SQL introduction
   reason: Introductory section.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md#data-plane-escalation-azure-sql-fixed-server-roles-impersonate-db_owner
   technique: T-SQL role escalation (fixed server roles, IMPERSONATE, db_owner)
-  reason: Escalation inside the SQL engine's own permission model; SQL logins and database roles are not collected and are not Azure/Entra principals.
+  reason: A credential or permission gain is documented, but it is deferred until azure_sql_principal target and
+    SQL data-plane permission/role evaluator for ALTER ANY SERVER ROLE, IMPERSONATE and db_owner. ARM RBAC does
+    not decide SQL login/role membership or EXECUTE AS rights.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md#microsoftsqlserversvirtualnetworkruleswrite--microsoftsqlserversoutboundfirewallruleswrite
   technique: SQL VNet rules / outbound firewall rules
   reason: Network reachability and exfiltration enablement; no identity gain (network_reachable condition of the SQL admin entries).

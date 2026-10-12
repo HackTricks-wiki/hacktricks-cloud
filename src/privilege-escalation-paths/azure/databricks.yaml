@@ -1,6 +1,3 @@
-# Azure Databricks techniques (declarative only).
-# Source: hacktricks-cloud az-databricks-privesc.md (rev 171e422).
-
 - id: azure-databricks-assign-workspace-admin
   provider: azure
   service: databricks
@@ -30,3 +27,35 @@
   references:
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/analytics
   notes: Workspace admins may further use identities configured on workspace compute; that is workspace-dependent and not modelled.
+- id: azure-databricks-uc-temporary-storage-credential
+  provider: azure
+  service: databricks
+  title: Obtain temporary Azure Storage authority through Unity Catalog
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#unity-catalog-storage-credential--external-location-abuse
+  source_revision: 0b36331
+  summary: A Unity Catalog principal with rights over a storage credential or external location can request temporary
+    Azure Storage tokens or SAS through an Access Connector managed identity.
+  requires:
+    all_of: []
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    outcome: permission_grant
+    grants:
+    - Storage Blob read/write only where the Access Connector and UC privilege permit
+    selector:
+      azure_challenge_fact: azure-databricks-uc-temporary-storage-credential
+  confidence: conditional
+  severity: high
+  mitigation: Limit UC storage credential privileges and Access Connector Storage Blob roles.
+  references:
+  - https://docs.databricks.com/en/connect/unity-catalog/cloud-storage/azure-managed-identities.html
+  notes: 'UNKNOWN until UC permission and credential-to-connector facts are collected; no full MI role propagation.
+    Collector fact required: see request queue.'
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.

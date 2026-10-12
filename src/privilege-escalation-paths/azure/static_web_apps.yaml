@@ -1,0 +1,30 @@
+- id: azure-audit-microsoftwebstaticsiteslistsecretsaction
+  provider: azure
+  service: static_web_apps
+  title: Microsoft.Web/staticSites/listSecrets/action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsiteslistsecretsaction
+  summary: deployment token allowing arbitrary site content
+  requires:
+    all_of:
+    - action: Microsoft.Web/staticSites/listSecrets/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_verified_authority
+    scope: inherited_scope
+    aggregate_as: Microsoft.Web/staticSites/listSecrets/action on {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftwebstaticsiteslistsecretsaction
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/static-web-apps/snippets
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: staticWebApps.deploymentAuth.'
