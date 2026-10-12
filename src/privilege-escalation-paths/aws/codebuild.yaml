@@ -438,3 +438,38 @@
   references:
   - https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html
   notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+
+- id: aws-codebuild-read-plaintext-aws-credential
+  provider: aws
+  service: codebuild
+  title: Recover another AWS principal's credential from build variables
+  source: src/pentesting-cloud/aws-security/aws-services/aws-codebuild-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable project or build exposes a verified credential belonging to another principal in a PLAINTEXT
+    environment variable.
+  requires:
+    any_of:
+    - - action: codebuild:BatchGetProjects
+        resource: '*'
+    - - action: codebuild:BatchGetBuilds
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-codebuild-read-plaintext-aws-credential
+    scope: same_account
+    aggregate_as: Verified AWS identities exposed by readable CodeBuild environment values in {account}
+    grants:
+    - The exact AWS permissions of the verified credential owner during credential validity.
+  conditions:
+  - id: exact_credential_binding
+    description: Evidence must identify the exact readable project or build, source principal, credential owner
+      and validity interval; PARAMETER_STORE and SECRETS_MANAGER references do not qualify.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Keep credentials out of PLAINTEXT build variables and restrict CodeBuild metadata reads.
+  references:
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-env-vars.html
+  notes: The verified-authority fact is absent from current snapshots; without it the result remains UNKNOWN.

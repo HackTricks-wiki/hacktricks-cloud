@@ -44,3 +44,40 @@
   - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
   notes: gameliftstreams:CreateStreamUrl is not in aws_permissions_cat.yaml; HackTricks documents it as an alternative
     path that also takes a RoleArn.
+
+- id: aws-audit-gameliftstreams-bearer-url
+  provider: aws
+  service: gameliftstreams
+  title: Use a GameLift Streams bearer URL
+  source: src/pentesting-cloud/aws-security/aws-services/aws-gamelift-streams-enum.md#enumerate-bearer-stream-urls
+  summary: The source obtains a new application session without the creator’s AWS credentials.
+  requires:
+    any_of:
+    - - action: gameliftstreams:ListStreamUrls
+        resource: '*'
+    - - action: gameliftstreams:GetStreamUrl
+        resource: arn:aws:gameliftstreams:*:{account}:streamgroup/*
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-audit-gameliftstreams-bearer-url
+    scope: same_account
+    aggregate_as: Verified application sessions reachable through GameLift Streams bearer URLs
+    outcome: scope_control
+    grants:
+    - The source obtains a new application session without the creator’s AWS credentials.
+  conditions:
+  - id: active_bearer
+    description: The URL must be active, unexpired, have remaining uses, and start a distinct application session.
+      A role ARN shown in metadata does not by itself grant that IAM role to the browser session.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Scope the listed actions to approved resources and review linked targets and effective authorization.
+  notes: No definite edge from IAM permission alone. An exact active bearer URL and target application-session authority
+    must be verified; missing collector evidence is UNKNOWN.
+  source_revision: 0b36331
+  references:
+  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_ListStreamUrls.html
+  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_GetStreamUrl.html

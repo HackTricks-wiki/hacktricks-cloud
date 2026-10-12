@@ -260,3 +260,39 @@
   conditions:
   - The page describes possible credential capture; IAM permission alone does not prove content, owner, validity
     or usable downstream scope.
+
+- id: aws-connect-createparticipant-bearer
+  provider: aws
+  service: connect
+  title: Mint a participant bearer for an active Connect contact
+  source: src/pentesting-cloud/aws-security/aws-services/aws-connect-enum.md#authorization-and-unauthenticated-boundary
+  source_revision: 0b36331
+  summary: CreateParticipant grants an additional chat or WebRTC participant identity for a verified active contact.
+  requires:
+    all_of:
+    - action: connect:CreateParticipant
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-connect-createparticipant-bearer
+    scope: same_account
+    aggregate_as: Verified Connect participant identities for active contacts in {account}
+    grants:
+    - The participant role's chat or WebRTC capabilities for the exact active contact.
+  conditions:
+  - id: exact_active_contact
+    description: The source must know the initial contact ID, hold CreateParticipant on both required Contact and
+      Instance resources, and satisfy channel-specific role and state limits.
+  - id: short_token_lifetime
+    description: The participant token must be exchanged promptly; a stale contact snapshot cannot prove a successful
+      join.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateParticipant on Contact and Instance resources and monitor unexpected participant joins.
+  references:
+  - https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateParticipant.html
+  notes: aws_verified_authority represents the bounded Connect participant identity; no new target kind is required.
+    Missing evidence is UNKNOWN.

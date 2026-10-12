@@ -468,8 +468,9 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-chime-sdk-post-exploitation/README.md#chimegetmediapipeline--recover-an-rtmp-publishing-key
   technique: '`chime:GetMediaPipeline` — recover an RTMP publishing key'
-  reason: 'Documented impact: recover a third-party live-stream publishing credential and destination identifier.
-    This section does not establish another AWS principal or attacker-controlled role execution.'
+  reason: An RTMP URL can carry a third-party publisher credential. The exclusion applies when no live connector
+    returns a usable key or downstream acceptance is unverified; an exact publisher identity requires live connector
+    and downstream validation evidence.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-clean-rooms-post-exploitation/README.md#redirect-stored-sql-and-ml-output-destinations-with-passrole
   technique: Redirect stored SQL and ML output destinations with `PassRole`
@@ -2687,39 +2688,48 @@
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-datazone-enum.md#iampassrole-boundaries
   technique: '`iam:PassRole` boundaries'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: AssociateEnvironmentRole with iam:PassRole and GetEnvironmentCredentials is modeled by aws-datazone-passrole-associateenvironmentrole.
+    Other role-bearing operations named here only identify PassRole boundaries; this section does not show how their
+    fixed provisioning or domain roles can be used as a new principal.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#ssmgetdocument--command-content-disclosure
   technique: '`ssm:GetDocument` — command-content disclosure'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: GetDocument can return literal bootstrap credentials from an accessible document version, but the returned
+    content must contain a currently usable credential and its issuer must be verified before any principal edge
+    exists. Referenced secret ARNs or variable names do not reveal secret values; the read does not execute the
+    document.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#autoscalingdescribelaunchconfigurations--user-data-disclosure
   technique: '`autoscaling:DescribeLaunchConfigurations` — user-data disclosure'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: DescribeLaunchConfigurations returns base64 UserData that may contain credentials. A principal edge requires
+    a real, unexpired credential in a readable launch configuration and a verified issuer; IAM permission and UserData
+    presence alone cannot establish that fact.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#ec2describeinstanceattribute--ec2-user-data
   technique: '`ec2:DescribeInstanceAttribute` — EC2 user data'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: DescribeInstanceAttribute with userData can reveal launch scripts containing passwords or tokens even
+    for stopped instances. An identity edge requires the actual decoded content, credential validity and issuer;
+    the read permission and instance metadata alone do not prove these facts.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#ssmgetopsitem--operational-data-disclosure
   technique: '`ssm:GetOpsItem` — operational-data disclosure'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: GetOpsItem can disclose arbitrary OperationalData including credentials. A principal edge requires an
+    accessible OpsItem with a usable credential and a verified issuer; neither the permission nor OpsItem metadata
+    proves its content or validity.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-image-builder-enum.md#imagebuildergetcomponent--component-source-disclosure
   technique: '`imagebuilder:GetComponent` — component-source disclosure'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
+  reason: GetComponent returns literal component source, which may include repository credentials or tokens in account-owned
+    versions. A principal edge requires an actual usable credential in component.data and a verified issuer; a reference
+    to a secret ARN or variable name does not disclose its value, and GetComponent does not execute commands.
   source_revision: a66f094ede
 - source: src/pentesting-cloud/aws-security/aws-services/aws-greengrass-enum.md#greengrassgetcomponentversionartifact--presigned-component-download
   technique: '`greengrass:GetComponentVersionArtifact` — presigned component download'
-  reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
-    principal-to-principal escalation path.
-  source_revision: a66f094ede
+  reason: GetComponentVersionArtifact can return a presigned download for a known public or Lambda component artifact.
+    The bundle may contain a credential, but its bytes, credential validity and target identity are not known from
+    the configuration snapshot. Ordinary private S3 components are not covered by this API, and external artifacts
+    may require separate S3/KMS authorization.
+  source_revision: 0b36331
 - source: src/pentesting-cloud/aws-security/aws-services/aws-location-service-enum.md#geogetdeviceposition--recover-a-devices-latest-location
   technique: '`geo:GetDevicePosition` — recover a device''s latest location'
   reason: Service enumeration or authorization notes; this heading identifies API capabilities but documents no
@@ -3148,3 +3158,208 @@
   reason: Whether an artifact contains a usable credential, which IAM principal it identifies, whether that credential
     remains valid, and whether the recipient can decrypt and inspect the content are host/content and runtime facts
     unavailable in the configuration snapshot. A share permission alone does not prove privilege gain.
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-amplify-enum.md#what-to-review
+  technique: UI Builder schema JavaScript injection into privileged build
+  reason: The cited page documents JavaScript injection into generated UI components, but code execution as a privileged
+    build role requires the vulnerable codegen version, an affected component in the build input, and a build process
+    that executes the injected JavaScript with that role. Those dependency and build-runtime facts are not established
+    by the snapshot; merely compiling or packaging generated UI code does not prove role execution.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-api-gateway-enum.md#iam-authorizer
+  technique: Bypass flawed custom Lambda authorizer that accepts any nonempty Authorization header
+  reason: The page makes this a hypothetical flaw in custom Lambda authorizer code. A code review or verified request/response
+    probe must establish that an arbitrary nonempty header is allowed on a deployed reachable route and that other
+    authorization checks do not deny it; API Gateway configuration alone does not establish those runtime facts
+    or an AWS principal gain.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-appconfig-enum.md#aws-appconfig
+  technique: Read AppConfig content containing credentials
+  reason: Hosted-version reads have an existing exclusion, but deployed configuration reads via StartConfigurationSession
+    and GetLatestConfiguration are a distinct path. Either path yields an identity only if the returned content
+    contains a current reusable credential mapped to a target principal; a referenced secret ARN or ordinary configuration
+    value does not establish that content or validity fact.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-appflow-enum.md#iam-boundaries-worth-auditing
+  technique: Use stored SaaS connector authority in new flow
+  reason: The page documents using a stored SaaS connector profile for a flow, but a principal-to-principal edge
+    requires the external tenant identity and grants, source object authorization, successful flow execution, and
+    a destination the attacker can read. These SaaS/runtime and flow-to-profile facts are not in the AWS principal
+    snapshot.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-appsync-enum.md#graphql-apis-and-authorization
+  technique: Recover usable AppSync API keys
+  reason: ListApiKeys returns a bearer value, but the value is an application client key rather than an AWS principal
+    credential. An application access edge would require the live unexpired key, API_KEY authorization on a reachable
+    field, and the absence or satisfaction of other application checks; the catalog has no GraphQL client principal
+    target or these joined runtime facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-appsync-enum.md#graphql-apis-and-authorization
+  technique: Read credential-bearing AppSync environment variables
+  reason: GetGraphqlApiEnvironmentVariables returns arbitrary application values. An identity edge requires a literal
+    current reusable credential, proof of the identity it authenticates, and confirmation that it is not only a
+    secret reference; those content and validity facts are not collected.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md#registry-and-cloud-control-attack-surface
+  technique: ActivateType with a supplied execution role can run an attacker-published public extension/Hook as
+    that role.
+  reason: ActivateType runs publisher-supplied public extension code, but the page does not establish that the IAM
+    caller controls that publisher/code or can trigger its handler. Publisher ownership, exact extension version,
+    and an invocation event are external/runtime facts; configuration and PassRole alone cannot prove role execution
+    by the caller. The RegisterType path is separately modeled as aws-cloudformation-registertype-passrole-extension.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md#enumeration
+  technique: BatchDescribeTypeConfigurations can disclose stored extension configuration credentials.
+  reason: BatchDescribeTypeConfigurations can return extension settings, but the page does not identify a credential
+    in a particular TypeConfiguration or prove that it is valid for another identity. Exact configuration content
+    and credential validity/owner are required runtime/content facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudformation-and-codestar-enum.md#enumeration
+  technique: DescribeStacks/GetTemplate can disclose secrets in stack parameters, outputs or template.
+  reason: DescribeStacks/GetTemplate exposes stack metadata or template text. A privilege edge requires an unredacted
+    credential in an exact response, its current validity, and a stronger target identity; these content and runtime
+    facts are absent from a configuration-only snapshot. NoEcho parameters do not reveal their plaintext value.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudfront-enum.md#enumeration
+  technique: Distribution configuration can reveal origin custom-header shared secret.
+  reason: Origin custom headers are configuration data. A target identity exists only if a particular header is
+    accepted by the origin as an authentication secret; origin-side authentication behavior and current key validity
+    are host/runtime facts absent from the AWS snapshot.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudfront-enum.md#cloudfront
+  technique: Cookie logging can persist visitor session credentials in standard logs.
+  reason: Cookie logging records request cookies, but a privilege edge requires an exact delivered S3 log object
+    containing a still-valid authentication cookie for another visitor and an application that accepts replay. Log
+    content, delivery, session expiry, and application behavior are runtime facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudwatch-enum.md#enumeration
+  technique: GetLogEvents/tail may disclose application tokens or credentials stored in log events.
+  reason: Log read permissions expose events, not a fixed stronger identity. A privilege edge requires an exact
+    event with an unredacted, still-valid credential for another identity and any required downstream access; event
+    content and credential validity are runtime facts. The WAF-session case is already evidence-gated by aws-v3-15-replay-a-victim-application-session-recovered-from-waf.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudwatch-enum.md#cross-account-observability-oam
+  technique: CreateLink plus service Link action can expose source-account logs to an attacker-controlled monitoring
+    account.
+  reason: CreateLink and telemetry-service Link grant bounded cross-account telemetry access. An identity gain additionally
+    requires an actual linked log containing a still-valid credential for another identity, a sink policy permitting
+    the link, and access from the monitoring account; log content and credential validity are runtime facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-cloudwatch-omni-enum.md#security-relevant-permission-notes
+  technique: CreateView/UpdateView plus view-scoped GetRecords exposes raw default Dataset logs beyond a data-scope
+    grant.
+  reason: CreateView/UpdateView plus view-scoped GetRecords expands data access to raw Dataset rows, not an identity
+    by itself. An identity edge requires an exact returned row containing a valid credential for another principal;
+    row content and current credential validity are runtime facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-codeartifact-enum.md#basic-information
+  technique: GetPackageVersionAsset can retrieve package assets containing embedded identity credentials.
+  reason: GetPackageVersionAsset downloads an asset. Identity gain requires the exact asset to contain an unredacted,
+    still-valid credential mapped to another principal; package contents and credential validity are content/runtime
+    facts, not inferable from asset metadata or read permission.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-datazone-enum.md#search-published-listings-and-recover-metadata-forms
+  technique: DataZone published listing form credential disclosure
+  reason: SearchListings with FORMS or GetListing returns publisher-controlled form content. A principal edge requires
+    an actual unexpired credential in an accessible listing and verification of its issuer and grants; neither follows
+    from DataZone permissions or listing metadata alone.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-device-farm-enum.md#enumerate-account-and-projects
+  technique: Device Farm GetProject plaintext environment-variable disclosure
+  reason: GetProject returns configured variable values, but a target principal exists only if an accessible project
+    contains a usable credential and its issuer is verified. Configuration/IAM inventory cannot infer those arbitrary
+    values or their validity.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-device-farm-enum.md#enumerate-runs-jobs-tests-and-artifacts
+  technique: Device Farm ListArtifacts credential disclosure
+  reason: ListArtifacts returns expiring URLs to run, job, suite or test output. An identity edge needs a readable
+    artifact containing a currently usable credential or session cookie and a verified target account; neither artifact
+    contents nor session validity follows from IAM permissions.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-device-farm-enum.md#enumerate-testgrid-sessions-and-artifacts
+  technique: Device Farm TestGrid artifact credential disclosure
+  reason: ListTestGridSessionArtifacts returns short-lived URLs to logs or videos. A target identity requires a
+    readable recording containing an active credential or cookie and verification of its account; artifact bytes
+    and validity are runtime facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-dynamodb-enum.md#dax-inherit-the-cluster-roles-dynamodb-access
+  technique: DAX data-plane access through the cluster service role
+  reason: DAX data actions can read or modify tables permitted to the cluster role without matching direct DynamoDB
+    permission, but yield scoped table-data access, not the role session or a principal identity. Actual use also
+    needs a reachable cluster endpoint and matching cluster-role table permissions.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#ebs
+  technique: Read API keys from EBS snapshots or restored disks
+  reason: Snapshot and disk reads expose storage bytes, not a principal by themselves. Identity gain requires that
+    the selected snapshot contains a still-valid credential, that the attacker can obtain its bytes (including any
+    KMS or restore prerequisites), and that the issuer is verified; snapshot metadata cannot prove these facts.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-ecs-enum.md#on-host-enumeration-via-the-ecs-agent-state-db-agentdb
+  technique: Read credentials from ECS agent.db plaintext environment values
+  reason: agent.db is local host state and can contain plaintext task environment values, but a principal edge needs
+    host or mounted-file access, an actual usable credential in those values, and verification of its issuer. ECS
+    IAM configuration alone cannot prove file reachability, content, or validity.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-elastic-beanstalk-enum.md#exposure
+  technique: Read source bundle from the regional Elastic Beanstalk S3 bucket and recover accidentally embedded
+    credentials
+  reason: A source bundle can contain a credential, but the page says only that developers may have stored one.
+    A configuration snapshot cannot establish the bundle bytes, credential validity, or the identity and authority
+    obtained. Requires S3 object content inspection and credential-to-principal verification; s3:GetObject alone
+    is insufficient.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-elastic-beanstalk-enum.md#exposure
+  technique: Overwrite the deployed source bundle and wait for a deployment to run code as its instance profile
+  reason: s3:PutObject can poison a source bundle, but the page explicitly says the write does not change a running
+    environment. Escalation depends on a later deployment consuming that exact object and running code with a particular
+    instance profile; the future deployment and code execution are not configuration facts. The immediate rebuild
+    path is already aws-elasticbeanstalk-rebuildenvironment-s3-code and needs RebuildEnvironment.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-entity-resolution-enum.md#enumerate-id-mapping
+  technique: Put or add a workflow/namespace resource-policy statement to grant a chosen other account its supported
+    workflow rights
+  reason: PutPolicy or AddPolicyStatement can delegate supported workflow rights to another account, but an attack
+    edge requires an attacker-controlled external grantee, a matching allow in that account, and an exact supported
+    action/resource pairing. The local account snapshot cannot establish external identity policy or control of
+    the grantee; PutPolicy permission alone is insufficient.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-gamelift-streams-enum.md#enumerate-sessions-account-wide
+  technique: Read plaintext session environment variables or launch arguments containing another identity’s credential
+  reason: GetStreamSession returns plaintext environment variables and launch arguments, which could contain a credential,
+    but the page does not assert that any specific session does. The exact response content, credential validity,
+    and distinct target identity require runtime content inspection; the IAM permission alone cannot determine an
+    escalation.
+  source_revision: 0b36331
+
+- source: src/pentesting-cloud/aws-security/aws-services/aws-glue-enum.md#enumerate-connections-and-connected-records
+  technique: Read a Glue connection with stored username/password and assume the connected service identity
+  reason: GetConnection without HidePassword can return a stored password, but some connections have no password
+    or use a Secrets Manager reference. A privilege edge requires the actual returned secret, its validity and connected-service
+    identity; these response/content facts are absent from the configuration snapshot. Authorization also requires
+    GetConnection on both catalog and exact connection ARN.
+  source_revision: 0b36331

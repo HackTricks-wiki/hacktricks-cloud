@@ -1,0 +1,65 @@
+- id: aws-keyspaces-select-credential-row
+  provider: aws
+  service: cassandra
+  title: Recover another identity credential from a Keyspaces table row
+  source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#connect-to-cql-with-sigv4
+  source_revision: 0b36331
+  summary: Credential of the exact distinct AWS or application identity present in a readable row when exact source,
+    object, credential, and target evidence is verified.
+  requires:
+    all_of:
+    - action: cassandra:Select
+      resource: '*'
+    - action: cassandra:Select
+      resource: arn:aws:cassandra:*:*:/keyspace/system*
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-keyspaces-select-credential-row
+    scope: same_account
+    grants:
+    - Credential of the exact distinct AWS or application identity present in a readable row
+  conditions:
+  - id: verified_credential
+    description: The same source can read the exact table and system keyspace; a returned row contains a valid reusable
+      credential with verified owner and scope. A secrets table name alone is insufficient.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Select on credential-bearing tables and avoid storing reusable identity credentials.
+  references:
+  - https://docs.aws.amazon.com/keyspaces/latest/devguide/security_iam_service-with-iam.html
+  notes: Exact aws_privesc_challenge_evidence is required. Missing or incomplete evidence remains UNKNOWN.
+
+- id: aws-keyspaces-cdc-credential-record
+  provider: aws
+  service: cassandra
+  title: Recover another identity credential from a Keyspaces CDC record
+  source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#enumerate-and-read-cdc-streams
+  source_revision: 0b36331
+  summary: Credential of the exact distinct identity present in a readable CDC image when exact source, object,
+    credential, and target evidence is verified.
+  requires:
+    all_of:
+    - action: cassandra:GetStream
+      resource: '*'
+    - action: cassandra:GetShardIterator
+      resource: '*'
+    - action: cassandra:GetRecords
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-keyspaces-cdc-credential-record
+    scope: same_account
+    grants:
+    - Credential of the exact distinct identity present in a readable CDC image
+  conditions:
+  - id: verified_credential
+    description: A retained stream image contains a valid reusable credential; verify exact stream read, image content,
+      credential validity and distinct owner. CDC enablement alone is insufficient.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CDC reads and avoid writing reusable credentials to CDC-enabled tables.
+  references:
+  - https://docs.aws.amazon.com/keyspaces/latest/devguide/configure-cdc-permissions.html
+  notes: Exact aws_privesc_challenge_evidence is required. Missing or incomplete evidence remains UNKNOWN.

@@ -976,10 +976,10 @@
 - id: aws-v3-32-reuse-another-user-s-cached-sts-role-credentials-or-sta
   provider: aws
   service: challenge-evidence
-  title: Reuse another user's cached STS role credentials or static IAM user keys from local AWS CLI files
+  title: Reuse another user's cached STS role credentials from local AWS CLI files
   source: src/pentesting-cloud/aws-security/aws-services/aws-iam-enum.md#local-enumeration
-  summary: Host file read of cached STS/static key -> exact owner principal. Exact external source and target proof are
-    required.
+  summary: Reading another user's cached STS session can yield its issuing role only with verified host-file access,
+    live credentials and owner.
   requires: {}
   source_kind: aws_challenge_foothold
   source_selector:
@@ -989,19 +989,18 @@
     selector:
       aws_challenge_fact: aws-v3-32-reuse-another-user-s-cached-sts-role-credentials-or-sta
     scope: same_account
-    aggregate_as: Verified Reuse another user's cached STS role credentials or static IAM user keys from local AWS CLI
-      files targets in {account}
+    aggregate_as: Verified cached STS role sessions in {account}
     grants:
-    - exact owner principal.
+    - Exact issuing role of the live STS session.
   conditions:
   - id: exact_external_foothold
-    description: No edge from mere existence of a shared host or AWS CLI installation. Source evidence must prove local
-      control for the exact target.
+    description: Source evidence must prove local read access to another user's CLI cache, live STS credentials
+      and exact issuing role.
   confidence: conditional
   severity: high
   mitigation: Restrict access to the source primitive and revoke exposed credentials or sessions.
-  notes: The synthetic source is only a hypothesis until an exact verified evidence item exists; no IAM principal is
-    inferred from configuration.
+  notes: The synthetic local foothold stays UNKNOWN until an exact evidence item identifies the source and issuing
+    role.
 - id: aws-v3-33-read-aws-vpn-client-temporary-credentials-from-another
   provider: aws
   service: challenge-evidence
@@ -2613,3 +2612,67 @@
   - https://docs.aws.amazon.com/msk/latest/developerguide/what-is-msk.html
   notes: Missing aws_privesc_challenge_evidence is UNKNOWN; evidence must bind TechniqueId, SourceArn, TargetKind,
     TargetId and TargetAccount and prove all prerequisites.
+
+- id: aws-chime-attendee-jointoken-read
+  provider: aws
+  service: chime
+  title: Read another Chime meeting attendee JoinToken
+  source: src/pentesting-cloud/aws-security/aws-services/aws-chime-sdk-enum.md#meetings
+  summary: GetAttendee or ListAttendees returns a bearer JoinToken for an existing attendee.
+  requires:
+    any_of:
+    - - action: chime:GetAttendee
+        resource: '*'
+    - - action: chime:ListAttendees
+        resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-chime-attendee-jointoken-read
+    scope: same_account
+    aggregate_as: Verified Read another Chime meeting attendee JoinToken targets in {account}
+    grants:
+    - Join the exact meeting as the represented attendee.
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The meeting and a different active attendee must exist; a nonempty token must be returned, and
+      evidence must bind the source, meeting and attendee.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the exact read permission and protect returned credentials.
+  references:
+  - https://docs.aws.amazon.com/chime-sdk/latest/APIReference/API_meeting-chime_GetAttendee.html
+  notes: Absent or stale evidence must evaluate UNKNOWN; do not store the credential value in the snapshot.
+
+- id: aws-chime-rtmp-publisher-key-read
+  provider: aws
+  service: chime
+  title: Read live connector RTMP publishing key
+  source: src/pentesting-cloud/aws-security/aws-services/aws-chime-sdk-enum.md#media-pipelines
+  summary: GetMediaPipeline returns the complete RTMP destination URL including its stream key.
+  requires:
+    all_of:
+    - action: chime:GetMediaPipeline
+      resource: '*'
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_challenge_fact: aws-chime-rtmp-publisher-key-read
+    scope: same_account
+    aggregate_as: Verified Read live connector RTMP publishing key targets in {account}
+    grants:
+    - Publish to the exact downstream live-stream destination.
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The selected pipeline must be a live connector with a nonempty RTMP(S) stream key; the destination
+      must still accept that key.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the exact read permission and protect returned credentials.
+  references:
+  - https://docs.aws.amazon.com/chime-sdk/latest/APIReference/API_media-pipelines_GetMediaPipeline.html
+  notes: Absent or stale evidence must evaluate UNKNOWN; do not store the credential value in the snapshot.
