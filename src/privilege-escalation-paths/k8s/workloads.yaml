@@ -332,18 +332,58 @@
     - https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/
   notes: No external backend is needed (CEL runs in the API server). HackTricks reproduced injection of an init container into later pods.
 
+- id: k8s-workloads-mutating-admission-policy-half-pair
+  provider: k8s
+  service: admission
+  title: Complete a MutatingAdmissionPolicy and binding pair with one half only
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#mutatingadmissionpolicy-code-injection
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of ServiceAccounts of later-created pods by creating the policy an existing binding references but is missing, or by creating or repointing a binding to an existing policy whose mutation injects code.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: create, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "ServiceAccounts of namespaces with new pod creations in {cluster}"
+  conditions:
+    - id: mutating_admission_policy_served
+      description: The MutatingAdmissionPolicy API must be enabled/served on the cluster version.
+    - id: dangling_binding_exists
+      description: The create-policy alternative needs an existing binding whose policyName names a policy that does not exist yet.
+    - id: injecting_policy_exists
+      description: The binding alternatives need an existing (unbound or differently bound) policy whose mutation runs code or otherwise hands the source a pod identity; a benign policy gives nothing.
+    - id: new_pod_creation_occurs
+      description: Only pods created after the change are mutated.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to mutatingadmissionpolicies and their bindings to cluster administrators; delete bindings whose policy is missing and policies that are not bound.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/
+  notes: HackTricks (a66f094ede) reproduced each half independently (patch binding to repoint policyName, create binding for an existing unbound policy, create policy filling a dangling binding). Holding both halves (or patch/update on the policy) is k8s-workloads-mutating-admission-policy-injection. Policy contents and dangling policyName references are not evaluated.
+
 - id: k8s-workloads-configmap-executed-by-workload
   provider: k8s
   service: workloads
   title: Modify a ConfigMap that a running workload executes
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#consumed-configuration-as-code
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of ServiceAccounts whose pods consume a ConfigMap it can modify, when that ConfigMap carries a script or configuration the workload executes.
   requires:
     all_of: []
     any_of:
       - - {verb: patch, resource: configmaps, namespace: "{target.namespace}"}
       - - {verb: update, resource: configmaps, namespace: "{target.namespace}"}
+      # Replace the ConfigMap: delete it and create one with the same name.
+      - - {verb: delete, resource: configmaps, namespace: "{target.namespace}"}
+        - {verb: create, resource: configmaps, namespace: "{target.namespace}"}
   target:
     kind: k8s_service_account
     selector:

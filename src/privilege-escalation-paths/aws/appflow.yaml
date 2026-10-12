@@ -1,0 +1,44 @@
+# AWS appflow privilege escalation techniques.
+# Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
+
+- id: aws-appflow-passrole-glue-catalog
+  provider: aws
+  service: appflow
+  title: Use a passed AppFlow role to create or update Glue Data Catalog tables
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appflow-privesc/README.md#createflowupdateflow--iampassrole-to-aws-glue-catalog-authority
+  source_revision: 6fb9ac51fd
+  summary: The source can exercise the Glue Data Catalog table and partition create/update privileges of a passable role trusting appflow.amazonaws.com by setting it as the metadata-catalog role of a flow it creates or updates and runs.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: appflow:StartFlow
+        resource: "*"
+    any_of:
+      - - action: appflow:CreateFlow
+          resource: "*"
+      - - action: appflow:UpdateFlow
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: appflow.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting appflow.amazonaws.com passable in {account}"
+    outcome: impersonation
+  conditions:
+    - id: bounded_catalog_authority
+      description: AppFlow uses the role only for the Glue table, database and partition operations of the flow's catalog registration; no credentials and no arbitrary actions under the role.
+    - id: connector_profiles
+      description: Referenced connector profiles also need appflow:UseConnectorProfile, and an S3-destination flow needs the caller-side S3 bucket permissions.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: low
+  mitigation: Restrict iam:PassRole on AppFlow catalog roles with iam:PassedToService and exact role ARNs, scope those roles to dedicated Glue databases, and limit flow creation and update.
+  references:
+    - https://docs.aws.amazon.com/appflow/latest/userguide/security_iam_service-with-iam.html
+  notes: Bounded impact - catalog-integrity proxy through the passed role (page states it is privilege escalation but not role credential theft). Modelled like the DataSync bounded PassRole entries.

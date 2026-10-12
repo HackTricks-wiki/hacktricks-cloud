@@ -115,32 +115,37 @@
   service: osconfig
   title: Propagate a root OS policy to VMs across projects with an OS Config policy orchestrator
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-osconfig-privesc.md#osconfigpolicyorchestratorscreate-or-update---propagate-a-privileged-policy-across-projects-and-zones
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs in every project under the project, folder or organization where it can create policy orchestrators.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service accounts attached to OS Config-managed VMs in every project under the project, folder or organization where it can create or update policy
+    orchestrators.
   requires:
-    all_of:
-      - action: osconfig.policyOrchestrators.create
-        resource: "{target.project}"
+    any_of:
+    - - action: osconfig.policyOrchestrators.create
+        resource: '{target.project}'
+    - - action: osconfig.policyOrchestrators.update
+        resource: '{target.project}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: compute_instance
     scope: any
-    aggregate_as: "SAs of OS Config-managed VMs under the orchestrator parent"
+    aggregate_as: SAs of OS Config-managed VMs under the orchestrator parent
   conditions:
-    - id: service_agents
-      description: The OS Config, OS Config rollout and Progressive Rollout service agents of the parent must exist with their service-agent roles; folder/organization calls need a billing-enabled quota project and serviceusage.services.use.
-    - id: update_variant
-      description: osconfig.policyOrchestrators.update on an existing orchestrator gives the same reach within its configured selectors (not in the bundled permission list).
-    - id: agent_enabled
-      description: Each target VM still needs the GA OS-policy prerequisites (active agent, attached SA, connectivity) and must match the selectors and filters.
-    - id: access_scopes
-      description: The usable token is limited by the VM's OAuth access scopes.
+  - id: service_agents
+    description: The OS Config, OS Config rollout and Progressive Rollout service agents of the parent must exist with their service-agent roles; folder/organization calls need a billing-enabled quota project
+      and serviceusage.services.use.
+  - id: update_variant
+    description: With osconfig.policyOrchestrators.update the reach is limited to the selectors and filters of the existing orchestrators (which the source can rewrite).
+  - id: agent_enabled
+    description: Each target VM still needs the GA OS-policy prerequisites (active agent, attached SA, connectivity) and must match the selectors and filters.
+  - id: access_scopes
+    description: The usable token is limited by the VM's OAuth access scopes.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Restrict roles/osconfig.policyOrchestratorAdmin and roles/osconfig.admin at folder and organization level.
   references:
-    - https://docs.cloud.google.com/compute/vm-manager/docs/os-policies/use-policy-orchestrator
-  notes: The permission is checked on the orchestrator parent; a folder/organization grant inherits to every descendant project, which "{target.project}" captures. Reconciliation reapplies the assignment every six hours.
+  - https://docs.cloud.google.com/compute/vm-manager/docs/os-policies/use-policy-orchestrator
+  notes: The permission is checked on the orchestrator parent; a folder/organization grant inherits to every descendant project, which "{target.project}" captures. Reconciliation reapplies the assignment
+    every six hours.

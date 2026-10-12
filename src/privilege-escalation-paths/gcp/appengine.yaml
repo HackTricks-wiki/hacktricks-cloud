@@ -87,3 +87,44 @@
     - https://docs.cloud.google.com/appengine/docs/flexible/debugging-an-instance
     - https://docs.cloud.google.com/compute/docs/oslogin/set-up-oslogin
   notes: The debug branch does not require actAs or Compute setMetadata (the debug request carries the SSH key). The OS Login branch requires actAs because the VM has an attached SA. OS Login resource "*" is project-level; the VM is the version's flexible instance.
+
+- id: gcp-appengine-versions-create-legacy-default-sa-no-actas
+  provider: gcp
+  service: appengine
+  title: Deploy an App Engine version as the legacy default service account without actAs
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-appengine-privesc.md#deploy-attacker-controlled-code-as-a-version-service-account
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the auto-created App Engine default service account of projects where it can deploy versions, in legacy-affected organizations that do not enforce the App Engine actAs check.
+  requires:
+    all_of:
+      - action: appengine.versions.create
+        resource: "*"
+      - action: storage.objects.create
+        resource: "*"
+      - action: cloudbuild.builds.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      target_id_glob: ["*@appspot.gserviceaccount.com"]
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "App Engine default SA deployable without actAs in {project}"
+  conditions:
+    - id: legacy_affected_org
+      description: Only legacy-affected organizations have the exemption; where constraints/appengine.enforceServiceAccountActAsCheck is not visible the check is already enforced and this edge does not exist.
+    - id: app_exists
+      description: An App Engine application must already exist and the version must run as the app-level default SA (no per-version SA and no user-managed app default).
+    - id: version_sa_artifact_registry
+      description: The default SA itself needs artifactregistry.repositories.uploadArtifacts (and downloadArtifacts for flexible) or the deployment never reaches execution.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+    - id: org_policy_constraint
+      constraint: appengine.enforceServiceAccountActAsCheck
+  confidence: conditional
+  severity: critical
+  mitigation: Enforce constraints/appengine.enforceServiceAccountActAsCheck and remove roles/editor from the App Engine default SA.
+  references:
+    - https://docs.cloud.google.com/iam/docs/service-accounts-actas
+  notes: Complements gcp-appengine-versions-create-actas (which requires actAs) for the documented legacy exception; it does not cover per-version or user-managed default SAs.

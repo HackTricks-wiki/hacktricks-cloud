@@ -8,14 +8,19 @@
   service: composer
   title: Create a Composer environment running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md#composerenvironmentscreate--iamserviceaccountsactas--bucket-write--create-an-environment-over-a-chosen-identity
-  source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by creating a Composer environment that runs as that service account and delivering a DAG to it.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
       - action: composer.environments.create
         resource: "*"
+    any_of:
+      - - action: storage.objects.create
+          resource: "*"
+      - - action: composer.environments.update
+          resource: "*"
   target:
     kind: gcp_service_account
     selector:
@@ -25,15 +30,15 @@
     aggregate_as: "Service accounts usable as Composer environment SA in {project}"
   conditions:
     - id: code_delivery
-      description: Running code in the new environment also needs a way to deliver a DAG (environment bucket write or environment update), which the creator normally has.
+      description: Creating the environment alone runs no attacker code; the DAG is delivered by writing to an eligible custom bucket (same project and region, Standard class, no retention policy, not used by another environment) before creation, or to the new environment bucket, or by installing a PyPI package through an environment update.
     - id: legacy_actas_exemption
       description: Until constraints/composer.enforceServiceAccountActAsCheck is enforced on a legacy organization, a creator can attach any project SA without actAs (the edge then reaches every project SA; not modelled).
     - id: environment_sa_role
-      description: The environment SA must hold roles/composer.worker for the environment to come up.
+      description: The environment SA must hold Composer Worker permissions (including on the bucket) for the environment to come up.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on specific SAs; roles/composer.admin does not include actAs but roles/editor does.
   references:

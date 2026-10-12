@@ -72,14 +72,17 @@
   service: data_factory
   title: Run a debug sandbox pipeline that authenticates with the factory identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#rce-as-msi-via-a-debug-sandbox-run-no-pipelineswrite
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: A debug run of a source-supplied pipeline definition executes with the factory's managed identities without saving any pipeline.
   requires:
-    all_of:
-      - action: Microsoft.DataFactory/factories/pipelines/sandbox/create/action
-        scope: '{target.host_resource}'
-      - action: Microsoft.DataFactory/factories/pipelines/sandbox/run/action
-        scope: '{target.host_resource}'
+    all_of: []
+    any_of:
+      - - action: Microsoft.DataFactory/factories/pipelines/sandbox/create/action
+          scope: '{target.host_resource}'
+        - action: Microsoft.DataFactory/factories/pipelines/sandbox/run/action
+          scope: '{target.host_resource}'
+      - - action: Microsoft.DataFactory/factories/sandboxpipelineruns/action
+          scope: '{target.host_resource}'
   target:
     kind: azure_managed_identity
     selector:
@@ -96,7 +99,7 @@
   mitigation: Restrict the pipelines/sandbox actions (debug runs) to factory authors.
   references:
     - https://learn.microsoft.com/en-us/azure/data-factory/iterative-development-debugging
-  notes: ""
+  notes: The page names factories/sandboxpipelineruns/action as the equivalent single action.
 
 - id: azure-datafactory-dataplane-access-token
   provider: azure
@@ -128,3 +131,39 @@
   references:
     - https://learn.microsoft.com/en-us/rest/api/datafactory/factories/get-data-plane-access
   notes: ""
+
+- id: azure-datafactory-rogue-shir-linked-service-credentials
+  provider: azure
+  service: data_factory
+  title: Register a rogue self-hosted integration runtime node and receive linked-service credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#microsoftdatafactoryfactoriesintegrationruntimeslistauthkeysaction
+  source_revision: a66f094ede
+  summary: A self-hosted integration runtime node registered with the runtime auth key executes activities with the stored linked-service credentials, which can include service-principal secrets.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.DataFactory/factories/integrationruntimes/listauthkeys/action
+          scope: '{pivot}'
+      - - action: Microsoft.DataFactory/factories/integrationruntimes/regenerateauthkey/action
+          scope: '{pivot}'
+      - - action: Microsoft.DataFactory/datafactories/gateways/listauthkeys/action
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.DataFactory/factories
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in linked services of {pivot}
+  conditions:
+    - id: linked_service_uses_sp_secret_on_shir
+      description: Only linked services that authenticate with a service-principal secret or certificate and connect through that self-hosted runtime are exposed; other credential types are data access only.
+    - id: activity_runs_on_rogue_node
+      description: An activity using the linked service must be dispatched to the rogue node while it is registered.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict integration runtime listauthkeys and regenerateauthkey, alert on new runtime node registrations, and store linked-service secrets in Key Vault with managed-identity access.
+  references:
+    - https://learn.microsoft.com/en-us/azure/data-factory/create-self-hosted-integration-runtime
+  notes: Key rotation (az-data-factory-privesc.md#self-hosted-ir-key-rotation-connection-recon-and-cross-factory-sharing) returns the new keys and evicts legitimate nodes. Linked services that resolve secrets from Key Vault through the factory identity are not exposed this way.

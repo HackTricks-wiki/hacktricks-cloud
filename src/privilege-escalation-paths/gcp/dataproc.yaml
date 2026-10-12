@@ -237,3 +237,48 @@
     - https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/staging-bucket
     - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
   notes: dataproc.clusters.get only discovers the SA, scopes and bucket names; the escalation is the object replacement. Planting a brand-new object needs only storage.objects.create but executes nothing unless a consumer references it.
+
+- id: gcp-dataproc-staging-object-plant
+  provider: gcp
+  service: dataproc
+  title: Plant a new Dataproc staging dependency for a later job
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataproc-privesc.md#dataprocclustersget--config-leak-sa--scopes--buckets--metadata--properties--staging-bucket-poison
+  source_revision: 6fb9ac51fd
+  summary: The source can place a new object at a Dataproc staging path that a later
+    cluster job loads, causing its code to run as the existing cluster service account.
+  requires:
+    all_of:
+    - action: storage.objects.create
+      resource: '{target.host_resource.content_storage}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: dataproc_cluster
+    scope: any
+    aggregate_as: SAs of Dataproc clusters loading code from objects the source can
+      replace
+  conditions:
+  - id: new_object_path
+    description: The referenced object name must be unused; replacing an existing
+      live generation also requires storage.objects.delete and is covered by gcp-dataproc-staging-object-replace.
+  - id: trusted_consumer
+    description: A later job on the selected cluster must load the planted JAR or
+      script from that exact unpinned path; mere write access to the staging bucket
+      does not cause execution.
+  - id: staging_bucket
+    description: The caller must be able to create the object in the specific config
+      or temp bucket consumed by the cluster, and the cluster service account must
+      be able to read it.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to Dataproc staging buckets and pin job dependencies
+    to reviewed immutable generations.
+  references:
+  - https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/staging-bucket
+  - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+  notes: dataproc.clusters.get only discovers the SA, scopes and bucket names; the
+    escalation is the object replacement. Planting a brand-new object needs only storage.objects.create
+    but executes nothing unless a consumer references it.

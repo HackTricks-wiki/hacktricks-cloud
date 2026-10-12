@@ -76,28 +76,33 @@
   service: elasticbeanstalk
   title: Create a Beanstalk application and environment with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkcreateapplication-elasticbeanstalkcreateenvironment-elasticbeanstalkcreateapplicationversion-elasticbeanstalkupdateenvironment-iampassrole-and-more
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable EC2-trusting role with an instance profile, used as the instance profile of its own environment.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any passable EC2-trusting role with an instance profile, used as the instance profile of a new Beanstalk environment or of an existing one it updates.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: elasticbeanstalk:CreateApplication
-        resource: "*"
+    - action: iam:PassRole
+      resource: '{target.arn}'
+    - action: elasticbeanstalk:CreateApplicationVersion
+      resource: '*'
+    - action: s3:PutObject
+      resource: '*'
+    any_of:
+    - - action: elasticbeanstalk:CreateApplication
+        resource: '*'
       - action: elasticbeanstalk:CreateEnvironment
-        resource: "*"
-      - action: elasticbeanstalk:CreateApplicationVersion
-        resource: "*"
+        resource: '*'
       - action: elasticbeanstalk:UpdateEnvironment
-        resource: "*"
-      - action: s3:PutObject
-        resource: "*"
+        resource: '*'
       - action: cloudformation:CreateStack
-        resource: "*"
+        resource: '*'
       - action: ec2:RunInstances
-        resource: "*"
+        resource: '*'
       - action: autoscaling:CreateAutoScalingGroup
-        resource: "*"
+        resource: '*'
+    - - action: elasticbeanstalk:UpdateEnvironment
+        resource: '*'
+      - action: cloudformation:UpdateStack
+        resource: '*'
   target:
     kind: aws_role
     selector:
@@ -105,20 +110,24 @@
       has_instance_profile: true
       resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "EC2 instance-profile roles passable in {account}"
+    aggregate_as: EC2 instance-profile roles passable in {account}
   conditions:
-    - id: supporting_permissions
-      description: The full set of S3, EC2, CloudFormation, Auto Scaling and Elastic Load Balancing permissions Beanstalk needs (cf. AdministratorAccess-AWSElasticBeanstalk) is approximated by the listed actions.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: supporting_permissions
+    description: The full set of S3, EC2, CloudFormation, Auto Scaling and Elastic Load Balancing permissions Beanstalk needs (cf. AdministratorAccess-AWSElasticBeanstalk) is approximated by the listed
+      actions.
+  - id: existing_environment_variant
+    description: The update-only alternative needs an existing environment within UpdateEnvironment scope; the instance profile is changed and the attacker application version deployed to it.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on instance-profile roles and grant Beanstalk environment-creation rights only to deployment principals.
   references:
-    - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess-AWSElasticBeanstalk.html
+  - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess-AWSElasticBeanstalk.html
   notes: A principal with these supporting permissions (ec2:RunInstances + PassRole) is usually already covered by the EC2 PassRole edge; this entry records the Beanstalk route.
+
 
 - id: aws-elasticbeanstalk-createapplicationversion-updateenvironment
   provider: aws

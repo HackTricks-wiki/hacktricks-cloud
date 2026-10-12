@@ -274,36 +274,41 @@
   service: sso
   title: Create an Identity Center user and add it to a privileged group
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreateuser--sso-directorycreateuser--group-membership--assignment
-  source_revision: 171e422299
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of permission sets assigned to Identity Center groups by creating its own directory user and adding it to such a group.
   requires:
     all_of:
-      - action: identitystore:CreateUser
-        resource: "*"
       - action: identitystore:CreateGroupMembership
         resource: "*"
+    any_of:
+      - - action: identitystore:CreateUser
+          resource: "*"
+      - - action: sso-directory:CreateUser
+          resource: "*"
   target:
     kind: aws_identity_center_permission_set
     selector:
       assigned_to_identity_center_group: true
     scope: org
     aggregate_as: "Permission sets assigned to Identity Center groups (via a new user)"
+    outcome: role_activation
   conditions:
     - id: identity_center_directory_source
       description: Only applies when the identity source is the Identity Center directory; with Active Directory or an external IdP, users are not created this way.
     - id: sign_in_credential
-      description: The new user needs a password (one-time password or reset email to an address the source controls) and must satisfy the instance MFA policy.
+      description: The new user needs a password (one-time password, sso-directory:UpdatePassword, or a reset email to an address the source controls) and must satisfy the instance MFA policy.
     - id: external_idp_sync
       description: With SCIM provisioning the membership may be overwritten on the next sync.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict identitystore:CreateUser and CreateGroupMembership to administrators and alert on directory user creation.
+  mitigation: Restrict identitystore:CreateUser, sso-directory:CreateUser and CreateGroupMembership to administrators and alert on directory user creation.
   references:
     - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateUser.html
     - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateGroupMembership.html
-  notes: Removes the controls_identity_center_user condition of aws-identitystore-creategroupmembership; direct assignment of the new user is covered by the sso:CreateAccountAssignment entries.
+  notes: The page names both identitystore:CreateUser and sso-directory:CreateUser as the user-creation permission. Removes the controls_identity_center_user condition of aws-identitystore-creategroupmembership; the direct-assignment variant is aws-identitystore-createuser-createaccountassignment.
+
 
 - id: aws-account-access-createentitlement
   provider: aws
@@ -339,3 +344,43 @@
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/aam-prepare-roles.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_account-access.html
   notes: An entitlement cannot make a non-trusting role assumable; no iam:PassRole is required.
+
+- id: aws-identitystore-createuser-createaccountassignment
+  provider: aws
+  service: sso
+  title: Create an Identity Center user and assign it a permission set
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreateuser--sso-directorycreateuser--group-membership--assignment
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any permission set it can assign by creating its own Identity Center directory user and assigning the permission set to it in a member account.
+  requires:
+    all_of:
+      - action: sso:CreateAccountAssignment
+        resource: "{target.arn}"
+    any_of:
+      - - action: identitystore:CreateUser
+          resource: "*"
+      - - action: sso-directory:CreateUser
+          resource: "*"
+  target:
+    kind: aws_identity_center_permission_set
+    selector:
+      resource_permission_covers_target: sso:CreateAccountAssignment
+    scope: org
+    aggregate_as: "Permission sets assignable via sso:CreateAccountAssignment (via a new user)"
+    outcome: role_activation
+  conditions:
+    - id: identity_center_directory_source
+      description: Only applies when the identity source is the Identity Center directory; with Active Directory or an external IdP, users are not created this way.
+    - id: sign_in_credential
+      description: The new user needs a password (one-time password, sso-directory:UpdatePassword, or a reset email to an address the source controls) and must satisfy the instance MFA policy.
+    - id: management_account_permission_sets
+      description: A delegated administrator cannot assign permission sets in the management account.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict directory user creation and sso:CreateAccountAssignment to Identity Center administrators and alert on new users that quickly receive an account assignment.
+  references:
+    - https://docs.aws.amazon.com/singlesignon/latest/IdentityStoreAPIReference/API_CreateUser.html
+    - https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateAccountAssignment.html
+  notes: Removes the controls_identity_center_user condition of aws-sso-createaccountassignment; the group-membership variant is aws-identitystore-createuser-groupmembership.

@@ -39,59 +39,70 @@
   service: codebuild
   title: Run a command in a running CodeBuild sandbox
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox it can send commands to.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox
+    it can send commands to.
   requires:
     all_of:
-      - action: codebuild:StartCommandExecution
-        resource: "{target.codebuild_sandbox_arn}"
+    - action: codebuild:StartCommandExecution
+      resource: '{target.codebuild_sandbox_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: codebuild
     scope: same_account
-    aggregate_as: "Service roles of CodeBuild projects with sandboxes covered by codebuild:StartCommandExecution in {account}"
+    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartCommandExecution
+      in {account}
+    outcome: workload_execution
   conditions:
-    - id: running_sandbox
-      description: A sandbox must be running for the project (or the source must also hold codebuild:StartSandbox).
+  - id: running_sandbox
+    description: A sandbox must be running for the project (or the source must also hold codebuild:StartSandbox).
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
+  severity: critical
   mitigation: Restrict sandbox actions and stop idle sandboxes.
   references: []
-  notes: No iam:PassRole, StartBuild or UpdateProject is needed. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn} expands to sandbox/<project>:* of each project running as the target role.
+  notes: No iam:PassRole, StartBuild or UpdateProject is needed. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn}
+    expands to sandbox/<project>:* of each project running as the target role.
+
 
 - id: aws-codebuild-startsandboxconnection
   provider: aws
   service: codebuild
   title: Open an interactive Session Manager shell in a running CodeBuild sandbox
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartsandboxconnection--open-an-interactive-shell-in-a-running-sandbox
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox by opening an interactive shell inside the sandbox container.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service role of a CodeBuild project that has a running sandbox
+    by opening an interactive shell inside the sandbox container.
   requires:
     all_of:
-      - action: codebuild:StartSandboxConnection
-        resource: "{target.codebuild_sandbox_arn}"
+    - action: codebuild:StartSandboxConnection
+      resource: '{target.codebuild_sandbox_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: codebuild
     scope: same_account
-    aggregate_as: "Service roles of CodeBuild projects with sandboxes covered by codebuild:StartSandboxConnection in {account}"
+    aggregate_as: Service roles of CodeBuild projects with sandboxes covered by codebuild:StartSandboxConnection
+      in {account}
+    outcome: workload_execution
   conditions:
-    - id: running_sandbox
-      description: A sandbox must be running for the project and its ID known to the source.
-    - id: ssm_agent_in_image
-      description: The sandbox image must have a working SSM Agent and the project configuration must allow CodeBuild to start the Session Manager session.
+  - id: running_sandbox
+    description: A sandbox must be running for the project and its ID known to the source.
+  - id: ssm_agent_in_image
+    description: The sandbox image must have a working SSM Agent and the project configuration must allow CodeBuild
+      to start the Session Manager session.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: conditional
-  severity: high
+  severity: critical
   mitigation: Scope codebuild:StartSandboxConnection to exact sandbox ARNs of trusted operators and stop idle sandboxes.
   references:
-    - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandboxConnection.html
-  notes: Caller-side ssm:StartSession and iam:PassRole are not required. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn} expands to sandbox/<project>:* of each project running as the target role.
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandboxConnection.html
+  notes: Caller-side ssm:StartSession and iam:PassRole are not required. The API resource is the sandbox ARN; {target.codebuild_sandbox_arn}
+    expands to sandbox/<project>:* of each project running as the target role.
+
 
 - id: aws-codebuild-passrole-createproject
   provider: aws
@@ -227,3 +238,107 @@
   mitigation: Use versioned, immutable source objects and restrict s3:PutObject on build source locations.
   references: []
   notes: "{target.consumer_input_arn} is the configured S3 source object ARN."
+
+- id: aws-codebuild-startsandbox-exec
+  provider: aws
+  service: codebuild
+  title: Start a CodeBuild sandbox for a project and run commands in it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildstartcommandexecution--execute-in-a-running-sandbox
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service role of an existing CodeBuild project by starting a sandbox for it and running commands or opening a shell in that sandbox.
+  requires:
+    all_of:
+      - action: codebuild:StartSandbox
+        resource: "{target.attached_resource_arn}"
+    any_of:
+      - - action: codebuild:StartCommandExecution
+          resource: "{target.codebuild_sandbox_arn}"
+      - - action: codebuild:StartSandboxConnection
+          resource: "{target.codebuild_sandbox_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: codebuild
+      attached_resource_covered_by: codebuild:StartSandbox
+    scope: same_account
+    aggregate_as: "Service roles of CodeBuild projects covered by codebuild:StartSandbox in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: ssm_agent_in_image
+      description: The interactive-shell alternative needs a working SSM Agent in the sandbox image and a project configuration that lets CodeBuild start the Session Manager session.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict codebuild:StartSandbox, StartCommandExecution and StartSandboxConnection to trusted operators on exact projects and keep project service roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_StartSandbox.html
+  notes: Removes the running-sandbox runtime prerequisite of aws-codebuild-startcommandexecution and aws-codebuild-startsandboxconnection; the page states the caller of those needs no StartSandbox only when a sandbox is already running.
+
+- id: aws-codebuild-env-parameter-store-poisoning
+  provider: aws
+  service: codebuild
+  title: Overwrite a Parameter Store value consumed as a CodeBuild environment variable
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain (at the next build) the privileges of the service role of a project whose PARAMETER_STORE environment variable feeds privileged build logic and references a parameter the source can overwrite.
+  requires:
+    all_of:
+      - action: ssm:PutParameter
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: codebuild
+      consumer_input_writable_via: ssm:PutParameter
+    scope: same_account
+    aggregate_as: "Service roles of CodeBuild projects with writable PARAMETER_STORE variables in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: delayed_trigger
+      description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger CodeBuild.
+    - id: consumer_semantics
+      description: Code execution or credential substitution depends on how the trusted buildspec and tools use the variable; otherwise the impact is limited to configuration poisoning.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Scope ssm:PutParameter away from build-consumed parameters, validate values before use and prefer immutable, version-reviewed build inputs.
+  references:
+    - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+  notes: "{target.consumer_input_arn} is the Parameter Store parameter ARN referenced by the project's PARAMETER_STORE environment variable."
+
+- id: aws-codebuild-env-secretsmanager-poisoning
+  provider: aws
+  service: codebuild
+  title: Overwrite a Secrets Manager value consumed as a CodeBuild environment variable
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain (at the next build) the privileges of the service role of a project whose SECRETS_MANAGER environment variable feeds privileged build logic and references a secret the source can write a new value to.
+  requires:
+    all_of:
+      - action: secretsmanager:PutSecretValue
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: codebuild
+      consumer_input_writable_via: secretsmanager:PutSecretValue
+    scope: same_account
+    aggregate_as: "Service roles of CodeBuild projects with writable SECRETS_MANAGER variables in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: delayed_trigger
+      description: A build must run afterwards (schedule, webhook, pipeline or operator); the write alone does not trigger CodeBuild.
+    - id: consumer_semantics
+      description: Code execution or credential substitution depends on how the trusted buildspec and tools use the variable; otherwise the impact is limited to configuration poisoning.
+    - id: version_pinning
+      description: A variable pinned to a specific version stage or version ID other than AWSCURRENT is not changed by a new current value.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Scope secretsmanager:PutSecretValue away from build-consumed secrets, validate values before use and prefer immutable, version-reviewed build inputs.
+  references:
+    - https://docs.aws.amazon.com/codebuild/latest/userguide/build-spec-ref.html
+  notes: "{target.consumer_input_arn} is the secret ARN referenced by the project's SECRETS_MANAGER environment variable."

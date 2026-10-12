@@ -196,7 +196,7 @@
   service: functions
   title: Read app settings exposing the content storage connection string
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesconfiglistaction
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of the Function App's managed identities.
   requires:
     all_of: []
@@ -204,6 +204,10 @@
       - - action: Microsoft.Web/sites/config/list/action
           scope: "{target.host_resource}"
       - - action: Microsoft.Web/sites/config/snapshots/listsecrets/action
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Web/sites/slots/config/list/action
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Web/sites/slots/config/snapshots/listsecrets/action
           scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
@@ -217,13 +221,47 @@
       description: Only when the content storage setting contains an account key (not identity-based connections).
     - id: snapshot_key_still_valid
       description: For the snapshots/listsecrets path, a key recovered from a historical config snapshot must not have been rotated since.
+    - id: slot_shares_content_storage
+      description: For the slot paths, the slot's storage setting must reference the same storage account as the production app (the usual case); a slot-only account yields only the slot's identities.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Use identity-based storage connections, rotate storage keys after setting changes, and restrict config/list/action and config/snapshots/listsecrets/action.
   references:
     - https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference#connecting-to-host-storage-with-an-identity
-  notes: The publishing-credential path of config/list/action is modelled in app_services.yaml.
+  notes: The publishing-credential path of config/list/action is modelled in app_services.yaml. Slot alternatives come from the slots/config/list/action section of the same page and the slot snapshot listing of az-app-services-privesc.md.
+
+- id: azure-functions-sites-write-source-control
+  provider: azure
+  service: functions
+  title: Repoint a Function App's deployment source through a site write
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#change-github-repo
+  source_revision: a66f094ede
+  summary: Rewriting the app's source-control configuration to an attacker repository makes the next deployment run attacker code with the Function App's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_site_kind: functionapp
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Function App {target.host_resource}"
+  conditions:
+    - id: deployment_runs
+      description: Changing the source-control metadata does not push code; a deployment from the new source must authenticate and succeed.
+    - id: site_write_covers_source_control
+      description: HackTricks lists sites/write for this route; deployments that use the sourcecontrols child resource are authorized by sites/sourcecontrols/write (azure-appservice-sourcecontrols-write).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.Web/sites/write and sourcecontrols/write, and monitor deployment source changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-continuous-deployment
+  notes: The sourcecontrols/write variant is azure-appservice-sourcecontrols-write.
 
 - id: azure-functions-remote-debugging
   provider: azure

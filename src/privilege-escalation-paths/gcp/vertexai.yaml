@@ -8,16 +8,19 @@
 - id: gcp-vertex-customjobs-create-actas
   provider: gcp
   service: aiplatform
-  title: Create a Vertex AI custom job running as a chosen service account
+  title: Create a Vertex AI custom job or custom training pipeline running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformcustomjobscreate--iamserviceaccountsactas
-  source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by creating a Vertex AI custom job or a custom TrainingPipeline whose workload runs as that service account.
   requires:
     all_of:
-    - action: aiplatform.customJobs.create
-      resource: '*'
     - action: iam.serviceAccounts.actAs
       resource: '{target.email}'
+    any_of:
+    - - action: aiplatform.customJobs.create
+        resource: '*'
+    - - action: aiplatform.trainingPipelines.create
+        resource: '*'
   target:
     kind: gcp_service_account
     selector:
@@ -34,7 +37,7 @@
   confidence: derived
   severity: critical
   mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
-  notes: aiplatform.trainingPipelines.create wrapping a custom job spec is the same class.
+  notes: A custom TrainingPipeline wraps the same custom job spec, so aiplatform.trainingPipelines.create is an equivalent alternative.
 
 - id: gcp-vertex-pipelinejobs-create-actas
   provider: gcp
@@ -133,14 +136,14 @@
 - id: gcp-vertex-models-upload-endpoint-deploy-actas
   provider: gcp
   service: aiplatform
-  title: Deploy a source-uploaded model to an endpoint under a chosen service account
+  title: Deploy a controlled model to a Vertex AI endpoint under a chosen service
+    account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#deploy-an-attacker-controlled-model-to-an-endpoint-as-a-target-service-account
-  source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  source_revision: 6fb9ac51fd
+  summary: The source can run a controlled custom-container model as a chosen service
+    account by deploying it to an existing endpoint.
   requires:
     all_of:
-    - action: aiplatform.models.upload
-      resource: '*'
     - action: aiplatform.endpoints.deploy
       resource: '*'
     - action: iam.serviceAccounts.actAs
@@ -153,18 +156,26 @@
     scope: same_project
     aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
   conditions:
+  - id: controlled_model
+    description: An attacker-controlled model must already exist. Uploading a new
+      one additionally requires aiplatform.models.upload; deploy alone does not let
+      the caller change an existing model container.
   - id: endpoint
-    description: Needs an existing endpoint or aiplatform.endpoints.create; the raw DeployModel RPC needs aiplatform.endpoints.deploy plus actAs, models.upload is only needed to bring a new attacker model.
+    description: An existing endpoint is required. Creating one additionally requires
+      aiplatform.endpoints.create.
   - id: service_agent_delegation
-    description: The project's Vertex AI Service Agent must hold the documented prediction delegation grant (roles/iam.serviceAccountAdmin) on the custom SA.
+    description: The project's Vertex AI Service Agent must hold the documented prediction
+      delegation grant (roles/iam.serviceAccountAdmin) on the custom SA.
   - id: container_contract
-    description: Custom containers must pass Vertex health/prediction checks for the deployment to stay up.
+    description: Custom containers must pass Vertex health/prediction checks for the
+      deployment to stay up.
   blockers:
   - gcp_deny_policy
   - vpc_sc_perimeter
   confidence: conditional
   severity: critical
-  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.*
+    role contains actAs but roles/editor contains both.
 
 - id: gcp-vertex-reasoningengines-create-actas
   provider: gcp

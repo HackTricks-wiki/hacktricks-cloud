@@ -42,3 +42,44 @@
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/git-sync-prereq.html
     - https://docs.aws.amazon.com/codeconnections/latest/APIReference/API_CreateSyncConfiguration.html
   notes: Trust principal verified in the CloudFormation Git sync prerequisites (cloudformation.sync.codeconnections.amazonaws.com). The role needs change-set permissions plus whatever the template creates, so the reachable privilege is the role's own permission set.
+
+- id: aws-codeconnections-updaterepositorylink-gitsync-role
+  provider: aws
+  service: codeconnections
+  title: Redirect a repository link consumed by CloudFormation Git sync to a controlled connection
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codeconnections-post-exploitation/README.md#redirect-a-repository-link
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the Git sync role of an existing CloudFormation sync configuration by repointing its repository link at a connection, and so a repository, it controls.
+  requires:
+    all_of:
+      - action: codeconnections:UpdateRepositoryLink
+        resource: "arn:aws:codeconnections:*:*:repository-link/*"
+      - action: codeconnections:UseConnection
+        resource: "arn:aws:codeconnections:*:{source.account}:connection/*"
+        bind: connection
+      - action: codeconnections:PassConnection
+        resource: "arn:aws:codeconnections:*:{source.account}:connection/*"
+        bind: connection
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: cloudformation.sync.codeconnections.amazonaws.com
+    scope: same_account
+    aggregate_as: "Git sync roles of CloudFormation sync configurations in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: existing_sync_configuration
+      description: A CloudFormation Git sync configuration using the target role must consume the repository link; roles trusting the Git sync principal are an approximation of that set.
+    - id: controlled_connection_and_repository
+      description: The replacement connection must be of the same provider type, be AVAILABLE (handshake completed for an installation the source controls) and reach a repository and branch with the monitored deployment file the source can write. The link keeps its owner and repository name, so this is practical mainly when the source controls a same-type self-managed host (GitHub Enterprise Server, GitLab self-managed) or an installation on the original owner.
+    - id: passconnection_condition_key
+      description: codeconnections:PassedToService conditions on PassConnection and aws:SourceArn conditions in the sync role trust may block the change.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict codeconnections:UpdateRepositoryLink to exact repository-link ARNs held by administrators, restrict UseConnection/PassConnection to approved connections, and alert on repository-link connection changes.
+  references:
+    - https://docs.aws.amazon.com/codeconnections/latest/APIReference/API_UpdateRepositoryLink.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/git-sync-prereq.html
+  notes: No iam:PassRole is needed because the sync configuration keeps its role. Complements aws-codeconnections-gitsync-passrole (new or updated sync configuration with a passed role).

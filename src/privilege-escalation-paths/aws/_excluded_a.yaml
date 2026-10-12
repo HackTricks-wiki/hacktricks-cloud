@@ -5,18 +5,12 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateaccesskey
   technique: iam:UpdateAccessKey
   reason: Only re-activates an existing key; using it requires already knowing the target's secret access key, so the permission alone does not yield a new identity.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamuploadsshpublickey--iamdeactivatemfadevice
-  technique: iam:DeactivateMFADevice
-  reason: Requires already holding the target's password; it removes a second factor rather than granting an identity. The UploadSSHPublicKey half is modelled in iam.yaml.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamresyncmfadevice
   technique: iam:ResyncMFADevice
   reason: Requires possession of the target's MFA device and password; no new identity from the permission alone.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateopenidconnectproviderthumbprint-iamlistopenidconnectproviders-iamgetopenidconnectprovider
   technique: iam:UpdateOpenIDConnectProviderThumbprint
   reason: AWS validates tokens of most major IdPs against its own trusted CA library and ignores thumbprints; exploitation also requires man-in-the-middle of the IdP JWKS endpoint. Not reliably derivable from a snapshot.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamcreatevirtualmfadevice-iamenablemfadevice-and-the-target-users-access-keys
-  technique: iam:CreateVirtualMFADevice + iam:EnableMFADevice
-  reason: Requires the target user's access keys already; it only satisfies MFA conditions for an identity already held. Modelled as no new identity.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iampassrole--a-compute-service
   technique: iam:PassRole + a compute service (generic)
   reason: Generic overview; each service-specific PassRole technique is modelled per service with the correct trusted service principal.
@@ -56,9 +50,6 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadduserpoolclientsecret--inject-an-m2m-application-credential
   technique: cognito-idp:AddUserPoolClientSecret
   reason: Client-credentials (M2M) tokens grant OAuth scopes to resource servers, not identity-pool AWS roles (identity pools accept user tokens). Application-level impact only.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminupdateuserattributes
-  technique: cognito-idp:AdminUpdateUserAttributes
-  reason: Application-level privilege change; AWS-role impact only with attribute rule-based role mapping, which needs app-specific evaluation. Not modelled.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpcreateuserpoolclient--cognito-idpupdateuserpoolclient
   technique: cognito-idp:CreateUserPoolClient / UpdateUserPoolClient
   reason: Relaxes client settings (flows, scopes); still needs user credentials to obtain tokens. Application-level.
@@ -125,9 +116,6 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationsignalresource--release-a-stack-waiting-on-a-success-signal
   technique: cloudformation:SignalResource
   reason: Releases a gate for a fixed workload; no attacker-controlled execution under the role.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#ssmputparameter-on-a-cloudformation-supplied-parameter--delayed-policy-injection
-  technique: ssm:PutParameter on a CloudFormation-supplied parameter
-  reason: Impact depends on how a template consumes a single value (template semantics not in the snapshot); delayed and value-only. Not generically evaluable.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#aws-cdk
   technique: AWS CDK bootstrap roles
   reason: CDK bootstrap roles are regular roles whose reachability is covered by sts:AssumeRole and CloudFormation PassRole entries.
@@ -153,9 +141,6 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
   technique: ssm:StartSession into CodeBuild sandboxes
   reason: Cross-reference; SSM techniques are owned by ssm.yaml (part B), sandbox command execution is modelled as aws-codebuild-startcommandexecution.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#poison-a-secrets_manager-or-parameter_store-environment-value
-  technique: Poison SECRETS_MANAGER/PARAMETER_STORE environment values
-  reason: Value-only injection whose impact depends on the buildspec; not generically evaluable.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildbatchgetprojects-codebuildbatchgetbuilds--read-build-environment-values
   technique: codebuild:BatchGetProjects / BatchGetBuilds
   reason: Pure data read (plaintext env values).

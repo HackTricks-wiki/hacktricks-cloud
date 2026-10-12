@@ -238,16 +238,16 @@
 - id: aws-ssm-maintenancewindow-register-task-target
   provider: aws
   service: ssm
-  title: Register a Run Command task and targets on an existing maintenance window
+  title: Register or update a Run Command task on an existing maintenance window
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmregistertaskwithmaintenancewindow-ssmregistertargetwithmaintenancewindow-ssmdescribemaintenancewindows--ec2describeinstances
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the instance-profile role of SSM-managed instances it can register into a maintenance window.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the instance-profile role of SSM-managed instances by having an existing maintenance window run a command task it registered or modified on them.
   requires:
-    all_of:
-      - action: ssm:RegisterTaskWithMaintenanceWindow
-        resource: "*"
-      - action: ssm:RegisterTargetWithMaintenanceWindow
-        resource: "*"
+    any_of:
+      - - action: ssm:RegisterTaskWithMaintenanceWindow
+          resource: "*"
+      - - action: ssm:UpdateMaintenanceWindowTask
+          resource: "*"
   target:
     kind: aws_role
     selector:
@@ -255,9 +255,12 @@
       via_resource_type: ec2_instance
     scope: same_account
     aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+    outcome: workload_execution
   conditions:
     - id: window_schedule
-      description: An enabled maintenance window must exist and run on schedule; the task can omit a service role (the service-linked role is used) or needs iam:PassRole for a custom one.
+      description: An enabled maintenance window must exist and reach its next scheduled run; the task can omit a service role (the service-linked role is used) or needs iam:PassRole for a custom one.
+    - id: task_targets
+      description: Without ssm:RegisterTargetWithMaintenanceWindow the task reaches only the window's existing targets or instances it names directly as task targets; with it the source can add any managed instance to the window.
     - id: instance_managed
       description: Target instances must be online in SSM.
   preconditions:
@@ -267,10 +270,12 @@
     - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict maintenance-window registration APIs to operations principals and alert on new window tasks.
+  mitigation: Restrict maintenance-window task registration and update APIs to operations principals, reconcile window tasks against IaC and alert on new or changed window tasks.
   references:
     - https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows-permissions.html
-  notes: Targets are any SSM-managed instance in the account/region since the source chooses the targets.
+    - https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_UpdateMaintenanceWindowTask.html
+  notes: The page states that registering a task alone executes on the window's existing targets and that UpdateMaintenanceWindowTask is the quieter variant altering an existing task; RegisterTargetWithMaintenanceWindow only widens the reached instances, so it is a condition rather than a requirement. Discovery calls (DescribeMaintenanceWindows, ec2:DescribeInstances) are not required. The passed-service-role Automation variant is aws-ssm-maintenancewindow-automation-task-passrole.
+
 
 - id: aws-ssm-createdocument-startautomationexecution-passrole
   provider: aws
@@ -447,3 +452,84 @@
   references:
     - https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-just-in-time-node-access.html
   notes: This is not an approval bypass; it is listed because the two actions are shell-equivalent to ssm:StartSession once a policy approves the request.
+
+- id: aws-ssm-exec-hybrid-managed-node
+  provider: aws
+  service: ssm
+  title: Run commands or open sessions on hybrid managed nodes that carry an SSM service role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmsendcommand
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service role bound to hybrid (mi-*) managed nodes by running code on those nodes, whose SSM agent is served that role's temporary credentials.
+  requires:
+    any_of:
+      - - action: ssm:SendCommand
+          resource: "{target.resource_arn}"
+      - - action: ssm:StartSession
+          resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      via_resource_type: ssm_managed_instance
+    scope: same_account
+    aggregate_as: "Service roles of hybrid managed nodes in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: shell_document_allowed
+      description: SendCommand must also cover a document that runs arbitrary commands, and StartSession must cover a shell-capable session document; restricting either to non-shell documents removes the edge.
+    - id: node_online
+      description: The hybrid node must be online in SSM (agent running and registered).
+    - id: ssm_resource_tag_condition
+      description: ssm:resourceTag conditions may limit covered managed-instance ARNs.
+  preconditions:
+    - ssm_managed_instance
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope ssm:SendCommand and ssm:StartSession to specific managed-instance ARNs and non-shell documents, and keep hybrid service roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/hybrid-multicloud-service-role.html
+  notes: Complements aws-ssm-sendcommand and aws-ssm-startsession, which only reach EC2 instance-profile roles. The page's CreateActivation and UpdateManagedInstanceRole sections state that hybrid nodes are served their bound role's credentials like an instance profile. Managed-instance-to-role bindings are not collected, so the target falls back to roles trusting ssm.amazonaws.com (unknown confidence until collected).
+
+- id: aws-ssm-maintenancewindow-automation-task-passrole
+  provider: aws
+  service: ssm
+  title: Register or update a maintenance-window Automation task with a passed service role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmregistertaskwithmaintenancewindow-ssmregistertargetwithmaintenancewindow-ssmdescribemaintenancewindows--ec2describeinstances
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of a passable role trusting ssm.amazonaws.com by having a maintenance window run an Automation runbook it authored under that service role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ssm:CreateDocument
+        resource: "*"
+    any_of:
+      - - action: ssm:RegisterTaskWithMaintenanceWindow
+          resource: "*"
+      - - action: ssm:UpdateMaintenanceWindowTask
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: window_schedule
+      description: An enabled maintenance window must exist and reach its next scheduled run; the effect is delayed until then.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: automation_task_type
+      description: Only Automation tasks execute steps under the passed service role; Run Command tasks use it only for notifications and run as the node's role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict maintenance-window task registration and update to operations principals, scope iam:PassRole on SSM service roles with iam:PassedToService, and restrict ssm:CreateDocument.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows-permissions.html
+  notes: The page states that with a passed service role the window task runs under that role. Same reach as aws-ssm-createdocument-startautomationexecution-passrole, delayed to the window schedule.

@@ -389,3 +389,72 @@
   references:
     - https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminLinkProviderForUser.html
   notes: Group roles are reachable when token-based mapping is used (same selector semantics as cognito_user_pool_group_role_covered_by). MFA on the native user does not apply to the federated sign-in.
+
+- id: aws-cognito-adminupdateuserattributes-rule-mapping
+  provider: aws
+  service: cognito
+  title: Change a user-pool user's attributes to match an identity-pool role-mapping rule
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminupdateuserattributes
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the rule-mapped roles of identity pools federated with a covered user pool by setting a user it can log in as to the attribute value a rule-based role mapping matches.
+  requires:
+    all_of:
+      - action: cognito-idp:AdminUpdateUserAttributes
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_user_pool_covered_by: cognito-idp:AdminUpdateUserAttributes
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Rule-mapped identity-pool roles of user pools covered by cognito-idp:AdminUpdateUserAttributes in {account}"
+  conditions:
+    - id: controlled_pool_user
+      description: The source must be able to authenticate as some user of the pool (own account, self sign-up, or a user whose recovery channel it can redirect by changing the email or phone attributes and their verified flag).
+    - id: rule_based_mapping_on_mutable_attribute
+      description: Only roles assigned by rule-based RoleMappings on a claim backed by a mutable attribute that the app client can read are reachable; the default authenticated role is reachable by any pool user anyway.
+    - id: trust_aud_amr
+      description: The role trust must accept the identity pool's aud and the authenticated amr.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-idp:AdminUpdateUserAttributes, base role-mapping rules only on immutable or admin-only attributes (or cognito:groups) and limit app-client attribute read/write permissions.
+  references:
+    - https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_AdminUpdateUserAttributes.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/role-based-access-control.html
+  notes: The page's editable-claims section describes the rule-based role selection after an attribute change; the evaluator's cognito_user_pool_covered_by set includes RoleMappings roles, of which only those keyed on attributes are reachable. Previously excluded as needing app-specific evaluation; the rule-to-attribute check is kept as a condition.
+
+- id: aws-cognito-updateidentitypool-classic-flow
+  provider: aws
+  service: cognito
+  title: Enable the basic (classic) authentication flow on an identity pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identityupdateidentitypool
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of roles trusting cognito-identity.amazonaws.com for the pool's aud (not only the pool's configured roles) by enabling the basic flow, where the identity's OpenID token is exchanged with STS for a role chosen by the caller.
+  requires:
+    all_of:
+      - action: cognito-identity:UpdateIdentityPool
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_federated: cognito-identity.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting cognito-identity.amazonaws.com in {account}"
+  conditions:
+    - id: trust_aud_matches_pool
+      description: Only roles whose trust aud condition names the modified identity pool (or has no aud condition) are reachable through its OpenID tokens.
+    - id: amr_condition
+      description: Trust conditions on cognito-identity.amazonaws.com:amr must match the identity type used (authenticated or unauthenticated).
+    - id: source_can_get_identity
+      description: The source must obtain an identity in the pool, by enabling unauthenticated identities in the same update or through a provider it controls.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cognito-identity:UpdateIdentityPool, keep AllowClassicFlow disabled and condition every Cognito role trust on aud and amr.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/role-trust-and-permissions.html
+  notes: Complements aws-cognito-updateidentitypool (pool's configured roles, via attached_resource_covered_by). In the basic flow the role is not taken from the pool configuration, so no SetIdentityPoolRoles or iam:PassRole is needed; reachability is decided by the role trust's aud and amr conditions, which the evaluator should check when the trust is collected.

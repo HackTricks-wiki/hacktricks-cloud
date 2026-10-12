@@ -87,8 +87,8 @@
   service: nodes
   title: Add a privileged ephemeral container to an existing pod
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#ephemeralcontainers
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the nodes hosting pods in the namespace by adding a privileged ephemeral container to them.
+  source_revision: a66f094ede
+  summary: The source may obtain the privileges of a node hosting a target pod by adding a privileged ephemeral container when the runtime exposes a usable host escape surface.
   requires:
     all_of: []
     any_of:
@@ -102,11 +102,11 @@
     aggregate_as: "Nodes running pods of {pivot.namespace}"
   conditions:
     - id: host_namespaces_fixed_by_pod
-      description: hostPID/hostNetwork and volumes are fixed by the existing pod; only securityContext privileged is added by the ephemeral container, which is enough for node access.
+      description: hostPID/hostNetwork and volumes are fixed by the existing pod. Privileged mode gives broad device and capability access, but node control still depends on the runtime, host mounts or another verified escape surface.
     - id: other_admission_blocks_host_access
       description: Non-PSA admission may reject privileged ephemeral containers.
   blockers: [pivot_namespace_psa_enforce_baseline_or_restricted, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict pods/ephemeralcontainers and enforce PSA baseline/restricted.
   references:
@@ -195,7 +195,7 @@
   service: nodes
   title: Mount the node filesystem through a hostPath PersistentVolume
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#storage-control-objects
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of schedulable nodes by consuming a hostPath PersistentVolume it created, which Pod Security Admission does not inspect.
   requires:
     all_of:
@@ -205,9 +205,15 @@
       - verb: create
         resource: persistentvolumeclaims
         namespace: "{pivot.namespace}"
-      - verb: create
-        resource: pods
-        namespace: "{pivot.namespace}"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
   target:
     kind: k8s_node
     selector:
@@ -232,13 +238,19 @@
   service: nodes
   title: Relax a namespace's Pod Security labels and create host-privileged pods
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-namespace-escalation.md#escape-to-the-node
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of schedulable nodes by removing the PSA enforcement label of a namespace where it can create pods.
   requires:
     all_of:
-      - verb: create
-        resource: pods
-        namespace: "{pivot.namespace}"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
     any_of:
       - - {verb: patch, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
       - - {verb: update, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
@@ -267,16 +279,22 @@
   service: nodes
   title: Create a new namespace and host-privileged pods in it
   source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-namespace-escalation.md#escape-to-the-node
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of schedulable nodes by creating a namespace without PSA enforcement and creating pods there.
   requires:
     all_of:
       - verb: create
         resource: namespaces
         namespace: "*"
-      - verb: create
-        resource: pods
-        namespace: "*"
+      - any_of:
+          - {verb: create, resource: pods, namespace: "*"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "*"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: replicationcontrollers, namespace: "*"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "*"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "*"}
   target:
     kind: k8s_node
     selector:
@@ -395,14 +413,23 @@
   service: certificates
   title: Issue and approve a node client certificate
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of any node identity (system:node:<name>) by self-approving a kube-apiserver-client-kubelet certificate.
   requires:
     all_of:
       - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-      - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-      - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
-      - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client-kubelet"}
+      # Read the issued certificate back (status.certificate).
+      - any_of:
+          - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: list, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: watch, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: patch, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+      # The signer check also accepts the domain wildcard resourceName.
+      - any_of:
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client-kubelet"}
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/*"}
   target:
     kind: k8s_node
     selector:
@@ -509,29 +536,28 @@
   service: nodes
   title: Force a controller-managed pod onto a controlled node
   source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#delete-pods--unschedulable-nodes
-  source_revision: 171e422
+  source_revision: a66f094ede
   summary: A source that already controls a node can obtain the privileges of ServiceAccounts of controller-managed pods in the namespace by forcing their replacements onto that node.
   source_selector:
     source_reaches_kind: k8s_node
   requires:
     all_of: []
     any_of:
-      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
-        - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
-      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
-        - {verb: update, resource: nodes, subresource: status, namespace: "*"}
-      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
-        - {verb: patch, resource: nodes, namespace: "*"}
-      - - {verb: delete, resource: pods, namespace: "{target.namespace}"}
-        - {verb: update, resource: nodes, namespace: "*"}
-      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
-        - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
-      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
-        - {verb: update, resource: nodes, subresource: status, namespace: "*"}
-      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
-        - {verb: patch, resource: nodes, namespace: "*"}
-      - - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
-        - {verb: update, resource: nodes, namespace: "*"}
+      # A NoExecute taint written through nodes patch/update both evicts the running pod and excludes competing nodes.
+      - - {verb: patch, resource: nodes, namespace: "*"}
+      - - {verb: update, resource: nodes, namespace: "*"}
+      # Otherwise: one way to make the controller create a replacement, plus one way to exclude competing nodes.
+      - - any_of:
+            - {verb: delete, resource: pods, namespace: "{target.namespace}"}
+            - {verb: create, resource: pods, subresource: eviction, namespace: "{target.namespace}"}
+            - {verb: patch, resource: pods, namespace: "{target.namespace}"}
+            - {verb: update, resource: pods, namespace: "{target.namespace}"}
+            - {verb: patch, resource: pods, subresource: status, namespace: "{target.namespace}"}
+            - {verb: update, resource: pods, subresource: status, namespace: "{target.namespace}"}
+        - any_of:
+            - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
+            - {verb: update, resource: nodes, subresource: status, namespace: "*"}
+            - {verb: delete, resource: nodes, namespace: "*"}
   target:
     kind: k8s_service_account
     selector:
@@ -546,15 +572,18 @@
       description: Default node credentials cannot do this (NodeRestriction limits deletes and status writes to their own node); the grants must belong to a non-node identity.
     - id: pdb_blocks_eviction
       description: A PodDisruptionBudget may block the eviction variant.
+    - id: replacement_trigger_accepted
+      description: A pods patch/update replacement works only by changing labels so the pod leaves its controller selector (the orphan keeps running); a pods/status write works only if the terminal phase is accepted and the controller replaces failed pods.
     - id: every_competing_node_excluded
-      description: Every other node that satisfies the pod's constraints must be excluded (allocatable pods set to 0 via nodes/status, or NoSchedule taint / cordon via nodes patch/update); kubelets restore status quickly and tolerations or spec.nodeName defeat taints.
+      description: Every other node that satisfies the pod's constraints must be excluded (allocatable pods set to 0 via nodes/status, Node object deletion, or NoSchedule/NoExecute taint or cordon via nodes patch/update); kubelets restore status and re-register deleted Nodes, and tolerations or spec.nodeName defeat taints.
   blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
   confidence: conditional
   severity: medium
-  mitigation: Do not grant nodes/status writes to non-node identities; use dedicated node pools with taints for privileged workloads.
+  mitigation: Do not grant nodes, nodes/status, pods/status or Node delete permissions to non-node identities; use dedicated node pools with taints for privileged workloads.
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/node/
-  notes: Taint/cordon alternatives follow HackTricks dosing-other-nodes.md#taints-cordon-and-eviction (171e422). Composite path; source_selector source_reaches_kind k8s_node keeps the edge only when the source is a node or a chain in the same run reaches one (then condition source_reaches_k8s_node_via_chain). Kubelets restore their reported capacity, so the window is timing dependent.
+    - https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  notes: Replacement triggers and exclusion methods follow HackTricks node-permissions-and-status.md#delete-pods--unschedulable-nodes and dosing-other-nodes.md#cause-a-replacement-pod / #taints-cordon-and-eviction (a66f094ede). Composite path; source_selector source_reaches_kind k8s_node keeps the edge only when the source is a node or a chain in the same run reaches one (then condition source_reaches_k8s_node_via_chain). Kubelets restore their reported capacity, so the window is timing dependent.
 
 - id: k8s-nodes-pods-binding-pending-pod-to-controlled-node
   provider: k8s
@@ -588,3 +617,44 @@
   references:
     - https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/binding-v1/
   notes: HackTricks (171e422) states direct scheduling with create pods/binding or core bindings assigns an unscheduled pod to a node, bypassing the scheduler's placement decision; creating or modifying the pod is a separate permission. k8s_sa_used_by_pending_pod targets ServiceAccounts of collected pods with status.phase Pending and no spec.nodeName. The pod's token is then readable from the controlled node.
+
+- id: k8s-nodes-attract-pending-pod-to-controlled-node
+  provider: k8s
+  service: nodes
+  title: Attract a pending pod to a controlled node through node labels or status, or pod nomination
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodes-and-pods-status
+  source_revision: a66f094ede
+  summary: A source that already controls a node can obtain the privileges of the ServiceAccount of a pending pod by making that node the scheduler's choice (adding the label the pod's nodeSelector requires, forging capacity, or setting the pod's nominated node).
+  source_selector:
+    source_reaches_kind: k8s_node
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: update, resource: nodes, subresource: status, namespace: "*"}
+      - - {verb: patch, resource: nodes, namespace: "*"}
+      - - {verb: update, resource: nodes, namespace: "*"}
+      - - {verb: patch, resource: pods, subresource: status, namespace: "{target.namespace}"}
+      - - {verb: update, resource: pods, subresource: status, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_used_by_pending_pod: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts of pending pods in {cluster}"
+  conditions:
+    - id: pod_pending_for_missing_placement
+      description: The pod must be pending because no node satisfies its nodeSelector/affinity or capacity needs (or, for nominatedNodeName, because scoring prefers another node); the label or forged status must make the controlled node feasible before another node becomes so.
+    - id: hard_filters_still_apply
+      description: Taints, tolerations, resource requests and admission still apply; pods/status nomination does not bypass hard filters.
+    - id: kubelet_reconciles_status
+      description: Kubelets restore forged nodes/status capacity and conditions; labels added through /status persist on legacy strategies.
+    - id: not_a_node_credential
+      description: Default node credentials cannot label or status-patch other objects freely (NodeRestriction); the grants must belong to a non-node identity.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Do not grant nodes, nodes/status or pods/status writes to non-node identities; place sensitive workloads on node pools selected by labels under the node-restriction.kubernetes.io/ prefix, which kubelets cannot self-assign.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction
+  notes: HackTricks (a66f094ede) reproduced a non-node identity adding a scheduling label through nodes/status that scheduled a pending nodeSelector pod onto the node, forged capacity/image status attracting eligible pods, and pods/status nominatedNodeName selecting a feasible attacker node. The scheduler (not admission) places the pod, so no admission blocker applies. Complements k8s-nodes-pods-binding-pending-pod-to-controlled-node (direct binding).

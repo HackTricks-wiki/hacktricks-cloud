@@ -105,3 +105,42 @@
   mitigation: Restrict datafusion.artifacts.create/update, pin plugin versions in pipelines and use a low-privilege pipeline SA.
   references:
     - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
+
+- id: gcp-datafusion-namespace-setserviceaccount-actas
+  provider: gcp
+  service: datafusion
+  title: Pin a Data Fusion namespace to a chosen service account and run pipelines as it
+  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-data-fusion-persistence.md#scheduled-backdoor-pipeline-pinned-to-a-privileged-runtime-sa
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by setting it as a Data Fusion namespace service account and deploying and running pipelines in that namespace.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: datafusion.namespaces.setServiceAccount
+        resource: "*"
+      - action: datafusion.pipelines.create
+        resource: "*"
+      - action: datafusion.pipelines.execute
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts pinnable as Data Fusion namespace SA in {project}"
+  conditions:
+    - id: namespace_identity_use
+      description: HackTricks states scheduled pipeline runs in the pinned namespace execute as that SA; on RBAC-enabled instances the namespace SA is the design-time identity, so whether runtime code (compute profile) also uses it depends on the instance version and profile configuration.
+    - id: plugin_installed
+      description: A code-capable plugin (PySpark Program, Scala Spark) must be installed, and the Data Fusion service agent must be able to act as / mint tokens for the chosen SA.
+    - id: instance_access
+      description: The caller also needs effective datafusion.instances.get on the instance.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Grant actAs only on dedicated Data Fusion namespace SAs and restrict datafusion.namespaces.setServiceAccount to platform administrators.
+  notes: The recurring schedule is persistence and is not modelled; the edge is the namespace SA pin plus pipeline execution.

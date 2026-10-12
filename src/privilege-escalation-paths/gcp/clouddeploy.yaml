@@ -10,95 +10,116 @@
   service: clouddeploy
   title: Create a delivery pipeline and target whose render/deploy hooks run as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-deploy-privesc.md#pipelinetarget-configuration--releaserollout-creation--run-an-attacker-task-as-an-execution-service-account
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
   requires:
     all_of:
-      - action: clouddeploy.releases.create
-        resource: "*"
-      - action: clouddeploy.rollouts.create
-        resource: "*"
-      - action: storage.objects.create
-        resource: "*"
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+    - action: clouddeploy.releases.create
+      resource: '*'
+    - action: clouddeploy.rollouts.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
     any_of:
-      - - action: clouddeploy.targets.update
-          resource: "*"
-        - action: clouddeploy.deliveryPipelines.update
-          resource: "*"
-      - - action: clouddeploy.targets.create
-          resource: "*"
-        - action: clouddeploy.deliveryPipelines.create
-          resource: "*"
-      - - action: clouddeploy.targets.create
-          resource: "*"
-        - action: clouddeploy.deliveryPipelines.update
-          resource: "*"
+    - - action: clouddeploy.targets.update
+        resource: '*'
+      - action: clouddeploy.deliveryPipelines.update
+        resource: '*'
+    - - action: clouddeploy.targets.create
+        resource: '*'
+      - action: clouddeploy.deliveryPipelines.create
+        resource: '*'
+    - - action: clouddeploy.targets.create
+        resource: '*'
+      - action: clouddeploy.deliveryPipelines.update
+        resource: '*'
+    - - action: clouddeploy.targets.update
+        resource: '*'
+    - - action: clouddeploy.targets.update
+        resource: '*'
+      - action: clouddeploy.deliveryPipelines.create
+        resource: '*'
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
-    aggregate_as: "Service accounts usable as Cloud Deploy execution SA in {project}"
+    aggregate_as: Service accounts usable as Cloud Deploy execution SA in {project}
   conditions:
-    - id: pipeline_write
-      description: The CLI apply path sends allow-missing PATCH requests, so deliveryPipelines.update plus targets.update suffice even for new resources; direct Create calls need .create. An existing pipeline already referencing the target makes the pipeline write unnecessary (not modelled).
-    - id: actas_every_phase
-      description: actAs is needed on every execution identity used (the RENDER account at release creation and every account the target selects for rollout jobs); an omitted serviceAccount selects the Compute Engine default SA and does not waive the check.
-    - id: execution_sa_roles
-      description: The execution SA needs baseline Cloud Build execution permissions (e.g. clouddeploy.jobRunner, logging, staging bucket access) for the job to run.
+  - id: actas_every_phase
+    description: actAs is needed on every execution identity used (the RENDER account at release creation and every account
+      the target selects for rollout jobs); an omitted serviceAccount selects the Compute Engine default SA and does not waive
+      the check.
+  - id: execution_sa_roles
+    description: The execution SA needs baseline Cloud Build execution permissions (e.g. clouddeploy.jobRunner, logging, staging
+      bucket access) for the job to run.
+  - id: pipeline_write
+    description: A matching existing pipeline can use an updated target without pipeline write. Applying a new pipeline and
+      target through the CLI requires both .update permissions; direct Create calls require .create. The corresponding target
+      and pipeline must form a valid deployment path.
+  - id: source_staging
+    description: A release needs valid renderable source. Local-source gcloud staging requires storage.objects.create on the
+      staging bucket (and bucket read/create as applicable); a caller may instead supply a previously staged source through
+      the API.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: derived
   severity: critical
-  mitigation: Grant actAs only on dedicated execution SAs, restrict clouddeploy.targets.create/update and set an explicit low-privilege execution SA on every target.
+  mitigation: Grant actAs only on dedicated execution SAs, restrict clouddeploy.targets.create/update and set an explicit
+    low-privilege execution SA on every target.
   references:
-    - https://cloud.google.com/deploy/docs/execution-environment
-  notes: Custom target types (clouddeploy.customTargetTypes.update/create) are an equivalent code-execution vehicle. Local source staging may also need storage.buckets.get/create on the staging bucket.
+  - https://cloud.google.com/deploy/docs/execution-environment
+  notes: Custom target types add a conditional customTargetTypes.create or .update permission. The direct API can create a
+    release using existing accessible source; storage.objects.create is a CLI staging requirement, not a universal caller
+    permission.
 
 - id: gcp-clouddeploy-release-existing-pipeline
   provider: gcp
   service: clouddeploy
   title: Release attacker artifacts through an existing delivery pipeline
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-deploy-privesc.md#clouddeployreleasescreate--clouddeployrolloutscreate--iamserviceaccountsactas--deploy-attacker-controlled-artifacts-through-an-existing-pipeline
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the execution service accounts of existing delivery pipelines on which it holds clouddeploy.releases.create and clouddeploy.rollouts.create and actAs on those service accounts.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution service accounts of existing delivery pipelines on which
+    it holds clouddeploy.releases.create and clouddeploy.rollouts.create and actAs on those service accounts.
   requires:
     all_of:
-      - action: clouddeploy.releases.create
-        resource: "{target.host_resource}"
-      - action: clouddeploy.rollouts.create
-        resource: "{target.host_resource}"
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-      - action: storage.objects.create
-        resource: "*"
+    - action: clouddeploy.releases.create
+      resource: '{target.host_resource}'
+    - action: clouddeploy.rollouts.create
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: clouddeploy_target
       gcp_actas_granted_on_target: true
     scope: same_project
-    aggregate_as: "Execution and runtime SAs of Cloud Deploy pipelines the source can release to"
+    aggregate_as: Execution and runtime SAs of Cloud Deploy pipelines the source can release to
   conditions:
-    - id: approvals_policies
-      description: Targets with requireApproval or active deploy policies hold the rollout until approved/overridden.
-    - id: runtime_vs_execution
-      description: The deployed image/manifest runs as the target workload's runtime SA (as defined by the attacker-supplied manifest within the target's limits); Skaffold hooks run as the execution SA.
-    - id: staging_bucket
-      description: storage.objects.create is needed on the pipeline's render staging bucket.
+  - id: approvals_policies
+    description: Targets with requireApproval or active deploy policies hold the rollout until approved/overridden.
+  - id: runtime_vs_execution
+    description: The deployed image/manifest runs as the target workload's runtime SA (as defined by the attacker-supplied
+      manifest within the target's limits); Skaffold hooks run as the execution SA.
+  - id: staging_bucket
+    description: Local-source gcloud staging needs storage.objects.create on a staging bucket and storage.objects.get for
+      copied GCS source; existing source supplied to the direct API does not require caller-side staging writes.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Restrict roles/clouddeploy.releaser, require approval on production targets and enforce Binary Authorization on targets.
+  mitigation: Restrict roles/clouddeploy.releaser, require approval on production targets and enforce Binary Authorization
+    on targets.
   references:
-    - https://docs.cloud.google.com/deploy/docs/execution-environment
-  notes: HackTricks (171e422) and Google document that actAs is required on both the render and deployment execution SAs; roles/clouddeploy.releaser alone is not sufficient (the a53b46392c "no actAs" claim was corrected upstream). Reaching a workload runtime SA is a second hop that needs the execution SA's own mutation rights and actAs on that runtime SA (and, for GKE, an existing Workload Identity binding); requiring caller actAs on runtime SAs here under-approximates that hop.
+  - https://docs.cloud.google.com/deploy/docs/execution-environment
+  notes: The caller needs actAs on both render and deployment execution identities; a distinct pair requires both grants.
+    Reaching a workload runtime SA is a second hop that needs the execution SA's deployment rights and actAs on that runtime
+    SA (and, for GKE, an existing Workload Identity binding). The evaluator does not yet bind rollout permission to the selected
+    target separately from its pipeline.
 
 - id: gcp-clouddeploy-resource-setiampolicy
   provider: gcp
@@ -135,3 +156,47 @@
   confidence: conditional
   severity: high
   mitigation: Restrict clouddeploy.*.setIamPolicy (roles/clouddeploy.admin, roles/owner).
+
+- id: gcp-clouddeploy-custom-target-render-actas
+  provider: gcp
+  service: clouddeploy
+  title: Run an updated custom-target render task as the target execution service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-deploy-privesc.md#pipelinetarget-configuration--releaserollout-creation--run-an-attacker-task-as-an-execution-service-account
+  source_revision: 6fb9ac51fd
+  summary: The source can update a custom target type used by an existing delivery target so that release rendering runs attacker-controlled
+    task code as its render execution service account.
+  requires:
+    all_of:
+    - action: clouddeploy.customTargetTypes.update
+      resource: '*'
+    - action: clouddeploy.releases.create
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: clouddeploy_target
+      gcp_actas_granted_on_target: true
+    scope: same_project
+    aggregate_as: Render SAs of existing Cloud Deploy pipelines using a custom target type the source can update
+  conditions:
+  - id: custom_target_relationship
+    description: The updated custom target type must be referenced by a target in the selected existing pipeline; the target
+      must use the SA as its RENDER execution identity. This relationship is not yet collected.
+  - id: render_source
+    description: The release must have valid source available to the render account. Local-source CLI staging needs Storage
+      permissions, but a direct API request may reference previously staged source.
+  - id: execution_sa_roles
+    description: The render account must retain its Cloud Deploy job runner and artifact access, and target configuration
+      or policy must not reject the task.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict custom target type updates and release creation; review render task images and commands, and limit
+    actAs on execution accounts.
+  notes: CustomTargetType.tasks.render executes during release creation, so no clouddeploy.rollouts.create permission is needed
+    for this render-only variant. Resource-to-target linkage remains conditional until pipeline and custom target type inventory
+    is available.

@@ -7,8 +7,8 @@
   service: dataplex
   title: Create a Dataplex Spark task with a chosen execution service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataplex-privesc.md#dataplextaskscreate--iamserviceaccountsactas--execute-attacker-code-as-a-service-account
-  source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by creating a Dataplex Spark task that runs as that execution service account.
   requires:
     all_of:
       - action: dataplex.tasks.create
@@ -23,17 +23,20 @@
     scope: same_project
     aggregate_as: "Service accounts usable as Dataplex task SA in {project}"
   conditions:
-    - id: same_project_sa
-      description: The execution SA must belong to the task's own project.
+    - id: execution_project_sa
+      description: The execution SA must belong to the task's execution project (the lake project by default, or a chosen execution project); cross-project execution adds service-agent, networking and quota prerequisites in both projects.
     - id: sa_baseline_roles
-      description: The SA needs baseline serverless Dataproc permissions (e.g. roles/dataproc.worker) for the job to start.
+      description: The SA needs the serverless Spark runtime permissions (e.g. roles/dataproc.worker) and read access to every referenced script, JAR or file.
+    - id: payload_upload
+      description: The source must be able to place its code at a URI readable by the execution SA; that upload permission is not implied by dataplex.tasks.create.
     - id: lake
-      description: A Dataplex lake must exist or be creatable; Dataplex and Dataproc APIs must be enabled.
+      description: An existing Dataplex lake is required (creating one is not part of the minimum set); Dataplex and Dataproc APIs must be enabled.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on dedicated Dataplex task SAs; roles/editor contains both permissions.
   references:
     - https://cloud.google.com/dataplex/docs/schedule-custom-spark-tasks
+  notes: Task updates revalidate actAs on the bound execution identity, so updating an existing task is not modelled as an actAs bypass.

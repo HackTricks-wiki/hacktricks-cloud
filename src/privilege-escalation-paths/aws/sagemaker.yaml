@@ -132,6 +132,39 @@
     - https://docs.aws.amazon.com/sagemaker/latest/dg/amazon-sagemaker-toolkits.html
   notes: Artifact set = sagemaker_submit_directory bundles and executed ProcessingInputs of jobs/pipelines; requires collector support for pipeline definitions.
 
+- id: aws-sagemaker-ecr-putimage-processing-image
+  provider: aws
+  service: sagemaker
+  title: Replace a mutable ECR image consumed by a later SageMaker Processing job
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#ecrputimage-on-a-mutable-processing-image-later-job-required
+  source_revision: a66f094ede
+  summary: The source can run code with a Processing job's execution role when that job later pulls a mutable image tag it can replace.
+  requires:
+    all_of:
+      - action: ecr:PutImage
+        resource: "{target.artifact_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_artifact_type: ecr_repository
+    scope: same_account
+    aggregate_as: "SageMaker Processing roles consuming mutable ECR images in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: mutable_tag_and_manifest
+      description: The consumer must reference a mutable tag in this repository, and the source must possess a valid image manifest and its layers; ecr:BatchGetImage is needed to retrieve an existing manifest unless known through another path, while uploading new layers needs further ECR actions.
+    - id: later_processing_job
+      description: A pipeline, schedule or operator must create a Processing job after the tag is replaced; PutImage alone starts no workload.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Pin Processing images by digest or immutable tags, restrict ecr:PutImage on consumed repositories and verify image provenance before job creation.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/dg/build-your-own-processing-container.html
+  notes: The repo-to-Processing-consumer binding is not collected, so this path remains unresolved until a job or pipeline definition names the mutable tag.
+
 - id: aws-sagemaker-passrole-createprocessingjob
   provider: aws
   service: sagemaker
@@ -417,3 +450,143 @@
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateNotebookInstanceLifecycleConfig.html
   notes: "{target.consumer_input_arn} is the lifecycle configuration attached to the notebook instance; when the mapping is not collected the edge is unknown. Becomes derived with sagemaker:StopNotebookInstance + StartNotebookInstance on the notebook."
+
+- id: aws-sagemaker-attach-notebook-lifecycle-config
+  provider: aws
+  service: sagemaker
+  title: Attach a controlled lifecycle configuration to an existing notebook instance
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#set-lifecycle-configuration-on-notebook-instances
+  source_revision: 6fb9ac51fd
+  summary: The source can run startup code with an existing notebook instance's execution role by attaching a controlled lifecycle configuration.
+  requires:
+    all_of:
+      - action: sagemaker:CreateNotebookInstanceLifecycleConfig
+        resource: "arn:aws:sagemaker:*:{source.account}:notebook-instance-lifecycle-config/*"
+      - action: sagemaker:UpdateNotebookInstance
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_notebook_instance
+    scope: same_account
+    aggregate_as: Roles of notebook instances whose lifecycle configuration can be replaced in {account}
+    outcome: workload_execution
+  conditions:
+    - id: notebook_restart
+      description: The notebook must be stopped for the configuration change and started afterward so the startup hook executes.
+    - id: controlled_configuration
+      description: The source must create a lifecycle configuration containing code that uses the notebook role's authority.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit notebook lifecycle-configuration creation and attachment to trusted deployment principals, and review lifecycle script content.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateNotebookInstance.html
+  notes: This differs from rewriting an already-attached lifecycle configuration, which is covered by aws-sagemaker-updatenotebookinstancelifecycleconfig.
+
+- id: aws-sagemaker-attach-studio-lifecycle-config-user-profile
+  provider: aws
+  service: sagemaker
+  title: Attach a controlled Studio lifecycle configuration to an existing user profile
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#set-lifecycle-configuration-on-sagemaker-studio
+  source_revision: 6fb9ac51fd
+  summary: The source can run startup code with a Studio user profile's execution role by attaching a controlled lifecycle configuration.
+  requires:
+    all_of:
+      - action: sagemaker:CreateStudioLifecycleConfig
+        resource: "arn:aws:sagemaker:*:{source.account}:studio-lifecycle-config/*"
+      - action: sagemaker:UpdateUserProfile
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_user_profile
+    scope: same_account
+    aggregate_as: Roles of Studio user profiles with updatable lifecycle settings in {account}
+    outcome: workload_execution
+  conditions:
+    - id: studio_app_start
+      description: A compatible Studio app for the profile must start after the update so the lifecycle script runs.
+    - id: controlled_configuration
+      description: The source must create a Studio lifecycle configuration for the application type used by the profile.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict Studio lifecycle-configuration creation and user-profile updates and review startup scripts on profiles with privileged roles.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/dg/studio-lcc.html
+  notes: Domain-level default settings and shared spaces need separate target-to-resource joins; this entry applies to an individually updatable user profile.
+
+- id: aws-sagemaker-attach-studio-lifecycle-config-space
+  provider: aws
+  service: sagemaker
+  title: Attach a controlled Studio lifecycle configuration to an existing space
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#set-lifecycle-configuration-on-sagemaker-studio
+  source_revision: 6fb9ac51fd
+  summary: The source can run startup code with the execution role of a Studio space by attaching a controlled lifecycle configuration.
+  requires:
+    all_of:
+      - action: sagemaker:CreateStudioLifecycleConfig
+        resource: "arn:aws:sagemaker:*:{source.account}:studio-lifecycle-config/*"
+      - action: sagemaker:UpdateSpace
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: sagemaker.amazonaws.com
+      via_resource_type: sagemaker_space
+    scope: same_account
+    aggregate_as: Roles of Studio spaces with updatable lifecycle settings in {account}
+    outcome: workload_execution
+  conditions:
+    - id: studio_app_start
+      description: A compatible app in the space must start after the update so the lifecycle script runs.
+    - id: controlled_configuration
+      description: The source must create a Studio lifecycle configuration for the application type used by the space.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict Studio lifecycle-configuration creation and space updates and review startup scripts on spaces with privileged roles.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/dg/studio-lcc.html
+  notes: Space-to-role attachment is not collected, so the evaluator may fall back to roles trusting sagemaker.amazonaws.com.
+
+- id: aws-sagemaker-createmodelpackage-approved-autodeploy
+  provider: aws
+  service: sagemaker
+  title: Register an Approved model version in a Model Package Group consumed by auto-deploy automation
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md#sagemaker-model-registry-supply-chain-injection-via-createmodelpackageapproved
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution roles of SageMaker endpoints or jobs that automation deploys from Approved versions of a Model Package Group it can register versions in.
+  requires:
+    all_of:
+      - action: sagemaker:CreateModelPackage
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      consumer_input_writable_via: sagemaker:CreateModelPackage
+    scope: same_account
+    aggregate_as: "SageMaker roles deploying Approved versions of writable Model Package Groups in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: autodeploy_consumer
+      description: A pipeline, EventBridge rule or operator must deploy new Approved versions of that group (endpoint, batch transform or training) after the registration.
+    - id: artifact_readable
+      description: The referenced container image and model artifacts must be readable by SageMaker and the deploying role (attacker-controlled image in a pullable repository, model archive in a readable S3 location).
+    - id: cross_account_group_policy
+      description: For a group in another account the owner must share it with a resource policy that allows the caller to create model packages.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sagemaker:CreateModelPackage and approval status changes to the release pipeline, require a separate approver for Approved status, and pin deployments to vetted image digests and artifact locations.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/dg/model-registry-approve.html
+  notes: Consumer mapping (Model Package Group -> deploying role) is not collected, so the edge resolves as unknown. Optional sagemaker:CreateModelPackageGroup only creates a new group, which no automation consumes by default.

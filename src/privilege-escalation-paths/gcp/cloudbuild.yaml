@@ -41,33 +41,39 @@
 - id: gcp-cloudbuild-builds-create-default-identity
   provider: gcp
   service: cloudbuild
-  title: Submit a build running as the project's default Cloud Build identity
+  title: Submit a build running as the legacy Cloud Build service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildbuildscreate--execute-build-steps-as-a-build-service-account
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the default Cloud Build service account of every project where it holds cloudbuild.builds.create.
+  source_revision: 6fb9ac51fd
+  summary: The source can execute build steps as a project's enabled legacy Cloud Build service account without iam.serviceAccounts.actAs
+    on that Google-owned identity.
   requires:
     all_of:
-      - action: cloudbuild.builds.create
-        resource: "*"
+    - action: cloudbuild.builds.create
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: cloudbuild_default_identity
       gcp_sa_in_scope_of_permission: true
+      target_id_glob: '*@cloudbuild.gserviceaccount.com'
     scope: same_project
-    aggregate_as: "Default Cloud Build identity of {project}"
+    aggregate_as: Legacy Cloud Build service account of {project}, when enabled
   conditions:
-    - id: default_identity_config
-      description: The default identity is configuration-dependent (Compute default SA or legacy Cloud Build SA); the legacy SA may be absent or disabled on newer projects.
+  - id: legacy_default_enabled
+    description: Only projects retaining and enabling the legacy Cloud Build default identity permit builds without caller
+      actAs; current Compute Engine defaults require actAs and are covered by gcp-cloudbuild-builds-create-custom-sa-actas.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: critical
-  mitigation: Configure builds to use a dedicated least-privilege SA, remove Editor from the Compute default SA and restrict roles/cloudbuild.builds.editor.
+  mitigation: Configure builds to use a dedicated least-privilege SA, remove Editor from the Compute default SA and restrict
+    roles/cloudbuild.builds.editor.
   references:
-    - https://cloud.google.com/build/docs/cloud-build-service-account-updates
-  notes: HackTricks (171e422) states actAs is needed for a Compute Engine default or user-managed build identity; only the legacy Cloud Build SA (<PROJECT_NUMBER>@cloudbuild.gserviceaccount.com) is usable without actAs. When the project default is the Compute default SA this entry over-approximates (the custom-SA entry then applies), so it stays conditional.
+  - https://cloud.google.com/build/docs/cloud-build-service-account-updates
+  notes: The target_id_glob excludes Compute Engine default SAs. This Google-owned legacy identity may be absent from ordinary
+    service-account inventories; until the evaluator synthesizes it from Cloud Build default-identity state, the edge can
+    be unresolved or missed.
 
 - id: gcp-cloudbuild-repositories-accessreadwritetoken
   provider: gcp

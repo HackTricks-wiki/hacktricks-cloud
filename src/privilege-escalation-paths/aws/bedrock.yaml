@@ -6,66 +6,76 @@
   service: bedrock
   title: Run code in an existing AgentCore Code Interpreter with an execution role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md#bedrock-agentcorestartcodeinterpretersession--bedrock-agentcoreinvokecodeinterpreter---code-interpreter-execution-role-pivot
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the execution role of a custom AgentCore Code Interpreter it can start sessions in and invoke.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of a custom AgentCore Code Interpreter it
+    can start sessions in and invoke.
   requires:
     all_of:
-      - action: bedrock-agentcore:StartCodeInterpreterSession
-        resource: "{target.attached_resource_arn}"
-      - action: bedrock-agentcore:InvokeCodeInterpreter
-        resource: "{target.attached_resource_arn}"
+    - action: bedrock-agentcore:StartCodeInterpreterSession
+      resource: '{target.attached_resource_arn}'
+    - action: bedrock-agentcore:InvokeCodeInterpreter
+      resource: '{target.attached_resource_arn}'
   target:
     kind: aws_role
     selector:
       attached_to_service: bedrock-agentcore
       attached_resource_covered_by: bedrock-agentcore:InvokeCodeInterpreter
     scope: same_account
-    aggregate_as: "Execution roles of AgentCore Code Interpreters covered by bedrock-agentcore:InvokeCodeInterpreter in {account}"
+    aggregate_as: Execution roles of AgentCore Code Interpreters covered by bedrock-agentcore:InvokeCodeInterpreter
+      in {account}
+    outcome: workload_execution
   conditions:
-    - id: network_mode
-      description: Credentials can be used from inside the interpreter regardless of network mode; exfiltration outside AWS depends on PUBLIC/VPC mode, but in-sandbox use of the role still grants its privileges.
+  - id: network_mode
+    description: Credentials can be used from inside the interpreter regardless of network mode; exfiltration outside
+      AWS depends on PUBLIC/VPC mode, but in-sandbox use of the role still grants its privileges.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
-  severity: high
-  mitigation: Restrict StartCodeInterpreterSession/InvokeCodeInterpreter on custom interpreters and keep their execution roles least-privileged.
+  severity: critical
+  mitigation: Restrict StartCodeInterpreterSession/InvokeCodeInterpreter on custom interpreters and keep their execution
+    roles least-privileged.
   references: []
   notes: The AWS-managed default interpreter has no customer execution role and is not a target.
+
 
 - id: aws-bedrock-agentcore-createcodeinterpreter-passrole
   provider: aws
   service: bedrock
   title: Create an AgentCore Code Interpreter with a passed execution role and run code in it
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcorecreatecodeinterpreter--createbrowser-iampassrole--code-execution-sandbox-as-a-role
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting bedrock-agentcore.amazonaws.com by creating a Code Interpreter with that execution role and invoking it.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles trusting bedrock-agentcore.amazonaws.com by creating
+    a Code Interpreter with that execution role and invoking it.
   requires:
     all_of:
-      - action: bedrock-agentcore:CreateCodeInterpreter
-        resource: "*"
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: bedrock-agentcore:StartCodeInterpreterSession
-        resource: "*"
-      - action: bedrock-agentcore:InvokeCodeInterpreter
-        resource: "*"
+    - action: bedrock-agentcore:CreateCodeInterpreter
+      resource: '*'
+    - action: iam:PassRole
+      resource: '{target.arn}'
+    - action: bedrock-agentcore:StartCodeInterpreterSession
+      resource: '*'
+    - action: bedrock-agentcore:InvokeCodeInterpreter
+      resource: '*'
   target:
     kind: aws_role
     selector:
       trust_allows_service: bedrock-agentcore.amazonaws.com
       resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
+    aggregate_as: Roles trusting bedrock-agentcore.amazonaws.com passable in {account}
+    outcome: workload_execution
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict this.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict this.
   blockers:
-    - scp_or_boundary_deny
+  - scp_or_boundary_deny
   confidence: derived
-  severity: high
+  severity: critical
   mitigation: Restrict iam:PassRole for AgentCore execution roles and bedrock-agentcore:CreateCodeInterpreter.
   references: []
-  notes: CreateBrowser with InvokeBrowser is an equivalent sandbox path under the same execution role; it is not modelled separately.
+  notes: CreateBrowser with InvokeBrowser is an equivalent sandbox path under the same execution role; it is not
+    modelled separately.
+
 
 - id: aws-bedrock-agent-lambda-actiongroup-hijack
   provider: aws
@@ -216,3 +226,67 @@
   references:
     - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_UpdateAgentRuntime.html
   notes: UpdateGateway is not modelled because a gateway's role is only used by the service to call configured targets, not to run caller code. UpdateCodeInterpreter-style variants are covered by the create entries where they exist.
+
+- id: aws-bedrock-agentcore-invokeagentruntimecommand-existing-runtime
+  provider: aws
+  service: bedrock
+  title: Run shell commands in an existing AgentCore agent runtime
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-agentcore-privesc/README.md#bedrock-agentcorecreateharness-iampassrole-invokeagentruntimecommand--root-shell-as-a-role
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of an existing AgentCore agent runtime (including harness runtimes) by running commands in it.
+  requires:
+    all_of:
+      - action: bedrock-agentcore:InvokeAgentRuntimeCommand
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: bedrock-agentcore
+      attached_resource_covered_by: bedrock-agentcore:InvokeAgentRuntimeCommand
+    scope: same_account
+    aggregate_as: "Execution roles of AgentCore runtimes covered by bedrock-agentcore:InvokeAgentRuntimeCommand in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: runtime_endpoint
+      description: The runtime must have a ready endpoint the source can address; runtimes are not collected, so any role trusting bedrock-agentcore.amazonaws.com is a candidate.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Deny bedrock-agentcore:InvokeAgentRuntimeCommand except where direct shell access is required, and keep runtime execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html
+  notes: The harness heading shows InvokeAgentRuntimeCommand giving a shell as the runtime's execution role; on an existing runtime neither iam:PassRole nor any create action is needed.
+
+- id: aws-bedrock-agentcore-invokeharness-shell-existing
+  provider: aws
+  service: bedrock
+  title: Invoke an existing AgentCore harness with its shell tool to run commands as its execution role
+  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#aws---agentcore-harness-rce-via-indirect-prompt-injection
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of an existing AgentCore harness it can invoke, because the built-in shell tool (enabled unless allowedTools restricts it, and overridable per invocation) runs commands as root in the harness runtime.
+  requires:
+    all_of:
+      - action: bedrock-agentcore:InvokeHarness
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: bedrock-agentcore
+      via_resource_type: bedrock-agentcore_harness
+    scope: same_account
+    aggregate_as: "Execution roles of AgentCore harnesses invokable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: shell_tool_available
+      description: The shell tool must be selectable for the invocation (no restrictive allowedTools on the harness that the invocation cannot override) and the model must follow the instruction.
+    - id: indirect_variant
+      description: Without InvokeHarness, the same result needs attacker-controlled content that a harness with shell enabled processes (indirect prompt injection); that variant is not permission-based.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bedrock-agentcore:InvokeHarness to the application principal, restrict allowedTools so harnesses processing untrusted content cannot select shell, and keep harness execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_InvokeHarness.html
+  notes: Existing-harness counterpart of aws-bedrock-agentcore-createharness-passrole. Harnesses are not collected, so roles trusting bedrock-agentcore.amazonaws.com are the fallback target set (unknown).

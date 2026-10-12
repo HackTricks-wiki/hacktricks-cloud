@@ -72,3 +72,61 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-specs
   notes: Deployers may be users as well as service principals/managed identities. Deployment Stacks write is not a standalone escalation per the page.
+
+- id: azure-arm-templatespec-version-poisoning-managed-identity
+  provider: azure
+  service: arm
+  title: Overwrite a template spec version consumed by a managed-identity deployer
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arm-template-spec-privesc.md#microsoftresourcestemplatespecsversionswrite
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of managed identities (pipeline agents, automation) that later deploy the template spec version.
+  requires:
+    all_of:
+      - action: Microsoft.Resources/templateSpecs/versions/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.Resources/templateSpecs
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_deployer_of_pivot: true
+    scope: any
+    aggregate_as: "Managed identities that deploy template spec {pivot}"
+  conditions:
+    - id: deployer_unknown
+      description: Who deploys the spec is only inferable from deployment history; edge exists only if a more privileged managed identity later deploys it.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict templateSpecs/versions/write to the owners of the deploying pipeline and make versions immutable (publish new versions under review).
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-specs
+  notes: Managed-identity sibling of azure-arm-templatespec-version-poisoning.
+
+- id: azure-arm-templatespec-version-poisoning-user
+  provider: azure
+  service: arm
+  title: Overwrite a template spec version consumed by a more privileged user
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arm-template-spec-privesc.md#microsoftresourcestemplatespecsversionswrite
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of administrators who later deploy the template spec version.
+  requires:
+    all_of:
+      - action: Microsoft.Resources/templateSpecs/versions/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.Resources/templateSpecs
+  target:
+    kind: azure_user
+    selector:
+      azure_deployer_of_pivot: true
+    scope: any
+    aggregate_as: "Users that deploy template spec {pivot}"
+  conditions:
+    - id: deployer_unknown
+      description: Who deploys the spec is only inferable from deployment history; edge exists only if a more privileged user later deploys it.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict templateSpecs/versions/write to the owners of the deploying pipeline and make versions immutable (publish new versions under review).
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-specs
+  notes: User sibling of azure-arm-templatespec-version-poisoning.

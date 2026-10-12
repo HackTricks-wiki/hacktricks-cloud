@@ -343,6 +343,126 @@
     - https://learn.microsoft.com/en-us/azure/container-apps/jobs
   notes: Covers the existing-job and new-job sections of the page.
 
+- id: azure-containerapp-list-secrets
+  provider: azure
+  service: containers
+  title: Read the inline secrets of a Container App
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappcontainerappslistsecretsaction
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of service principals whose client secrets are stored as inline Container App secrets.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.App/containerApps/listSecrets/action
+          scope: '{pivot}'
+      - - action: Microsoft.Web/containerApps/listsecrets/action
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/containerApps|Microsoft.Web/containerApps
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only inline secrets that hold a service-principal client secret yield an identity; Key Vault references return only the reference, and other values are data access only.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Store app secrets as Key Vault references resolved by a least-privileged identity, use managed identities instead of service-principal secrets, and restrict containerApps/listSecrets/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets
+  notes: The Microsoft.Web form is the legacy provider operation named on the page. Secret content is unknown from RBAC alone.
+
+- id: azure-containerapp-job-list-secrets
+  provider: azure
+  service: containers
+  title: Read the inline secrets of a Container Apps Job
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappjobsread-microsoftappjobslistsecretsaction
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of service principals whose client secrets are stored as inline Job secrets.
+  requires:
+    all_of:
+      - action: Microsoft.App/jobs/listSecrets/action
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/jobs
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only inline secrets that hold a service-principal client secret yield an identity; Key Vault references return only the reference.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Store Job secrets as Key Vault references, prefer managed identities, and restrict jobs/listSecrets/action and jobs/start/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets
+  notes: jobs/read is used by clients to locate the job but is not the gating permission. jobs/start/action can also consume Job secrets through an execution template override (azure-containerapp-job-start-template-override).
+
+- id: azure-containerapp-dapr-component-list-secrets
+  provider: azure
+  service: containers
+  title: Read the inline secrets of a Container Apps Dapr component
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappmanagedenvironmentsdaprcomponentslistsecretsaction
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of service principals whose client secrets are stored inline in a Dapr component.
+  requires:
+    all_of:
+      - action: Microsoft.App/managedEnvironments/daprComponents/listSecrets/action
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/managedEnvironments|Microsoft.App/managedEnvironments/daprComponents
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only components that authenticate with a service-principal client secret (for example Azure state stores or bindings configured with azureClientSecret) yield an identity; connection strings and keys are data access only.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Configure Dapr components with managed identities or secret-store references and restrict daprComponents/listSecrets/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/dapr-components
+  notes: Component-scope assignments are enough; environment scope exposes every component.
+
+- id: azure-containerapp-sandbox-secret-peek
+  provider: azure
+  service: containers
+  title: Read the cleartext values of an ACA Sandbox secret
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-instances-apps-jobs-privesc.md#microsoftappsandboxgroupssecretspeekaction
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of service principals whose credentials are stored in a sandbox group secret.
+  requires:
+    all_of:
+      - action: Microsoft.App/sandboxGroups/secrets/peek/action
+        data_action: true
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.App/sandboxGroups
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only secrets that hold a service-principal client secret yield an identity; API keys, bearer tokens and headers for other services are data access only.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Inject only narrowly scoped credentials into sandbox egress policies and restrict the secrets/peek data action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-apps/sandboxes-get-started
+  notes: Preview data-plane action; secret content is unknown from RBAC alone.
+
 - id: azure-containerapp-sourcecontrols-write
   provider: azure
   service: containers

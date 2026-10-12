@@ -100,3 +100,39 @@
   mitigation: Use versioned, immutable source objects and restrict s3:PutObject on pipeline source keys.
   references: []
   notes: The evaluator resolves attached_to_service codepipeline to roles trusting codepipeline.amazonaws.com, i.e. the pipeline role, which runs no artifact content; the selector therefore targets CodeBuild project roles (the main code-executing downstream action). CloudFormation deploy-action roles are also reachable but are not modelled here. Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves unknown.
+
+- id: aws-codepipeline-s3-source-poisoning-cloudformation-role
+  provider: aws
+  service: codepipeline
+  title: Replace the S3 source object of a pipeline that deploys through CloudFormation
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#s3putobject-on-a-configured-s3-source-codepipelinestartpipelineexecution-optional
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain (at the next execution) the privileges of the CloudFormation deploy-action roles of a pipeline whose S3 source object it can overwrite, because the deploy action applies the template carried in that artifact with its stored role.
+  requires:
+    all_of:
+      - action: s3:PutObject
+        resource: "{target.consumer_input_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: cloudformation
+      consumer_input_writable_via: s3:PutObject
+    scope: same_account
+    aggregate_as: "CloudFormation deploy roles of pipelines with writable S3 sources in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: delayed_trigger
+      description: An execution must start afterwards (S3 change detection, schedule, operator or source-held StartPipelineExecution).
+    - id: template_from_artifact
+      description: A CloudFormation deploy action must take its template (or template configuration) from the replaced source artifact.
+    - id: approval_gates
+      description: Manual approval or validation stages before the deploy action may stop the poisoned revision.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Use versioned, immutable source objects, restrict s3:PutObject on pipeline source keys to a dedicated publisher, and gate CloudFormation deploy stages with reviewed approvals.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-S3.html
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html
+  notes: Companion of aws-codepipeline-s3-source-poisoning, which targets CodeBuild project roles; the page states the impact reaches the roles of downstream build or deployment actions. The CloudFormation deploy action role trusts cloudformation.amazonaws.com. Pipeline S3 sources are not collected, so {target.consumer_input_arn} resolves unknown.

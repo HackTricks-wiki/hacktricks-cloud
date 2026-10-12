@@ -1,0 +1,57 @@
+# Azure Service Bus techniques (declarative only).
+# Source: hacktricks-cloud az-servicebus-privesc.md (re-reviewed at rev a66f094ede).
+# Second-order escalation through privileged consumers of the namespace, like consumer_poisoning.yaml:
+# until trigger bindings are collected, managed identities holding messages/receive/action on the namespace
+# are reported conditional (consumer_binding_not_collected) and every other identity unknown.
+
+- id: azure-servicebus-message-injection-consumer
+  provider: azure
+  service: service_bus
+  title: Inject Service Bus messages into a privileged consumer
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#send-messages-dataactions-microsoftservicebusnamespacesmessagessendaction
+  source_revision: a66f094ede
+  summary: Sending messages through Entra data actions or a disclosed or rotated SAS key feeds attacker input to Functions, Logic Apps or workers that process the queue or subscription with their own managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.ServiceBus/namespaces/messages/send/action
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/authorizationRules/listKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/authorizationRules/regenerateKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/queues/authorizationRules/listKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/queues/authorizationRules/regenerateKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/topics/authorizationRules/listKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/topics/authorizationRules/regenerateKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.ServiceBus/namespaces/disasterRecoveryConfigs/authorizationRules/listkeys/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.ServiceBus/namespaces
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_consumer_of_pivot: service_bus_trigger
+    scope: any
+    aggregate_as: "Workload identities triggered by Service Bus namespace {pivot}"
+    outcome: workload_execution
+  conditions:
+    - id: consumer_trusts_message
+      description: The consumer must treat message fields as commands, URLs, templates or serialized objects; send access alone does not guarantee code execution.
+    - id: local_auth_enabled
+      description: The listKeys / regenerateKeys alternatives require local (SAS) authentication on the namespace and a rule carrying the Send right.
+    - id: entity_scope
+      description: Entity-scoped rules and data-action assignments reach only that queue or topic, so the consumer must read from it.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Disable local auth, separate senders from privileged consumers, and validate or sign message content before acting on it.
+  references:
+    - https://learn.microsoft.com/en-us/azure/service-bus-messaging/authenticate-application
+    - https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas
+  notes: Rule-creation headings (authorizationRules/write) need a key read-back, which the listKeys alternatives cover. Receive headings are data access and stay excluded.

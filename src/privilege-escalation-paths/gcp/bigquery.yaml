@@ -51,18 +51,21 @@
 - id: gcp-bigquery-spark-procedure-connection-identity
   provider: gcp
   service: bigquery
-  title: Create a Spark stored procedure that runs code as an existing Spark connection's service identity
+  title: Create or replace a Spark stored procedure that runs code as an existing Spark connection's service identity
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryroutinescreate--bigqueryconnectionsdelegateuse--code-execution-through-a-spark-connection
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service identity of every BigQuery Spark connection it can delegate and use, or whose IAM policy it controls.
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service identity of every BigQuery Spark connection it can delegate and use, or whose IAM policy it controls, by creating or replacing a Spark stored procedure bound to it.
   requires:
     all_of:
-      - action: bigquery.routines.create
-        resource: "*"
       - action: bigquery.routines.get
         resource: "*"
       - action: bigquery.jobs.create
         resource: "*"
+      - any_of:
+          - - action: bigquery.routines.create
+              resource: "*"
+          - - action: bigquery.routines.update
+              resource: "*"
     any_of:
       - - action: bigquery.connections.delegate
           resource: "{target.host_resource}"
@@ -80,7 +83,9 @@
     - id: privileged_connection_identity
       description: Escalation only exists when the existing connection's service identity already holds permissions the source lacks; a newly created connection identity starts without useful grants.
     - id: dataset_location
-      description: The procedure must be created in a dataset the source can write, in the connection's location.
+      description: The procedure must be created (or an existing one replaced) in a dataset the source can write, in the connection's location.
+    - id: replace_existing_procedure
+      description: The routines.update branch replaces an existing Spark procedure's body; the connection delegation check still applies to the replaced definition.
     - id: setiampolicy_followup
       description: The setIamPolicy branch self-grants connection admin/user on the connection and then follows the delegate/use path.
   blockers:
@@ -88,11 +93,11 @@
     - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Restrict roles/bigquery.connectionAdmin and roles/bigquery.connectionUser on Spark connections and keep the connection identity least-privileged.
+  mitigation: Restrict roles/bigquery.connectionAdmin and roles/bigquery.connectionUser on Spark connections, restrict routine create/update on datasets in the connection's location, and keep the connection identity least-privileged.
   references:
     - https://docs.cloud.google.com/bigquery/docs/spark-procedures
     - https://docs.cloud.google.com/bigquery/docs/connect-to-spark
-  notes: Google documents Data Editor on the dataset, Connection Admin on the connection and Job User to create, and Metadata Viewer, Connection User and Job User to call. Google does not document a caller-side actAs check for the EXTERNAL SECURITY INVOKER custom service-account variant; that variant is not modelled. Covers the bigquery.connections.setIamPolicy self-grant heading for Spark connections; other connection consumers (EXTERNAL_QUERY, remote functions) are data access or audience-bound and are excluded.
+  notes: The page documents SQL create (routines.create + connections.delegate + jobs.create), CREATE OR REPLACE / direct routines.update (routines.update), direct Routines API create (no job) and invocation (routines.get + connections.use + jobs.create); jobs.create is always needed for the call. Google does not document a caller-side actAs check for the EXTERNAL SECURITY INVOKER custom service-account variant; that variant is not modelled. Covers the bigquery.connections.setIamPolicy self-grant heading for Spark connections; other connection consumers (EXTERNAL_QUERY, remote functions, BigLake tables) are data access or audience-bound and are excluded.
 
 - id: gcp-bigquery-continuous-query-actas
   provider: gcp

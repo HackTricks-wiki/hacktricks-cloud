@@ -9,12 +9,16 @@
   service: developerconnect
   title: Write to a linked repository through Developer Connect and poison the pipeline that builds from it
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-developer-connect-privesc.md#fetchreadwritetoken-or-git-proxy-write---poison-a-privileged-repository-driven-pipeline
-  source_revision: 171e422
+  source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of the run-as identity of Cloud Build triggers or deployment pipelines that automatically build from external repositories it can write through a Developer Connect repository link.
   requires:
-    all_of:
-      - action: developerconnect.gitRepositoryLinks.fetchReadWriteToken
-        resource: "{target.artifact_arn}"
+    any_of:
+      - - action: developerconnect.gitRepositoryLinks.fetchReadWriteToken
+          resource: "{target.artifact_arn}"
+      - - action: developerconnect.gitRepositoryLinks.gitProxyRead
+          resource: "{target.artifact_arn}"
+        - action: developerconnect.gitRepositoryLinks.gitProxyWrite
+          resource: "{target.artifact_arn}"
   target:
     kind: gcp_service_account
     selector:
@@ -22,8 +26,8 @@
     scope: any
     aggregate_as: "Run-as SAs of pipelines building from repositories writable through Developer Connect"
   conditions:
-    - id: git_proxy_variant
-      description: developerconnect.gitRepositoryLinks.gitProxyRead plus gitProxyWrite (roles/developerconnect.gitProxyUser, roles/developerconnect.admin) on an enabled system-connection Git proxy give the same write path without the raw token; roles/developerconnect.admin does not contain fetchReadWriteToken.
+    - id: git_proxy_enabled
+      description: The gitProxyRead plus gitProxyWrite alternative (roles/developerconnect.gitProxyUser, roles/developerconnect.admin) needs the connection's system Git proxy enabled and its URI known; roles/developerconnect.admin does not contain fetchReadWriteToken.
     - id: provider_write_allowed
       description: The provider integration must allow writes to the repository, and the triggering ref/file must not be protected by provider branch rules or approvals.
     - id: automatic_consumer
@@ -35,4 +39,4 @@
   mitigation: Restrict fetchReadWriteToken (roles/developerconnect.tokenAccessor) and Git proxy write roles, protect trigger branches in the provider, and require approval on privileged build triggers.
   references:
     - https://docs.cloud.google.com/developer-connect/docs/access-control
-  notes: Developer Connect itself runs no code; the escalation ceiling is the downstream build/deployment identity. gitProxyRead/gitProxyWrite are not in the bundled permission list, so the proxy variant is a condition.
+  notes: Developer Connect itself runs no code; the escalation ceiling is the downstream build/deployment identity.

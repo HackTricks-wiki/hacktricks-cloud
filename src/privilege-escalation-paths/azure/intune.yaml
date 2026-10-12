@@ -45,3 +45,37 @@
     - https://learn.microsoft.com/en-us/mem/intune/fundamentals/role-based-access-control
     - https://learn.microsoft.com/en-us/mem/intune/fundamentals/multi-admin-approval
   notes: Also covers the portal path (Cloud -> On-Prem), macOS shell scripts / Win32 apps and the Intune Administrator -> Global Administrator chain (a privileged user signing in to a managed PAW). Users who merely sign in to a device without being its primary user are not visible in the collected facts.
+
+- id: azure-intune-laps-local-admin-device-user
+  provider: azure
+  service: intune
+  title: Read Windows LAPS passwords and take over the users of those devices
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-intune-post-exploitation.md#credential-access--filevault--bitlocker-keys--laps-passwords
+  source_revision: a66f094ede
+  summary: A principal that can read backed-up Windows LAPS local-administrator passwords gains local administrator on those devices and can steal the tokens of the users who sign in to them.
+  requires:
+    any_of:
+      - - entra_permission: microsoft.directory/deviceLocalCredentials/password/read
+      - - graph_app_permission: DeviceLocalCredential.Read.All
+  target:
+    kind: azure_user
+    selector:
+      intune_managed_device_user: true
+    scope: tenant
+    aggregate_as: "Primary users of LAPS-protected managed devices in {scope}"
+    outcome: credentials
+  conditions:
+    - id: laps_backup_to_entra
+      description: Only devices with Windows LAPS backed up to Microsoft Entra ID have a readable password; devices backing up to on-premises AD are not reachable this way.
+    - id: device_reachability
+      description: Using the local administrator password needs network or interactive logon to the device; this is not visible in the cloud snapshot.
+    - id: device_session_not_verified
+      description: The target user must sign in (or have a cached session / PRT) on the device for its tokens to be stolen.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict deviceLocalCredentials/password/read and DeviceLocalCredential.Read.All to Tier-0 device administrators, keep privileged access workstations in separate administrative units, and alert on LAPS password reads.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/devices/howto-manage-local-admin-passwords
+    - https://learn.microsoft.com/en-us/graph/api/devicelocalcredentialinfo-get
+  notes: Also covers az-entraid-privesc/README.md#microsoftdirectorydevicelocalcredentialspasswordread (same permission). Only Intune-managed devices with a known primary user are visible as targets; Entra-joined devices outside Intune are missed. BitLocker and FileVault key reads stay excluded (offline disk access, no session of another principal).

@@ -40,12 +40,13 @@
   service: ec2
   title: Launch an instance that joins an ECS cluster to receive task roles
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#privesc-to-ecs
-  source_revision: 171e422299
+  source_revision: a66f094ede
   summary: The source can obtain the privileges of ECS task roles of tasks that get scheduled on an instance it launches into an EC2-backed ECS cluster.
   requires:
     all_of:
       - action: iam:PassRole
-        resource: "*"
+        resource: "arn:aws:iam::{source.account}:role/*"
+        bind: ecs_instance_role
       - action: ec2:RunInstances
         resource: "*"
   target:
@@ -65,7 +66,7 @@
   severity: high
   mitigation: Restrict iam:PassRole on ECS instance roles; use Fargate or placement constraints for privileged tasks.
   references: []
-  notes: "The PassRole Resource is the ECS instance role, not the target task role; target selection is by ECS scheduling."
+  notes: "The PassRole Resource is a same-account ECS container-instance role, not the target task role. The role's trust and ecs:RegisterContainerInstance permission, and actual task placement, remain conditions because the catalog has no intermediate ECS instance-role-to-task-role binding."
 
 - id: aws-ec2-passrole-addroletoinstanceprofile
   provider: aws
@@ -325,3 +326,77 @@
   references:
     - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html
   notes: ""
+
+- id: aws-ec2-createreplacerootvolumetask-existing-role
+  provider: aws
+  service: ec2
+  title: Replace the root volume of an existing role-bearing EC2 instance
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-ec2-replace-root-volume-persistence/README.md#ec2
+  source_revision: 6fb9ac51fd
+  summary: The source can run code under the instance-profile role of an existing EC2 instance by replacing its root volume with an attacker-controlled image.
+  requires:
+    all_of:
+      - action: ec2:CreateReplaceRootVolumeTask
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: ec2
+      via_resource_type: ec2_instance
+      has_instance_profile: true
+    scope: same_account
+    aggregate_as: Instance-profile roles on replaceable EC2 instances in {account}
+    outcome: workload_execution
+  conditions:
+    - id: compatible_root_image
+      description: The target must be a running EBS-backed instance and the source must control a compatible AMI or eligible root-volume snapshot.
+    - id: boot_execution
+      description: The replacement reboots the instance, and the planted code must run after boot to use the instance profile.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ec2:CreateReplaceRootVolumeTask on instances with privileged profiles and monitor root-volume replacement tasks.
+  references:
+    - https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateReplaceRootVolumeTask.html
+  notes: The replacement retains the existing instance profile. An AMI or eligible snapshot must be available to the source; copied snapshots are not eligible.
+
+- id: aws-ec2-passrole-requestspotfleet
+  provider: aws
+  service: ec2
+  title: Create a Spot Fleet with a passable EC2 instance-profile role
+  source: src/pentesting-cloud/aws-security/aws-persistence/aws-ec2-persistence/README.md#spot-fleet-request
+  source_revision: 6fb9ac51fd
+  summary: The source can run controlled code on Spot Fleet instances carrying a passable instance-profile role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ec2:RequestSpotFleet
+        resource: "arn:aws:ec2:*:{source.account}:spot-fleet-request/*"
+      - action: ec2:RunInstances
+        resource: "arn:aws:ec2:*:{source.account}:instance/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: EC2 instance-profile roles passable to Spot Fleet in {account}
+    outcome: workload_execution
+  conditions:
+    - id: fleet_role
+      description: The Spot Fleet role must exist and the source must also be allowed to pass it; a new service-linked role may need iam:CreateServiceLinkedRole.
+    - id: launch_capacity
+      description: The requested fleet must obtain compatible instance capacity and use controlled user data or an image that runs source code.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict use of the instance-profile role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ec2:RequestSpotFleet and iam:PassRole to approved instance profiles and fleet service roles.
+  references:
+    - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-prerequisites.html
+  notes: Spot Fleet may keep relaunching instances after the initial request. Fleet-role and launch-resource authorization are separate from the target instance-profile role.
