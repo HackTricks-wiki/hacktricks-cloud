@@ -261,6 +261,7 @@
     - [GCP - Logging Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-logging-privesc.md)
     - [GCP - Cloud Domains Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-domains-privesc.md)
     - [GCP - Service Directory Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-service-directory-privesc.md)
+    - [GCP - Contact Center Insights Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-contact-center-insights-privesc.md)
     - [GCP - Compute Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md)
       - [GCP - Add Custom SSH Metadata](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/gcp-add-custom-ssh-metadata.md)
     - [GCP - Composer Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md)
