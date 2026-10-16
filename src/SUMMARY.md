@@ -112,6 +112,7 @@
       - [K8s - DoSing other nodes](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/dosing-other-nodes.md)
       - [K8s - SPIFFE/SPIRE Workload Identity Spoofing](pentesting-cloud/kubernetes-security/spiffe-spire-workload-identity-spoofing.md)
     - [K8s - Internal Network Attacks](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md)
+    - [K8s - Admission Control Bypass](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/admission-control-bypass.md)
     - [K8s - Namespace Escalation](pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-namespace-escalation.md)
     - [Moved page](pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-namespace-escalation.md)
     - [K8s - Pivoting to Clouds](pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md)
