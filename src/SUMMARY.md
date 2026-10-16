@@ -1535,6 +1535,7 @@
     - [Az - PTA - Pass-through Authentication](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pta-pass-through-authentication.md)
     - [Az - Seamless SSO](pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-seamless-sso.md)    
   - [Az - Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/README.md)
+    - [Az - Service Configuration Secret Disclosure](pentesting-cloud/azure-security/az-post-exploitation/az-service-configuration-disclosure.md)
     - [Az - App Configuration Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md)
     - [Az - Batch Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-batch-post-exploitation.md)
     - [Az - Synapse Post Exploitation](pentesting-cloud/azure-security/az-post-exploitation/az-synapse-post-exploitation.md)
