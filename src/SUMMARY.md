@@ -1605,6 +1605,7 @@
     - [Az - VM control-plane code execution Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-vm-code-execution-privesc.md)
     - [Az - VM managed identity token Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-vm-managed-identity-token-privesc.md)
     - [Az - Azure IAM Privesc (Authorization)](pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md)
+    - [Az - Healthcare APIs Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-healthcare-apis-privesc.md)
     - [Az - AI Foundry Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md)
     - [Az - AI Search Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-ai-search-privesc.md)
     - [Az - API Center Privesc](pentesting-cloud/azure-security/az-privilege-escalation/az-api-center-privesc.md)
