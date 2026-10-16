@@ -230,6 +230,7 @@
     - [GCP - Advisory Notifications Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-advisory-notifications-post-exploitation.md)
     - [GCP - Policy Troubleshooter Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-policy-troubleshooter-post-exploitation.md)
     - [GCP - Privileged Access Manager (PAM) Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-pam-post-exploitation.md)
+    - [GCP - Agent Identity Auth Manager Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-agent-identity-auth-manager-post-exploitation.md)
   - [GCP - Privilege Escalation](pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md)
     - [GCP - Access Context Manager / VPC-SC Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-access-context-manager-privesc.md)
     - [GCP - Agent Registry Privesc](pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md)
