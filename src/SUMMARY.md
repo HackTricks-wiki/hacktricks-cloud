@@ -172,6 +172,7 @@
     - [GCP - Container Analysis Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-container-analysis-post-exploitation.md)
     - [GCP - Data Fusion Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-data-fusion-post-exploitation.md)
     - [GCP - Dataflow Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataflow-post-exploitation.md)
+    - [GCP - Dataform Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataform-post-exploitation.md)
     - [GCP - Database Center Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-database-center-post-exploitation.md)
     - [GCP - Database Insights Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-database-insights-post-exploitation.md)
     - [GCP - Dataproc Post Exploitation](pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-dataproc-post-exploitation.md)
