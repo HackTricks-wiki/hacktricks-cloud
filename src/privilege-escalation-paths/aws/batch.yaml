@@ -1,43 +1,12 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS Batch privilege escalation techniques.
 # Source: hacktricks-cloud aws-batch-privesc/README.md.
 
-- id: aws-batch-submitjob-existing-definition
-  provider: aws
-  service: batch
-  title: Submit a job using an existing job definition with a job role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#batchsubmitjob
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the job role of an existing job definition by submitting a job
-    with a container command override.
-  requires:
-    all_of:
-    - action: batch:SubmitJob
-      resource: '{target.attached_resource_arn}'
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: ecs
-      attached_resource_covered_by: batch:SubmitJob
-    scope: same_account
-    aggregate_as: Job roles of Batch job definitions covered by batch:SubmitJob in {account}
-    outcome: workload_execution
-  conditions:
-  - id: job_queue_covered
-    description: A usable job queue must exist, batch:SubmitJob must authorize that queue and the selected job-definition
-      revision together, and the queue must have a VALID, ENABLED compute environment compatible with the definition.
-      These queue and definition facts are unresolved unless collected and joined.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Scope batch:SubmitJob to specific job definitions and queues; keep job roles least-privileged.
-  references:
-  - https://docs.aws.amazon.com/batch/latest/userguide/batch-supported-iam-actions-resources.html
-  notes: Registering a new job definition with a passed role is covered by aws-batch-registerjobdefinition-passrole-submitjob.
-    Compute-environment instance roles may also be reachable from EC2-backed jobs. The baked jobRoleArn is an ECS
-    task role (trusts ecs-tasks.amazonaws.com), so the selector resolves through the ECS task principal rather than
-    batch.amazonaws.com; job definitions are not collected, so the attachment is unknown. EKS-backed jobs use a
-    Kubernetes service account and are not covered.
 - id: aws-batch-registerjobdefinition-passrole-submitjob
   provider: aws
   service: batch
@@ -60,6 +29,9 @@
       resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting ecs-tasks.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - batch_new_job_and_ec2_queue_authorized
   conditions:
     - id: job_queue_available
       description: batch:SubmitJob must cover the new job definition and an existing job queue with a VALID, ENABLED compute environment.
@@ -75,5 +47,5 @@
   references:
     - https://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html
     - https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html
-    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsbatch.html
-  notes: The Service Authorization Reference lists iam:PassRole as a dependent action of batch:RegisterJobDefinition, and the job definition reference states jobRoleArn is an ECS task IAM role. Jobs on Amazon EKS compute environments use a Kubernetes service account instead of jobRoleArn and are not covered.
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_batch.html
+  notes: The Service Authorization Reference lists iam:PassRole as a dependent action of batch:RegisterJobDefinition, and the job definition reference states jobRoleArn is an ECS task IAM role. The evaluator checks one unused job-definition name, its first revision and the same enabled EC2 queue with matching RegisterJobDefinition and SubmitJob grants. Other restricted names, incomplete inventories and Fargate execution-role requirements remain unresolved. Jobs on Amazon EKS compute environments use a Kubernetes service account instead of jobRoleArn and are not covered.

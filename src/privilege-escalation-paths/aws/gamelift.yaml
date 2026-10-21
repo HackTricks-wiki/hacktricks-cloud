@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # Amazon GameLift Servers privilege escalation techniques.
 # Source: hacktricks-cloud aws-gamelift/README.md (rev 171e422299).
 
@@ -40,39 +46,3 @@
     - https://docs.aws.amazon.com/gamelift/latest/apireference/API_CreateFleet.html
     - https://docs.aws.amazon.com/gamelift/latest/apireference/API_CreateContainerFleet.html
   notes: The InstanceRoleArn (CreateFleet) or FleetRoleArn (CreateContainerFleet) credentials are available to processes on fleet instances or containers. CreateGameServerGroup is excluded separately (its role is used by FleetIQ to manage the Auto Scaling group, not exposed to instance code).
-
-- id: aws-gamelift-getcomputeaccess-fleet-instance-role
-  provider: aws
-  service: gamelift
-  title: Open a Session Manager shell on a GameLift fleet compute and use its instance role
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-post-exploitation/README.md#managed-compute-shell-with-gameliftgetcomputeaccess
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the instance role configured on a GameLift EC2 or container fleet by minting compute-access credentials and opening a shell on a fleet compute where that role's credentials are available.
-  requires:
-    all_of:
-      - action: gamelift:GetComputeAccess
-        resource: "{target.resource_arn}"
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: gamelift.amazonaws.com
-      via_resource_type: gamelift_fleet
-    scope: same_account
-    aggregate_as: "GameLift fleet instance roles in {account}"
-    outcome: workload_execution
-  conditions:
-    - id: sdk5_managed_fleet
-      description: The fleet must be a managed EC2 or container fleet using GameLift Server SDK 5 or later; Anywhere fleets use a different access model.
-    - id: fleet_instance_role
-      description: The fleet must have an InstanceRoleArn configured; otherwise the shell yields host data but no additional IAM role.
-    - id: compute_known
-      description: The source must know or be able to list a compute name of the fleet.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict gamelift:GetComputeAccess to operators, keep fleet instance roles least-privileged and alert on compute-access requests.
-  references:
-    - https://docs.aws.amazon.com/gamelift/latest/apireference/API_GetComputeAccess.html
-    - https://docs.aws.amazon.com/gameliftservers/latest/developerguide/fleets-remote-access.html
-  notes: The returned credentials belong to a GameLift service session limited to Session Manager; the escalation is the fleet instance role reachable from the host. GameLift fleets are not collected, so attachment resolves through roles trusting gamelift.amazonaws.com.

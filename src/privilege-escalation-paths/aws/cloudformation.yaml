@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS CloudFormation privilege escalation techniques.
 # Source: hacktricks-cloud aws-cloudformation-privesc/ (README.md and sub-page).
 
@@ -5,70 +11,72 @@
   provider: aws
   service: cloudformation
   title: Create a stack with a passed CloudFormation service role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatestack
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatestack
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting cloudformation.amazonaws.com by deploying a
-    template it controls with that service role.
+  summary: The source can make CloudFormation run resource operations allowed by a passable service role through a template it controls.
   requires:
     all_of:
-    - action: iam:PassRole
-      resource: "{target.arn}"
-    - action: cloudformation:CreateStack
-      resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: cloudformation.amazonaws.com
+      - action: cloudformation:CreateStack
+        resource: "*"
   target:
     kind: aws_role
     selector:
       trust_allows_service: cloudformation.amazonaws.com
     scope: same_account
     aggregate_as: "Roles trusting cloudformation.amazonaws.com in {account}"
+    outcome: impersonation
+  preconditions:
+    - cloudformation_new_stack_with_role
   conditions:
-  - id: passrole_condition_key
-    description: iam:PassedToService / cloudformation:RoleArn conditions may restrict this.
-  - id: template_location
-    description: The template must be supplied from S3 (HTTPS URL) or inline; an S3 location readable by CloudFormation
-      is needed.
+    - id: passrole_condition_key
+      description: iam:PassedToService / cloudformation:RoleArn conditions may restrict this.
+    - id: template_effects
+      description: A caller-controlled inline template must create a resource action supported by the passed role.
   blockers:
-  - scp_or_boundary_deny
-  confidence: derived
+    - scp_or_boundary_deny
+  confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references:
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html
-  notes: The sub-page iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md describes the same
-    edge (DescribeStacks only helps read outputs). Severity critical because CloudFormation service roles are frequently
-    admin-equivalent.
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html
+  notes: The sub-page iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md describes the same edge (DescribeStacks only helps read outputs). Severity critical because CloudFormation service roles are frequently admin-equivalent.
 
 - id: aws-cloudformation-passrole-updatestack
   provider: aws
   service: cloudformation
   title: Update a stack with a passed CloudFormation service role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationupdatestack-and-where-needed-cloudformationsetstackpolicy
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationupdatestack-and-where-needed-cloudformationsetstackpolicy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting cloudformation.amazonaws.com by updating an
-    existing stack with a template it controls and that role.
+  summary: The source can make CloudFormation run resource operations allowed by a passable service role by updating an existing stack with a template it controls.
   requires:
     all_of:
-    - action: iam:PassRole
-      resource: "{target.arn}"
-    - action: cloudformation:UpdateStack
-      resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: cloudformation.amazonaws.com
+      - action: cloudformation:UpdateStack
+        resource: "*"
   target:
     kind: aws_role
     selector:
       trust_allows_service: cloudformation.amazonaws.com
     scope: same_account
     aggregate_as: "Roles trusting cloudformation.amazonaws.com in {account}"
+    outcome: impersonation
   conditions:
-  - id: stack_policy
-    description: A stack policy denying updates may require cloudformation:SetStackPolicy (or a temporary override
-      policy on the update).
-  - id: passrole_condition_key
-    description: iam:PassedToService / cloudformation:RoleArn conditions may restrict this.
+    - id: stack_policy
+      description: A stack policy denying updates may require cloudformation:SetStackPolicy (or a temporary override policy on the update).
+    - id: passrole_condition_key
+      description: iam:PassedToService / cloudformation:RoleArn conditions may restrict this.
+  preconditions:
+    - cloudformation_existing_stack_updatable_with_role
   blockers:
-  - scp_or_boundary_deny
-  confidence: derived
+    - scp_or_boundary_deny
+  confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references: []
@@ -77,116 +85,127 @@
 - id: aws-cloudformation-updatestack-attached-role
   provider: aws
   service: cloudformation
-  title: Update a stack that already has a service role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationupdatestack-and-where-needed-cloudformationsetstackpolicy
+  title: Update a stack through its attached CloudFormation service role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationupdatestack-and-where-needed-cloudformationsetstackpolicy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role stored on an existing stack by updating that stack
-    with a template it controls.
+  summary: The source can change a stack's template using the service role already attached to that exact stack, without passing the role again.
   requires:
     all_of:
-    - action: cloudformation:UpdateStack
-      resource: "{target.attached_resource_arn}"
+      - action: cloudformation:UpdateStack
+        resource: "{target.attached_resource_arn}"
   target:
     kind: aws_role
     selector:
-      attached_to_service: cloudformation
+      trust_allows_service: cloudformation.amazonaws.com
+      via_resource_type: cloudformation_stack
       attached_resource_covered_by: cloudformation:UpdateStack
     scope: same_account
-    aggregate_as: "Service roles of stacks covered by cloudformation:UpdateStack in {account}"
+    aggregate_as: "CloudFormation service roles on updatable stacks in {account}"
+    outcome: impersonation
+  preconditions:
+    - cloudformation_attached_role_stack_updatable
   conditions:
-  - id: stack_policy
-    description: A stack policy denying updates may require cloudformation:SetStackPolicy.
+    - id: stack_policy
+      description: A stack policy may prevent changes to protected resources unless the caller can supply an override.
   blockers:
-  - scp_or_boundary_deny
-  confidence: derived
+    - scp_or_boundary_deny
+  confidence: conditional
   severity: critical
-  mitigation: Restrict cloudformation:UpdateStack to deployment pipelines; use stack policies and cloudformation:RoleArn
-    conditions.
-  references: []
-  notes: Stacks without a stored service role run with the caller's own permissions and are not targets.
+  mitigation: Scope cloudformation:UpdateStack to stacks whose attached service roles are appropriate for the updater, and restrict the roles' permissions.
+  references:
+  - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_UpdateStack.html
+  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html
+  notes: CloudFormation continues to use the stack's attached role for future operations even when the updater cannot pass that role. The evaluator requires the recorded RoleARN on the same updatable stack covered by UpdateStack.
+
+- id: aws-cloudformation-changeset-attached-role
+  provider: aws
+  service: cloudformation
+  title: Execute a change set through a stack's attached service role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationcreatechangeset-cloudformationexecutechangeset-and-where-needed-cloudformationsetstackpolicy
+  source_revision: 171e422299
+  summary: The source can supply and execute a change set on an existing stack that already carries a CloudFormation service role.
+  requires:
+    all_of:
+      - action: cloudformation:CreateChangeSet
+        resource: "{target.attached_resource_arn}"
+      - action: cloudformation:ExecuteChangeSet
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: cloudformation.amazonaws.com
+      via_resource_type: cloudformation_stack
+      attached_resource_covered_by: cloudformation:CreateChangeSet
+    scope: same_account
+    aggregate_as: "CloudFormation service roles on updatable stacks in {account}"
+    outcome: impersonation
+  preconditions:
+    - cloudformation_attached_role_changeset_executable
+  conditions:
+    - id: stack_policy
+      description: A stack policy may prevent changes to protected resources.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope change set creation and execution to stacks whose attached service roles are appropriate for the caller, and restrict the roles' permissions.
+  references:
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_CreateChangeSet.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_ExecuteChangeSet.html
+  notes: CloudFormation keeps using the stack's attached role when no new RoleARN is supplied. The evaluator requires both actions on the same recorded, updatable stack carrying that role.
 
 - id: aws-cloudformation-passrole-changeset
   provider: aws
   service: cloudformation
   title: Create and execute a change set with a passed service role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatechangeset-cloudformationexecutechangeset-and-where-needed-cloudformationsetstackpolicy
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatechangeset-cloudformationexecutechangeset-and-where-needed-cloudformationsetstackpolicy
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting cloudformation.amazonaws.com by creating and
-    executing a change set with that role.
+  summary: The source can make CloudFormation run resource operations allowed by a passable service role by creating and executing a change set with a template it controls.
   requires:
     all_of:
-    - action: iam:PassRole
-      resource: "{target.arn}"
-    - action: cloudformation:CreateChangeSet
-      resource: "*"
-    - action: cloudformation:ExecuteChangeSet
-      resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: cloudformation.amazonaws.com
+      - action: cloudformation:CreateChangeSet
+        resource: "*"
+      - action: cloudformation:ExecuteChangeSet
+        resource: "*"
   target:
     kind: aws_role
     selector:
       trust_allows_service: cloudformation.amazonaws.com
     scope: same_account
     aggregate_as: "Roles trusting cloudformation.amazonaws.com in {account}"
+    outcome: impersonation
+  preconditions:
+    - cloudformation_new_changeset_with_role
   conditions:
-  - id: stack_policy
-    description: Updating an existing stack with a deny stack policy may require cloudformation:SetStackPolicy.
+    - id: template_effects
+      description: A CREATE-type change set needs a caller-controlled inline template with a resource action supported by the passed role.
   blockers:
-  - scp_or_boundary_deny
-  confidence: derived
+    - scp_or_boundary_deny
+  confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references: []
   notes: A CREATE-type change set can create a new stack, so no existing stack is required.
 
-- id: aws-cloudformation-changeset-attached-role
-  provider: aws
-  service: cloudformation
-  title: Create and execute a change set on a stack that already has a service role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationcreatechangeset-cloudformationexecutechangeset-and-where-needed-cloudformationsetstackpolicy
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the service role stored on an existing stack by creating and
-    executing a change set with a template it controls.
-  requires:
-    all_of:
-    - action: cloudformation:CreateChangeSet
-      resource: "{target.attached_resource_arn}"
-    - action: cloudformation:ExecuteChangeSet
-      resource: "{target.attached_resource_arn}"
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: cloudformation
-      attached_resource_covered_by: cloudformation:CreateChangeSet
-    scope: same_account
-    aggregate_as: "Service roles of stacks covered by cloudformation:CreateChangeSet in {account}"
-  conditions:
-  - id: stack_policy
-    description: A deny stack policy may require cloudformation:SetStackPolicy.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: derived
-  severity: critical
-  mitigation: Restrict change-set creation and execution to deployment pipelines.
-  references: []
-  notes: ""
-
 - id: aws-cloudformation-passrole-stackset
   provider: aws
   service: cloudformation
   title: Create or update a self-managed StackSet with a passed administration role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatestackset--cloudformationupdatestackset
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#iampassrole-cloudformationcreatestackset--cloudformationupdatestackset
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the StackSet execution roles in the accounts the passed
-    administration role can assume, by deploying a template it controls through a self-managed StackSet.
+  summary: The source can run template resource operations through an execution role that the passed administration
+    role can assume when a new or existing self-managed StackSet can reach that role's account.
   pivot_resource_type: aws_stackset_administration_role
   requires:
     all_of:
     - action: iam:PassRole
       resource: '{pivot}'
+      request_context:
+        iam:PassedToService: cloudformation.amazonaws.com
     any_of:
     - - action: cloudformation:CreateStackSet
         resource: '*'
@@ -200,137 +219,49 @@
       assumable_by_pivot_role: true
     scope: org
     aggregate_as: StackSet execution roles assumable by passable administration roles (from {account})
+    outcome: impersonation
   conditions:
   - id: execution_role_name_chosen_by_source
-    description: The source chooses ExecutionRoleName (default AWSCloudFormationStackSetExecutionRole), so any role in a
-      target account that the administration role can assume is reachable, not only the default name.
+    description: The source chooses ExecutionRoleName (default AWSCloudFormationStackSetExecutionRole), so any role
+      in a target account that the administration role can assume is reachable, not only the default name.
   - id: target_account_reachable
-    description: CloudFormation must be able to deploy stack instances in the execution role's account and region
-      (account and region enabled, no failure-tolerance abort).
+    description: A new StackSet requires CreateStackSet and CreateStackInstances on the same generated StackSet and its
+      target account; an update requires an existing self-managed instance in that account.
   - id: passrole_condition_key
     description: iam:PassedToService conditions may restrict which administration roles can be passed.
   - id: service_managed_stacksets
-    description: Service-managed StackSets do not use a passed role and are not covered by this entry. The
-      service-managed variant is covered by aws-cloudformation-service-managed-stackset-org-members.
+    description: Service-managed StackSets do not use a passed role and are not covered by this entry. The service-managed
+      variant is covered by aws-cloudformation-service-managed-stackset-org-members.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on StackSet administration roles, scope the administration role's sts:AssumeRole to
-    specific execution roles, and scope execution-role trust policies to the administration role ARN.
+  mitigation: Restrict iam:PassRole on StackSet administration roles, scope the administration role's sts:AssumeRole
+    to specific execution roles, and scope execution-role trust policies to the administration role ARN.
   references:
   - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
   - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awscloudformation.html
-  notes: '{pivot} is the StackSet administration role (a role trusting cloudformation.amazonaws.com that the source can pass).
-    The target is each execution role that the pivot can assume: the execution role''s trust allows the pivot role or its
-    account, and the pivot role''s identity policy allows sts:AssumeRole on it. The Service Authorization Reference lists
-    iam:PassRole as a dependent action of CreateStackSet and UpdateStackSet and none for CreateStackInstances.'
+  notes: '{pivot} is the StackSet administration role (a role trusting cloudformation.amazonaws.com that the source
+    can pass). The target is an execution role that pivot can assume. For creation, the evaluator checks CreateStackSet
+    with that administration role and CreateStackInstances on both the same generated StackSet ARN and a target-account
+    ARN. For updates it requires a recorded SELF_MANAGED StackSet instance in the target account and UpdateStackSet on
+    that exact StackSet and target. The template''s actual effects remain conditional.'
 
-
-- id: aws-cloudformation-updatestackset-attached
-  provider: aws
-  service: cloudformation
-  title: Update an existing self-managed StackSet
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationupdatestackset
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the execution roles of an existing self-managed StackSet's stack
-    instances by updating its template, which CloudFormation deploys through the StackSet's stored administration role.
-  pivot_resource_type: aws_stackset_administration_role
-  requires:
-    all_of:
-    - action: cloudformation:UpdateStackSet
-      resource: arn:aws:cloudformation:*:*:stackset/*
-  target:
-    kind: aws_role
-    selector:
-      assumable_by_pivot_role: true
-    scope: org
-    aggregate_as: StackSet execution roles assumable by StackSet administration roles (from {account})
-  conditions:
-  - id: stackset_uses_pivot
-    description: An existing StackSet the source can update must store this administration role; StackSets are not
-      collected, so any administration role trusting cloudformation.amazonaws.com is a candidate pivot.
-  - id: stored_execution_role
-    description: Without iam:PassRole the update keeps the StackSet's stored ExecutionRoleName, so only execution roles
-      with that name are reached in practice.
-  - id: stackset_permission_model
-    description: Service-managed StackSets use service-created execution roles in OU accounts (updated from the
-      management or delegated-admin account) and are not modelled by the pivot. The service-managed variant is covered
-      by aws-cloudformation-service-managed-stackset-org-members.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict cloudformation:UpdateStackSet to the StackSet administrators and scope execution-role trust to
-    the administration role ARN.
-  references:
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-prereqs-self-managed.html
-  notes: The previous selector value attached_to_service cloudformation-stackset resolved to the nonexistent principal
-    cloudformation-stackset.amazonaws.com and matched no role. No iam:PassRole is needed when the stored administration
-    role is kept.
-
-
-- id: aws-cloudformation-nested-template-s3-poisoning
-  provider: aws
-  service: cloudformation
-  title: Replace a mutable nested-stack template object in S3
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#s3putobject-on-a-nested-stack-template--delayed-cloudformation-role-escalation
-  source_revision: 171e422299
-  summary: The source can obtain (on a later legitimate update) the privileges of the service role of a stack whose
-    nested-stack TemplateURL points to an S3 object the source can overwrite.
-  requires:
-    all_of:
-    - action: s3:PutObject
-      resource: "{target.consumer_input_arn}"
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: cloudformation
-      consumer_input_writable_via: s3:PutObject
-    scope: same_account
-    aggregate_as: "Service roles of stacks with writable nested templates in {account}"
-  conditions:
-  - id: delayed_trigger
-    description: A later parent-stack operation must actually update the nested stack; the source does not control the
-      trigger.
-  - id: bucket_controls
-    description: Bucket policy, Object Lock, versioned URLs and KMS key policy must not prevent replacement.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Use immutable/versioned template URLs and separate template-publishing permissions from deployment.
-  references: []
-  notes: "Requires placeholder {target.consumer_input_arn}: the S3 object ARN referenced as the nested TemplateURL. Gaining
-    the role's privileges for the source's own principal needs a follow-on step (e.g. the poisoned template granting the source
-    access)."
 
 - id: aws-cloudformation-registertype-passrole-extension
   provider: aws
   service: cloudformation
   title: Register a private CloudFormation extension with a passed execution role and invoke it
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationregistertype-iampassrole-and-an-extension-invocation-path
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationregistertype-iampassrole-and-an-extension-invocation-path
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting resources.cloudformation.amazonaws.com,
-    because the handler code of a private resource type or Hook it registers runs with the passed execution role when
-    invoked.
+  summary: The source can obtain the privileges of passable roles trusting resources.cloudformation.amazonaws.com, because the handler code of a private resource type or Hook it registers runs with the passed execution role when invoked.
   requires:
     all_of:
-    - action: iam:PassRole
-      resource: "{target.arn}"
-    - action: cloudformation:RegisterType
-      resource: "*"
-    any_of:
-    - - action: cloudformation:CreateResource
-        resource: "*"
-    - - action: cloudformation:CreateStack
-        resource: "*"
-    - - action: cloudformation:UpdateStack
-        resource: "*"
-    - - action: cloudformation:SetTypeConfiguration
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: resources.cloudformation.amazonaws.com
+      - action: cloudformation:RegisterType
         resource: "*"
   target:
     kind: aws_role
@@ -338,97 +269,38 @@
       trust_allows_service: resources.cloudformation.amazonaws.com
       resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "CloudFormation extension execution roles (trusting resources.cloudformation.amazonaws.com) passable in
-      {account}"
+    aggregate_as: "CloudFormation extension execution roles (trusting resources.cloudformation.amazonaws.com) passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - cloudformation_extension_package_and_invocation
   conditions:
-  - id: handler_package_readable
-    description: The source must be able to supply a handler package in S3 that CloudFormation can read during
-      registration.
-  - id: invocation_path
-    description: The registered type must be invoked (Cloud Control CreateResource, a stack operation using the type, or
-      an enabled Hook targeting a later operation); a Hook needs SetTypeConfiguration and a subsequent matching
-      operation.
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions on the PassRole grant may restrict passing the execution role.
+    - id: handler_package_readable
+      description: The source must be able to supply a handler package in S3 that CloudFormation can read during registration.
+    - id: invocation_path
+      description: The registered resource type must be invoked through Cloud Control CreateResource or a stack operation on a usable stack.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions on the PassRole grant may restrict passing the execution role.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict cloudformation:RegisterType/ActivateType to platform administrators, restrict iam:PassRole on
-    extension execution roles, and keep extension roles least-privileged.
+  mitigation: Restrict cloudformation:RegisterType/ActivateType to platform administrators, restrict iam:PassRole on extension execution roles, and keep extension roles least-privileged.
   references:
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html
-  - https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-develop.html
-  notes: Extension execution roles trust resources.cloudformation.amazonaws.com, not cloudformation.amazonaws.com, so
-    the target set is disjoint from stack service roles. cloudformation:ActivateType of a third-party public extension
-    with an execution role is a related path but runs code the source does not author unless it published that
-    extension.
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html
+    - https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-develop.html
+  notes: The evaluator requires PutObject and GetObject on the same object in a recorded S3 bucket, plus a bound CreateResource or stack operation. SetTypeConfiguration alone cannot invoke a Hook. Extension roles trust resources.cloudformation.amazonaws.com, not cloudformation.amazonaws.com; ActivateType of public extensions is separate because the source does not author that handler.
 
-- id: aws-cloudformation-ssm-parameter-poisoning
-  provider: aws
-  service: cloudformation
-  title: Overwrite a Parameter Store value that a stack resolves as a template parameter
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#ssmputparameter-on-a-cloudformation-supplied-parameter--delayed-policy-injection
-  source_revision: 6fb9ac51fd
-  summary: A later stack update attaches an attacker-selected policy to a role the source can assume, increasing the
-    authority of that role.
-  requires:
-    all_of:
-    - action: ssm:PutParameter
-      resource: '*'
-    - action: sts:AssumeRole
-      resource: '*'
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-cloudformation-ssm-parameter-poisoning
-    scope: same_account
-  conditions:
-  - id: delayed_trigger
-    description: A later stack update must resolve the parameter again (supplied parameter kept with its previous key);
-      the source does not control the trigger.
-  - id: consumer_semantics
-    description: Impact depends on the property consuming the value (policy ARNs, trust principals, AMI IDs, code
-      locations, endpoints); a value used only for non-sensitive settings yields no privilege.
-  - id: kms_and_tier
-    description: SecureString parameters with a customer-managed key need kms:Encrypt on that key for the overwrite.
-  - id: verified_collector_fact
-    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
-      runtime prerequisites; without it the result is UNKNOWN.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict ssm:PutParameter on deployment-consumed parameter namespaces, pin security-sensitive values to
-    reviewed versions or ordinary template parameters, and alert when a parameter write precedes a stack operation that
-    resolves it.
-  references:
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-supplied-parameter-types.html
-  notes: '{target.consumer_input_arn} is the Parameter Store parameter ARN named by the stack''s SSM parameter-typed template
-    parameter; that mapping is not collected, so the edge is unknown until it is. Same modelling as aws-cloudformation-nested-template-s3-poisoning.
-    Unversioned dynamic references are not guaranteed to refresh and are not covered. Required collector evidence is absent
-    from current snapshots; missing evidence remains UNKNOWN/unresolved.'
 - id: aws-cloudformation-service-managed-stackset-org-members
   provider: aws
   service: cloudformation
   title: Deploy a service-managed StackSet into organization member accounts
-  source:
-    src/pentesting-cloud/aws-security/aws-cross-account-attacks/organizations-and-central-account-pivots.md#cloudformation-stacksets
-  source_revision: 6fb9ac51fd
-  summary: A management-account (or delegated-administrator) principal that can create or update service-managed
-    StackSets can deploy templates it controls into member accounts of the targeted OUs through the administrator
-    execution roles StackSets creates there, gaining control of those accounts.
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformation-stacksets
+  source_revision: b587e6bd26
+  summary: A management-account principal can make CloudFormation run IAM resource operations in a member account by deploying a service-managed StackSet with its own template.
   requires:
-    any_of:
-    - - action: cloudformation:CreateStackSet
-        resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
-        bind: stackset
-      - action: cloudformation:CreateStackInstances
-        resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
-        bind: stackset
-    - - action: cloudformation:UpdateStackSet
-        resource: "arn:aws:cloudformation:*:{source.account}:stackset/*"
+    all_of:
+      - action: cloudformation:CreateStackSet
+        resource: "*"
   target:
     kind: aws_account_admin
     selector:
@@ -438,59 +310,24 @@
     aggregate_as: "Member accounts reachable through service-managed StackSets"
     outcome: scope_control
   conditions:
-  - id: trusted_access_enabled
-    description: Trusted access between CloudFormation StackSets and AWS Organizations must be enabled (it creates the
-      stacksets-exec execution roles with administrator access in member accounts).
-  - id: service_managed_permission_model
-    description: The StackSet must use the SERVICE_MANAGED permission model; UpdateStackSet only applies to existing
-      service-managed StackSets, whose targets and auto-deployment settings bound the reached accounts.
-  - id: delegated_administrator
-    description: A registered StackSets delegated administrator (CallAs DELEGATED_ADMIN) has the same reach; this entry
-      only draws edges from the management account (see aws-organizations-registerdelegatedadministrator).
-  - id: management_account_not_targeted
-    description: Service-managed StackSets never deploy to the management account; member-account SCPs still constrain
-      the template's resources.
+    - id: trusted_access_enabled
+      description: Trusted access between CloudFormation StackSets and AWS Organizations must be enabled (it creates the stacksets-exec execution roles with administrator access in member accounts).
+    - id: service_managed_permission_model
+      description: The new StackSet must use the SERVICE_MANAGED permission model and target the member account's organizational unit in CreateStackInstances.
+    - id: delegated_administrator
+      description: A registered StackSets delegated administrator (CallAs DELEGATED_ADMIN) can also deploy, but this entry draws edges only from the management account.
+    - id: management_account_not_targeted
+      description: Service-managed StackSets never deploy to the management account; member-account SCPs still constrain the template's resources.
   preconditions:
-  - source_in_org_management_account
-  - target_in_other_account
+    - source_in_org_management_account
+    - target_in_other_account
+    - cloudformation_service_managed_stackset_targetable
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict cloudformation:CreateStackSet, CreateStackInstances and UpdateStackSet in the management and
-    delegated-administrator accounts to deployment roles, keep the management account free of workloads, and review
-    delegated StackSets administrators and auto-deployment OUs.
+  mitigation: Restrict cloudformation:CreateStackSet, CreateStackInstances and UpdateStackSet in the management and delegated-administrator accounts to deployment roles, keep the management account free of workloads, and review delegated StackSets administrators and auto-deployment OUs.
   references:
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-activate-trusted-access.html
-  - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
-  notes: Complements aws-cloudformation-passrole-stackset and aws-cloudformation-updatestackset-attached, which model
-    self-managed StackSets only (their service_managed_stacksets / stackset_permission_model conditions). No
-    iam:PassRole is involved. StackSet permission model, trusted-access state and delegated administrators are not
-    collected, so the edge stays conditional.
-- id: aws-pa-persist-s01-30
-  provider: aws
-  service: cloudformation
-  title: Change CDKToolkit TrustedAccounts to attacker account and deploy role trust
-  source: src/pentesting-cloud/aws-security/aws-persistence/aws-cloudformation-persistence/README.md#cdk-bootstrap-stack
-  summary: Assume victim CDK bootstrap role from attacker account after trust update
-  requires:
-    all_of:
-    - action: cloudformation:UpdateStack
-      resource: '*'
-  target:
-    kind: aws_role
-    selector:
-      aws_challenge_fact: aws-pa-persist-s01-30
-    scope: same_account
-    grants:
-    - Assume victim CDK bootstrap role from attacker account after trust update
-  conditions:
-  - id: exact_prerequisites
-    description: Exact existing CDKToolkit stack and mutable TrustedAccounts parameter; Attacker controls listed external account; update changes bootstrap role trust; Execution policy and external account sts:AssumeRole determine gained permissions
-  confidence: conditional
-  severity: high
-  mitigation: Restrict these permissions on the exact resource and review the resulting service access.
-  references:
-  - https://docs.aws.amazon.com/cdk/v2/guide/ref-cli-cmd-bootstrap.html
-  - https://docs.aws.amazon.com/cli/latest/reference/cloudformation/update-stack.html
-  notes: 'Draft only: exact source and target evidence is required; absent evidence evaluates UNKNOWN.'
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-activate-trusted-access.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
+  notes: Complements aws-cloudformation-passrole-stackset, which models self-managed StackSets. No iam:PassRole is involved. The evaluator requires recorded enabled Organizations access, the member account's OU, and CreateStackInstances permission on the same generated StackSet, its OU target and the IAM role resource type. Template effects and target-Region availability remain conditional.

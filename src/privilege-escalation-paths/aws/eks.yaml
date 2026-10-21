@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS EKS privilege escalation techniques (AWS-API side: access entries, Pod Identity, node groups).
 # Source: hacktricks-cloud aws-eks-privesc/README.md (rev 171e422299).
 # k8s_cluster_admin targets are the collected EKS clusters of the source's own account (eks_cluster: describe_cluster
@@ -10,17 +16,14 @@
   provider: aws
   service: eks
   title: Create an EKS access entry for the source and associate a cluster-admin access policy
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreateaccessentry-eksassociateaccesspolicy--iam-only-path-to-cluster-admin
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreateaccessentry-eksassociateaccesspolicy--iam-only-path-to-cluster-admin
   source_revision: 6fb9ac51fd
-  summary: The source can become Kubernetes cluster-admin of an EKS cluster using only EKS API permissions, by mapping a
-    principal it controls into the cluster and associating AmazonEKSClusterAdminPolicy with cluster scope.
+  summary: The source can become Kubernetes cluster-admin of an EKS cluster using only EKS API permissions, by mapping
+    a principal it controls into the cluster and associating AmazonEKSClusterAdminPolicy with cluster scope.
   requires:
     all_of:
     - action: eks:CreateAccessEntry
       resource: '{target.scope}'
-    - action: eks:AssociateAccessPolicy
-      resource: arn:aws:eks:*:{target.account}:access-entry/{target.name}/*
   target:
     kind: k8s_cluster_admin
     selector:
@@ -30,11 +33,13 @@
       - API_AND_CONFIG_MAP
     scope: cluster
     aggregate_as: Cluster-admin of EKS clusters whose access entries the source can create
+  preconditions:
+  - eks_new_self_access_entry_can_receive_cluster_admin
   conditions:
   - id: authentication_mode_api
     description: The cluster authenticationMode must be API or API_AND_CONFIG_MAP (checked by eks_authentication_mode);
-      with CONFIG_MAP only, the access-entry APIs are unavailable (switching mode needs eks:UpdateClusterConfig and is
-      one-way).
+      with CONFIG_MAP only, the access-entry APIs are unavailable (switching mode needs eks:UpdateClusterConfig
+      and is one-way).
   - id: source_controls_mapped_principal
     description: The access entry must name an IAM principal the source can authenticate as (normally itself).
   - id: api_endpoint_reachable
@@ -48,418 +53,102 @@
   confidence: conditional
   severity: critical
   mitigation: Treat eks:CreateAccessEntry and eks:AssociateAccessPolicy as cluster-admin grants; restrict them to
-    platform administrators and use the eks:policyArn / eks:accessScope condition keys to forbid
-    AmazonEKSClusterAdminPolicy.
+    platform administrators and use the eks:policyArn / eks:accessScope condition keys to forbid AmazonEKSClusterAdminPolicy.
   references:
   - https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html
   - https://docs.aws.amazon.com/eks/latest/userguide/setting-up-access-entries.html
   - https://docs.aws.amazon.com/eks/latest/userguide/access-policies.html
   - https://docs.aws.amazon.com/eks/latest/APIReference/API_AssociateAccessPolicy.html
   - https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonelastickubernetesservice.html
-  notes: The cluster creator's bootstrap admin entry is not required; access entries work on clusters created before the
-    feature once the authentication mode allows it. An existing-entry AssociateAccessPolicy path is covered separately
-    by aws-eks-associateaccesspolicy-existing-entry. A CONFIG_MAP cluster can enable access entries through
+  notes: The cluster creator's bootstrap admin entry is not required; access entries work on clusters created before
+    the feature once the authentication mode allows it. An existing-entry AssociateAccessPolicy path is covered
+    separately by aws-eks-associateaccesspolicy-existing-entry. A CONFIG_MAP cluster can enable access entries through
     aws-eks-updateclusterconfig-enable-access-entries.
 
-
-- id: aws-eks-createaccessentry-privileged-kubernetes-group
-  provider: aws
-  service: eks
-  title: Create an EKS access entry that places the source in an existing privileged Kubernetes group
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreateaccessentry-alone--join-an-existing-privileged-kubernetes-group
-  source_revision: 171e422299
-  summary: The source can obtain the in-cluster permissions bound to an existing custom Kubernetes group by creating a
-    STANDARD access entry for itself that lists that group in kubernetesGroups.
-  requires:
-    all_of:
-    - action: eks:CreateAccessEntry
-      resource: "{target.scope}"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-      eks_authentication_mode: [API, API_AND_CONFIG_MAP]
-    scope: cluster
-    aggregate_as: "EKS clusters where the source can map itself into privileged Kubernetes groups"
-  conditions:
-  - id: authentication_mode_api
-    description: The cluster authenticationMode must be API or API_AND_CONFIG_MAP (checked by eks_authentication_mode).
-  - id: privileged_custom_group_bound
-    description: Only escalates when a ClusterRoleBinding/RoleBinding grants an admin-equivalent role to a custom group
-      name; EKS rejects group names starting with system:, so system:masters cannot be requested.
-  - id: kubernetes_groups_condition_key
-    description: The eks:kubernetesGroups condition key on the grant can restrict which groups may be requested.
-  - id: api_endpoint_reachable
-    description: The source must reach the Kubernetes API endpoint.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Constrain eks:CreateAccessEntry with eks:kubernetesGroups and avoid binding cluster-admin to custom groups
-    that access entries can request.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/userguide/creating-access-entries.html
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_CreateAccessEntry.html
-  notes: Severity is critical only when the bound group is admin-equivalent; the real target is the RBAC of that group,
-    which the Kubernetes snapshot of the cluster exposes.
-
-- id: aws-eks-updateaccessentry-kubernetes-groups
-  provider: aws
-  service: eks
-  title: Rewrite the Kubernetes groups of an existing EKS access entry
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksupdateaccessentry--escalate-an-access-entry-that-already-exists
-  source_revision: 171e422299
-  summary: The source can escalate an existing STANDARD access entry of a principal it controls by replacing its
-    kubernetesGroups with a privileged custom group.
-  requires:
-    all_of:
-    - action: eks:UpdateAccessEntry
-      resource: "arn:aws:eks:*:{target.account}:access-entry/{target.name}/*"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-      eks_authentication_mode: [API, API_AND_CONFIG_MAP]
-    scope: cluster
-    aggregate_as: "EKS clusters where the source can rewrite access-entry groups"
-  conditions:
-  - id: source_controls_entry_principal
-    description: The edited access entry must belong to a principal the source can authenticate as (itself or a role it
-      can assume).
-  - id: standard_entry_type
-    description: Only STANDARD entries carry custom kubernetesGroups; EC2_LINUX / EC2_WINDOWS / FARGATE_LINUX node
-      entries have fixed groups.
-  - id: privileged_custom_group_bound
-    description: A binding must grant an admin-equivalent role to a custom (non system:) group the source can request.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict eks:UpdateAccessEntry with eks:kubernetesGroups and to administrators only.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_UpdateAccessEntry.html
-  notes: Complements aws-eks-createaccessentry-privileged-kubernetes-group when the entry already exists.
-
-- id: aws-eks-createpodidentityassociation-passrole
-  provider: aws
-  service: eks
-  title: Bind a passable role to a Kubernetes service account through EKS Pod Identity
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreatepodidentityassociation-iampassrole-iamgetrole--bind-an-aws-role-to-a-namespace-you-control
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting pods.eks.amazonaws.com by associating it
-    with a service account in a namespace where it can run pods.
-  requires:
-    all_of:
-    - action: eks:CreatePodIdentityAssociation
-      resource: "arn:aws:eks:*:{target.account}:cluster/*"
-    - action: iam:PassRole
-      resource: "{target.arn}"
-    - action: iam:GetRole
-      resource: "{target.arn}"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: pods.eks.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting pods.eks.amazonaws.com passable to EKS Pod Identity in {account}"
-  preconditions:
-  - eks_cluster_exists
-  conditions:
-  - id: pod_execution_in_namespace
-    description: The source must be able to run a pod using the associated service account (Kubernetes create pods /
-      workload permissions in that namespace), or control an existing pod using it.
-  - id: pod_identity_agent_installed
-    description: The cluster must run the EKS Pod Identity Agent add-on.
-  - id: trust_actions
-    description: The role trust must allow both sts:AssumeRole and sts:TagSession for pods.eks.amazonaws.com;
-      aws:SourceArn / aws:SourceAccount or eks-cluster-* session-tag conditions may limit which clusters and namespaces
-      can use it.
-  - id: passrole_condition_key
-    description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict passing the role to EKS.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Scope iam:PassRole for EKS Pod Identity to specific roles with iam:PassedToService=pods.eks.amazonaws.com,
-    and pin trusted roles to cluster ARNs and namespaces with session-tag conditions.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html
-  - https://docs.aws.amazon.com/eks/latest/userguide/pod-id-role.html
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_CreatePodIdentityAssociation.html
-  notes: The edge is the AWS half; the Kubernetes half (ability to run a pod with the service account) is evaluated in
-    the cluster's K8s snapshot.
-
-- id: aws-eks-passrole-createnodegroup
-  provider: aws
-  service: eks
-  title: Create a managed node group with a passed node role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#iampassrole-ekscreatenodegroup--ekscreatefargateprofile--run-pods-on-capacity-you-control
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting ec2.amazonaws.com by launching an EKS
-    managed node group with it and reaching the node.
-  requires:
-    all_of:
-    - action: eks:CreateNodegroup
-      resource: "arn:aws:eks:*:{target.account}:cluster/*"
-    - action: iam:PassRole
-      resource: "{target.arn}"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: ec2.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting ec2.amazonaws.com passable as EKS node roles in {account}"
-  preconditions:
-  - eks_cluster_exists
-  conditions:
-  - id: node_access
-    description: The source must execute code on the node to read the instance role credentials (remote access key, a
-      launch template it controls, or a pod scheduled onto the node with host access).
-  - id: subnet_and_launch_template_permissions
-    description: Using a custom launch template or remote access needs the corresponding EC2 permissions and reachable
-      subnets.
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions may restrict passing the role to EKS.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Scope iam:PassRole for node roles to the approved node role and restrict eks:CreateNodegroup to platform
-    administrators.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/userguide/create-managed-node-group.html
-  - https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html
-  notes: Pods later scheduled onto the node also expose their service-account tokens and Pod Identity credentials. The
-    Fargate variant is not modelled as an edge because the Fargate pod execution role (trusting
-    eks-fargate-pods.amazonaws.com) is used by the Fargate infrastructure for image pulls and logging and its
-    credentials are not exposed to pods.
-
-- id: aws-eks-associateidentityproviderconfig-privileged-group
-  provider: aws
-  service: eks
-  title: Associate an attacker-controlled OIDC identity provider with an EKS cluster that binds a privileged RBAC group
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-eks-post-exploitation/README.md#eksassociateidentityproviderconfig-with-a-matching-privileged-rbac-group
-  source_revision: 6fb9ac51fd
-  summary: The source can become Kubernetes cluster-admin of an EKS cluster by making the cluster trust an OIDC issuer
-    it controls and presenting tokens whose group claim matches an existing privileged RBAC binding.
-  requires:
-    all_of:
-    - action: eks:AssociateIdentityProviderConfig
-      resource: "{target.scope}"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-    scope: cluster
-    aggregate_as: "Cluster-admin of EKS clusters whose OIDC identity providers the source can associate"
-  conditions:
-  - id: privileged_group_binding
-    description: A pre-existing RoleBinding or ClusterRoleBinding must grant high privileges to a group (or to all
-      authenticated users) that the configured group claim and prefix can produce; EKS rejects system-prefixed username
-      and group prefixes, so system:masters cannot be targeted directly.
-  - id: issuer_controlled
-    description: The source must operate an OIDC issuer reachable by EKS and mint tokens whose audience and required
-      claims match the association.
-  - id: api_endpoint_reachable
-    description: The source must reach the Kubernetes API endpoint (public endpoint CIDR allowlist or private VPC
-      access).
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict eks:AssociateIdentityProviderConfig to platform administrators, alert on new identity provider
-    associations and avoid RBAC bindings that grant broad privileges to groups an external issuer could assert.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/userguide/authenticate-oidc-identity-provider.html
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_AssociateIdentityProviderConfig.html
-  notes: The association creates authentication only; authorization comes from existing RBAC bindings, which are not
-    collected as AWS facts, hence conditional.
-
-- id: aws-eks-associateaccesspolicy-existing-entry
-  provider: aws
-  service: eks
-  title: Associate a cluster-admin access policy with an existing EKS access entry the source controls
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-eks-post-exploitation/README.md#abusing-access-entries
-  source_revision: 6fb9ac51fd
-  summary: The source can become Kubernetes cluster-admin of an EKS cluster by associating AmazonEKSClusterAdminPolicy
-    with an already existing access entry for a principal it can authenticate as, without creating an entry.
-  requires:
-    all_of:
-    - action: eks:AssociateAccessPolicy
-      resource: "arn:aws:eks:*:{target.account}:access-entry/{target.name}/*"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-      eks_authentication_mode:
-      - API
-      - API_AND_CONFIG_MAP
-    scope: cluster
-    aggregate_as: "Cluster-admin of EKS clusters whose existing access entries the source can extend"
-    outcome: permission_grant
-  conditions:
-  - id: existing_entry_for_controlled_principal
-    description: A STANDARD access entry must already exist for an IAM principal the source can authenticate as (often
-      itself, created by a pipeline or the cluster creator bootstrap entry).
-  - id: associate_policy_condition_keys
-    description: eks:policyArn and eks:accessScope condition keys can restrict which access policy and scope may be
-      associated.
-  - id: api_endpoint_reachable
-    description: The source must reach the Kubernetes API endpoint (public endpoint CIDR allowlist or private VPC
-      access).
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Treat eks:AssociateAccessPolicy as a cluster-admin grant even without eks:CreateAccessEntry and use the
-    eks:policyArn / eks:accessScope condition keys to forbid AmazonEKSClusterAdminPolicy.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_AssociateAccessPolicy.html
-  - https://docs.aws.amazon.com/eks/latest/userguide/access-policies.html
-  notes: Variant of aws-eks-createaccessentry-associateaccesspolicy without the create step; access entries are not
-    inventoried per principal, so whether a controlled entry exists is a condition.
 
 - id: aws-eks-updateclusterconfig-enable-access-entries
   provider: aws
   service: eks
   title: Switch a CONFIG_MAP EKS cluster to access-entry authentication and grant the source cluster-admin
-  source:
-    src/pentesting-cloud/aws-security/aws-post-exploitation/aws-eks-post-exploitation/README.md#abusing-access-entries
-  source_revision: 6fb9ac51fd
-  summary: The source can become Kubernetes cluster-admin of an EKS cluster that only uses the aws-auth ConfigMap by
-    enabling access-entry authentication and then creating an access entry with AmazonEKSClusterAdminPolicy for itself.
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#associate-a-cluster-admin-access-policy-with-an-existing-eks-access-entry-the-source-controls
+  source_revision: b587e6bd26
+  summary: The source can become Kubernetes cluster-admin of an EKS cluster that only uses the aws-auth ConfigMap by enabling access-entry authentication and then creating an access entry with AmazonEKSClusterAdminPolicy for itself.
   requires:
     all_of:
-    - action: eks:UpdateClusterConfig
-      resource: "{target.scope}"
-    - action: eks:CreateAccessEntry
-      resource: "{target.scope}"
-    - action: eks:AssociateAccessPolicy
-      resource: "arn:aws:eks:*:{target.account}:access-entry/{target.name}/*"
+      - action: eks:UpdateClusterConfig
+        resource: "{target.scope}"
+        request_context:
+          eks:authenticationMode: API_AND_CONFIG_MAP
+      - action: eks:CreateAccessEntry
+        resource: "{target.scope}"
   target:
     kind: k8s_cluster_admin
     selector:
       any_principal_in_scope: true
       eks_authentication_mode:
-      - CONFIG_MAP
+        - CONFIG_MAP
     scope: cluster
     aggregate_as: "Cluster-admin of CONFIG_MAP EKS clusters whose authentication mode the source can change"
     outcome: permission_grant
-  conditions:
-  - id: mode_change_propagates
-    description: The authentication mode change to API_AND_CONFIG_MAP is one-way and must complete before access entries
-      can be created.
-  - id: associate_policy_condition_keys
-    description: eks:policyArn and eks:accessScope condition keys can restrict which access policy and scope may be
-      associated.
-  - id: api_endpoint_reachable
-    description: The source must reach the Kubernetes API endpoint (public endpoint CIDR allowlist or private VPC
-      access).
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict eks:UpdateClusterConfig to platform administrators, migrate clusters to API authentication
-    deliberately and alert on authenticationMode changes.
-  references:
-  - https://docs.aws.amazon.com/eks/latest/userguide/setting-up-access-entries.html
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_UpdateClusterConfig.html
-  notes: The existing exclusion of eks:UpdateClusterConfig on the privesc page covers only endpoint exposure; this entry
-    models the authentication-mode change that unlocks the access-entry APIs.
-- id: aws-eks-updatepodidentityassociation-passrole
-  provider: aws
-  service: eks
-  title: Repoint an existing EKS Pod Identity association to another passable role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksupdatepodidentityassociation-iampassrole--repoint-an-existing-association-role-swap-cross-account-chaining-tag-guardrail-bypass
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting pods.eks.amazonaws.com by swapping it into
-    an existing Pod Identity association whose pods it can run or control.
-  requires:
-    all_of:
-    - action: eks:UpdatePodIdentityAssociation
-      resource: arn:aws:eks:*:{target.account}:podidentityassociation/*
-    - action: iam:PassRole
-      resource: '{target.arn}'
-    - action: iam:GetRole
-      resource: '{target.arn}'
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: pods.eks.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: Roles trusting pods.eks.amazonaws.com swappable into Pod Identity associations in {account}
   preconditions:
-  - eks_cluster_exists
+    - eks_new_self_access_entry_can_receive_cluster_admin
   conditions:
-  - id: pod_execution_for_association
-    description: The source must run or control a pod using the association's service account, or the gained role only
-      reaches the existing workload.
-  - id: target_role_chaining
-    description: A targetRoleArn on the association makes EKS chain into a role in another account; that role must trust
-      the association role.
-  - id: session_tag_conditions
-    description: Disabling session tags on the association can bypass trust conditions that expect eks-cluster-* tags
-      only when those conditions use *IfExists or Null checks.
-  - id: cross_account_chain
-    description: A cross-account targetRoleArn requires the actual association roleArn to allow sts:AssumeRole and the
-      target role to trust that role; do not infer this from PassRole alone.
+    - id: eligible_cluster_platform
+      description: The cluster must be ACTIVE and its Kubernetes and EKS platform versions must support access entries.
+    - id: mode_change_propagates
+      description: The authentication mode change to API_AND_CONFIG_MAP is one-way and must complete before access entries can be created.
+    - id: associate_policy_condition_keys
+      description: eks:policyArn and eks:accessScope condition keys can restrict which access policy and scope may be associated.
+    - id: api_endpoint_reachable
+      description: The source must reach the Kubernetes API endpoint (public endpoint CIDR allowlist or private VPC access).
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict eks:UpdatePodIdentityAssociation as tightly as eks:CreatePodIdentityAssociation and scope
-    iam:PassRole to the intended roles.
+  mitigation: Restrict eks:UpdateClusterConfig to platform administrators, migrate clusters to API authentication deliberately and alert on authenticationMode changes.
   references:
-  - https://docs.aws.amazon.com/eks/latest/APIReference/API_UpdatePodIdentityAssociation.html
-  notes: Useful when CreatePodIdentityAssociation is denied but updates are allowed.
-- id: aws-eks-updatepodidentityassociation-targetrole
+    - https://docs.aws.amazon.com/eks/latest/userguide/setting-up-access-entries.html
+    - https://docs.aws.amazon.com/eks/latest/APIReference/API_UpdateClusterConfig.html
+  notes: The existing exclusion of eks:UpdateClusterConfig on the privesc page covers only endpoint exposure; this entry models the authentication-mode change that unlocks the access-entry APIs.
+
+- id: aws-eks-associateaccesspolicy-existing-entry
   provider: aws
   service: eks
-  title: Repoint EKS Pod Identity targetRoleArn to a cross-account role
-  summary: Credentials of a target role in another account reached through the Pod Identity intermediate role.
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksupdatepodidentityassociation-iampassrole--repoint-an-existing-association-role-swap-cross-account-chaining-tag-guardrail-bypass
-  source_revision: 0b36331
+  title: Give the source's existing EKS access entry cluster administrator access
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#associate-a-cluster-admin-access-policy-with-an-existing-eks-access-entry-the-source-controls
+  source_revision: b587e6bd26
+  summary: The source can associate AmazonEKSClusterAdminPolicy at cluster scope with its own existing STANDARD access entry.
   requires:
     all_of:
-    - action: eks:UpdatePodIdentityAssociation
-      resource: '*'
-    - action: iam:PassRole
-      resource: '*'
-    - action: iam:GetRole
-      resource: '*'
+      - action: eks:AssociateAccessPolicy
+        resource: "*"
+        request_context:
+          eks:policyArn: arn:{source.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
+          eks:accessScope: cluster
   target:
-    kind: aws_verified_authority
+    kind: k8s_cluster_admin
     selector:
-      aws_challenge_fact: aws-eks-updatepodidentityassociation-targetrole
-    scope: any
+      any_principal_in_scope: true
+      eks_authentication_mode:
+        - API
+        - API_AND_CONFIG_MAP
+    scope: cluster
+    aggregate_as: Cluster-admin of EKS clusters with a controlled access entry
+    outcome: permission_grant
+  preconditions:
+    - eks_existing_self_access_entry_can_receive_cluster_admin
   conditions:
-  - id: condition_1
-    description: An existing association supplies or is updated to an intermediate role that trusts
-      pods.eks.amazonaws.com with sts:AssumeRole and sts:TagSession.
-  - id: condition_2
-    description: The intermediate role may sts:AssumeRole into a targetRoleArn in another account and that target trusts
-      the intermediate role; the source controls a pod using the association’s service account.
-  - id: condition_3
-    description: Session-tag conditions must be evaluated as they actually apply; removing tags only bypasses
-      IfExists/Null-style conditions, not mandatory tag checks.
-  - id: verified_collector_fact
-    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
-      runtime prerequisites; without it the result is UNKNOWN.
+    - id: api_endpoint_reachable
+      description: The source must reach the Kubernetes API endpoint to use the granted cluster privileges.
+    - id: access_entry_identity_current
+      description: An entry for a deleted and recreated IAM principal has a stale internal identity even when its ARN still matches.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
-  severity: high
-  mitigation: Restrict the required actions to reviewed resources and principals.
-  references: []
-  notes: Required collector evidence is absent from current snapshots; missing evidence remains UNKNOWN/unresolved.
+  severity: critical
+  mitigation: Restrict AssociateAccessPolicy on access entries and use eks:policyArn and eks:accessScope conditions to limit administrator grants.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/access-policies.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_eks.html
+    - https://docs.aws.amazon.com/eks/latest/APIReference/API_AccessEntry.html
+  notes: The evaluator joins a recorded STANDARD entry to the source's exact IAM principal, uses its accessEntryArn for authorization, and ignores an entry that already has cluster-wide AmazonEKSClusterAdminPolicy.

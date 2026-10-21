@@ -1,39 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS greengrass privilege escalation techniques.
 # Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
 
-- id: aws-greengrass-createcomponentversion-createdeployment-tes-role
-  provider: aws
-  service: greengrass
-  title: Deploy a malicious Greengrass component to core devices and use their token exchange role
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-greengrass-post-exploitation/README.md#greengrasscreatecomponentversion--greengrasscreatedeployment--run-code-on-edge-core-devices
-  source_revision: 6fb9ac51fd
-  summary: The source can run code on every Greengrass core device of a thing group and thereby obtain the privileges of the token exchange role those devices assume through the IoT credential provider.
-  requires:
-    all_of:
-      - action: greengrass:CreateComponentVersion
-        resource: "*"
-      - action: greengrass:CreateDeployment
-        resource: "*"
-      - action: iot:DescribeThingGroup
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: credentials.iot.amazonaws.com
-    scope: same_account
-    aggregate_as: "Greengrass token exchange roles (roles trusting credentials.iot.amazonaws.com) in {account}"
-    outcome: workload_execution
-  conditions:
-    - id: tes_role_alias
-      description: Core devices in the targeted thing group must be configured with a token exchange role alias pointing at the target role.
-    - id: devices_online
-      description: Core devices must be online to receive the deployment, and the component artifact source must be fetchable by them.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict greengrass:CreateComponentVersion and greengrass:CreateDeployment to the device-management pipeline, keep token exchange roles least-privileged and alert on deployments created outside that pipeline.
-  references:
-    - https://docs.aws.amazon.com/greengrass/v2/developerguide/device-service-role.html
-    - https://docs.aws.amazon.com/greengrass/v2/APIReference/API_CreateDeployment.html
-  notes: The page frames the impact as edge-device code execution; the IAM gain is the token exchange role available to components on the device. The role-alias to device mapping is not collected, so all roles trusting credentials.iot.amazonaws.com are candidates.

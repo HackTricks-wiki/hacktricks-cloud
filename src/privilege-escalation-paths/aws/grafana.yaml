@@ -1,20 +1,24 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # Amazon Managed Grafana application-plane privilege escalation techniques (aws_service_plane_admin targets).
 # Source: hacktricks-cloud aws-managed-grafana-privesc/README.md (rev 171e422299).
-# Workspaces are not collected: every edge is one unresolved placeholder per account.
+# Collected workspace summaries provide ARN, status and Grafana version.
 
 - id: aws-grafana-createworkspaceapikey-admin
   provider: aws
   service: grafana
   title: Mint an ADMIN Grafana workspace API key
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#grafanacreateworkspaceapikey--arbitrary-role-legacy-api-key
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#grafanacreateworkspaceapikey--arbitrary-role-legacy-api-key
   source_revision: 171e422299
-  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by minting a legacy API key with a
-    chosen role.
+  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by minting a legacy API key with a chosen role.
   requires:
     all_of:
-    - action: grafana:CreateWorkspaceApiKey
-      resource: "{target.resource_arn}"
+      - action: grafana:CreateWorkspaceApiKey
+        resource: "{target.resource_arn}"
   target:
     kind: aws_service_plane_admin
     selector:
@@ -23,12 +27,13 @@
     scope: same_account
     aggregate_as: "Managed Grafana administrators in {account}"
     grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_api_key_workspace_eligible
   conditions:
-  - id: legacy_api_keys_supported
-    description: The workspace must still support legacy API keys (AWS is removing them for Grafana 9+ workspaces);
-      workspace network access controls still apply.
+    - id: legacy_api_keys_supported
+      description: Grafana versions before 12 support API keys through the AWS API; workspace network access controls still apply.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict grafana:CreateWorkspaceApiKey, migrate to service accounts and alert on ADMIN key creation.
@@ -38,17 +43,15 @@
   provider: aws
   service: grafana
   title: Mint a Grafana service-account token (optionally for a new ADMIN account)
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#createworkspaceserviceaccounttoken--existing-or-attacker-created-service-account
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#createworkspaceserviceaccounttoken--existing-or-attacker-created-service-account
   source_revision: 171e422299
-  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by creating an ADMIN service account
-    and minting a token for it.
+  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by creating an ADMIN service account and minting a token for it.
   requires:
     all_of:
-    - action: grafana:CreateWorkspaceServiceAccount
-      resource: "{target.resource_arn}"
-    - action: grafana:CreateWorkspaceServiceAccountToken
-      resource: "{target.resource_arn}"
+      - action: grafana:CreateWorkspaceServiceAccount
+        resource: "{target.resource_arn}"
+      - action: grafana:CreateWorkspaceServiceAccountToken
+        resource: "{target.resource_arn}"
   target:
     kind: aws_service_plane_admin
     selector:
@@ -57,30 +60,29 @@
     scope: same_account
     aggregate_as: "Managed Grafana administrators in {account}"
     grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_service_account_workspace_eligible
   conditions:
-  - id: grafana_9_or_later
-    description: Service accounts require Grafana 9 or later; workspace network access controls still apply.
+    - id: grafana_9_or_later
+      description: Service accounts require Grafana 9 or later; workspace network access controls still apply.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict grafana:CreateWorkspaceServiceAccount and CreateWorkspaceServiceAccountToken and inventory
-    workspace service accounts and tokens.
-  notes: Token vending alone (CreateWorkspaceServiceAccountToken for an existing service account) reaches only that
-    account's Grafana role, which is not modelled as ADMIN; ADMIN is guaranteed only with CreateWorkspaceServiceAccount.
+  mitigation: Restrict grafana:CreateWorkspaceServiceAccount and CreateWorkspaceServiceAccountToken and inventory workspace service accounts and tokens.
+  notes: Token vending alone (CreateWorkspaceServiceAccountToken for an existing service account) reaches only that account's Grafana role, which is not modelled as ADMIN; ADMIN is guaranteed only with CreateWorkspaceServiceAccount.
 
 - id: aws-grafana-updateworkspaceauthentication-saml-admin
   provider: aws
   service: grafana
   title: Add an attacker-controlled SAML administrator to an existing Grafana workspace
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md#grafanaupdateworkspaceauthentication--attacker-controlled-saml-idp
-  source_revision: 6fb9ac51fd
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#grafanaupdateworkspaceauthentication--attacker-controlled-saml-idp
+  source_revision: b587e6bd26
   summary: The source can gain Grafana administrator access to a workspace through a SAML identity provider it controls.
   requires:
     all_of:
-    - action: grafana:UpdateWorkspaceAuthentication
-      resource: "{target.resource_arn}"
+      - action: grafana:UpdateWorkspaceAuthentication
+        resource: "{target.resource_arn}"
   target:
     kind: aws_service_plane_admin
     selector:
@@ -90,85 +92,17 @@
     aggregate_as: Managed Grafana workspace administrators in {account}
     outcome: application_admin
     grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_saml_workspace_active
   conditions:
-  - id: saml_assertions
-    description: The source must control valid SAML metadata and assertions mapped to the workspace ADMIN role and be
-      able to reach its endpoint.
+    - id: saml_assertions
+      description: The source must control valid SAML metadata and assertions mapped to the workspace ADMIN role and be able to reach its endpoint.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict workspace authentication updates and alert on SAML metadata and administrator role-mapping
-    changes.
+  mitigation: Restrict workspace authentication updates and alert on SAML metadata and administrator role-mapping changes.
   references:
-  - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdateWorkspaceAuthentication.html
-  notes: The grant is limited to Grafana's application plane and configured data sources; it does not issue IAM
-    credentials.
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdateWorkspaceAuthentication.html
+  notes: The grant is limited to Grafana's application plane and configured data sources; it does not issue IAM credentials.
 
-- id: aws-grafana-updatepermissions-sso-admin
-  provider: aws
-  service: grafana
-  title: Grant a controlled Identity Center identity Grafana administrator access
-  source:
-    src/pentesting-cloud/aws-security/aws-persistence/aws-managed-grafana-persistence/README.md#grafanaupdatepermissions--iam-identity-center-administrator
-  source_revision: 6fb9ac51fd
-  summary: The source can gain Grafana administrator access to a workspace by granting ADMIN to a controlled Identity
-    Center user or group.
-  requires:
-    all_of:
-    - action: grafana:UpdatePermissions
-      resource: "{target.resource_arn}"
-  target:
-    kind: aws_service_plane_admin
-    selector:
-      service_plane: grafana
-      resource_permission_covers_target: grafana:UpdatePermissions
-    scope: same_account
-    aggregate_as: Managed Grafana workspace administrators in {account}
-    outcome: application_admin
-    grants: [Grafana ADMIN]
-  conditions:
-  - id: controlled_sso_identity
-    description: The workspace must enable IAM Identity Center and the source must control an existing user or group
-      member that can authenticate to it.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict grafana:UpdatePermissions and review ADMIN grants to users and groups in each workspace.
-  references:
-  - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdatePermissions.html
-  notes: The grant is limited to Grafana's application plane; an individual or group still needs a valid Identity Center
-    sign-in.
-- id: aws-s05-01-token-for-an-existing-admin-grafana-service-account
-  provider: aws
-  service: managed-grafana
-  title: Token for an existing ADMIN Grafana service account
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#createworkspaceserviceaccounttoken--existing-or-attacker-created-service-account
-  source_revision: 0b36331
-  summary: 'Conditional gain: ADMIN bearer token.'
-  requires:
-    all_of:
-    - action: grafana:CreateWorkspaceServiceAccountToken
-      resource: '*'
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-s05-01-token-for-an-existing-admin-grafana-service-account
-    scope: same_account
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Known existing ADMIN service-account ID; Grafana 9+; endpoint reachable.
-  - id: verified_collector_fact
-    description: The requested collector fact must bind the source, exact resource, newly reachable authority and all
-      runtime prerequisites; without it the result is UNKNOWN.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action to approved principals and exact resources.
-  references: []
-  notes: Draft only. Missing exact evidence remains UNKNOWN; replace placeholder with the typed selector or collector
-    fact described alongside this draft. Required collector evidence is absent from current snapshots; missing evidence
-    remains UNKNOWN/unresolved.

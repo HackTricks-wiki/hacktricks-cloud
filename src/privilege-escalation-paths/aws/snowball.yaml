@@ -1,72 +1,12 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS Snowball Edge job management privilege escalation techniques.
 # Source: hacktricks-cloud aws-snowball-privesc/README.md (rev 171e422299).
 # Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Bounded impact: the job role is used
 # only to read the selected S3 data onto a shipped device; no credentials are returned.
 
-- id: aws-snowball-passrole-createjob
-  provider: aws
-  service: snowball
-  title: Create a Snowball export job through a passed role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-snowball-privesc/README.md#snowballcreatejob--iampassrole--create-a-physical-s3-export-through-a-privileged-role
-  source_revision: 171e422299
-  summary: The source can exercise the S3 read (and KMS decrypt) privileges of a passable role trusting importexport.amazonaws.com by ordering an export job that copies data onto a physical device.
-  requires:
-    all_of:
-      - action: snowball:CreateJob
-        resource: "*"
-      - action: iam:PassRole
-        resource: "{target.arn}"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: importexport.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting importexport.amazonaws.com passable in {account}"
-  conditions:
-    - id: physical_delivery
-      description: The device must be shipped to an address the source can receive (snowball:CreateAddress when none is stored) and unlocked with the job manifest and unlock code (snowball:GetJobManifest, snowball:GetJobUnlockCode).
-    - id: account_eligibility
-      description: The account/Region must be eligible for Snow export jobs and the device/shipping combination supported; provisioning takes days to weeks and incurs charges.
-    - id: trust_external_id
-      description: The documented trust constrains sts:ExternalId to AWSIE; roles requiring another external id are not usable.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: low
-  mitigation: Restrict snowball:CreateJob/UpdateJob and iam:PassRole on importexport roles, and scope Snow roles to the buckets intended for export.
-  references:
-    - https://docs.aws.amazon.com/snowball/latest/developer-guide/security-iam.html
-  notes: Bounded impact - physical exfiltration of S3 data reachable by the role; not code execution or credential theft.
-
-- id: aws-snowball-updatejob-existing-role
-  provider: aws
-  service: snowball
-  title: Retarget an existing Snowball export job that keeps its stored role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-snowball-privesc/README.md#snowballupdatejob--make-an-existing-snow-role-export-additional-s3-data-to-another-address
-  source_revision: 171e422299
-  summary: The source can exercise the S3 read privileges of the role stored on an existing export job in state New by replacing its S3 selection and shipping address.
-  requires:
-    all_of:
-      - action: snowball:UpdateJob
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: importexport.amazonaws.com
-      via_resource_type: importexport_job
-    scope: same_account
-    aggregate_as: "Roles of Snowball export jobs in {account}"
-  conditions:
-    - id: job_state_new
-      description: The job must be an EXPORT job still in state New (normally about an hour after creation).
-    - id: physical_delivery
-      description: The source must receive the device and obtain the job manifest and unlock code.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: low
-  mitigation: Restrict snowball:UpdateJob and monitor job updates that change addresses or resources.
-  references:
-    - https://docs.aws.amazon.com/snowball/latest/api-reference/API_UpdateJob.html
-  notes: No iam:PassRole is needed while RoleARN is unchanged. Snowball job management supports only Resource "*".
+[]

@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # Amazon WorkSpaces (WorkSpaces Instances) privilege escalation techniques.
 # Source: hacktricks-cloud aws-workspaces-privesc/README.md (rev 171e422299).
 
@@ -6,19 +12,16 @@
   service: workspaces-instances
   title: Create a WorkSpaces instance with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workspaces-privesc/README.md#workspaces-instancescreateworkspaceinstance-iampassrole-ec2runinstances
-  source_revision: 0b36331
-  summary: The source can obtain the privileges of any passable instance-profile role trusting ec2.amazonaws.com
-    by launching a WorkSpaces instance whose user data it controls.
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable instance-profile role trusting ec2.amazonaws.com by launching a WorkSpaces instance whose user data it controls.
   requires:
     all_of:
-    - action: workspaces-instances:CreateWorkspaceInstance
-      resource: '*'
-    - action: iam:PassRole
-      resource: '{target.arn}'
-    - action: ec2:RunInstances
-      resource: '*'
-    - action: ec2:DescribeImages
-      resource: '*'
+      - action: workspaces-instances:CreateWorkspaceInstance
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ec2:RunInstances
+        resource: "*"
   target:
     kind: aws_role
     selector:
@@ -26,89 +29,20 @@
       has_instance_profile: true
       resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: Instance-profile roles passable in {account}
+    aggregate_as: "Instance-profile roles passable in {account}"
+    outcome: workload_execution
   conditions:
-  - id: forward_access_session
-    description: ec2:RunInstances is evaluated through a forward access session; aws:CalledVia conditions must admit
-      workspaces-instances.amazonaws.com.
-  - id: service_linked_role
-    description: The AWSServiceRoleForWorkSpacesInstances service-linked role must exist (or the source needs iam:CreateServiceLinkedRole).
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions may restrict which roles can be passed.
-  - id: runinstances_launch_resources
-    description: Check ec2:RunInstances on the exact AMI, subnet, security group, volume, network interface and
-      prospective instance; include aws:CalledVia, CreateTags, KMS and service-linked-role prerequisites where applicable.
+    - id: forward_access_session
+      description: ec2:RunInstances is evaluated through a forward access session; aws:CalledVia conditions must admit workspaces-instances.amazonaws.com.
+    - id: service_linked_role
+      description: The AWSServiceRoleForWorkSpacesInstances service-linked role must exist (or the source needs iam:CreateServiceLinkedRole).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on instance-profile roles and treat workspaces-instances:CreateWorkspaceInstance
-    like ec2:RunInstances.
+  mitigation: Restrict iam:PassRole on instance-profile roles and treat workspaces-instances:CreateWorkspaceInstance like ec2:RunInstances.
   references:
-  - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
-  notes: Equivalent reach to ec2:RunInstances + iam:PassRole; the source still needs RunInstances on the AMI, network
-    and instance resources.
-- id: aws-s05-workspacesupdateworkspaceimagepermission-share-a-custom-image-with-an
-  provider: aws
-  service: workspaces
-  title: '`workspaces:UpdateWorkspaceImagePermission` — share a custom image with an attacker account'
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-post-exploitation/README.md#workspacesupdateworkspaceimagepermission--share-a-custom-image-with-an-attacker-account
-  source_revision: 0b36331
-  summary: The source may obtain Identity associated with valid secret in copied WorkSpace image when the exact documented prerequisite is verified.
-  requires:
-    all_of:
-    - action: workspaces:UpdateWorkspaceImagePermission
-      resource: '*'
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-s05-workspacesupdateworkspaceimagepermission-share-a-custom-image-with-an
-    scope: same_account
-    aggregate_as: Verified Identity associated with valid secret in copied WorkSpace image in {account}
-    grants:
-    - Identity associated with valid secret in copied WorkSpace image
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Exact custom image shared for copy to attacker account, attacker copies it, and disk actually holds still-valid secrets. Existing exclusion ignores documented secret and domain-credential theft; no definite IAM edge from share alone. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
-  references:
-  - https://docs.aws.amazon.com/workspaces/latest/api/API_UpdateWorkspaceImagePermission.html
-  - https://docs.aws.amazon.com/workspaces/latest/adminguide/share-custom-image.html
-  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
-- id: aws-s05-workspacesmodifysamlproperties-modifycertificatebasedauthproperties-we
-  provider: aws
-  service: workspaces
-  title: '`workspaces:ModifySamlProperties` / `ModifyCertificateBasedAuthProperties` — weaken desktop authentication'
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-post-exploitation/README.md#workspacesmodifysamlproperties--modifycertificatebasedauthproperties--weaken-desktop-authentication
-  source_revision: 0b36331
-  summary: The source may obtain Victim WorkSpaces desktop session when the exact documented prerequisite is verified.
-  requires:
-    any_of:
-    - - action: workspaces:ModifySamlProperties
-        resource: '*'
-    - - action: workspaces:ModifyCertificateBasedAuthProperties
-        resource: '*'
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-s05-workspacesmodifysamlproperties-modifycertificatebasedauthproperties-we
-    scope: same_account
-    aggregate_as: Verified Victim WorkSpaces desktop session in {account}
-    grants:
-    - Victim WorkSpaces desktop session
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Exact directory/workspace auth configuration accepts attacker-controlled IdP assertion or downgraded certificate path, and victim desktop access actually succeeds. ModifyCertificateBasedAuthProperties is an independent alternative; ModifyWorkspaceAccessProperties only changes device/network restrictions. Missing or unverified evidence is UNKNOWN and must not emit a definite edge.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action on the exact resource and remove unnecessary access.
-  references:
-  - https://docs.aws.amazon.com/workspaces/latest/api/API_UpdateWorkspaceImagePermission.html
-  - https://docs.aws.amazon.com/workspaces/latest/adminguide/share-custom-image.html
-  notes: Requires an exact source/target evidence record; absent facts remain UNKNOWN.
+    - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
+  notes: Equivalent reach to ec2:RunInstances + iam:PassRole; the source still needs RunInstances on the AMI, network and instance resources.

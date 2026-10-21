@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # Amazon GameLift Streams privilege escalation techniques.
 # Source: hacktricks-cloud aws-gamelift-streams-privesc/README.md (rev 171e422299).
 # Session roles must trust gameliftstreams.amazonaws.com and be named GameLiftStreams-* (StartStreamSession API reference).
@@ -6,20 +12,18 @@
   provider: aws
   service: gameliftstreams
   title: Start a stream session of a controlled application with a passed role
-  source:
-    src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamsstartstreamsession--iampassrole-with-attacker-controlled-application-code
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamsstartstreamsession--iampassrole-with-attacker-controlled-application-code
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable GameLiftStreams-* roles trusting
-    gameliftstreams.amazonaws.com when it can stream an application whose code it controls.
+  summary: The source can obtain the privileges of passable GameLiftStreams-* roles trusting gameliftstreams.amazonaws.com when it can stream an application whose code it controls.
   requires:
     all_of:
-    - action: iam:PassRole
-      resource: "{target.arn}"
+      - action: iam:PassRole
+        resource: "{target.arn}"
     any_of:
-    - - action: gameliftstreams:StartStreamSession
-        resource: "*"
-    - - action: gameliftstreams:CreateStreamUrl
-        resource: "*"
+      - - action: gameliftstreams:StartStreamSession
+          resource: "*"
+      - - action: gameliftstreams:CreateStreamUrl
+          resource: "*"
   target:
     kind: aws_role
     selector:
@@ -28,56 +32,17 @@
       resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "GameLiftStreams-* roles passable in {account}"
+    outcome: workload_execution
   conditions:
-  - id: controlled_application
-    description: An application whose content the source controls must be associated with an active stream group with
-      capacity (creating or associating one needs further GameLift Streams and S3 permissions).
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: controlled_application
+      description: An application whose content the source controls must be associated with an active stream group with capacity (creating or associating one needs further GameLift Streams and S3 permissions).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
-  - scp_or_boundary_deny
+    - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict iam:PassRole on GameLiftStreams-* roles to the session backend and restrict who can create or
-    update applications.
+  mitigation: Restrict iam:PassRole on GameLiftStreams-* roles to the session backend and restrict who can create or update applications.
   references:
-  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
-  notes: gameliftstreams:CreateStreamUrl is not in aws_permissions_cat.yaml; HackTricks documents it as an alternative
-    path that also takes a RoleArn.
-
-- id: aws-audit-gameliftstreams-bearer-url
-  provider: aws
-  service: gameliftstreams
-  title: Use a GameLift Streams bearer URL
-  source: src/pentesting-cloud/aws-security/aws-services/aws-gamelift-streams-enum.md#enumerate-bearer-stream-urls
-  summary: The source obtains a new application session without the creator’s AWS credentials.
-  requires:
-    any_of:
-    - - action: gameliftstreams:ListStreamUrls
-        resource: '*'
-    - - action: gameliftstreams:GetStreamUrl
-        resource: arn:aws:gameliftstreams:*:{account}:streamgroup/*
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-audit-gameliftstreams-bearer-url
-    scope: same_account
-    aggregate_as: Verified application sessions reachable through GameLift Streams bearer URLs
-    outcome: scope_control
-    grants:
-    - The source obtains a new application session without the creator’s AWS credentials.
-  conditions:
-  - id: active_bearer
-    description: The URL must be active, unexpired, have remaining uses, and start a distinct application session.
-      A role ARN shown in metadata does not by itself grant that IAM role to the browser session.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Scope the listed actions to approved resources and review linked targets and effective authorization.
-  notes: No definite edge from IAM permission alone. An exact active bearer URL and target application-session authority
-    must be verified; missing collector evidence is UNKNOWN.
-  source_revision: 0b36331
-  references:
-  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_ListStreamUrls.html
-  - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_GetStreamUrl.html
+    - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
+  notes: gameliftstreams:CreateStreamUrl is not in aws_permissions_cat.yaml; HackTricks documents it as an alternative path that also takes a RoleArn.

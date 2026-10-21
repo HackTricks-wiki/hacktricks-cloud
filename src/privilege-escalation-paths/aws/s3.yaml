@@ -1,194 +1,82 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # Amazon S3 privilege escalation techniques (artifact tampering only).
 # Source: hacktricks-cloud aws-s3-privesc/README.md (rev a53b46392c).
 # Uses {target.artifact_arn} and via_artifact_type (see header of lambda.yaml). S3 techniques only count when the
 # written object is code/state that ANOTHER principal later executes; pure bucket data access is in _excluded_b.yaml.
 # Service-specific S3 artifact entries live in glue.yaml, emr.yaml, sagemaker.yaml and elasticbeanstalk.yaml.
 
-- id: aws-s3-cloudformation-template-hijack
+- id: aws-s3-putbucketpolicy-self-grant
   provider: aws
   service: s3
-  title: Race-replace CloudFormation templates uploaded to a template bucket
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketnotification-s3putobject-s3getobject
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the CloudFormation stack service role (or of the deploying principal when no service role is used) for stacks deployed from a template bucket it controls.
+  title: Grant the source principal GetObject on an exact S3 prefix through a bucket policy
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketpolicy--grant-your-principal-new-object-access
+  source_revision: e5a7b415ff
+  summary: The source uses s3:PutBucketPolicy on a same-account bucket to add a resource-policy Allow naming itself, gaining previously denied s3:GetObject on the reviewed prefix.
+  source_kind: [aws_user, aws_role]
   requires:
     all_of:
-      - action: s3:PutBucketNotification
-        resource: "{target.artifact_arn}"
-      - action: s3:PutObject
-        resource: "{target.artifact_arn}"
-      - action: s3:GetObject
-        resource: "{target.artifact_arn}"
-  target:
-    kind: aws_role
-    selector:
-      attached_to_service: cloudformation
-      via_artifact_type: s3_object
-    scope: same_account
-    aggregate_as: "CloudFormation deployers using writable template buckets in {account}"
-  conditions:
-    - id: deployment_occurs
-      description: A new stack create/update from that bucket must occur, and the replacement must land in the window between upload and deployment.
-    - id: notification_destination
-      description: The source needs a notification destination (e.g. a Lambda function) able to receive events from the bucket and write back to it.
-    - id: deployer_without_service_role
-      description: When no stack service role is used, CloudFormation acts with the deploying principal's credentials, so the reachable principal is that user/role rather than a service role.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict write and PutBucketNotification on cf-templates-* buckets to the deployer, and deploy templates from pipeline-owned buckets with integrity checks.
-  references:
-    - https://rhinosecuritylabs.com/aws/cloud-malware-cloudformation-injection/
-  notes: Artifact ARN is the template bucket (cf-templates-* or a pipeline bucket); identification of consumers requires CloudTrail or stack TemplateURL history.
-
-- id: aws-s3-putobject-ec2-userdata-object
-  provider: aws
-  service: s3
-  title: Replace an S3 object fetched and run by an EC2 managed node
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putobject-s3getobject
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain an instance-profile role when a managed node later fetches and runs a writable
-    S3 object as boot-time user data or an SSM remote script.
-  requires:
-    all_of:
-    - action: s3:PutObject
-      resource: '{target.artifact_arn}'
-  target:
-    kind: aws_role
-    selector:
-      has_instance_profile: true
-      via_artifact_type: s3_object
-    scope: same_account
-    aggregate_as: Instance-profile roles of EC2 bootstraps reading writable S3 objects in {account}
-  conditions:
-  - id: later_boot
-    description: The bootstrap must run after the replacement (new instance, Auto Scaling scale-out, or per-boot
-      user data).
-  - id: consumer_identification
-    description: Consumers are identified from user data, launch templates, SSM association parameters, or command
-      history referencing the object; references hidden in scripts may not be visible to the control plane.
-  - id: run_remote_script_invocation
-    description: An authorized caller, State Manager association, or automation must later run AWS-RunRemoteScript
-      with the exact key; the write alone runs nothing.
-  blockers:
-  - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Keep bootstrap objects in buckets writable only by the deployment pipeline and verify object integrity
-    before execution.
-  references:
-  - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
-  notes: s3:GetObject is not required when the source can supply a complete replacement.
-
-
-- id: aws-s3-putobject-terraform-state
-  provider: aws
-  service: s3
-  title: Tamper with a Terraform state file consumed by a pipeline
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putobject-s3getobject-optional-over-terraform-state-file
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of the principal that runs Terraform against the writable state file.
-  requires:
-    all_of:
-      - action: s3:PutObject
-        resource: "{target.artifact_arn}"
-  target:
-    kind: aws_role
-    selector:
-      via_artifact_type: terraform_state_object
-    scope: same_account
-    aggregate_as: "Terraform pipeline principals using writable state in {account}"
-  conditions:
-    - id: later_terraform_run
-      description: A terraform plan/apply must run against the tampered state after the write.
-    - id: consumer_heuristic
-      description: The consuming principal is approximated as principals holding both s3:GetObject and s3:PutObject on the same .tfstate key; this can include unrelated users and miss pipelines in other accounts.
-    - id: state_locking
-      description: DynamoDB/S3-native state locking and state encryption with a key the source cannot use may prevent a valid write.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict state buckets to the pipeline role, enable versioning and SSE-KMS with a pipeline-only key, and alert on state writes outside pipeline runs.
-  references:
-    - https://developer.hashicorp.com/terraform/language/backend/s3
-  notes: Target kind may also be an IAM user when Terraform runs with user keys; evaluator should allow aws_user too.
-
-# Passed-role S3 confused-deputy entries (rev 171e422299): bounded to the passed role's S3 data access, following the
-# transfer.yaml precedent.
-- id: aws-s3-accessgrants-passrole-location-getdataaccess
-  provider: aws
-  service: s3
-  title: Register an S3 Access Grants location with a passed role and vend its credentials
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#iampassrole-s3createaccessgrantslocation-s3createaccessgrant-s3getdataaccess
-  source_revision: 171e422299
-  summary: The source can obtain S3-scoped temporary credentials of a passable role trusting access-grants.s3.amazonaws.com by registering it as an Access Grants location, granting itself access and calling GetDataAccess.
-  requires:
-    all_of:
-      - action: iam:PassRole
+      - action: s3:PutBucketPolicy
         resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_s3_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["s3:GetObject on the exact reviewed bucket prefix"]
+    aggregate_as: "Reviewed S3 GetObject self-grants in {account}"
+  conditions:
+    - id: reviewed_effective_permission_differential
+      description: A unique collected aws_s3_policy_self_grant_evidence record must prove the exact source, owned bucket, prefix, policy principal and resource, accepted policy, prior denial and observed new GetObject access after guardrail review.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict s3:PutBucketPolicy on sensitive buckets, review policy changes granting the caller access and retain explicit denies for protected prefixes.
+  references:
+    - https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-policies.html
+  notes: The target is only the source's new GetObject permission on the reviewed bucket prefix. Missing, duplicate, partial or mismatched reviewed evidence creates no path.
+
+- id: aws-s3-accessgrants-self-grant
+  provider: aws
+  service: s3
+  title: Vend a newly authorized S3 Access Grants READ session for the source principal
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3-access-grants--vend-a-new-prefix-scoped-read-session
+  source_revision: e036a395d3
+  summary: The source registers a location with a passable role, creates a READ grant for itself and obtains a usable, prefix-scoped S3 STS session that newly allows GetObject.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
       - action: s3:CreateAccessGrantsLocation
-        resource: "*"
-      - action: s3:CreateAccessGrant
-        resource: "*"
-      - action: s3:GetDataAccess
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: access-grants.s3.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting access-grants.s3.amazonaws.com passable in {account}"
-  conditions:
-    - id: access_grants_instance
-      description: An Access Grants instance must exist in the Region (or the source also holds s3:CreateAccessGrantsInstance).
-    - id: grant_scoped_session
-      description: Vended credentials are scoped by a session policy to the granted S3 prefix and permission level (READ/WRITE/READWRITE); the role's other permissions are not usable.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict s3:CreateAccessGrantsLocation and iam:PassRole on Access Grants location roles, and scope location roles to the registered prefix.
-  references:
-    - https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-grants-location-register.html
-  notes: Bounded impact - credentials are an assumed-role session of the location role restricted to S3 data under the grant.
-
-- id: aws-s3-batchoperations-passrole-createjob
-  provider: aws
-  service: s3
-  title: Run an S3 Batch Operations job with a passed role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3createjob-s3-batch-operations-iampassrole--mass-copyexposelock-a-whole-bucket-as-a-passed-role
-  source_revision: 171e422299
-  summary: The source can exercise the S3 privileges of a passable role trusting batchoperations.s3.amazonaws.com (bulk copy, ACL, tagging, retention, Lambda invoke) by creating a Batch Operations job that runs as that role.
-  requires:
-    all_of:
-      - action: s3:CreateJob
-        resource: "*"
+        resource: "{target.location_arn}"
       - action: iam:PassRole
+        resource: "{target.role_arn}"
+        request_context:
+          iam:PassedToService: access-grants.s3.amazonaws.com
+      - action: s3:CreateAccessGrant
+        resource: "{target.grant_arn}"
+      - action: s3:GetDataAccess
         resource: "{target.arn}"
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: batchoperations.s3.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      aws_s3_access_grants_self_grant: true
     scope: same_account
-    aggregate_as: "Roles trusting batchoperations.s3.amazonaws.com passable in {account}"
+    outcome: permission_grant
+    grants: ["s3:GetObject through the reviewed Access Grants session on the exact bucket prefix"]
+    aggregate_as: "Reviewed S3 Access Grants READ self-grants in {account}"
   conditions:
-    - id: manifest_access
-      description: The job needs a manifest the role can read, or a manifest generator over a bucket the role can list.
-    - id: job_confirmation
-      description: Jobs created with confirmation required need s3:UpdateJobStatus to run.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-    - scp_or_boundary_deny
+    - id: reviewed_scoped_access_grants_session
+      description: Unique collected evidence must bind the exact source, instance, registered location, passable role, source-named READ grant, successful GetDataAccess session, prefix scope, prior denial and observed new GetObject access.
+  blockers: []
   confidence: conditional
-  severity: medium
-  mitigation: Restrict s3:CreateJob and iam:PassRole on Batch Operations roles (iam:PassedToService), and scope batch roles to the buckets of each job.
+  severity: high
+  mitigation: Restrict Access Grants location and grant creation, PassRole, and GetDataAccess; review new grants to the requesting principal and their prefix scope.
   references:
-    - https://docs.aws.amazon.com/AmazonS3/latest/userguide/batch-ops-iam-role-policies.html
-  notes: Bounded impact - S3 operations run as the role; the LambdaInvoke operation invokes functions that run with their own roles.
+    - https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_GetDataAccess.html
+    - https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_CreateAccessGrantsLocation.html
+  notes: The target is a bounded S3 permission, not the location role's full authority. Missing, duplicate, partial or mismatched session evidence creates no path.

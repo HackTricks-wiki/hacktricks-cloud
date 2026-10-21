@@ -1,71 +1,8 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS HealthOmics privilege escalation techniques.
 # Source: hacktricks-cloud aws-healthomics-privesc/README.md (rev 171e422299).
-
-- id: aws-healthomics-passrole-startrun
-  provider: aws
-  service: omics
-  title: Start a HealthOmics workflow run with a passed service role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-healthomics-privesc/README.md#omicsstartrun--iampassrole
-  source_revision: 171e422299
-  summary: The source can exercise the IAM permissions of any passable role trusting omics.amazonaws.com through workflow tasks it controls.
-  requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: omics:StartRun
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: omics.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting omics.amazonaws.com passable in {account}"
-  conditions:
-    - id: controlled_workflow
-      description: The source must control the workflow definition (for example via omics:CreateWorkflow) or a workflow it can run must execute code it controls.
-    - id: network_mode
-      description: In the default RESTRICTED networking mode the tasks only reach same-Region S3 and ECR, which bounds the reachable AWS access.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict iam:PassRole on HealthOmics roles with iam:PassedToService=omics.amazonaws.com, restrict omics:CreateWorkflow and omics:StartRun, and keep run roles least-privileged.
-  references:
-    - https://docs.aws.amazon.com/omics/latest/dev/permissions-service.html
-  notes: No credentials are disclosed directly; the escalation is code execution in a managed workflow with the role's access.
-
-- id: aws-healthomics-cloudtrail-workflow-zip-credential
-  provider: aws
-  service: omics
-  title: Recover another identity credential from a logged HealthOmics workflow ZIP
-  source: src/pentesting-cloud/aws-security/aws-services/aws-healthomics-enum.md#cloudtrail-and-stealth
-  source_revision: 0b36331
-  summary: Credential of the exact distinct identity found in the inline workflow ZIP when exact source, object,
-    credential, and target evidence is verified.
-  requires:
-    any_of:
-    - - action: cloudtrail:LookupEvents
-        resource: '*'
-    - - action: s3:GetObject
-        resource: '*'
-  target:
-    kind: aws_verified_authority
-    selector:
-      aws_challenge_fact: aws-healthomics-cloudtrail-workflow-zip-credential
-    scope: same_account
-    grants:
-    - Credential of the exact distinct identity found in the inline workflow ZIP
-  conditions:
-  - id: verified_credential
-    description: A readable CreateWorkflow event contains definitionZip with a valid credential for a distinct identity.
-      For S3 trail objects, verify log-object access and any required kms:Decrypt; bind the exact event or object
-      and owner.
-  confidence: conditional
-  severity: high
-  mitigation: Do not put reusable credentials in workflow archives; restrict CloudTrail and trail-object readers.
-  references:
-  - https://docs.aws.amazon.com/omics/latest/dev/omics-permissions.html
-  notes: Exact aws_privesc_challenge_evidence is required. Missing or incomplete evidence remains UNKNOWN.

@@ -1,41 +1,8 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS codeartifact privilege escalation techniques.
 # Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
-
-- id: aws-codeartifact-publishpackageversion-consumer-poisoning
-  provider: aws
-  service: codeartifact
-  title: Publish a newer compatible version of a trusted CodeArtifact package consumed by a privileged workload
-  source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codeartifact-post-exploitation/README.md#publish-a-newer-compatible-package-version
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the role of a build, deployment or runtime workload that resolves a CodeArtifact package it can publish new versions of, because the workload executes the package code.
-  requires:
-    all_of:
-      - action: codeartifact:PublishPackageVersion
-        resource: "{target.artifact_arn}"
-      - action: codeartifact:GetAuthorizationToken
-        resource: "*"
-      - action: sts:GetServiceBearerToken
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      via_artifact_type: codeartifact_package
-    scope: same_account
-    aggregate_as: "Roles of workloads consuming CodeArtifact packages publishable in {account}"
-    outcome: workload_execution
-  conditions:
-    - id: consumer_resolves_new_version
-      description: A consumer (CodeBuild build, pipeline, container build, application install) must later resolve the package through a version range, a regenerated or missing lockfile, or the latest tag; exact pins with an honoured lockfile prevent selection. Publication alone does not run code.
-    - id: repository_endpoint_access
-      description: The publishing client workflow also needs codeartifact:GetRepositoryEndpoint and codeartifact:ReadFromRepository on the repository; codeartifact:PutPackageMetadata is needed to move npm dist-tags such as latest.
-    - id: package_origin_controls
-      description: Package origin controls (publish BLOCK) on the package or an upstream-only configuration prevent direct publication.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict codeartifact:PublishPackageVersion and PutPackageMetadata to release pipelines on specific package ARNs, set package origin controls to block direct publishing of trusted internal packages, and pin dependencies with honoured lockfiles in privileged builds.
-  references:
-    - https://docs.aws.amazon.com/codeartifact/latest/ug/package-origin-controls.html
-    - https://docs.aws.amazon.com/codeartifact/latest/ug/tokens-authentication.html
-  notes: Package-to-consumer mappings are not collected, so the target set is unknown until consumers are resolved; the reachable privilege is the consuming workload's role (often a CodeBuild service role). CodeArtifact rejects republishing an existing asset with different content, so the path is a new version.

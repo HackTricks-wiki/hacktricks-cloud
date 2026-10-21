@@ -1,3 +1,9 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
 # AWS Cloud Control API privilege escalation techniques.
 # Source: hacktricks-cloud aws-cloudcontrol-privesc/README.md (rev 171e422299).
 # Cloud Control API actions use the cloudformation: IAM prefix.
@@ -5,37 +11,36 @@
 - id: aws-cloudcontrol-passrole-createresource
   provider: aws
   service: cloudcontrol
-  title: Create or update a resource through Cloud Control API with a passed role
+  title: Create an administrator user through Cloud Control API with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudcontrol-privesc/README.md#cloudformationcreateresource-or-updateresource--iampassrole
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting cloudformation.amazonaws.com, because Cloud Control performs the resource operation it requests (for example creating an IAM principal) with the passed role.
+  summary: The source can use a passable CloudFormation role to create an IAM user with an administrator policy and a chosen console password through Cloud Control.
   requires:
     all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-    any_of:
-      - - action: cloudformation:CreateResource
-          resource: "*"
-      - - action: cloudformation:UpdateResource
-          resource: "*"
+      - action: cloudformation:CreateResource
+        resource: "*"
   target:
-    kind: aws_role
+    kind: aws_account_admin
     selector:
-      trust_allows_service: cloudformation.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      any_principal_in_scope: true
     scope: same_account
-    aggregate_as: "Roles trusting cloudformation.amazonaws.com passable in {account}"
+    outcome: scope_control
+    aggregate_as: "Administrator of {account} through Cloud Control"
+  preconditions:
+    - cloudcontrol_source_can_create_admin_user
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService conditions on the PassRole grant may exclude cloudformation.amazonaws.com.
-    - id: resource_type_supported
-      description: The useful resource type (for example AWS::IAM::Role) must support Cloud Control operations; the passed role's own permissions bound what can be created or changed.
+    - id: iam_user_resource
+      description: The passed role must create one new IAM user, set a chosen console password, and attach or write administrator permissions on that same user.
   blockers:
     - scp_or_boundary_deny
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles with iam:PassedToService and specific role ARNs; deny cloudformation:CreateResource/UpdateResource to principals that should not provision resources directly.
   references:
     - https://docs.aws.amazon.com/cloudcontrolapi/latest/userguide/resource-operations.html
     - https://docs.aws.amazon.com/cloudcontrolapi/latest/APIReference/API_CreateResource.html
-  notes: Verified in the Cloud Control user guide (Specifying credentials) that a RoleArn is assumed by cloudformation.amazonaws.com, so the reachable set is the same role population as CloudFormation stack PassRole. Without RoleArn the operation uses the caller's own credentials (no edge). Operations only target the caller's own account.
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/userguide/supported-resources.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-iam-user.html
+  notes: Cloud Control assumes a passable role through cloudformation.amazonaws.com. The evaluator requires the role to create, read, and give a console password and administrator policy to one new IAM user. Other Cloud Control resource types need their own permission and outcome checks.
