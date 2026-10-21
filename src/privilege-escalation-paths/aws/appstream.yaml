@@ -8,6 +8,38 @@
 # Source: hacktricks-cloud aws-appstream-privesc/README.md (rev 171e422299).
 # Existing-resource updates use collected fleet and builder state and associations.
 
+- id: aws-appstream-createstreamingurl-existing-fleet
+  provider: aws
+  service: appstream
+  title: Open a desktop session on a fleet with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreatestreamingurl--enter-an-existing-fleet-under-its-machine-role
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to open a desktop session on an existing fleet may use that fleet's exact machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to streamable desktop fleets in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_fleet_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit running an application or script that can use the fleet role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateStreamingURL to approved fleets and avoid attaching powerful roles to desktop fleets.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateStreamingURL.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_Fleet.html
+  - https://docs.aws.amazon.com/appstream2/latest/developerguide/how-to-use-iam-role-with-streaming-instances.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a running DESKTOP fleet to its recorded IamRoleArn and an associated stack, requires available capacity and CreateStreamingURL on that fleet ARN, and returns a conditional role reach. No PassRole or fleet mutation is required.
+
 - id: aws-appstream-passrole-createimagebuilder-createfleet
   provider: aws
   service: appstream
