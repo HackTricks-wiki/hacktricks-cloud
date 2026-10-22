@@ -243,10 +243,12 @@
     alone is data access, not another IAM principal.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-durable-executions
   technique: aws-lambda-durablehistory-secret-identity
-  reason: 'Recover a distinct identity credential from Lambda durable history: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'GetDurableExecutionHistory with IncludeExecutionData can reveal retained step
+    inputs, results and callbacks for an exact durable execution; a customer-managed KMS key
+    also requires caller kms:Decrypt. The API does not identify that content as AWS credentials.
+    A role edge would need a real complete usable credential in the returned history, its
+    verified AWS principal and added authority. The CSPM does not collect execution payloads
+    or validate credential subjects, so history-read permission alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
   technique: aws-lambda-getfunction-package-secret-identity
   reason: 'Recover a distinct identity credential from Lambda deployment package: no source IAM action or resource
@@ -267,10 +269,12 @@
     subject and effective added permissions before restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lex-v2-enum.md#runtime-sessions-and-stored-utterances
   technique: aws-lex-getsession-other-application-session
-  reason: 'Recover another user application session from Lex GetSession: no source IAM action or resource is declared
-    in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'Lex GetSession returns a bot conversation state and its session attributes for
+    the supplied bot alias, locale and session ID. These values may expose application data,
+    but a Lex session ID is not an IAM or STS credential and GetSession does not grant the
+    caller another AWS principal. If a particular application stores an AWS secret in a
+    session attribute, that requires separate content and credential-subject evidence.
+    Keep generic application-session disclosure outside the principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-acm-persistence/README.md#register-an-attacker-controlled-acme-certificate-account
   technique: aws-pa-persist-s01-01
   reason: 'Create EAB for an existing issuance role, recover binding, register ACME account: no source IAM action
@@ -279,10 +283,12 @@
     subject and effective added permissions before restoring.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
   technique: aws-pa-s03-4-rds-proxy-auth-secret
-  reason: 'Read RDS Proxy backend database credentials: no source IAM action or resource is declared in requires.
-    The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'RDS Proxy auth secrets hold database usernames and passwords for backend
+    connections. DescribeDBProxies can identify a configured secret and GetSecretValue may
+    disclose its value, but that credential authenticates a database user, not an IAM role.
+    End-to-end IAM-authenticated proxies may have no backend password secret. Report the
+    database credential exposure separately; the role target in the retired YAML was an
+    unsupported principal-to-principal claim.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-blockchain-persistence/README.md#establish-an-attacker-owned-consortium-member
   technique: aws-peaso-establish-an-attacker-owned-consortium-member
   reason: 'Join Fabric consortium with controlled member: no source IAM action or resource is declared in requires.
