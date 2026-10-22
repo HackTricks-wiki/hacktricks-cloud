@@ -48,22 +48,15 @@
   title: Start a stream session of a controlled application with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamsstartstreamsession--iampassrole-with-attacker-controlled-application-code
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable GameLiftStreams-* roles trusting gameliftstreams.amazonaws.com when it can stream an application whose code it controls.
+  summary: The source may perform a useful action under a passable GameLiftStreams-* session role when controlled application code executes in a compatible stream group.
+  source_kind: [aws_user, aws_role]
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-    any_of:
-      - - action: gameliftstreams:StartStreamSession
-          resource: "*"
-      - - action: gameliftstreams:CreateStreamUrl
-          resource: "*"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: gameliftstreams.amazonaws.com
       name_prefix: GameLiftStreams-
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "GameLiftStreams-* roles passable in {account}"
     outcome: workload_execution
@@ -81,4 +74,4 @@
   mitigation: Restrict iam:PassRole on GameLiftStreams-* roles to the session backend and restrict who can create or update applications.
   references:
     - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_StartStreamSession.html
-  notes: gameliftstreams:CreateStreamUrl is not in aws_permissions_cat.yaml; HackTricks documents it as an alternative path that also takes a RoleArn.
+  notes: StartStreamSession is authorized on the exact stream group with gameliftstreams:RoleArn in request context. CreateStreamUrl additionally needs permission on both the stream group and application and depends on StartStreamSession. PassRole must allow gameliftstreams.amazonaws.com for the exact target role. A concrete route requires fresh reviewed evidence that an ACTIVE group supports session credentials, has capacity, contains a READY application controlled by the source, and that an accepted session ran the code and performed a useful role action unavailable directly to the caller. Groups created before session-credential support stay unresolved. CreateStreamUrl is a supported IAM action in the current AWS Service Authorization Reference.
