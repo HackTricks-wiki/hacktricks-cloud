@@ -126,6 +126,41 @@
   notes: A collected unpinned --scriptLocation plus StartJobRun on the exact job, or permission to create a new scheduled trigger in the same Region, establishes a conditional route. Pinned scripts may still have a dependency route through --extra-py-files, --extra-jars, --additional-python-modules or --python-virtual-env; those remain unresolved until their runtime prerequisites are verified. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
 
 
+- id: aws-glue-overwrite-existing-job-script
+  provider: aws
+  service: glue
+  title: Replace the script read by an existing Glue job
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#replace-the-script-of-an-existing-glue-job
+  source_revision: d5f695f4a3
+  summary: The source may run its code under an existing Glue job role by replacing the exact S3 script object used by that job and causing the job to run.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue
+      via_resource_type: glue_job
+    scope: same_account
+    aggregate_as: Execution roles of Glue jobs whose exact script object is writable and runnable in {account}
+    outcome: workload_execution
+  preconditions:
+    - glue_existing_job_script_object_writable_and_runnable
+  conditions:
+    - id: object_replacement_and_run
+      description: The exact S3 script object must accept the replacement and the job must subsequently load it. Bucket policy, encryption, or a job argument may impose additional limits.
+    - id: scheduled_run
+      description: The scheduled-trigger variant requires the recorded active schedule to fire after the object replacement.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit write access to Glue job script objects to trusted deployment identities and restrict who can start jobs that use privileged roles.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-api-jobs-job.html
+    - https://docs.aws.amazon.com/glue/latest/dg/edit-nodes-script.html
+  notes: The evaluator joins Command.ScriptLocation, the same job's role, exact s3:PutObject and role s3:GetObject permissions, and StartJobRun or an active scheduled trigger. It never infers a role edge from a generic writable bucket or a different job.
+
 - id: aws-glue-passrole-createjob-or-updatejob-run
   provider: aws
   service: glue
