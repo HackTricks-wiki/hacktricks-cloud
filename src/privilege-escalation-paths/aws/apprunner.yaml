@@ -83,6 +83,37 @@
   references:
     - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
   notes: Companion of aws-apprunner-updateservice (keeps the existing role, no PassRole). UpdateService cannot switch a code-based service to an image; code-based services need a separately verified attacker-controlled code or start-command path.
+- id: aws-apprunner-updateservice
+  provider: aws
+  service: apprunner
+  title: Change the start command of a service with an existing instance role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerupdateservice
+  source_revision: 6fb9ac51fd
+  summary: The source can change the start command of an existing image-based App Runner service that runs with the target role.
+  requires:
+    all_of:
+    - action: apprunner:UpdateService
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: tasks.apprunner.amazonaws.com
+    scope: same_account
+    outcome: workload_execution
+  preconditions:
+  - apprunner_existing_instance_role_update
+  conditions:
+  - id: deployment_execution
+    description: The updated service must successfully deploy and run the chosen start command.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit App Runner UpdateService to trusted deployment operators for services with privileged instance roles.
+  references:
+  - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
+  notes: This route keeps the existing instance role; no new role is passed. The recorded DescribeService response must bind InstanceRoleArn to the exact image service. Code-based services need a separately verified controlled command path.
+
 - id: aws-apprunner-plaintext-credential
   provider: aws
   service: apprunner
