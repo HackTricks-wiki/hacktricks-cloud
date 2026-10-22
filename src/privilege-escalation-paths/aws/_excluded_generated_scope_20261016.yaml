@@ -472,16 +472,15 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#identity-source-and-cross-account-boundaries
   technique: aws-verifiedpermissions-identity-source-impersonation
-  reason: 'Redirect application token trust to an attacker-controlled identity: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'Changing a Verified Permissions identity source may let attacker-issued tokens map to
+    application Cedar identities. The token still cannot call AWS APIs without a separately
+    authorized SigV4 caller, and the policy store does not grant IAM role permissions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
   technique: aws-waf-sampled-request-session-replay
-  reason: 'Replay a session recovered from WAF request samples: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'Candidate only if a readable WAF sample contains a complete usable AWS credential
+    for an identified other IAM principal. A cookie, bearer token or X-Amz-Security-Token
+    alone proves only an application session or incomplete AWS credential. Require actual
+    unredacted secret material, validity and principal attribution before an IAM edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-timestream-post-exploitation/README.md#timestreamcreatescheduledquery--iampassrole--run-sql-and-downstream-writes-as-a-scheduled-query-role
   source_revision: 0d0ea06005
   technique: aws-audit-create-scheduled-query-to-exfiltrate-role-readable-secrets
@@ -715,16 +714,14 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#enumerate-stores-and-aliases
   technique: aws-verifiedpermissions-alias-rebind
-  reason: 'Rebind a production alias to a permissive policy store: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'Rebinding a policy-store alias may change decisions consumed by an application.
+    The alias is a Verified Permissions resource, not an IAM role, and the changed Cedar
+    decision does not give the source AWS principal another principal''s AWS permissions.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#exact-iam-boundaries
   technique: aws-verifiedpermissions-policy-app-admin
-  reason: 'Grant application privileges through a Cedar policy: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'A Cedar policy can grant an application identity admin actions inside that
+    application. The policy store does not alter IAM identity policies or create AWS
+    credentials, and its decision API does not execute the application action.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#as2-partner-certificate-substitution--impersonate-a-trading-partner
   technique: aws-v3-01-substitute-an-as2-partner-signing-certificate
   reason: 'Substitute an AS2 partner signing certificate: actions transfer:ImportCertificate, transfer:UpdateProfile
@@ -821,9 +818,10 @@
     semantics, so RecognizeText permission alone cannot prove such an edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
   technique: aws-v3-15-replay-a-victim-application-session-recovered-from-waf
-  reason: 'Replay a victim application session recovered from WAF records: actions logs:FilterLogEvents are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate duplicate of aws-waf-sampled-request-session-replay across log and
+    sampled-request reads. Replaying a cookie or bearer token reaches an application session,
+    not automatically an AWS principal. An IAM edge requires an actually recorded complete
+    valid AWS credential and attribution to a distinct IAM user or role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-device-farm-post-exploitation/README.md#take-over-a-running-remote-access-device
   technique: aws-v3-16-redeem-a-device-farm-session-endpoint-and-control-a-log
   reason: 'GetRemoteAccessSession can return interactive and Appium endpoints for one
@@ -1102,9 +1100,10 @@
     cannot be inferred from an AWS IAM principal, and the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-devops-agent-post-exploitation/README.md#disable-and-re-enable-the-operator-app-with-an-attacker-idp
   technique: aws-v3-64-devops-agent-operator-app-idp-swap
-  reason: 'DevOps Agent operator app IdP swap: actions aidevops:DisableOperatorApp, aidevops:EnableOperatorApp,
-    iam:PassRole are stated, but the aws_verified_authority target does not identify an exact principal or encode
-    a verified new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate bounded operator-role path. DisableOperatorApp and EnableOperatorApp can
+    install an attacker IdP and pass an exact trusted operator role. An edge requires both
+    app actions, effective PassRole, compatible role trust, accepted attacker authentication
+    and proof of the operator actions reachable through that role; no raw STS key is returned.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md#policy-and-permission-boundary-deletion
   technique: aws-v3-65-remove-own-explicit-deny
   reason: 'Remove own explicit Deny: actions iam:DeleteUserPolicy are stated, but the aws_verified_authority target
@@ -1112,31 +1111,33 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-evs-managed-vcf-and-esx-credentials
   technique: aws-v3-66-evs-vmware-admin-secret
-  reason: 'EVS VMware admin secret: actions evs:GetEnvironment, secretsmanager:GetSecretValue are stated, but the
-    aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'EVS environment secrets can contain VMware vCenter, NSX, SDDC Manager or ESX
+    administrator credentials. Those are VMware control-plane identities, not AWS IAM
+    credentials; reading the secret does not identify another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-connector-credentials-for-an-existing-vcf-appliance
   technique: aws-v3-67-evs-connector-secret
-  reason: 'EVS connector secret: actions evs:GetEnvironment, secretsmanager:GetSecretValue are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'EVS connector secrets contain credentials for an existing VCF appliance.
+    The account authenticates to VMware, not AWS IAM, so the secret read does not
+    give the source an exact second AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-firewall-manager-post-exploitation/README.md#organizationsdescribeorganization--fmsassociateadminaccount-fmsdisassociateadminaccount-fmsputadminaccount
   technique: aws-v3-68-firewall-manager-admin-action
-  reason: 'Firewall Manager admin action: actions fms:AssociateAdminAccount are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate duplicate of aws-v3-51-firewall-manager-delegate. AssociateAdminAccount
+    changes the designated FMS administrator account, not a specific IAM principal. An exact
+    source-to-principal route needs a controlled identity in that account with usable FMS
+    permissions and verified organization/admin prerequisites.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-elasticache-post-exploitation/README.md#elasticachemodifyreplicationgroup--add-an-attacker-known-legacy-auth-token
   technique: aws-v3-69-elasticache-legacy-auth-rotation
-  reason: 'ElastiCache legacy AUTH rotation: actions elasticache:ModifyReplicationGroup are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'ModifyReplicationGroup can add a known legacy cache AUTH token where that mode
+    is enabled. The token authenticates to Valkey or Redis data, not to AWS IAM, and
+    gives no credentials for another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-inspector-post-exploitation/README.md#inspector2disabledelegatedadminaccount-inspector2enabledelegatedadminaccount--organizationslistdelegatedadministrators--organizationsenableawsserviceaccess--iamcreateservicelinkedrole
   technique: aws-v3-70-inspector-delegated-administrator
-  reason: 'Inspector delegated administrator: actions inspector2:EnableDelegatedAdminAccount are stated, but the
-    aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate cross-account Inspector authority. EnableDelegatedAdminAccount names
+    a member account, not an IAM principal. An exact edge needs management-account
+    authorization, organization all-features and incumbent-admin handling, plus a controlled
+    identity in the chosen account with effective Inspector management actions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md#sending-paths--telemetry-gaps
   technique: aws-v3-71-workmail-resetpassword
-  reason: 'WorkMail ResetPassword: actions workmail:ResetPassword are stated, but the aws_verified_authority target
-    does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'ResetPassword can give the caller a WorkMail mailbox login. The mailbox is an
+    application identity, not an IAM user or role, and the password does not authorize
+    AWS API calls as another principal.'
