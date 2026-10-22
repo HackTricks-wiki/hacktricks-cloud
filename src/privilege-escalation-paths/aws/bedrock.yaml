@@ -129,39 +129,39 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: bedrock-agentcore.amazonaws.com
       - action: bedrock-agentcore:CreateHarness
         resource: "*"
       - action: bedrock-agentcore:CreateAgentRuntime
         resource: "*"
-      - action: bedrock-agentcore:CreateAgentRuntimeEndpoint
-        resource: "*"
-      - action: bedrock-agentcore:InvokeAgentRuntimeCommand
-        resource: "*"
-      - action: bedrock-agentcore:InvokeAgentRuntime
+      - action: bedrock-agentcore:CreateMemory
         resource: "*"
   target:
     kind: aws_role
     selector:
       trust_allows_service: bedrock-agentcore.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - agentcore_new_harness_generated_scope_and_role_ready
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: composite_create_permissions
-      description: Harness creation also needs CreateWorkloadIdentity, GetAgentRuntime and related read actions; CreateMemory may be needed depending on configuration.
-    - id: runtime_identity_slr
-      description: The account must already have the AWSServiceRoleForBedrockAgentCoreRuntimeIdentity service-linked role, or the source must be able to create it.
+    - id: harness_ready
+      description: The harness and its managed runtime must reach READY under the passed role before a command can run.
+    - id: active_session
+      description: The command must use an active session of the same harness.
+    - id: managed_image_ready
+      description: The execution role must be able to start the managed image and access any configured memory.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Scope iam:PassRole to dedicated low-privilege AgentCore roles with iam:PassedToService=bedrock-agentcore.amazonaws.com and deny bedrock-agentcore:InvokeAgentRuntimeCommand unless direct shell access is required.
   references:
-    - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html
-  notes: Composite operation; only the core actions are modelled and the remaining provisioning actions are a condition.
+    - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness-security.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_bedrock-agentcore.html
+  notes: CreateHarness, CreateAgentRuntime and CreateMemory are account-level actions. GetMemory and InvokeHarness/InvokeAgentRuntime/InvokeAgentRuntimeCommand are checked by the precondition against future harness resources. A custom endpoint is optional and needs separate CreateHarnessEndpoint/CreateAgentRuntimeEndpoint permissions. Role readiness and a live command session remain conditional.
 
 - id: aws-bedrock-agentcore-createagentruntime-passrole
   provider: aws
