@@ -31,6 +31,8 @@
     scope: same_account
     aggregate_as: "Instance-profile roles passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - workspaces_instances_bound_launch_role_effect
   conditions:
     - id: forward_access_session
       description: ec2:RunInstances is evaluated through a forward access session; aws:CalledVia conditions must admit workspaces-instances.amazonaws.com.
@@ -45,4 +47,4 @@
   mitigation: Restrict iam:PassRole on instance-profile roles and treat workspaces-instances:CreateWorkspaceInstance like ec2:RunInstances.
   references:
     - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
-  notes: Equivalent reach to ec2:RunInstances + iam:PassRole; the source still needs RunInstances on the AMI, network and instance resources.
+  notes: ManagedInstanceRequest accepts an instance profile and user data. A concrete edge requires fresh reviewed evidence that a supported configuration launched, the exact profile was attached, controlled user data executed, and a useful action succeeded under that role but not for the caller. Current RunInstances grants must cover the exact AMI, network and instance resources with aws:CalledVia=workspaces-instances.amazonaws.com; PassRole must allow ec2.amazonaws.com and the service-linked role must be ready. Missing or conflicting execution evidence remains unresolved.
