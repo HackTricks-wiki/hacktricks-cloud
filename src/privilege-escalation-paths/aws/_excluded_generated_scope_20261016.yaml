@@ -757,9 +757,14 @@
     the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#1-runtime-ssrf---mmds-credentials
   technique: aws-v3-07-agentcore-runtime-ssrf-to-its-execution-role-credential
-  reason: 'AgentCore Runtime SSRF to its execution-role credentials: no source permission/action is declared. The
-    required foothold or credential possession cannot be inferred from an AWS IAM principal, and the challenge evidence
-    is not collected in current snapshots.'
+  reason: 'AgentCore Runtime uses an execution role whose temporary credentials are
+    available inside its microVM, but AWS now requires MMDSv2 for new Runtime invocations.
+    A GET-only SSRF cannot reach token-protected credentials; AWS notes already-running
+    legacy sessions are unaffected by the invocation gate. A current route needs an exact
+    accessible runtime/session, a demonstrated SSRF that reaches tokenless MMDS in such a
+    live legacy session or obtains and uses an MMDSv2 token, the credential response, and
+    the runtime-to-role join. The CSPM collects none of those exploit/session facts, so
+    InvokeAgentRuntime or role trust alone cannot prove this edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ecs-post-exploitation/README.md#steal-the-container-instance-role-from-an-ecs-on-ec2-task
   technique: aws-v3-08-read-ec2-instance-profile-credentials-from-imds-inside
   reason: 'Read EC2 instance-profile credentials from IMDS inside an ECS task: no source permission/action is declared.
@@ -772,9 +777,13 @@
     the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#exfiltrate-lambda-credentials
   technique: aws-v3-10-read-lambda-execution-role-credentials-from-runtime-env
-  reason: 'Read Lambda execution-role credentials from runtime environment variables: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'AWS places temporary execution-role credentials in Lambda runtime environment
+    variables, but a caller needs a demonstrated way to read the process environment or
+    make the function reveal those variables. InvokeFunction alone does not provide that
+    read. An exact edge also needs the function-to-execution-role join and a credential
+    response proving usable role access. The CSPM cannot infer a vulnerable handler or
+    local process foothold from IAM permissions, so this generic post-exploitation route
+    remains excluded; separately modeled code-control routes may reach the role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-migration-hub-strategy-recommendations-post-exploitation/README.md#harvest-credentials-from-a-compromised-collector-host
   technique: aws-v3-11-harvest-the-strategy-recommendations-collector-aws-keys
   reason: 'Harvest the Strategy Recommendations collector AWS keys from local configuration: no source permission/action
