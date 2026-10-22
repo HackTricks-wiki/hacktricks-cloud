@@ -218,22 +218,29 @@
     safely extract and verify such credential material, so the read grant alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-healthomics-enum.md#cloudtrail-and-stealth
   technique: aws-healthomics-cloudtrail-workflow-zip-credential
-  reason: 'Recover another identity credential from a logged HealthOmics workflow ZIP: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'CloudTrail may contain the base64 definitionZip from CreateWorkflow, but neither
+    the HealthOmics page nor CloudTrail event metadata establishes that the ZIP contains AWS
+    credentials. The source might read the event through CloudTrail, a trail S3 object or a
+    separate log store, so the required read action and exact event resource also vary. A
+    principal edge needs the actual decoded ZIP, a complete usable credential, its verified
+    AWS principal and additional effective authority; no such content is inventoried by the
+    CSPM. Do not infer another role from the ability to read a workflow event.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#enumerate-and-read-cdc-streams
   technique: aws-keyspaces-cdc-credential-record
-  reason: 'Recover another identity credential from a Keyspaces CDC record: no source IAM action or resource is
-    declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s
-    permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject and effective
-    added permissions before restoring.'
+  reason: 'Keyspaces CDC GetRecords can return changed table values on a permitted exact
+    stream, but the stream API does not identify those values as AWS credentials. A principal
+    edge requires an actual record with a complete usable credential, verified AWS subject
+    and extra effective authority, plus the source''s GetStream/GetShardIterator/GetRecords
+    rights on that stream. The CSPM does not collect stream contents or validate credential
+    subjects, so stream-read permission alone cannot establish this route.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#connect-to-cql-with-sigv4
   technique: aws-keyspaces-select-credential-row
-  reason: 'Recover another identity credential from a Keyspaces table row: no source IAM action or resource is declared
-    in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'cassandra:Select on an exact user table permits reading its rows, with system
+    table access often needed by CQL clients, but neither the permission nor table schema
+    proves any row contains an AWS credential. A principal edge needs an actual complete
+    usable credential row, verified AWS subject and extra effective authority. The CSPM
+    does not read customer table rows or validate credential subjects; table-read permission
+    alone is data access, not another IAM principal.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-durable-executions
   technique: aws-lambda-durablehistory-secret-identity
   reason: 'Recover a distinct identity credential from Lambda durable history: no source IAM action or resource
