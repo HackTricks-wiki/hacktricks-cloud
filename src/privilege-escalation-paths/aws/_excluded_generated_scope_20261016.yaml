@@ -397,16 +397,19 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#logsfilterlogevents--logsgetlogevents--recover-custom-idp-passwords-from-logs
   technique: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
-  reason: '`logs:FilterLogEvents` / `logs:GetLogEvents` — recover custom-IdP passwords from logs: no source IAM
-    action or resource is declared in requires. The conditional aws_role target relies on opaque evidence, so the
-    YAML cannot prove Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource,
-    credential subject and effective added permissions before restoring.'
+  reason: 'A custom Transfer Family identity provider may log the plaintext SFTP, FTP or
+    FTPS password it receives; FilterLogEvents or GetLogEvents could disclose that password
+    when the exact log group contains it. That password authenticates a Transfer user, not
+    an IAM or STS principal. A later file-transfer session may use a configured storage role
+    only for bounded S3/EFS operations and does not hand that role to the log reader. Keep
+    password leakage and file access as separate risks outside this principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-systems-manager-for-sap-post-exploitation/README.md#recover-configured-sap-hana-administrator-credentials
   technique: aws-s05-recover-configured-sap-hana-administrator-credentials
-  reason: 'Recover configured SAP HANA administrator credentials: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'GetDatabase returns the SecretId of a registered SAP HANA administrative
+    credential; a separate GetSecretValue grant may disclose its database username and
+    password. Those values authenticate a HANA database user, not another AWS IAM principal.
+    The retired role target therefore overclaimed a principal transition. Retain the HANA
+    credential exposure as a database issue outside this graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-thin-client-post-exploitation/README.md#thinclientupdateenvironment---redirect-devices-to-another-desktop-provider-or-idp-endpoint
   technique: aws-s05-thinclientupdateenvironment-redirect-devices-to-another-desktop-provid
   reason: '`thinclient:UpdateEnvironment` - Redirect devices to another desktop provider or IdP endpoint: no source
