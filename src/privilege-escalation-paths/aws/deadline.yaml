@@ -40,6 +40,38 @@
     - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/permissions-overview.html
   notes: The evaluator binds ListFarms, ListQueues and GetQueue to one farm, queue and role, checks the caller's IAM grant on the exact queue ARN, and evaluates the role's service trust with that farm ARN. It does not infer access from Deadline monitor membership or a Resource=* grant alone.
 
+- id: aws-deadline-existing-worker-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain the IAM role configured on an existing worker's fleet
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlineassumefleetroleforworker-on-an-existing-worker
+  source_revision: b9af68e3e9
+  summary: The source can request credentials for the exact IAM role configured on an existing Deadline Cloud worker's fleet when IAM allows AssumeFleetRoleForWorker on that worker.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Fleet worker roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_existing_worker_role_vend
+  conditions:
+    - id: worker_role_session
+      description: The fleet role must trust the Deadline credentials service for the farm and the worker credential API must accept the request. Additional unrelated role policies are not proven effective.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit AssumeFleetRoleForWorker to the worker hosts that need each fleet.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetFleet.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_ListWorkers.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
+  notes: The evaluator binds ListFarms, ListFleets, GetFleet and ListWorkers to one farm, fleet, worker and role; checks AssumeFleetRoleForWorker on the exact worker ARN and the target role's farm-scoped service trust. It does not infer unrelated permissions from the role's attached policies.
+
 - id: aws-deadline-passrole-createqueue-updatequeue
   provider: aws
   service: deadline
