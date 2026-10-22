@@ -14,21 +14,17 @@
 - id: aws-emr-serverless-passrole-startjobrun
   provider: aws
   service: emr-serverless
+  source_kind: [aws_user, aws_role]
   title: Start an EMR Serverless job run with a passed execution role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
   source_revision: 171e422299
   summary: The source can run job code it controls using a passable EMR Serverless role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-        request_context:
-          iam:PassedToService: emr-serverless.amazonaws.com
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: emr-serverless.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting emr-serverless.amazonaws.com passable in {account}"
     outcome: workload_execution
@@ -48,7 +44,7 @@
   mitigation: Restrict iam:PassRole on EMR Serverless roles with iam:PassedToService=emr-serverless.amazonaws.com and restrict StartJobRun to orchestrators.
   references:
     - https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/security-iam-runtime-role.html
-  notes: The evaluator joins an inventoried runnable application with exact StartJobRun and PassRole grants and a same-Region S3 script object writable by the source and readable by the execution role. The emr-containers:StartJobRun variant is aws-emr-containers-passrole-startjobrun.
+  notes: The evaluator joins an inventoried runnable application with exact StartJobRun and PassRole grants. A role edge requires a fresh reviewed accepted job run whose source-controlled entry point was read and executed under the exact role and performed a useful action unavailable directly to the caller. The recorded PassRole service and associated-resource context are evaluated. Without that execution evidence, the route remains unresolved.
 
 - id: aws-emr-containers-passrole-startjobrun
   provider: aws
