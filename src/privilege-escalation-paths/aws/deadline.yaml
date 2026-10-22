@@ -6,8 +6,39 @@
 
 # AWS Deadline Cloud privilege escalation techniques.
 # Source: hacktricks-cloud aws-deadline-cloud-privesc/README.md (rev 171e422299).
-# Queue and fleet roles trust credentials.deadline.amazonaws.com; attached_to_service names that principal directly
-# because queue/fleet inventory is not collected (attachment resolves as unknown).
+# Queue and fleet roles trust credentials.deadline.amazonaws.com. The existing-queue route
+# uses collected queue-to-role bindings; new queue/fleet PassRole routes need separate joins.
+
+- id: aws-deadline-existing-queue-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain the IAM role configured on an existing queue
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#queue-role-credential-vending
+  source_revision: 5508b27049
+  summary: The source can request credentials for the exact IAM role configured on a Deadline Cloud queue when its IAM policy allows AssumeQueueRoleForUser on that queue.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Queue roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_existing_queue_role_vend
+  conditions:
+    - id: queue_role_session
+      description: The configured role must still trust the Deadline credentials service for the exact farm, and the queue API must vend the credentials.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit deadline:AssumeQueueRoleForUser to the queues a principal needs and keep queue roles narrow.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeQueueRoleForUser.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetQueue.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/permissions-overview.html
+  notes: The evaluator binds ListFarms, ListQueues and GetQueue to one farm, queue and role, checks the caller's IAM grant on the exact queue ARN, and evaluates the role's service trust with that farm ARN. It does not infer access from Deadline monitor membership or a Resource=* grant alone.
 
 - id: aws-deadline-passrole-createqueue-updatequeue
   provider: aws
