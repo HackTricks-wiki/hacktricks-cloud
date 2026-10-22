@@ -503,7 +503,7 @@
     outcome: workload_execution
   conditions:
   - id: scheduled_rule_invokes_function
-    description: The source must create an enabled scheduled rule targeting the newly created function and grant events.amazonaws.com invoke permission on that function; function and rule must be creatable in a common Region.
+    description: The source must create an enabled scheduled rule on the default bus, add the newly created function as an allowed events:TargetArn, and grant events.amazonaws.com invoke permission; function and rule must be in one Region.
   - id: passrole_condition_key
     description: iam:PassedToService and iam:AssociatedResourceArn conditions must allow passing the role to this new Lambda function.
   blockers:
@@ -511,8 +511,11 @@
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole, lambda:CreateFunction, events:PutRule, events:PutTargets, and lambda:AddPermission to approved deployment principals.
-  references: []
-  notes: The two page examples, creating IAM user keys and granting assume-role permissions, are payload effects of this one role-execution path. EventBridge schedule can supply the trigger without an external event source.
+  references:
+  - https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutRule.html
+  - https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-use-conditions.html
+  - https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutTargets.html
+  notes: The two page examples, creating IAM user keys and granting assume-role permissions, are payload effects of this one role-execution path. A new PutRule is enabled by default and its schedule can supply the trigger without an external event source. The rule may also include an event pattern when an IAM condition requires events:source or events:detail-type.
 - id: aws-lambda-getconfig-secret-identity
   provider: aws
   service: lambda
