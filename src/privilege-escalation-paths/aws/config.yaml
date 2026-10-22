@@ -18,10 +18,12 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm.amazonaws.com
       - action: config:PutRemediationConfigurations
-        resource: "*"
+        resource: "arn:{source.partition}:config:*:{source.account}:remediation-configuration/*"
       - action: ssm:CreateDocument
-        resource: "*"
+        resource: "arn:{source.partition}:ssm:*:{source.account}:document/*"
   target:
     kind: aws_role
     selector:
@@ -30,6 +32,8 @@
     scope: same_account
     aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - config_automatic_remediation_effect_unverified
   conditions:
     - id: noncompliant_rule
       description: A Config rule must report a non-compliant resource (an existing rule, or config:PutConfigRule), with the configuration recorder running; config:StartConfigRulesEvaluation only speeds it up.
