@@ -12,7 +12,7 @@
   service: cognito-identity
   title: Obtain a developer identity pool's authenticated role credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
-  source_revision: 3d2e6950d7
+  source_revision: ad04436fdb
   summary: The source can mint a developer-authenticated identity token for an exact pool and exchange it for that pool's authenticated IAM role credentials.
   requires:
     all_of:
@@ -40,7 +40,7 @@
   service: cognito-identity
   title: Use a developer identity token with a trusted IAM role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
-  source_revision: 3d2e6950d7
+  source_revision: ad04436fdb
   summary: A source that can mint a developer identity token for a pool with Basic authentication enabled can exchange it through STS for an IAM role that trusts that pool and authenticated method.
   requires:
     all_of:
@@ -69,7 +69,7 @@
   service: cognito-identity
   title: Set an identity pool role and obtain its credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitysetidentitypoolroles-iampassrole
-  source_revision: 3d2e6950d7
+  source_revision: ad04436fdb
   summary: A source that can set an identity pool's authenticated role, pass the target role and mint a developer token for that same pool can obtain the target role's credentials.
   requires:
     all_of:
@@ -98,3 +98,34 @@
     - https://docs.aws.amazon.com/cognito/latest/developerguide/role-based-access-control.html
     - https://docs.aws.amazon.com/cognito/latest/developerguide/developer-authenticated-identities.html
   notes: SetIdentityPoolRoles has no resource-level IAM scope. The selector still requires the source to own a collected developer pool, have token-mint permission on that exact pool, and choose a same-account role whose web-identity trust admits its authenticated developer token. Other token sources need separate proof.
+
+- id: aws-cognito-updateidentitypool-enable-classic-developer-token
+  provider: aws
+  service: cognito-identity
+  title: Enable Basic authentication and use a developer token
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identityupdateidentitypool
+  source_revision: ad04436fdb
+  summary: A source that can enable Basic authentication on a developer identity pool and mint its token can exchange that token through STS for a role that trusts the pool.
+  requires:
+    all_of:
+      - action: cognito-identity:UpdateIdentityPool
+        resource: "{target.attached_resource_arn}"
+      - action: cognito-identity:GetOpenIdTokenForDeveloperIdentity
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_developer_enable_classic_role: true
+    scope: any
+    aggregate_as: "Roles reachable after enabling Basic authentication in {account}"
+    outcome: credentials
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict identity-pool updates and developer-token issuance to approved backend roles, and keep Basic authentication disabled where it is unnecessary.
+  references:
+    - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_UpdateIdentityPool.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/developer-authenticated-identities.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html
+  notes: The collected pool must have a developer provider and enough configuration to preserve required UpdateIdentityPool fields. The selector verifies both permissions on the same pool and matching target trust. Cross-account roles need explicit aud and amr trust conditions.
