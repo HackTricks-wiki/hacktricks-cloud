@@ -129,3 +129,33 @@
     - https://docs.aws.amazon.com/cognito/latest/developerguide/developer-authenticated-identities.html
     - https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html
   notes: The collected pool must have a developer provider and enough configuration to preserve required UpdateIdentityPool fields. The selector verifies both permissions on the same pool and matching target trust. Cross-account roles need explicit aud and amr trust conditions.
+
+- id: aws-cognito-updateidentitypool-enable-guest-classic-role
+  provider: aws
+  service: cognito-identity
+  title: Enable guest Basic flow and assume a role trusting the pool
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identityupdateidentitypool
+  source_revision: c111ee5412
+  summary: A source that can update an identity pool can enable guest and Basic authentication, obtain a guest token, and assume an IAM role that trusts the pool's unauthenticated web identity.
+  requires:
+    all_of:
+      - action: cognito-identity:UpdateIdentityPool
+        resource: "{target.attached_resource_arn}"
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      cognito_guest_update_classic_role: true
+    scope: any
+    aggregate_as: "Roles reachable after enabling guest Basic flow in {account}"
+    outcome: credentials
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict identity-pool updates to approved administrators, and allow guest Basic flow only where the trusted roles have deliberately limited permissions.
+  references:
+    - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_UpdateIdentityPool.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html
+  notes: The collected pool needs a usable name and no role mappings. The source must be able to update that exact pool; no token-mint IAM permission is needed for a guest. The target role must trust the pool audience and unauthenticated method. Cross-account roles require both conditions explicitly.
