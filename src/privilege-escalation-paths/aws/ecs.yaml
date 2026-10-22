@@ -52,10 +52,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-      - action: ecs:RegisterTaskDefinition
-        resource: "*"
-      - action: ecs:RunTask
-        resource: "*"
+        request_context:
+          iam:PassedToService: ecs-tasks.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -68,6 +66,8 @@
       description: iam:PassedToService conditions may restrict this.
     - id: cluster_and_network
       description: A cluster with Fargate or EC2 capacity and (for awsvpc) a subnet is required; ecs:RunTask Resource is the task-definition ARN with an ecs:cluster condition.
+  preconditions:
+    - ecs_new_task_definition_runtask_ready
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -75,7 +75,7 @@
   mitigation: Restrict iam:PassRole on ECS task roles with iam:PassedToService and specific role ARNs.
   references:
     - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
-  notes: ""
+  notes: A conditional EC2 route needs a new task-definition family and revision covered by scoped RegisterTaskDefinition and RunTask grants, an active same-Region cluster with an active connected container instance, and PassRole for the target task role. Fargate and network-dependent launches remain unresolved until their launch facts are collected; image pull and placement are conditional.
 
 - id: aws-ecs-passrole-runtask-overrides
   provider: aws
