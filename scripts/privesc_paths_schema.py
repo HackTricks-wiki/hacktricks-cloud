@@ -208,6 +208,9 @@ SELECTOR_KEYS = {
         "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
         "Missing or incomplete evidence is unresolved; a different source or target never matches."),
     "aws_s3_policy_self_grant": (("aws",), "bool_true", "Reviewed exact S3 bucket-policy self-grant for the caller and a bounded object prefix."),
+    "aws_sqs_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself ReceiveMessage on an exact unencrypted queue through SetQueueAttributes."),
+    "aws_sns_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself Subscribe on an exact topic through SetTopicAttributes."),
+    "aws_dynamodb_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself GetItem on an exact AWS-owned-key table through PutResourcePolicy."),
     "aws_s3_access_grants_self_grant": (("aws",), "bool_true", "Reviewed exact S3 Access Grants session with new READ permission on a bounded prefix."),
     "aws_secretsmanager_policy_self_grant": (("aws",), "bool_true", "Reviewed GetSecretValue self-grant for the exact IAM user and secret."),
     "aws_efs_policy_self_grant": (("aws",), "bool_true", "Reviewed ClientMount self-grant for the exact EFS file system."),
@@ -251,6 +254,18 @@ SELECTOR_KEYS = {
     "cognito_user_pool_covered_by": (("aws",), "action",
         "Target role is mapped by an identity pool to a user pool covered by the action; dropped when the account's "
         "cognito_user_pool inventory is collected and empty, otherwise unknown (identity-pool roles not collected)."),
+    "cognito_developer_authenticated_role": (("aws",), "bool_true",
+        "Target role is the authenticated role of an identity pool with a developer provider, with trust admitting "
+        "that pool's authenticated Cognito web identity."),
+    "cognito_developer_classic_role": (("aws",), "bool_true",
+        "Target role trusts the authenticated web identity of a developer identity pool whose Basic (Classic) "
+        "flow is enabled, whether or not it is the pool's default role."),
+    "cognito_developer_settable_authenticated_role": (("aws",), "bool_true",
+        "Target role can become the authenticated role of a collected developer identity pool and trusts that "
+        "pool's authenticated web identity; the source must be able to mint a developer token for the same pool."),
+    "cognito_developer_enable_classic_role": (("aws",), "bool_true",
+        "Target role trusts a developer identity pool whose Basic (Classic) flow is disabled; the source can enable "
+        "that flow and mint a developer token for the same pool."),
     "cognito_user_pool_group_role_covered_by": (("aws",), "action",
         "Target role is the RoleArn of a user-pool group covered by the action; dropped when the account's "
         "cognito_user_pool inventory is collected and empty, otherwise unknown (groups not collected)."),
@@ -264,8 +279,8 @@ SELECTOR_KEYS = {
         "Target role is the instance role of an ECS container instance or the task role of a task placed on one "
         "(dropped when every cluster has 0 container instances; unknown without container-instance/task inventory)."),
     "ecs_task_colocated_with_source_container_instance": (("aws",), "string",
-        "Value {source.arn}: the source is an EC2 container-instance role and the target task role runs (or, without "
-        "placement facts, may run: unknown) on an EC2 container instance carrying the source's instance profile."),
+        "Value {source.arn}: the source is an EC2 container-instance role and the target task or task-execution role "
+        "runs (or, without placement facts, may run: unknown) on an EC2 container instance carrying the source's instance profile."),
     "eks_authentication_mode": (("aws",), "string_or_list",
         "EKS cluster accessConfig.authenticationMode is one of the values (API, API_AND_CONFIG_MAP, CONFIG_MAP); unknown when not collected."),
     "trust_allows_oidc_provider_covered_by": (("aws",), "action",
@@ -780,6 +795,9 @@ FACTS_NEEDED = {
     "source_boundary_policy_version_contents": "stored versions of the source permissions boundary policy",
     "source_boundary_replacement_authorization": "the replacement boundary policy and request conditions on changing the source boundary",
     "aws_s3_policy_self_grant": "unique collected aws_s3_policy_self_grant_evidence with exact source, bucket, prefix, policy principal/resource and observed before/after GetObject authorization",
+    "aws_sqs_policy_self_grant": "the exact queue ARN, a same-account IAM user's SetQueueAttributes grant, absent prior ReceiveMessage and no surviving explicit deny or SSE-KMS key",
+    "aws_sns_policy_self_grant": "the exact topic ARN, a same-account IAM user's SetTopicAttributes grant, absent prior Subscribe and no surviving explicit deny",
+    "aws_dynamodb_policy_self_grant": "an active table with an exact ARN and AWS-owned encryption, a same-account IAM user's PutResourcePolicy grant, absent prior GetItem and no surviving explicit deny",
     "aws_s3_access_grants_self_grant": "unique collected aws_s3_access_grants_self_grant_evidence with exact source, location role, grant, target prefix, scoped session and observed before/after GetObject authorization",
     "aws_secretsmanager_policy_self_grant": "unique reviewed exact-source, exact-secret policy grant with observed before/after GetSecretValue and KMS authorization",
     "aws_efs_policy_self_grant": "unique reviewed exact-source, exact-file-system policy grant with observed before/after ClientMount authorization",
@@ -801,12 +819,26 @@ FACTS_NEEDED = {
                          "fully collected in every region: imagebuilder_pipeline (imagebuilder:ListImagePipelines + "
                          "ListInfrastructureConfigurations {instanceProfileName}), sagemaker_user_profile (sagemaker:ListUserProfiles + "
                          "DescribeUserProfile {UserSettings.ExecutionRole} / DescribeDomain DefaultUserSettings.ExecutionRole), "
+                         "sagemaker_space (ListSpaces + DescribeSpace {SpaceArn, AppType, SharingType, OwnerUserProfileName} "
+                         "+ DescribeDomain DefaultSpaceSettings.ExecutionRole or owner DescribeUserProfile ExecutionRole), "
                          "sagemaker_cluster (sagemaker:ListClusters + DescribeCluster {InstanceGroups[].ExecutionRole})",
     "via_artifact_type": "AWS: artifact consumer mapping (S3 object / ECR repo / SSM document -> consuming role)",
     "consumer_input_writable_via": "AWS: workload input mapping (ECR repo / S3 object -> consuming role); Image Builder: "
                                    "imagebuilder_pipeline (ListImagePipelines + ListInfrastructureConfigurations) in every region",
     "cognito_user_pool_covered_by": "AWS: cognito_identity_pool Roles {Roles, RoleMappings} (cognito-identity:GetIdentityPoolRoles) + "
                                     "Configuration.CognitoIdentityProviders (DescribeIdentityPool) in every region",
+    "cognito_developer_authenticated_role": "AWS: cognito_identity_pool Configuration.DeveloperProviderName "
+                                            "(DescribeIdentityPool), Roles.Roles.authenticated (GetIdentityPoolRoles), "
+                                            "and exact role web-identity trust for the pool audience and authenticated method",
+    "cognito_developer_classic_role": "AWS: cognito_identity_pool Configuration.{DeveloperProviderName, AllowClassicFlow} "
+                                      "(DescribeIdentityPool) and IAM role web-identity trust for that pool's audience "
+                                      "and authenticated developer-provider method",
+    "cognito_developer_settable_authenticated_role": "AWS: cognito_identity_pool Configuration.DeveloperProviderName "
+                                                     "(DescribeIdentityPool) and IAM role web-identity trust for "
+                                                     "the same pool's audience and authenticated method",
+    "cognito_developer_enable_classic_role": "AWS: cognito_identity_pool Configuration.{DeveloperProviderName, AllowClassicFlow} "
+                                             "(DescribeIdentityPool), IAM role web-identity trust, and exact "
+                                             "UpdateIdentityPool plus token-mint permission on the same pool",
     "cognito_user_pool_group_role_covered_by": "AWS: cognito_user_pool Groups {GroupName, RoleArn} (cognito-idp:ListGroups) in every region",
     "codedeploy_group_instance_role_covered_by": "AWS: codedeploy_deployment_group {ec2TagFilters, ec2TagSet, autoScalingGroups} "
                                                  "(codedeploy:BatchGetDeploymentGroups) + instance {Tags, IamInstanceProfile} in the same region",
@@ -816,7 +848,8 @@ FACTS_NEEDED = {
                                                          "(ecs:ListContainerInstances + DescribeContainerInstances) and Tasks {taskDefinitionArn, "
                                                          "launchType, containerInstanceArn, overrides.taskRoleArn} (ecs:ListTasks + DescribeTasks)",
     "ecs_task_colocated_with_source_container_instance": "AWS: ecs_cluster ContainerInstances {containerInstanceArn, ec2InstanceId} + Tasks "
-                                                         "{taskDefinitionArn, launchType, containerInstanceArn, overrides.taskRoleArn} + instance IamInstanceProfile",
+                                                         "{taskDefinitionArn, launchType, containerInstanceArn, taskRoleArn, executionRoleArn, overrides} "
+                                                         "+ task definitions {taskRoleArn, executionRoleArn} + instance IamInstanceProfile",
     "eks_authentication_mode": "AWS: eks_cluster describe_cluster {cluster.arn, cluster.accessConfig.authenticationMode}",
     "trust_allows_oidc_provider_covered_by": "AWS: iam_role AssumeRolePolicyDocument (collected)",
     "trust_federated_provider_missing": "AWS: iam_saml_provider (iam:ListSAMLProviders {Arn}) / iam_oidc_provider (iam:ListOpenIDConnectProviders {Arn})",
@@ -969,9 +1002,18 @@ FACTS_NEEDED = {
 # an "Unresolved" placeholder (unknown confidence, never FAIL). mode "target" depends only on the target and the
 # inventory (shared candidate set); mode "source" also depends on the source principal.
 PRECONDITIONS = {
+    "braket_createjob_device_authorized": (("aws",), "source",
+      "The caller can create a Braket hybrid job on a usable device rather than only on a job ARN.",
+      "AWS: CreateJob must authorize a device ARN; a job-only grant cannot launch a hybrid job. Exact device grants outside the known simulator need device availability evidence."),
+    "imagebuilder_component_publish_and_pipeline_start": (("aws",), "source",
+        "The source can publish a newer build of an account-owned component consumed by one pipeline and start that same pipeline.",
+        "AWS: complete Image Builder pipeline and recipe-component inventory; the same pipeline has the target instance-profile role, an unpinned component reference, source CreateComponent permission covering new versions or builds of that component, and source StartImagePipelineExecution on that pipeline"),
     "gameliftstreams_live_role_session_admin_shell": (("aws",), "source",
       "The caller can open an admin shell in one live GameLift Streams session carrying the target role.",
       "AWS: complete per-Region ListStreamGroups/ListStreamSessions inventory with the same session ARN, live status, exact RoleArn and parent group ARN; CreateStreamSessionAdminShell must allow that group"),
+    "gameliftstreams_controlled_application_role_session": (("aws",), "source",
+      "The caller can start a controlled GameLift Streams application in an eligible stream group with the target role.",
+      "AWS: exact application content control, application-to-active-stream-group association and capacity, source StartStreamSession or CreateStreamUrl authorization on the required resources, and effective PassRole for the target role"),
     "athena_existing_session_calculation_role": (("aws",), "source",
       "The caller can submit code to an idle PySpark 3 session with the target execution role.",
       "AWS: complete Athena ListSessions/GetSession inventory with exact SessionConfiguration.ExecutionRole, IDLE state, PySpark engine version 3, and StartCalculationExecution on its workgroup ARN"),
@@ -1028,6 +1070,9 @@ PRECONDITIONS = {
     "sagemaker_notebook_instance_accessible": (("aws",), "source",
         "The source can open a running notebook, or start a stopped notebook before opening it.",
         "AWS: the exact notebook attached to the target role is InService, or it is Stopped on a restartable platform and the source can call StartNotebookInstance on that notebook ARN"),
+    "sagemaker_attached_notebook_lifecycle_update": (("aws",), "source",
+        "The source can replace the startup script already attached to a notebook using the target role.",
+        "AWS: a collected notebook names the exact existing lifecycle configuration and target RoleArn; UpdateNotebookInstanceLifecycleConfig covers that configuration ARN in the same account and Region, and the notebook can run again"),
     "sagemaker_new_notebook_creation_and_url_authorized": (("aws",), "source",
         "The source can create and open one new notebook instance using the passed role.",
         "AWS: a free notebook name in a collected Region is authorized for both CreateNotebookInstance and CreatePresignedNotebookInstanceUrl on the same ARN"),
@@ -1064,6 +1109,9 @@ PRECONDITIONS = {
     "glue_job_override_arguments_available": (("aws",), "source",
         "An existing Glue job can run with a script override supplied by the source.",
         "AWS: the job's command type and non-overridable code argument names are collected; --scriptLocation is not pinned; StartJobRun covers that job or CreateTrigger covers a new scheduled trigger name in its Region. Dependency-only routes remain unresolved until their runtime prerequisites are verified"),
+    "glue_existing_job_script_object_writable_and_runnable": (("aws",), "source",
+        "The source can replace the exact script object of an existing Glue job that runs as the target role.",
+        "AWS: collected Glue job Name, Role, Command.ScriptLocation and code argument names; source s3:PutObject on that S3 object, target-role s3:GetObject on the same object, and source StartJobRun on that job with an unpinned --scriptLocation or an active scheduled trigger naming it without script redirects in job defaults or trigger arguments. Bucket policy, encryption and actual run remain conditional"),
     "appstream_new_app_block_builder_with_role": (("aws",), "source",
         "The source can create and start one app block builder with the target role and stream into it.",
         "AWS: complete builder and app-block name inventory, two available subnets in separate Availability Zones of one VPC, and CreateAppBlockBuilder, AssociateAppBlockBuilderAppBlock, StartAppBlockBuilder and CreateAppBlockBuilderStreamingURL on the same unused builder ARN; the associated APPSTREAM2 app block must be unassociated already, or be newly creatable with a regional S3 bucket"),
@@ -1154,6 +1202,9 @@ PRECONDITIONS = {
     "mwaa_existing_environment_update_with_dag_code": (("aws",), "source",
         "The source can update one usable MWAA environment to use the target role and upload a DAG that the role can read.",
         "AWS: collected mwaa_environment ARN, AVAILABLE or UPDATE_FAILED status, SourceBucketArn and DagS3Path; exact airflow:UpdateEnvironment and s3:PutObject for one new DAG, plus target role s3:ListBucket and s3:GetObject for that DAG"),
+    "mwaa_existing_dag_object_execution_role": (("aws",), "source",
+        "The source can upload a Python DAG to an existing MWAA environment and have it parsed under that environment's exact execution role.",
+        "AWS: collected AVAILABLE mwaa_environment ARN, ExecutionRoleArn, SourceBucketArn and DagS3Path; exact s3:PutObject on a Python object in that DAG folder, plus the attached role's s3:ListBucket and s3:GetObject for the same object"),
     "mwaa_serverless_new_workflow_definition_and_start": (("aws",), "source",
         "The source can create a new workflow from a controlled S3 definition and start that exact workflow under the target role.",
         "AWS: complete workflow inventory and free name; same-Region versioned, private owned S3 bucket plus source Put/Get/List for a new YAML object; broad StartWorkflowRun covering generated workflow IDs, exact PassRole with iam:PassedToService=airflow-serverless.amazonaws.com, and required logging and service-linked-role permissions"),
@@ -1196,6 +1247,12 @@ PRECONDITIONS = {
     "ssm_shell_session_on_online_instance": (("aws",), "source",
         "The source can open the default shell session document and data channel on the same online instance carrying the target role.",
         "AWS: ssm:StartSession on an online EC2 instance and its SSM-SessionManagerRunShell document, plus ssmmessages:OpenDataChannel"),
+    "ssm_hybrid_sendcommand_role": (("aws",), "source",
+        "The source can send a shell command to an online hybrid managed node carrying the exact target service role.",
+        "AWS: collected online mi- managed node with IamRole equal to the target role name; source ssm:SendCommand on its managed-instance ARN and the platform-matching AWS shell document"),
+    "ssm_hybrid_startsession_role": (("aws",), "source",
+        "The source can open an interactive shell on an online hybrid managed node carrying the exact target service role.",
+        "AWS: collected online mi- managed node with IamRole equal to the target role name; source ssm:StartSession on its managed-instance ARN and SSM-SessionManagerRunShell document, plus future ssmmessages:OpenDataChannel"),
     "ssm_shell_association_targets": (("aws",), "source",
         "The source can create an association for a shell-capable document in the Region of an online target instance.",
         "AWS: ssm:CreateAssociation on a new association ARN and AWS-RunShellScript or AWS-RunPowerShellScript document in the instance Region; Targets can name its InstanceIds value"),
@@ -1916,7 +1973,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
         if "service_plane" in selector and kind != "aws_service_plane_admin":
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
         aws_authority_selectors = (
-            "aws_challenge_fact", "aws_s3_policy_self_grant", "aws_s3_access_grants_self_grant",
+            "aws_challenge_fact", "aws_s3_policy_self_grant", "aws_sqs_policy_self_grant", "aws_sns_policy_self_grant", "aws_dynamodb_policy_self_grant", "aws_s3_access_grants_self_grant",
             "aws_secretsmanager_policy_self_grant", "aws_efs_policy_self_grant",
             "aws_cases_tag_self_grant", "aws_sitewise_portal_self_grant")
         selected_authority = [key for key in aws_authority_selectors if selector.get(key)]
