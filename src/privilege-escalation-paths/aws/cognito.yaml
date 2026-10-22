@@ -12,7 +12,7 @@
   service: cognito-identity
   title: Obtain a developer identity pool's authenticated role credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
-  source_revision: fd9bf8863b
+  source_revision: 2e86843a15
   summary: The source can mint a developer-authenticated identity token for an exact pool and exchange it for that pool's authenticated IAM role credentials.
   requires:
     all_of:
@@ -34,3 +34,32 @@
     - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_GetOpenIdTokenForDeveloperIdentity.html
     - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_GetCredentialsForIdentity.html
   notes: The selector requires a collected developer provider, the pool's authenticated role, and role trust that admits the pool audience and authenticated Cognito method. Guest and rule-mapped roles are excluded.
+
+- id: aws-cognito-getopenidtokenfordeveloperidentity-classic
+  provider: aws
+  service: cognito-identity
+  title: Use a developer identity token with a trusted IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
+  source_revision: 2e86843a15
+  summary: A source that can mint a developer identity token for a pool with Basic authentication enabled can exchange it through STS for an IAM role that trusts that pool and authenticated method.
+  requires:
+    all_of:
+      - action: cognito-identity:GetOpenIdTokenForDeveloperIdentity
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_developer_classic_role: true
+    scope: any
+    aggregate_as: "Roles trusting classic developer identity pools reachable in {account}"
+    outcome: credentials
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict developer-token issuance to trusted backend identities and keep Basic authentication disabled unless the application needs it.
+  references:
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/developer-authenticated-identities.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html
+  notes: The pool must have AllowClassicFlow enabled. The selector verifies token-mint permission on that same pool and the target role's matching Cognito web-identity trust. Cross-account roles require explicit aud and amr trust conditions.
