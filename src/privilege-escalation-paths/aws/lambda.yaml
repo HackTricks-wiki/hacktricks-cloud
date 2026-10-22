@@ -292,17 +292,15 @@
 - id: aws-lambda-passrole-updatefunctionconfiguration-role-swap
   provider: aws
   service: lambda
-  title: Repoint and replace the code of an existing Lambda function
+  title: Run controlled code through an existing Lambda function with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#iampassrole-lambdaupdatefunctionconfiguration-lambdainvokefunction--repoint-an-existing-functions-execution-role
   source_revision: 171e422299
-  summary: The source can run chosen code under a passable Lambda-trusting role by changing the role and code of one existing function it can invoke.
+  summary: The source can run chosen code under a passable Lambda-trusting role by changing the role and either the code or a startup wrapper layer of one existing function it can invoke.
   requires:
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
       - action: lambda:UpdateFunctionConfiguration
-        resource: "*"
-      - action: lambda:UpdateFunctionCode
         resource: "*"
       - action: lambda:InvokeFunction
         resource: "*"
@@ -318,7 +316,7 @@
     - lambda_existing_zip_function_role_swap_ready
   conditions:
     - id: same_function
-      description: The role change, code update, and invocation must cover the same active ZIP function.
+      description: The role change, chosen-code path, and invocation must cover the same active ZIP function. Chosen code comes from UpdateFunctionCode or a newly published executable layer attached with AWS_LAMBDA_EXEC_WRAPPER and GetLayerVersion permission.
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
@@ -329,7 +327,7 @@
   references:
     - https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionConfiguration.html
     - https://docs.aws.amazon.com/lambda/latest/dg/lambda-intro-execution-role.html
-  notes: Changing a function's role without controlling its code does not grant the caller the role's general permissions. This route requires control of both the role and executable ZIP code on one function.
+  notes: Changing a function's role without a way to run chosen code does not grant the caller the role's general permissions. The evaluator requires UpdateFunctionCode or a new wrapper layer published and attached by the source on the same supported native-runtime function, followed by InvokeFunction. A pre-existing controlled layer or customer-managed KMS setting stays unresolved without further evidence.
 
 - id: aws-lambda-putresourcepolicy-grant-updatefunctioncode
   provider: aws
