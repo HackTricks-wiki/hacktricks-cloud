@@ -226,14 +226,10 @@
   summary: The source can obtain the privileges of passable roles trusting ecs-tasks.amazonaws.com by deploying a task set it controls to a service with the EXTERNAL deployment controller.
   requires:
     all_of:
-      - action: ecs:RegisterTaskDefinition
-        resource: "*"
-      - action: ecs:CreateTaskSet
-        resource: "*"
-      - action: ecs:UpdateServicePrimaryTaskSet
-        resource: "*"
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ecs-tasks.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -244,6 +240,8 @@
   conditions:
     - id: external_controller_service
       description: A service using the EXTERNAL deployment controller must exist in a covered cluster.
+  preconditions:
+    - ecs_external_service_taskset_ready
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -251,7 +249,8 @@
   mitigation: Restrict iam:PassRole on ECS task roles and task-set actions.
   references:
     - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_CreateTaskSet.html
-  notes: Without a task role the result is container execution only (no IAM gain).
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+  notes: A conditional route requires an active EXTERNAL service with a simple EC2 configuration and a connected container instance. RegisterTaskDefinition must cover every revision of one new family; CreateTaskSet must cover any ECS-generated task-set ID on that service, and UpdateServicePrimaryTaskSet must cover that same service. Image pull and placement remain conditional.
 
 - id: aws-ecs-ecscape-agent-impersonation
   provider: aws
