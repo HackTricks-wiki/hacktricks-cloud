@@ -822,9 +822,11 @@
 
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ivs-chat-room-token-post-exploitation/README.md#mint-a-room-token-and-join-the-data-plane
   technique: aws-v3-20-mint-an-ivs-chat-token-using-another-application-user-i
-  reason: 'Mint an IVS Chat token using another application user ID: actions ivschat:CreateChatToken are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'CreateChatToken can mint a room WebSocket token with an application-provided
+    userId and selected chat capabilities. That token may let the caller impersonate an
+    application user and send, receive or moderate messages in the room, but userId is not
+    an IAM principal and the token cannot call AWS APIs as another role. Keep this bounded
+    chat impersonation risk outside the AWS principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-audit-manager-post-exploitation/README.md#delegate-a-control-set-to-another-role
   technique: aws-v3-21-delegate-audit-manager-control-set-authority-to-an-atta
   reason: 'Delegate Audit Manager control-set authority to an attacker-controlled role: actions auditmanager:BatchCreateDelegationByAssessment
@@ -852,14 +854,18 @@
     new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-managed-blockchain-post-exploitation/README.md#recover-an-accessor-bearer-token
   technique: aws-v3-26-reuse-an-amazon-managed-blockchain-accessor-billing-tok
-  reason: 'Reuse an Amazon Managed Blockchain accessor billing token: actions managedblockchain:GetAccessor are
-    stated, but the aws_verified_authority target does not identify an exact principal or encode a verified new
-    effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetAccessor can return a BILLING_TOKEN for Ethereum or Polygon JSON-RPC access
+    and charge usage to the accessor owner. The token is a Managed Blockchain service
+    credential, not an AWS IAM or STS session; it neither discloses wallet private keys nor
+    grants another AWS principal authority. Keep paid-node misuse as a separate issue.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kinesis-video-streams-post-exploitation/README.md#recover-turn-credentials-and-impersonate-webrtc-peers
   technique: aws-v3-27-join-kinesis-video-signaling-as-a-master-or-viewer-peer
-  reason: 'Join Kinesis Video signaling as a master or viewer peer: actions kinesisvideo:ConnectAsViewer are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetIceServerConfig returns temporary TURN relay credentials for one signaling
+    channel; joining signaling separately requires the source principal to have
+    ConnectAsViewer or ConnectAsMaster on that channel. TURN credentials authenticate to
+    the relay, not to IAM or STS, and the signed WebSocket call still uses the source
+    principal. Media exposure or peer impersonation is a bounded application-plane risk,
+    not a transition to another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statesstartexecution---input-injection-into-dangerous-sinks
   technique: aws-v3-28-reach-a-lambda-execution-role-through-unsafe-workflow-i
   reason: 'Reach a Lambda execution role through unsafe workflow input deserialization: actions states:StartExecution
