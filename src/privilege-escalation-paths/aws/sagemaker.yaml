@@ -122,13 +122,14 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:CreateProcessingJob
-        resource: "*"
+        resource: arn:{source.partition}:sagemaker:*:{source.account}:processing-job/*
   target:
     kind: aws_role
     selector:
       trust_allows_service: sagemaker.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
@@ -146,7 +147,8 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and use SageMaker condition keys (approved images, network isolation) on job creation.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateProcessingJob.html
-  notes: The role also needs ECR pull permissions for the chosen image; AWS-provided images are normally pullable by SageMaker roles.
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_sagemaker.html
+  notes: CreateProcessingJob authorizes the caller-selected processing-job ARN. AppSpecification.ContainerEntrypoint can select caller-supplied commands, but an authorized, runnable image, target role image access and a viable job request remain to be proven before a role edge is reported.
 
 - id: aws-sagemaker-passrole-createtrainingjob
   provider: aws
@@ -159,13 +161,14 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:CreateTrainingJob
-        resource: "*"
+        resource: arn:{source.partition}:sagemaker:*:{source.account}:training-job/*
   target:
     kind: aws_role
     selector:
       trust_allows_service: sagemaker.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
@@ -183,7 +186,8 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and enforce approved images/network isolation via condition keys.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateTrainingJob.html
-  notes: ""
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_sagemaker.html
+  notes: CreateTrainingJob authorizes the caller-selected training-job ARN. The code, image, data, output path and job conditions still need a joined execution witness.
 
 - id: aws-sagemaker-passrole-createhyperparametertuningjob
   provider: aws
@@ -196,13 +200,14 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:CreateHyperParameterTuningJob
-        resource: "*"
+        resource: arn:{source.partition}:sagemaker:*:{source.account}:hyper-parameter-tuning-job/*
   target:
     kind: aws_role
     selector:
       trust_allows_service: sagemaker.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
