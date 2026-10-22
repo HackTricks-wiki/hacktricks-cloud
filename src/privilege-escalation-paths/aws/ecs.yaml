@@ -192,22 +192,12 @@
   source_revision: 171e422299
   summary: The source can obtain the privileges of the container-instance role and of task roles of tasks co-located on EC2 container instances by running a privileged/host-mounted container it controls.
   requires:
-    all_of:
-      - action: ecs:RegisterTaskDefinition
-        resource: "*"
-    any_of:
-      - - action: ecs:RunTask
-          resource: "*"
-      - - action: ecs:StartTask
-          resource: "*"
-      - - action: ecs:CreateService
-          resource: "*"
-      - - action: ecs:UpdateService
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
-      ecs_container_instance_role_in_cluster_covered_by: ecs:RunTask
+      any_principal_in_scope: true
     scope: same_account
     aggregate_as: "ECS container-instance roles and co-located task roles in clusters covered by the launch action in {account}"
   conditions:
@@ -215,13 +205,17 @@
       description: Only EC2-launch-type capacity is affected; Fargate does not allow privileged containers or host access.
     - id: co_located_tasks
       description: Other task roles are only reachable for tasks placed on the same instance.
+  preconditions:
+    - ecs_privileged_task_exact_host_ready
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Use Fargate for sensitive workloads, block privileged/host-network containers, and restrict task-definition registration.
-  references: []
-  notes: The selector applies to whichever launch action matched; it covers instance-profile roles of container instances plus task roles of tasks on them (ecs_task_role_on_ec2_capacity restricted to those clusters).
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters_ec2.html
+  notes: A concrete conditional edge requires a privileged task definition and StartTask on the exact active connected Linux EC2 container instance carrying the node role or a running target-role task. RunTask and service deployment remain unresolved without an exact placement join; registration, launch, image pull, and credential access are each evaluated conservatively.
 
 - id: aws-ecs-taskset-primary
   provider: aws
