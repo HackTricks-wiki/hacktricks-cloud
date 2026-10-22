@@ -12,7 +12,7 @@
   service: cognito-identity
   title: Obtain a developer identity pool's authenticated role credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
-  source_revision: 2e86843a15
+  source_revision: 3d2e6950d7
   summary: The source can mint a developer-authenticated identity token for an exact pool and exchange it for that pool's authenticated IAM role credentials.
   requires:
     all_of:
@@ -40,7 +40,7 @@
   service: cognito-identity
   title: Use a developer identity token with a trusted IAM role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitygetopenidtokenfordeveloperidentity--mint-credentials-for-the-pools-authenticated-role-with-no-account-at-all
-  source_revision: 2e86843a15
+  source_revision: 3d2e6950d7
   summary: A source that can mint a developer identity token for a pool with Basic authentication enabled can exchange it through STS for an IAM role that trusts that pool and authenticated method.
   requires:
     all_of:
@@ -63,3 +63,38 @@
     - https://docs.aws.amazon.com/cognito/latest/developerguide/authentication-flow.html
     - https://docs.aws.amazon.com/cognito/latest/developerguide/iam-roles.html
   notes: The pool must have AllowClassicFlow enabled. The selector verifies token-mint permission on that same pool and the target role's matching Cognito web-identity trust. Cross-account roles require explicit aud and amr trust conditions.
+
+- id: aws-cognito-setidentitypoolroles-developer-token
+  provider: aws
+  service: cognito-identity
+  title: Set an identity pool role and obtain its credentials
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-identitysetidentitypoolroles-iampassrole
+  source_revision: 3d2e6950d7
+  summary: A source that can set an identity pool's authenticated role, pass the target role and mint a developer token for that same pool can obtain the target role's credentials.
+  requires:
+    all_of:
+      - action: cognito-identity:SetIdentityPoolRoles
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: cognito-identity.amazonaws.com
+      - action: cognito-identity:GetOpenIdTokenForDeveloperIdentity
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      cognito_developer_settable_authenticated_role: true
+    scope: same_account
+    aggregate_as: "Roles assignable to developer identity pools in {account}"
+    outcome: credentials
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict SetIdentityPoolRoles and iam:PassRole to approved pool roles, and limit developer-token issuance to trusted backend identities.
+  references:
+    - https://docs.aws.amazon.com/cognitoidentity/latest/APIReference/API_SetIdentityPoolRoles.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/role-based-access-control.html
+    - https://docs.aws.amazon.com/cognito/latest/developerguide/developer-authenticated-identities.html
+  notes: SetIdentityPoolRoles has no resource-level IAM scope. The selector still requires the source to own a collected developer pool, have token-mint permission on that exact pool, and choose a same-account role whose web-identity trust admits its authenticated developer token. Other token sources need separate proof.
