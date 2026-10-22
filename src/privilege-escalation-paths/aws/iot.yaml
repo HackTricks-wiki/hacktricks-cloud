@@ -54,4 +54,42 @@
     - https://docs.aws.amazon.com/iot/latest/developerguide/authorizing-direct-aws.html
     - https://docs.aws.amazon.com/iot/latest/apireference/API_CreateRoleAlias.html
     - https://docs.aws.amazon.com/iot/latest/apireference/API_RegisterCertificateWithoutCA.html
-  notes: This is the self-contained new-alias/new-policy/new-certificate path, including a locally generated certificate registered without a CA. Repointing an existing alias, attaching an existing permissive policy and using an already held active certificate require separate exact alias/policy/certificate joins. The aws-iot-core-privesc page documents the same family.
+  notes: This is the self-contained new-alias/new-policy/new-certificate path, including a locally generated certificate registered without a CA. The existing-alias route below covers repointing a collected alias with a new policy and certificate. Reusing an existing policy or already-held certificate still requires separate exact joins. The aws-iot-core-privesc page documents the same family.
+
+- id: aws-iot-update-existing-alias-new-certificate
+  provider: aws
+  service: iot
+  title: Repoint an existing IoT role alias to a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-privesc/README.md#iotcreaterolealias--updaterolealias--iampassrole--assume-an-arbitrary-role-via-a-device-certificate
+  source_revision: 117eefa65f
+  summary: The source can repoint an existing IoT role alias to a passable role, then use a newly generated or self-registered certificate with a new IoT policy to obtain that role's credentials.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: iot.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: credentials.iot.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles reachable by repointing a collected IoT alias in {account}"
+    outcome: credentials
+  preconditions:
+    - iot_existing_alias_new_policy_certificate_same_region
+  conditions:
+    - id: exact_existing_alias
+      description: A collected alias in the same Region can be updated by the source to point to the target role.
+    - id: controlled_certificate
+      description: The source can create an IoT policy for that alias and attach it to a generated or self-registered active certificate whose private key it holds.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit UpdateRoleAlias and iam:PassRole for IoT credential-provider roles, and restrict who can create and attach IoT certificate policies.
+  references:
+    - https://docs.aws.amazon.com/iot/latest/apireference/API_ListRoleAliases.html
+    - https://docs.aws.amazon.com/iot/latest/apireference/API_UpdateRoleAlias.html
+    - https://docs.aws.amazon.com/iot/latest/developerguide/authorizing-direct-aws.html
+  notes: The exact alias is observed by ListRoleAliases; no existing certificate or policy is assumed. Another same-Region path must let the source create a policy and active certificate and attach that policy to the certificate.
