@@ -53,19 +53,17 @@
 - id: aws-emr-containers-passrole-startjobrun
   provider: aws
   service: emr-containers
+  source_kind: [aws_user, aws_role]
   title: Start an EMR on EKS job run with a passed execution role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
   source_revision: 171e422299
   summary: The source can obtain the privileges of an EMR on EKS execution role (trusting the EKS cluster OIDC provider for emr-containers-sa-* service accounts) by running its own job code on a virtual cluster under that role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_emr_containers_oidc: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "EMR on EKS execution roles passable in {account}"
     outcome: workload_execution
@@ -84,24 +82,22 @@
   references:
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
     - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html
-  notes: The evaluator checks StartJobRun on an inventoried RUNNING virtual cluster in the source account. The EKS namespace and role trust remain conditional.
+  notes: The evaluator joins StartJobRun on the exact RUNNING virtual cluster to a fresh reviewed job run, a controlled readable artifact, applied execution role, code execution and a useful role action unavailable to the caller. PassRole uses the recorded service and associated-resource context; absent execution evidence remains unresolved.
 
 - id: aws-emr-containers-passrole-startjobrun-pod-identity
   provider: aws
   service: emr-containers
+  source_kind: [aws_user, aws_role]
   title: Start an EMR on EKS job through EKS Pod Identity
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
   source_revision: 171e422299
   summary: The source can submit a job with a passable execution role when its EKS Pod Identity trust and all three EMR service-account associations are in place.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: pods.eks.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "EMR on EKS Pod Identity execution roles passable in {account}"
     outcome: workload_execution
@@ -120,24 +116,22 @@
   references:
     - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
-  notes: The evaluator binds one RUNNING virtual cluster, an ACTIVE EKS cluster, all three recorded service-account associations, exact PassRole context for pods.eks.amazonaws.com and its EKS cluster ARN, and exact StartJobRun authorization.
+  notes: The evaluator binds one RUNNING virtual cluster, an ACTIVE EKS cluster, all three recorded service-account associations, exact PassRole context for pods.eks.amazonaws.com and its EKS cluster ARN, and a fresh reviewed job run that executed controlled code with the target role and performed a useful action.
 
 - id: aws-emr-containers-getmanagedendpointsessioncredentials
   provider: aws
   service: emr-containers
+  source_kind: [aws_user, aws_role]
   title: Open an interactive EMR on EKS session as a managed endpoint's execution role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-containersgetmanagedendpointsessioncredentials--iampassrole--interactive-spark-session-as-the-execution-role
   source_revision: 171e422299
   summary: The source can run interactive Spark code as an EMR on EKS execution role by retrieving managed-endpoint session credentials for that role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_emr_containers_oidc: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "EMR on EKS execution roles of managed endpoints in {account}"
     outcome: workload_execution
@@ -156,4 +150,4 @@
   references:
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
     - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/connect-emr-studio.html
-  notes: The evaluator checks the credentials action on an inventoried ACTIVE endpoint of a RUNNING virtual cluster. Endpoint connection and role trust remain conditional.
+  notes: The evaluator checks the credentials action on an inventoried ACTIVE endpoint of a RUNNING virtual cluster. A role edge needs fresh reviewed evidence that the endpoint token connected, controlled code ran with the exact execution role and a useful action succeeded. Without that runtime evidence the route remains unresolved.
