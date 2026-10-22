@@ -8,6 +8,37 @@
 # Source: hacktricks-cloud aws-emr-privesc/README.md (rev a53b46392c; GetClusterSessionCredentials at 171e422299).
 # Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
 
+- id: aws-emr-addjobflowsteps
+  provider: aws
+  service: emr
+  title: Run a step on an existing EMR cluster with its instance role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreduceaddjobflowsteps--execute-as-an-existing-cluster-instance-profile
+  source_revision: 171e422299
+  summary: A principal allowed to add a command step to an active cluster may use the role of that cluster's EC2 instance profile.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Instance roles of active EMR clusters in {account}
+    outcome: workload_execution
+  preconditions:
+  - emr_existing_cluster_step_instance_role
+  conditions:
+  - id: command_step_runs
+    description: The submitted command step must run on the cluster and be able to use its instance profile credentials.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict AddJobFlowSteps to approved cluster operators and keep EMR instance roles least privileged.
+  references:
+  - https://docs.aws.amazon.com/emr/latest/APIReference/API_AddJobFlowSteps.html
+  - https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-commandrunner.html
+  - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-role-for-ec2.html
+  notes: The evaluator joins a RUNNING or WAITING cluster to its recorded EC2 instance profile, the exact attached IAM role, and AddJobFlowSteps on that cluster ARN. It does not require PassRole for the existing profile.
+
 - id: aws-emr-passrole-runjobflow
   provider: aws
   service: emr
