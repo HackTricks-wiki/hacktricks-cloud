@@ -283,6 +283,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:UpdateDomain
         resource: "*"
       - action: sagemaker:CreateUserProfile
@@ -299,6 +301,8 @@
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - sagemaker_domain_default_new_profile_route
   conditions:
     - id: no_inservice_apps_in_domain
       description: UpdateDomain fails while any app in the domain is InService; sagemaker:DeleteApp on all of them is needed otherwise (disruptive).
@@ -311,7 +315,7 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:UpdateDomain/CreateUserProfile to platform admins.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateDomain.html
-  notes: CreateUserProfile with an explicit ExecutionRole is itself a PassRole path, modelled in aws-sagemaker-createuserprofile-passrole-createapp; this entry follows the page's inherit-default variant.
+  notes: This inherited-default variant changes one IAM-authenticated domain before creating a profile without an explicit role. The precondition joins the domain and a complete app inventory with no existing app, a free profile name, exact UpdateDomain, CreateUserProfile, CreateApp and CreatePresignedDomainUrl grants, app tagging permission, PassRole and service trust. Domain update, profile creation, app start and URL access remain conditional. A direct explicit-role variant is modelled separately.
 
 - id: aws-sagemaker-createuserprofile-passrole-createapp
   provider: aws
