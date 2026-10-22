@@ -140,37 +140,23 @@
   title: Obtain fleet worker credentials through a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatefleetupdatefleet--iampassrole--deadlinecreateworker--deadlineassumefleetroleforworker
   source_revision: d4ab3fa4e4
-  summary: A caller that can configure a customer-managed fleet, pass its eligible fleet role, register a worker and request that worker's credentials may gain Deadline worker permissions. AWS says extra permissions attached to a fleet role have no effect.
+  summary: A caller that configures a customer-managed fleet and receives its worker credentials may gain a specific Deadline worker operation it could not perform directly. Unrelated IAM permissions attached to the fleet role are not included.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: deadline:CreateWorker
-        resource: "*"
-      - action: deadline:AssumeFleetRoleForWorker
-        resource: "*"
-    any_of:
-      - - action: deadline:CreateFleet
-          resource: "*"
-      - - action: deadline:UpdateFleet
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: credentials.deadline.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      aws_challenge_fact: aws-deadline-passrole-fleet-createworker
     scope: same_account
-    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
-    outcome: credentials
+    aggregate_as: "Verified Deadline worker permissions in {account}"
+    outcome: bounded_authority
+    grants: ["One observed Deadline worker operation on the exact worker"]
   preconditions:
-    - deadline_fleet_worker_binding_unverified
+    - deadline_fleet_worker_bounded_authority_reviewed
   conditions:
-    - id: passrole_condition_key
-      description: The role pass must be allowed for iam:PassedToService=deadline.amazonaws.com.
-    - id: customer_managed_fleet
-      description: The caller needs an eligible customer-managed fleet, a worker it can register there, and permission to vend credentials for that exact worker.
-    - id: fleet_role_effective_permissions
-      description: A fleet role's additional unrelated permissions must not be treated as effective worker permissions merely because they are attached to the role.
+    - id: exact_verified_worker_authority
+      description: Fresh reviewed evidence must bind the farm, fleet, worker, passed role, accepted configuration and registration, vended credentials, and a specific worker operation unavailable directly to the caller.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -180,4 +166,4 @@
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateFleet.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
-  notes: The current generic permission requirements do not bind a farm, fleet, registered worker and exact worker ARN, so this path remains unknown until that join exists. The credential's possible impact is Deadline worker access, not unrestricted use of unrelated attached policies.
+  notes: The target is only the observed new worker operation on the exact worker. Resource-scoped CreateFleet or UpdateFleet, CreateWorker, AssumeFleetRoleForWorker, dependent permissions and PassRole are checked against the same farm, fleet, worker and role from reviewed evidence. Missing or stale evidence stays unresolved.
