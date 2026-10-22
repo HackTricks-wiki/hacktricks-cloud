@@ -208,7 +208,7 @@ SELECTOR_KEYS = {
         "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
         "Missing or incomplete evidence is unresolved; a different source or target never matches."),
     "aws_s3_policy_self_grant": (("aws",), "bool_true", "Reviewed exact S3 bucket-policy self-grant for the caller and a bounded object prefix."),
-    "aws_sqs_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself ReceiveMessage on an exact unencrypted queue through SetQueueAttributes."),
+    "aws_sqs_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself ReceiveMessage on an exact queue through SetQueueAttributes; an SSE-KMS queue also needs effective Decrypt on its collected key."),
     "aws_sns_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself Subscribe on an exact topic through SetTopicAttributes."),
     "aws_dynamodb_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself GetItem on an exact AWS-owned-key table through PutResourcePolicy."),
     "aws_s3_access_grants_self_grant": (("aws",), "bool_true", "Reviewed exact S3 Access Grants session with new READ permission on a bounded prefix."),
@@ -795,7 +795,7 @@ FACTS_NEEDED = {
     "source_boundary_policy_version_contents": "stored versions of the source permissions boundary policy",
     "source_boundary_replacement_authorization": "the replacement boundary policy and request conditions on changing the source boundary",
     "aws_s3_policy_self_grant": "unique collected aws_s3_policy_self_grant_evidence with exact source, bucket, prefix, policy principal/resource and observed before/after GetObject authorization",
-    "aws_sqs_policy_self_grant": "the exact queue ARN, a same-account IAM user's SetQueueAttributes grant, absent prior ReceiveMessage and no surviving explicit deny or SSE-KMS key",
+    "aws_sqs_policy_self_grant": "the exact queue ARN, a same-account IAM user's SetQueueAttributes grant, absent prior ReceiveMessage and no surviving explicit deny; for SSE-KMS, the exact collected key policy and effective Decrypt grant",
     "aws_sns_policy_self_grant": "the exact topic ARN, a same-account IAM user's SetTopicAttributes grant, absent prior Subscribe and no surviving explicit deny",
     "aws_dynamodb_policy_self_grant": "an active table with an exact ARN and AWS-owned encryption, a same-account IAM user's PutResourcePolicy grant, absent prior GetItem and no surviving explicit deny",
     "aws_s3_access_grants_self_grant": "unique collected aws_s3_access_grants_self_grant_evidence with exact source, location role, grant, target prefix, scoped session and observed before/after GetObject authorization",
