@@ -122,9 +122,11 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - lambda_existing_sqs_queue_function_and_role
   conditions:
     - id: event_source_available
-      description: An event source must exist or be creatable and receive a record (e.g. dynamodb:CreateTable/PutItem or an existing stream/queue with traffic); the passed role must be able to read that source for the mapping to be created.
+      description: An existing SQS queue can trigger the new function when the source can send a message and the passed role can receive and delete it. Other poll-based sources remain unresolved until their source, trigger, and role grants are joined.
     - id: passrole_condition_key
       description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
   blockers:
@@ -134,7 +136,8 @@
   mitigation: Restrict iam:PassRole to specific roles with iam:PassedToService, and restrict lambda:CreateEventSourceMapping to deployment principals.
   references:
     - https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html
-  notes: HackTricks uses DynamoDB as the trigger; any poll-based source the passed role can read works. The self-contained DynamoDB variant (Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo) is aws-lambda-passrole-createfunction-dynamodb-stream-trigger.
+    - https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html
+  notes: HackTricks uses DynamoDB as the trigger; a separate self-contained DynamoDB variant is aws-lambda-passrole-createfunction-dynamodb-stream-trigger. This general route reports a conditional edge for one collected SQS queue only when SendMessage, ReceiveMessage, DeleteMessage, GetQueueAttributes, a same-Region new function, function-bound PassRole, and a resource-less CreateEventSourceMapping grant all join. A customer-managed encrypted queue needs key grants and stays unresolved here. Other poll-based sources remain unknown until their permissions and a record-producing path are established.
 
 - id: aws-lambda-passrole-createfunction-dynamodb-stream-trigger
   provider: aws
