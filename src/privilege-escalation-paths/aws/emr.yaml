@@ -37,7 +37,7 @@
   - https://docs.aws.amazon.com/emr/latest/APIReference/API_AddJobFlowSteps.html
   - https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-commandrunner.html
   - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-role-for-ec2.html
-  notes: The evaluator joins a RUNNING or WAITING cluster to its recorded EC2 instance profile, the exact attached IAM role, and AddJobFlowSteps on that cluster ARN. It does not require PassRole for the existing profile.
+  notes: The evaluator joins a RUNNING or WAITING cluster to its recorded EC2 instance profile, the exact attached IAM role, and AddJobFlowSteps on that cluster ARN. It excludes clusters with runtime-role isolation enabled and leaves uncollected security configurations unresolved. It does not require PassRole for the existing profile.
 
 - id: aws-emr-passrole-runjobflow
   provider: aws
@@ -50,6 +50,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ec2.amazonaws.com
       - action: elasticmapreduce:RunJobFlow
         resource: "*"
   target:
@@ -61,11 +63,15 @@
     scope: same_account
     aggregate_as: "EC2 instance-profile roles passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - emr_new_cluster_role_execution_unverified
   conditions:
     - id: emr_service_role_passable
       description: RunJobFlow also requires passing an EMR service role (or the default EMR_DefaultRole must exist and be passable); PassRole must cover it too.
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: runnable_step
+      description: The caller must provide an executable bootstrap action or step, and the selected instance profile must be attached to instances that launch successfully.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -75,13 +81,45 @@
     - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-role-for-ec2.html
   notes: The EMR service role itself is not reachable (only used by the EMR control plane); the reachable role is the EC2 instance profile role.
 
+- id: aws-emr-addjobflowsteps-runtime-role
+  provider: aws
+  service: emr
+  title: Submit an EMR step under an authorized runtime role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreduceaddjobflowsteps--execute-as-an-existing-cluster-instance-profile
+  source_revision: e0ecce7ba7
+  summary: A caller may run a command step under a selected runtime role on an existing EMR cluster with runtime roles enabled.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      emr_runtime_role_of_cluster: true
+    scope: same_account
+    aggregate_as: Runtime roles authorized on active EMR clusters in {account}
+    outcome: workload_execution
+  preconditions:
+    - emr_existing_cluster_runtime_step_role
+  conditions:
+    - id: executable_step
+      description: The submitted step must be accepted and run under the selected runtime role; an AddJobFlowSteps grant alone does not prove that execution occurred.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope AddJobFlowSteps to approved clusters and require elasticmapreduce:ExecutionRoleArn to name only the runtime roles each operator needs.
+  references:
+    - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-steps-runtime-roles.html
+    - https://docs.aws.amazon.com/emr/latest/APIReference/API_AddJobFlowSteps.html
+  notes: The evaluator binds a RUNNING or WAITING cluster, its runtime-role security configuration and instance profile, the host role's AssumeRole and TagSession grants, target trust, and the caller's AddJobFlowSteps grant with the selected ExecutionRoleArn. This path does not require caller iam:PassRole.
+
 - id: aws-emr-getclustersessioncredentials-runtime-role
   provider: aws
   service: emr
   title: Vend endpoint credentials for an EMR runtime role without iam:PassRole
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducegetclustersessioncredentials--vend-a-runtime-roles-credentials-without-iampassrole
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducegetclustersessioncredentials--connect-to-a-runtime-role-cluster-endpoint
   source_revision: 171e422299
-  summary: The source can act as an EMR runtime role on a fine-grained-access-control cluster (submitting work to the cluster endpoints as that role) by retrieving the cluster session credentials for it, without holding iam:PassRole on the role.
+  summary: A caller may submit work under an EMR runtime role if it can obtain endpoint credentials for that role, reach a compatible endpoint and run a permitted workload.
   requires:
     all_of:
       - action: elasticmapreduce:GetClusterSessionCredentials
@@ -99,8 +137,11 @@
       description: elasticmapreduce:ExecutionRoleArn conditions on the grant can restrict which runtime roles credentials can be retrieved for.
     - id: cluster_running_with_runtime_roles
       description: The cluster must be running with a security configuration that enables runtime roles (and Lake Formation / FGAC where applicable).
+    - id: endpoint_and_workload
+      description: The returned credentials authenticate only to supported HTTP endpoints; the source needs endpoint reachability and a permitted workload to obtain any role-authorized AWS effect.
   preconditions:
     - emr_cluster_session_runtime_role
+    - emr_cluster_endpoint_role_effect_unverified
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
