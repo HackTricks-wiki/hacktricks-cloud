@@ -21,6 +21,8 @@
     all_of:
     - action: iam:PassRole
       resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: ec2.amazonaws.com
     - action: elasticbeanstalk:CreateApplicationVersion
       resource: '*'
     - action: s3:PutObject
@@ -51,12 +53,16 @@
     scope: same_account
     aggregate_as: EC2 instance-profile roles passable in {account}
     outcome: workload_execution
+  preconditions:
+  - elasticbeanstalk_environment_role_execution_unverified
   conditions:
   - id: supporting_permissions
     description: The full set of S3, EC2, CloudFormation, Auto Scaling and Elastic Load Balancing permissions Beanstalk needs (cf. AdministratorAccess-AWSElasticBeanstalk) is approximated by the listed
       actions.
   - id: existing_environment_variant
     description: The update-only alternative needs an existing environment within UpdateEnvironment scope; the instance profile is changed and the attacker application version deployed to it.
+  - id: source_and_runtime
+    description: The application version must use a same-Region source bundle readable by the deployment path, and the environment must successfully launch instances with the selected profile and run the controlled application.
   - id: passrole_condition_key
     description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
