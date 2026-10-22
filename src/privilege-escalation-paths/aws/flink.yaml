@@ -78,3 +78,38 @@
   references:
     - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplication.html
   notes: The service does not expose role credentials directly; the code acts with the role's permissions. CreateApplication is authorized on * and StartApplication on the new application's ARN.
+
+- id: aws-flink-updateapplication-inline-code-existing-role
+  provider: aws
+  service: kinesisanalytics
+  title: Replace running Flink application code under its execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#updateapplication--code-control--application-execution-role
+  source_revision: 171e422299
+  summary: The source can submit an inline ZIP update to a running streaming application, which restarts with code using its recorded service role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: kinesisanalytics.amazonaws.com
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of running Flink applications whose code the source can update in {account}
+    outcome: workload_execution
+  preconditions:
+    - flink_existing_streaming_inline_code_update
+  conditions:
+    - id: successful_update
+      description: The submitted ZIP must be a valid application and the code update must complete successfully.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict UpdateApplication on privileged applications and PassRole on their service roles to trusted deployment principals.
+  references:
+    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_UpdateApplication.html
+    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CodeContentUpdate.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_kinesisanalytics.html
+  notes: UpdateApplication accepts ZipFileContentUpdate, so no S3 object-write grant is needed for this variant. The evaluator joins one RUNNING STREAMING application to its exact recorded role and checks UpdateApplication on that ARN. The AWS authorization reference lists iam:PassRole as a dependent action. A successful update and useful role-authorized code action remain conditional.

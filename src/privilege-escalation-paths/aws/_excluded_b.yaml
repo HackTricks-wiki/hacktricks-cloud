@@ -205,7 +205,7 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputtargets--eventsputevents--invoke-a-resource-policy-authorized-lambda
   source_revision: a53b46392c
   technique: events:PutTargets + events:PutEvents
-  reason: Invokes a fixed Lambda with attacker input; no control of code or role.
+  reason: PutTargets can attach a Lambda to an exact rule and PutEvents can supply matching input only if the rule, bus and Lambda invoke policy align. Fixed invocation does not expose its execution role. A principal edge needs reviewed handler behavior showing that source-controlled event fields drive a useful privileged AWS action under that exact role; this input-to-action witness is not collected.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputpermission--self-grant-publishing-through-a-bus-policy
   source_revision: a53b46392c
   technique: events:PutPermission
@@ -213,11 +213,11 @@
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputrule--enable-a-disabled-rule-with-its-existing-target
   source_revision: a53b46392c
   technique: events:PutRule (enable disabled rule)
-  reason: Runs an existing fixed target; no control of code or role.
+  reason: PutRule can re-enable an existing disabled rule, but omitted rule fields may be replaced and break its pattern or schedule. The target can run only if the complete rule fires and its invocation is authorized. Fixed target execution does not expose a role unless reviewed target behavior turns the event into a useful privileged AWS action; that witness is not collected.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsstartreplay--replay-retained-events-into-unchanged-targets
   source_revision: a53b46392c
   technique: events:StartReplay
-  reason: Replays events into fixed targets; no control of code or role.
+  reason: StartReplay re-emits retained archive events without changing their payload, rule or target. A principal edge needs the exact archive interval, a retained matching event, the bus/rule/target authorization chain and reviewed target behavior yielding additional authority. Archive contents and handler effects are not joined, so replay permission alone remains outside the automatic graph.
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-post-exploitation/README.md#eventsupdateapidestination--redirect-stored-connection-credentials
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsupdateapidestination--redirect-stored-connection-credentials
   source_revision: f2aa915198
