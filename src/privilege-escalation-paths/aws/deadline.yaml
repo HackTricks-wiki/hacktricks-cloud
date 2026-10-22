@@ -84,10 +84,10 @@
 - id: aws-deadline-passrole-fleet-createworker
   provider: aws
   service: deadline
-  title: Attach a passed role to a fleet and vend it to a registered worker
+  title: Obtain fleet worker credentials through a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatefleetupdatefleet--iampassrole--deadlinecreateworker--deadlineassumefleetroleforworker
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com through a customer-managed fleet worker it registers.
+  summary: A caller that can configure a customer-managed fleet, pass its eligible fleet role, register a worker and request that worker's credentials may gain Deadline worker permissions. AWS says extra permissions attached to a fleet role have no effect.
   requires:
     all_of:
       - action: iam:PassRole
@@ -111,15 +111,18 @@
     outcome: credentials
   conditions:
     - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: The role pass must be allowed for iam:PassedToService=deadline.amazonaws.com.
     - id: customer_managed_fleet
-      description: Worker registration and fleet-role vending apply to customer-managed fleets.
+      description: The caller needs an eligible customer-managed fleet, a worker it can register there, and permission to vend credentials for that exact worker.
+    - id: fleet_role_effective_permissions
+      description: A fleet role's additional unrelated permissions must not be treated as effective worker permissions merely because they are attached to the role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
-  severity: critical
-  mitigation: Restrict iam:PassRole on Deadline Cloud fleet roles and deadline:CreateWorker / AssumeFleetRoleForWorker to the worker host identities.
+  severity: high
+  mitigation: Limit fleet-role passing and worker registration or credential vending to the intended fleet administrators and worker hosts.
   references:
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateFleet.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
-  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
+  notes: The current generic permission requirements do not bind a farm, fleet, registered worker and exact worker ARN; until that join exists, they cannot establish a concrete role edge. The credential's possible impact is Deadline worker access, not unrestricted use of unrelated attached policies.
