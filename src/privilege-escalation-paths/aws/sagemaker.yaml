@@ -238,6 +238,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:UpdateUserProfile
         resource: "*"
       - action: sagemaker:CreateApp
@@ -252,6 +254,8 @@
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - sagemaker_existing_profile_role_swap_route
   conditions:
     - id: no_inservice_apps
       description: UpdateUserProfile fails while the profile has InService apps; sagemaker:DeleteApp is needed if any exist.
@@ -266,7 +270,7 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:UpdateUserProfile to platform admins.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateUserProfile.html
-  notes: ""
+  notes: The precondition joins one InService profile in an IAM domain to exact UpdateUserProfile, CreateApp, CreatePresignedDomainUrl, PassRole and app tagging grants, and checks that the target role trusts SageMaker. A profile with existing apps needs a separate app-state and restart analysis. The role update, new app start and URL access remain conditional.
 
 - id: aws-sagemaker-updatedomain-createuserprofile-passrole
   provider: aws
