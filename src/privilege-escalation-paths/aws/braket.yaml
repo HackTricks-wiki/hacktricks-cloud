@@ -33,8 +33,7 @@
   - braket_createjob_device_authorized
   conditions:
   - id: controlled_job_code
-    description: The job algorithm script or container image must be one the source controls (S3 object or ECR image
-      it can write or read).
+    description: The source must write one script archive that the passed role can read, and the role must write the job output prefix.
   - id: passrole_condition_key
     description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
@@ -44,4 +43,4 @@
   mitigation: Restrict iam:PassRole on Braket job roles with iam:PassedToService and limit braket:CreateJob.
   references:
   - https://docs.aws.amazon.com/braket/latest/APIReference/API_CreateJob.html
-  notes: CreateJob must authorize both a usable device and the service-generated job ARN. The evaluator checks SV1 in a documented Region and a broad job ARN grant; device-only or job-only grants remain unresolved. Controlled algorithm code, output access and successful execution remain conditional.
+  notes: CreateJob must authorize both an ONLINE SV1 simulator observed in the Region and the service-generated job ARN. The precondition joins those grants with exact PassRole, Braket service trust, a same-Region script archive writable by the source and readable by the role, and a complete output prefix writable by the role. Other devices and container-image routes remain unresolved. Job scheduling and successful execution remain conditional.
