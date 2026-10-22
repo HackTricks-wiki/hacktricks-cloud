@@ -114,6 +114,38 @@
   - https://docs.aws.amazon.com/apprunner/latest/api/API_UpdateService.html
   notes: This route keeps the existing instance role; no new role is passed. The recorded DescribeService response must bind InstanceRoleArn to the exact image service. Code-based services need a separately verified controlled command path.
 
+- id: aws-apprunner-mutable-ecr-autodeploy
+  provider: aws
+  service: apprunner
+  title: Push a replacement image to a watched App Runner tag
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#mutable-private-ecr-tag-with-automatic-deployments
+  source_revision: 1098b391c4
+  summary: The source can publish a new image to the exact private ECR tag that an existing App Runner service automatically deploys with the target instance role.
+  requires:
+    all_of:
+    - action: ecr:GetAuthorizationToken
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: tasks.apprunner.amazonaws.com
+    scope: same_account
+    outcome: workload_execution
+  preconditions:
+  - apprunner_mutable_ecr_autodeploy_instance_role
+  conditions:
+  - id: next_deployment
+    description: The source must actually push a runnable image to the watched tag and App Runner must successfully deploy it.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ECR image-push permissions on repositories watched by App Runner and use immutable tags or manual deployments for privileged services.
+  references:
+  - https://docs.aws.amazon.com/apprunner/latest/dg/manage-deploy.html
+  - https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-push-iam.html
+  notes: The source does not need App Runner or PassRole permissions. The same-account private ECR tag, auto-deployment flag, effective tag mutability or permission to change it, image-push permissions and instance role must all join exactly.
+
 - id: aws-apprunner-plaintext-credential
   provider: aws
   service: apprunner
