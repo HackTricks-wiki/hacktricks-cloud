@@ -19,6 +19,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: states.amazonaws.com
       - action: states:TestState
         resource: "*"
   target:
@@ -29,6 +31,8 @@
     scope: same_account
     aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
     outcome: impersonation
+  preconditions:
+    - stepfunctions_teststate_privileged_task_unverified
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
@@ -41,7 +45,7 @@
   mitigation: Restrict iam:PassRole on Step Functions roles with iam:PassedToService=states.amazonaws.com, and restrict states:TestState to developers on non-production roles.
   references:
     - https://docs.aws.amazon.com/step-functions/latest/dg/test-state-isolation.html
-  notes: The Step Functions developer guide confirms TestState assumes the provided role and that iam:PassRole is required for an unmocked task. AWS SDK integrations include IAM. Map, Parallel, Activity, .sync, and waitForTaskToken patterns require mocks in TestState, so they do not exercise the role through this path.
+  notes: TestState assumes the provided role for an unmocked task, and iam:PassRole is required. The caller grants alone do not identify a supported task or an action that the role may perform on an exact resource, so the role edge stays unresolved. Map, Parallel, Activity, .sync, and waitForTaskToken patterns require mocks in TestState and do not exercise the role through this path.
 
 - id: aws-stepfunctions-createstatemachine-passrole-start
   provider: aws
