@@ -8,45 +8,6 @@
 # Source: hacktricks-cloud aws-ml-dataaccess-passrole-privesc/README.md (rev 171e422299).
 # The data-only (confused-deputy read/write) services on that page are excluded in _excluded_refresh_g4.yaml.
 
-- id: aws-finspace-passrole-createkxcluster
-  provider: aws
-  service: finspace
-  title: Create a FinSpace Managed kdb cluster with a passed execution role
-  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting finspace.amazonaws.com by running q code it supplies in a kdb cluster under that role.
-  requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-        request_context:
-          iam:PassedToService: finspace.amazonaws.com
-      - action: finspace:CreateKxCluster
-        resource: "*"
-  target:
-    kind: aws_role
-    selector:
-      trust_allows_service: finspace.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
-    scope: same_account
-    aggregate_as: "Roles trusting finspace.amazonaws.com passable in {account}"
-    outcome: workload_execution
-  conditions:
-    - id: existing_kx_environment
-      description: A Managed kdb environment must already exist in the CreateKxCluster Resource scope.
-    - id: code_readable
-      description: The cluster code location must be readable by the service.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-  blockers:
-    - scp_or_boundary_deny
-  confidence: conditional
-  severity: high
-  mitigation: Restrict iam:PassRole on FinSpace execution roles and finspace:CreateKxCluster, and keep execution roles least-privileged.
-  references:
-    - https://docs.aws.amazon.com/finspace/latest/management-api/API_CreateKxCluster.html
-  notes: Documentation-grounded; Managed kdb environments are rare. CreateKxUser/UpdateKxUser role binding is not modelled.
-
 - id: aws-kafkaconnect-passrole-createconnector
   provider: aws
   service: kafkaconnect
