@@ -257,20 +257,8 @@
   summary: The source can obtain the privileges of the execution role of code-signed Lambda functions whose config trusts a signing profile it can use.
   requires:
     all_of:
-      - action: signer:StartSigningJob
-        resource: "*"
       - action: lambda:UpdateFunctionCode
         resource: "{target.resource_arn}"
-      - action: lambda:GetCodeSigningConfig
-        resource: "*"
-      - action: s3:PutObject
-        resource: "*"
-      - action: s3:GetObject
-        resource: "*"
-      - action: s3:GetObjectVersion
-        resource: "*"
-      - action: s3:ListBucket
-        resource: "*"
   target:
     kind: aws_role
     selector:
@@ -278,6 +266,8 @@
       via_resource_type: lambda_function
     scope: same_account
     aggregate_as: "Execution roles of code-signed Lambda functions in {account}"
+  preconditions:
+    - lambda_signer_trusted_profile_artifact_unverified
   conditions:
     - id: signing_profile_trusted
       description: signer:StartSigningJob must cover a signing profile whose version ARN is in the AllowedPublishers of the function's code-signing config.
@@ -292,7 +282,7 @@
   mitigation: Restrict signer:StartSigningJob on production signing profiles to the release pipeline, and keep signing profiles per environment.
   references:
     - https://docs.aws.amazon.com/signer/latest/developerguide/signing-profiles.html
-  notes: The evaluator should check that the signing profile covered by StartSigningJob is trusted by the function's CSC; without that fact the edge is conditional.
+  notes: The evaluator joins the same writable ZIP function to its enforcing code-signing config and checks StartSigningJob on a trusted profile, including signer:ProfileVersion, plus GetCodeSigningConfig on the exact config ARN. A complete versioned source object and writable/readable signed destination are still needed before the role edge can be reported. The source S3 object may already exist, so PutObject is not always required.
 
 - id: aws-lambda-passrole-updatefunctionconfiguration-role-swap
   provider: aws
