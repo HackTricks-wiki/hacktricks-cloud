@@ -413,6 +413,39 @@
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateNotebookInstance.html
   notes: This differs from rewriting an already-attached lifecycle configuration, which is covered by aws-sagemaker-updatenotebookinstancelifecycleconfig.
 
+- id: aws-sagemaker-updatenotebookinstancelifecycleconfig
+  provider: aws
+  service: sagemaker
+  title: Replace the startup script of an attached notebook lifecycle configuration
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerupdatenotebookinstancelifecycleconfig--stored-code-execution-as-the-notebook-role
+  source_revision: ad7429a974
+  summary: The source can replace an existing lifecycle configuration used by a notebook and run code under that notebook's execution role on its next start.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_notebook_instance
+    scope: same_account
+    aggregate_as: Roles of notebooks using a lifecycle configuration the source can update in {account}
+    outcome: workload_execution
+  preconditions:
+    - sagemaker_attached_notebook_lifecycle_update
+  conditions:
+    - id: future_notebook_start
+      description: The edited OnStart hook executes only when the attached notebook starts again; the source may need another authorized principal to perform that start.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit updates to notebook lifecycle configurations used by privileged notebooks and review their scripts before restarting those notebooks.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateNotebookInstanceLifecycleConfig.html
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_DescribeNotebookInstance.html
+  notes: The evaluator joins the exact collected NotebookInstanceLifecycleConfigName, notebook ARN and RoleArn in one account and Region, then checks UpdateNotebookInstanceLifecycleConfig on that configuration ARN. A future start and the script's actual outcome remain conditional.
+
 - id: aws-sagemaker-attach-studio-lifecycle-config-user-profile
   provider: aws
   service: sagemaker
