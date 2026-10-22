@@ -7,6 +7,40 @@
 # AWS ECS privilege escalation techniques.
 # Source: hacktricks-cloud aws-ecs-privesc/README.md.
 
+- id: aws-ecs-executecommand
+  provider: aws
+  service: ecs
+  title: Open a running task container with ECS Exec and its task role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsexecutecommand-ecsdescribetasks-and-optionally-a-task-launching-action
+  source_revision: 171e422299
+  summary: The source can run commands in an exact live task container whose running Exec agent and task role are recorded.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: ecs:ExecuteCommand
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      any_principal_in_scope: true
+    scope: same_account
+    outcome: impersonation
+    aggregate_as: "Task roles in live ECS containers reachable by Exec in {account}"
+  preconditions:
+    - ecs_exec_live_task_role
+  conditions:
+    - id: live_task_and_agent
+      description: The task and its ExecuteCommandAgent must remain running when the session opens.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ExecuteCommand to approved operators on exact clusters and tasks, and keep task roles narrow.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec-run.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+  notes: The role is joined from the same running task; this route needs no new PassRole grant.
+
 - id: aws-ecs-passrole-registertaskdefinition-runtask
   provider: aws
   service: ecs
