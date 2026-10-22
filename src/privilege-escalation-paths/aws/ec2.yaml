@@ -18,8 +18,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-      - action: ec2:RunInstances
-        resource: "*"
+        request_context:
+          iam:PassedToService: ec2.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -28,6 +28,8 @@
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
+  preconditions:
+    - ec2_runinstances_launch_with_passed_profile_unverified
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict this.
@@ -40,7 +42,7 @@
   mitigation: Restrict iam:PassRole on EC2 roles with iam:PassedToService and specific role ARNs; require IMDSv2 and monitor RunInstances with instance profiles.
   references:
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html
-  notes: Creating a new instance profile for a role without one additionally needs iam:CreateInstanceProfile and iam:AddRoleToInstanceProfile.
+  notes: RunInstances authorizes the chosen image and launch resources together, including the generated instance, network interface, subnet, security group and storage resources when applicable. A role edge needs one compatible launch request, an existing profile carrying the target role and a usable user-data boot path; caller grants and profile inventory alone leave that request unresolved. Creating a new instance profile for a role without one additionally needs iam:CreateInstanceProfile and iam:AddRoleToInstanceProfile.
 
 - id: aws-ec2-passrole-associate-instance-profile
   provider: aws
