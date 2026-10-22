@@ -1,0 +1,86 @@
+# GCP Resource Manager (organization / folder / project IAM) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-resourcemanager-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Writing the IAM policy of a node grants any role on it and, through inheritance, on all descendants.
+
+- id: gcp-resourcemanager-organizations-setiampolicy
+  provider: gcp
+  service: resourcemanager
+  title: Rewrite the organization IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the owner of every organization on which it holds resourcemanager.organizations.setIamPolicy.
+  requires:
+    all_of:
+      - action: resourcemanager.organizations.setIamPolicy
+        resource: "{target.scope}"
+  target:
+    kind: gcp_scope_owner
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Organizations whose IAM policy the source controls"
+  conditions:
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Restrict roles/resourcemanager.organizationAdmin and roles/iam.securityAdmin at the organization to break-glass identities.
+  references:
+    - https://cloud.google.com/resource-manager/docs/access-control-org
+
+- id: gcp-resourcemanager-folders-setiampolicy
+  provider: gcp
+  service: resourcemanager
+  title: Rewrite a folder IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the owner of every folder (and its subtree) on which it holds resourcemanager.folders.setIamPolicy.
+  requires:
+    all_of:
+      - action: resourcemanager.folders.setIamPolicy
+        resource: "{target.scope}"
+  target:
+    kind: gcp_scope_owner
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Folders whose IAM policy the source controls"
+  conditions:
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Restrict roles/resourcemanager.folderAdmin and roles/resourcemanager.folderIamAdmin.
+
+- id: gcp-resourcemanager-projects-setiampolicy
+  provider: gcp
+  service: resourcemanager
+  title: Rewrite a project IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the owner of every project on which it holds resourcemanager.projects.setIamPolicy.
+  requires:
+    all_of:
+      - action: resourcemanager.projects.setIamPolicy
+        resource: "{target.scope}"
+  target:
+    kind: gcp_scope_owner
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Projects whose IAM policy the source controls"
+  conditions:
+    - id: owner_invite
+      description: Granting roles/owner to a user outside the organization through the API may require an invitation flow; other admin-equivalent roles (e.g. roles/resourcemanager.projectIamAdmin plus service roles) are directly grantable.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+  blockers:
+    - gcp_deny_policy
+  confidence: derived
+  severity: critical
+  mitigation: Restrict roles/resourcemanager.projectIamAdmin, roles/iam.securityAdmin and roles/owner.

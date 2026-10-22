@@ -1,0 +1,670 @@
+# Kubernetes workload-plane techniques: run code as a ServiceAccount by creating/modifying
+# pods or controllers, entering existing pods, or injecting into pods via admission.
+# Conventions: see header of rbac.yaml. Source: hacktricks-cloud rev a53b46392c, re-verified against 171e422.
+
+- id: k8s-workloads-pods-create
+  provider: k8s
+  service: workloads
+  title: Create a pod that runs as any ServiceAccount of the namespace
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-create---steal-token
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every ServiceAccount in the namespace where it can create pods.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        namespace: "{target.namespace}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+    scope: same_namespace
+    aggregate_as: "All ServiceAccounts in {target.namespace}"
+  conditions:
+    - id: admission_restricts_service_account
+      description: A validating/mutating admission policy (VAP, webhook, Kyverno, Gatekeeper, OpenShift SCC) that restricts serviceAccountName, token automount or images could remove the edge. Pod Security Admission does not restrict the ServiceAccount.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Do not grant pods create in namespaces that host privileged ServiceAccounts (kube-system, operator namespaces); keep powerful ServiceAccounts in dedicated namespaces.
+  references:
+    - https://kubernetes.io/docs/concepts/security/rbac-good-practices/#workload-creation
+  notes: The pod-level automountServiceAccountToken overrides the ServiceAccount's setting, so automount=false on the ServiceAccount is not a blocker. Severity is raised by the evaluator when a reachable ServiceAccount is admin-equivalent.
+
+- id: k8s-workloads-controllers-create
+  provider: k8s
+  service: workloads
+  title: Create a workload controller whose pod template runs as any ServiceAccount
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#createpatch-deployment-daemonsets-statefulsets-replicationcontrollers-replicasets-jobs-and-cronjobs
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every ServiceAccount in the namespace where it can create a pod-creating controller.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: create, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: create, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: create, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: create, resource: replicationcontrollers, namespace: "{target.namespace}"}
+      - - {verb: create, resource: jobs, api_group: batch, namespace: "{target.namespace}"}
+      - - {verb: create, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+    scope: same_namespace
+    aggregate_as: "All ServiceAccounts in {target.namespace}"
+  conditions:
+    - id: admission_restricts_service_account
+      description: Admission policies applied to the controller-created pods (or to the controller objects) may restrict serviceAccountName or images.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Treat controller create like pods create; do not grant it in namespaces holding privileged ServiceAccounts.
+  references:
+    - https://kubernetes.io/docs/concepts/security/rbac-good-practices/#workload-creation
+  notes: Pods are created by the controller-manager, so the source needs no pods permission and Kubernetes performs no "use ServiceAccount" check.
+
+- id: k8s-workloads-controllers-modify
+  provider: k8s
+  service: workloads
+  title: Modify an existing workload controller's pod template
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#createpatch-deployment-daemonsets-statefulsets-replicationcontrollers-replicasets-jobs-and-cronjobs
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every ServiceAccount in the namespace by rewriting the pod template of a controller it can update or patch.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: update, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: patch, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: update, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: patch, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: update, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: patch, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: update, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+      - - {verb: patch, resource: replicationcontrollers, namespace: "{target.namespace}"}
+      - - {verb: update, resource: replicationcontrollers, namespace: "{target.namespace}"}
+      - - {verb: patch, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
+      - - {verb: update, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+    scope: same_namespace
+    aggregate_as: "All ServiceAccounts in {target.namespace}"
+  conditions:
+    - id: controller_object_exists
+      description: An existing controller object covered by the grant (resourceNames) must exist in the namespace.
+    - id: admission_restricts_service_account
+      description: Admission policies may restrict serviceAccountName or images of the resulting pods.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Limit controller update/patch to CI/CD identities and scope with resourceNames; protect controllers that run privileged ServiceAccounts.
+  references:
+    - https://kubernetes.io/docs/concepts/security/rbac-good-practices/#workload-creation
+  notes: serviceAccountName in a pod template is mutable, so any SA of the namespace is reachable. The HackTricks lab shows patch-only grants are sufficient (update without get may fail client-side). Job pod templates are immutable after creation, so jobs update/patch is not included; CronJob templates are mutable.
+
+- id: k8s-workloads-pods-modify-running
+  provider: k8s
+  service: workloads
+  title: Change the container image of an existing pod
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/README.md#high-permissions
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the ServiceAccounts used by existing pods in the namespace by replacing a container image of those pods.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: pods, namespace: "{target.namespace}"}
+      - - {verb: update, resource: pods, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_running_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of running pods in {target.namespace}"
+  conditions:
+    - id: admission_restricts_images
+      description: Image policy admission may reject the image change.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Do not grant pods update/patch to non-controller identities.
+  references:
+    - https://kubernetes.io/docs/concepts/workloads/pods/#pod-update-and-replacement
+  notes: Pod spec is mostly immutable but container image is mutable, while serviceAccountName is not; hence only SAs already used by pods are reachable (unlike pods create). Verified against Kubernetes pod update rules.
+
+- id: k8s-workloads-pods-exec
+  provider: k8s
+  service: workloads
+  title: Execute commands in existing pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pods-exec
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the ServiceAccounts mounted in pods it can exec into.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        subresource: exec
+        namespace: "{target.namespace}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_running_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of running pods in {target.namespace}"
+  conditions:
+    - id: token_mounted_in_pod
+      description: The pod must mount a ServiceAccount token (automount not disabled) and contain an executable entrypoint usable for exec.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict pods/exec to break-glass operators, especially in namespaces with privileged workloads.
+  references:
+    - https://kubernetes.io/docs/concepts/security/rbac-good-practices/#workload-creation
+  notes: Executing in a privileged/host pod also reaches the node (see nodes.yaml).
+
+- id: k8s-workloads-pods-exec-get-websocket
+  provider: k8s
+  service: workloads
+  title: Execute commands in pods with only get on pods/exec (WebSocket upgrade)
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-interactive-subresources
+  source_revision: 171e422
+  summary: On clusters older than 1.35 the source can obtain the privileges of ServiceAccounts mounted in pods by exec over WebSocket with only get on pods/exec.
+  requires:
+    all_of:
+      - verb: get
+        resource: pods
+        subresource: exec
+        namespace: "{target.namespace}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_running_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of running pods in {target.namespace}"
+  conditions:
+    - id: websocket_upgrade_create_check_disabled
+      description: Applies only when the API server is older than v1.35 or the AuthorizePodWebsocketUpgradeCreatePermission feature gate is disabled.
+    - id: token_mounted_in_pod
+      description: The pod must mount a ServiceAccount token.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Upgrade to Kubernetes 1.35+ (or keep AuthorizePodWebsocketUpgradeCreatePermission enabled) and avoid granting get on pods/* subresources.
+  references:
+    - https://github.com/kubernetes/kubernetes/issues/78741
+  notes: Verified via upstream issue 78741 and the v1.35 release notes that WebSocket exec previously required only get; since v1.35 create is required by default.
+
+- id: k8s-workloads-pods-attach
+  provider: k8s
+  service: workloads
+  title: Attach to the process streams of existing pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-interactive-subresources
+  source_revision: 171e422
+  summary: The source can obtain the privileges of ServiceAccounts mounted in pods whose main process accepts interactive input.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        subresource: attach
+        namespace: "{target.namespace}"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_running_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of interactive running pods in {target.namespace}"
+  conditions:
+    - id: container_stdin_interactive
+      description: The target container must have stdin enabled and run a process (e.g. a shell or REPL) that executes attacker input; most containers do not.
+  blockers: []
+  confidence: derived
+  severity: medium
+  mitigation: Restrict pods/attach like pods/exec; avoid stdin/tty in production containers.
+  references:
+    - https://kubernetes.io/docs/reference/kubectl/generated/kubectl_attach/
+  notes: Pod spec stdin is collected in the snapshot only if the collector keeps container fields; otherwise this stays conditional.
+
+- id: k8s-workloads-pods-ephemeralcontainers
+  provider: k8s
+  service: workloads
+  title: Add an ephemeral container to existing pods
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#ephemeralcontainers
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the ServiceAccounts used by existing pods in the namespace by adding an ephemeral container that shares their volumes.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: pods, subresource: ephemeralcontainers, namespace: "{target.namespace}"}
+      - - {verb: update, resource: pods, subresource: ephemeralcontainers, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_running_pod: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of running pods in {target.namespace}"
+  conditions:
+    - id: admission_restricts_ephemeral
+      description: Admission policies covering ephemeral containers may reject them; PSA also evaluates ephemeral containers.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Grant pods/ephemeralcontainers only to debugging break-glass roles.
+  references:
+    - https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/
+  notes: An ephemeral container can mount the pod's existing volumes, including the projected ServiceAccount token volume. Privileged ephemeral containers reaching the node are modelled in nodes.yaml.
+
+- id: k8s-workloads-mutating-webhook-injection
+  provider: k8s
+  service: admission
+  title: Register or modify a mutating admission webhook
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#validatingwebhookconfigurations-or-mutatingwebhookconfigurations
+  source_revision: 171e422
+  summary: The source can obtain the privileges of ServiceAccounts in any namespace where pods are created after the webhook is in place, by mutating those pods.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "ServiceAccounts of namespaces with new pod creations in {cluster}"
+  conditions:
+    - id: webhook_backend_controlled
+      description: The source needs an HTTPS endpoint it controls that the API server can reach (external URL or an in-cluster Service it can deploy) and a CA it controls in the configuration.
+    - id: new_pod_creation_occurs
+      description: Only pods created or updated after registration are mutated; namespaces with no pod churn are reached only after a restart or rollout.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Restrict writes to mutatingwebhookconfigurations to cluster administrators and alert on new or changed webhook registrations.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+  notes: A mutating webhook can change serviceAccountName, add containers or make pods privileged, so the reachable set is all SAs in the matched namespaces (and nodes, through privileged injection). Webhooks are never called for admission configuration objects themselves.
+
+- id: k8s-workloads-mutating-admission-policy-injection
+  provider: k8s
+  service: admission
+  title: Create or modify a MutatingAdmissionPolicy and its binding
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#mutatingadmissionpolicy-code-injection
+  source_revision: 171e422
+  summary: The source can obtain the privileges of ServiceAccounts in any namespace where pods are created after the policy is in place, by mutating those pods in-process.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+        - {verb: create, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: create, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+        - {verb: patch, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: create, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+        - {verb: update, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "ServiceAccounts of namespaces with new pod creations in {cluster}"
+  conditions:
+    - id: mutating_admission_policy_served
+      description: The MutatingAdmissionPolicy API must be enabled/served on the cluster version.
+    - id: existing_policy_bound
+      description: The patch/update-only policy groups require an existing policy that is already bound to pod creations; the create-policy plus patch/update-binding groups require an existing binding to repoint.
+    - id: new_pod_creation_occurs
+      description: Only pods created after the change are mutated.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Restrict writes to mutatingadmissionpolicies and their bindings to cluster administrators.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/
+  notes: No external backend is needed (CEL runs in the API server). HackTricks reproduced injection of an init container into later pods.
+
+- id: k8s-workloads-mutating-admission-policy-half-pair
+  provider: k8s
+  service: admission
+  title: Complete a MutatingAdmissionPolicy and binding pair with one half only
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#mutatingadmissionpolicy-code-injection
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of ServiceAccounts of later-created pods by creating the policy an existing binding references but is missing, or by creating or repointing a binding to an existing policy whose mutation injects code.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: mutatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: create, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: mutatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "*"
+    scope: cluster
+    aggregate_as: "ServiceAccounts of namespaces with new pod creations in {cluster}"
+  conditions:
+    - id: mutating_admission_policy_served
+      description: The MutatingAdmissionPolicy API must be enabled/served on the cluster version.
+    - id: dangling_binding_exists
+      description: The create-policy alternative needs an existing binding whose policyName names a policy that does not exist yet.
+    - id: injecting_policy_exists
+      description: The binding alternatives need an existing (unbound or differently bound) policy whose mutation runs code or otherwise hands the source a pod identity; a benign policy gives nothing.
+    - id: new_pod_creation_occurs
+      description: Only pods created after the change are mutated.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to mutatingadmissionpolicies and their bindings to cluster administrators; delete bindings whose policy is missing and policies that are not bound.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/mutating-admission-policy/
+  notes: HackTricks (a66f094ede) reproduced each half independently (patch binding to repoint policyName, create binding for an existing unbound policy, create policy filling a dangling binding). Holding both halves (or patch/update on the policy) is k8s-workloads-mutating-admission-policy-injection. Policy contents and dangling policyName references are not evaluated.
+
+- id: k8s-workloads-configmap-executed-by-workload
+  provider: k8s
+  service: workloads
+  title: Modify a ConfigMap that a running workload executes
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#consumed-configuration-as-code
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of ServiceAccounts whose pods consume a ConfigMap it can modify, when that ConfigMap carries a script or configuration the workload executes.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: configmaps, namespace: "{target.namespace}"}
+      - - {verb: update, resource: configmaps, namespace: "{target.namespace}"}
+      # Replace the ConfigMap: delete it and create one with the same name.
+      - - {verb: delete, resource: configmaps, namespace: "{target.namespace}"}
+        - {verb: create, resource: configmaps, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_in_namespace: "{target.namespace}"
+      k8s_sa_used_by_pod_consuming_configmap: true
+    scope: same_namespace
+    aggregate_as: "ServiceAccounts of ConfigMap-consuming pods in {target.namespace}"
+  conditions:
+    - id: configmap_consumer_executes_content_not_verified
+      description: Only ConfigMaps that the workload runs as code (mounted scripts, interpreter or hook configuration) give execution; inert data does not. The grant must also cover the consumed ConfigMap name.
+    - id: consumer_reload_required
+      description: Mounted ConfigMaps update in place, but env/envFrom values only apply when a new pod starts (next Job run or restart).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Keep executable content in images rather than ConfigMaps, restrict configmaps update/patch with resourceNames, and keep privileged ServiceAccounts' workloads in namespaces without tenant write access.
+  references:
+    - https://kubernetes.io/docs/concepts/configuration/configmap/
+  notes: The selector lists ServiceAccounts of running pods that reference any ConfigMap (volume, projected volume, envFrom, configMapKeyRef; kube-root-ca.crt ignored); whether the content is executed cannot be derived from the inventory.
+
+- id: k8s-workloads-flux-kustomization-controller-identity
+  provider: k8s
+  service: gitops
+  title: Create a Flux Kustomization without a ServiceAccount so kustomize-controller applies it
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#flux-kustomization-without-a-tenant-serviceaccount
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Flux kustomize-controller ServiceAccount by creating a Kustomization
+    that selects attacker-controlled content in an existing or newly created Flux source and is reconciled with
+    the controller identity.
+  requires:
+    all_of:
+    - verb: create
+      resource: kustomizations
+      api_group: kustomize.toolkit.fluxcd.io
+      namespace: '{pivot.namespace}'
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_name: kustomize-controller
+    scope: cluster
+    aggregate_as: Flux kustomize-controller of {cluster}
+  conditions:
+  - id: flux_default_service_account_flag
+    description: The controller flag --default-service-account makes Kustomizations without spec.serviceAccountName
+      impersonate a tenant ServiceAccount instead; controller arguments are not collected.
+  - id: flux_controller_rbac
+    description: The reached privileges are the kustomize-controller ServiceAccount's effective bindings, which
+      must exceed the caller's grants.
+  - id: source_controlled_by_attacker
+    description: The Kustomization must reference an existing or newly created source artifact containing attacker-controlled
+      content; source-controller egress and --no-cross-namespace-refs can restrict the reference. This fact is not
+      proved by create permission alone.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Enable Flux multi-tenancy lockdown (--default-service-account, --no-cross-namespace-refs), restrict
+    Kustomization creation, and protect the referenced source content.
+  references:
+  - https://fluxcd.io/flux/components/kustomize/kustomizations/#role-based-access-control
+  - https://fluxcd.io/flux/installation/configuration/multitenancy/
+  notes: Selected by ServiceAccount name in any namespace (usually flux-system). Patching an existing Kustomization's
+    path/sourceRef is modelled by k8s-workloads-flux-kustomization-patch-controller-identity.
+
+- id: k8s-workloads-flux-kustomization-patch-controller-identity
+  provider: k8s
+  service: gitops
+  title: Repoint an existing Flux Kustomization reconciled by kustomize-controller
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Flux kustomize-controller ServiceAccount by changing spec.path (or sourceRef) of an existing Kustomization that has no spec.serviceAccountName.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: kustomizations, api_group: kustomize.toolkit.fluxcd.io, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: kustomizations, api_group: kustomize.toolkit.fluxcd.io, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_name: kustomize-controller
+    scope: cluster
+    aggregate_as: "Flux kustomize-controller of {cluster}"
+  conditions:
+    - id: kustomization_without_service_account
+      description: The patched Kustomization must not set spec.serviceAccountName (or the source can also remove it) and the controller must not run with --default-service-account; Kustomization specs and controller arguments are not collected.
+    - id: attacker_content_in_source
+      description: The new path must exist in an artifact the source controls (or sourceRef must be switchable to a source it controls); repointing only to existing trusted content proves the controller write but not an arbitrary one.
+    - id: flux_controller_rbac
+      description: The default Flux install binds cluster-admin to kustomize-controller; the reached privileges are those of that binding.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Set spec.serviceAccountName on every tenant Kustomization, run kustomize-controller with --default-service-account and --no-cross-namespace-refs, and restrict patch/update on Kustomizations.
+  references:
+    - https://fluxcd.io/flux/components/kustomize/kustomizations/#role-based-access-control
+    - https://fluxcd.io/flux/installation/configuration/multitenancy/
+  notes: HackTricks (171e422) demonstrates switching spec.path of a dedicated Kustomization to a marker directory already present in its source artifact.
+
+- id: k8s-workloads-crossplane-provider-kubernetes-identity
+  provider: k8s
+  service: gitops
+  title: Write Crossplane provider-kubernetes Objects applied with the provider identity
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Crossplane provider-kubernetes ServiceAccount by creating or changing an Object whose forProvider.manifest the provider applies with its own identity.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: objects, api_group: kubernetes.m.crossplane.io, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: objects, api_group: kubernetes.m.crossplane.io, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: objects, api_group: kubernetes.m.crossplane.io, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: objects, api_group: kubernetes.crossplane.io, namespace: "*"}
+      - - {verb: patch, resource: objects, api_group: kubernetes.crossplane.io, namespace: "*"}
+      - - {verb: update, resource: objects, api_group: kubernetes.crossplane.io, namespace: "*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      target_name_glob: "provider-kubernetes-*"
+    scope: cluster
+    aggregate_as: "Crossplane provider-kubernetes identity of {cluster}"
+  conditions:
+    - id: providerconfig_injected_identity
+      description: The referenced ProviderConfig must use the in-cluster provider identity (InjectedIdentity); a ProviderConfig with a kubeconfig Secret applies with that credential, possibly in another cluster, which is not modelled. ProviderConfigs are not collected.
+    - id: providerconfig_referenceable
+      description: The namespaced API (kubernetes.m.crossplane.io) only resolves ProviderConfigs visible from the Object's namespace (or a ClusterProviderConfig); the legacy cluster-scoped API (kubernetes.crossplane.io) can reference any ProviderConfig.
+    - id: provider_rbac
+      description: The reached privileges are those bound to the provider ServiceAccount (often broad, sometimes cluster-admin, for InjectedIdentity setups).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Bind narrow RBAC to the provider-kubernetes ServiceAccount, use per-tenant ProviderConfigs and restrict who can write Object resources.
+  references:
+    - https://github.com/crossplane-contrib/provider-kubernetes
+  notes: HackTricks (171e422) verifies the installed API version first (namespaced kubernetes.m.crossplane.io/v1alpha1, older cluster-scoped kubernetes.crossplane.io). The provider ServiceAccount name is generated per package revision, hence the provider-kubernetes-* name glob.
+
+- id: k8s-workloads-flux-helmrelease-controller-identity
+  provider: k8s
+  service: gitops
+  title: Create a Flux HelmRelease without a ServiceAccount so helm-controller installs it
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#gitops-and-platform-controller-deputies
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Flux helm-controller ServiceAccount by creating a HelmRelease
+    that renders attacker-controlled chart content from an existing or newly created referenceable source under
+    the controller identity.
+  requires:
+    all_of:
+    - verb: create
+      resource: helmreleases
+      api_group: helm.toolkit.fluxcd.io
+      namespace: '{pivot.namespace}'
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_name: helm-controller
+    scope: cluster
+    aggregate_as: Flux helm-controller of {cluster}
+  conditions:
+  - id: flux_default_service_account_flag
+    description: With --default-service-account, or an explicit spec.serviceAccountName, the HelmRelease uses a
+      tenant ServiceAccount instead of helm-controller; controller arguments and the proposed HelmRelease spec must
+      be checked.
+  - id: flux_controller_rbac
+    description: The reached privileges are helm-controller's effective bindings, which must exceed the caller's
+      grants.
+  - id: source_and_rendered_content_controlled_by_attacker
+    description: The new HelmRelease must reference an existing or newly created source whose selected chart revision
+      or values the attacker controls and whose rendered objects exercise the stronger privilege. Reference policy,
+      reconciliation, and admission must allow the objects; source-create permission alone proves none of these
+      facts.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Enable Flux multi-tenancy lockdown, restrict HelmRelease creation, and protect the referenced chart
+    source and values.
+  references:
+  - https://fluxcd.io/flux/components/helm/helmreleases/#role-based-access-control
+  - https://fluxcd.io/flux/installation/configuration/multitenancy/
+  notes: Chart values, hooks and dependencies all render under the controller identity (see helm-template-injection.md).
+
+- id: k8s-workloads-argocd-application-controller-identity
+  provider: k8s
+  service: gitops
+  title: Create or modify an Argo CD Application so the application controller deploys attacker content
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Argo CD application controller by writing an Application object in the Argo CD namespace whose project permits its repository, destination and resource kinds.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: applications, api_group: argoproj.io, namespace: argocd}
+      - - {verb: patch, resource: applications, api_group: argoproj.io, namespace: argocd}
+      - - {verb: update, resource: applications, api_group: argoproj.io, namespace: argocd}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_name: argocd-application-controller
+      k8s_sa_in_namespace: argocd
+    scope: cluster
+    aggregate_as: "Argo CD application controller of {cluster}"
+  conditions:
+    - id: appproject_restrictions
+      description: The Application's AppProject (default project allows any repository, destination and kind) may restrict sourceRepos, destinations and cluster/namespace resource whitelists; AppProjects are not evaluated.
+    - id: argocd_namespace_name
+      description: Applications are only processed in the Argo CD control namespace (argocd by default) unless "applications in any namespace" is enabled.
+    - id: sync_required
+      description: Changes deploy only with automated sync or a later manual sync.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict Kubernetes RBAC on applications/appprojects in the Argo CD namespace, scope AppProjects (sourceRepos, destinations, clusterResourceWhitelist), and run namespace-scoped controllers where possible.
+  references:
+    - https://argo-cd.readthedocs.io/en/stable/user-guide/projects/
+    - https://argo-cd.readthedocs.io/en/stable/operator-manual/security/
+  notes: Direct Kubernetes API writes bypass Argo CD's own RBAC (argocd-rbac-cm). The default cluster-scoped install grants the application controller all verbs on all resources; destinations in other registered clusters use their stored credentials (not modelled). Writing appprojects in the Argo CD namespace removes the project restrictions and is covered by the same condition.
+
+- id: k8s-workloads-pods-mount-argocd-cluster-credential
+  provider: k8s
+  service: workloads
+  title: Mount an Argo CD managed-cluster credential in a Pod
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#pod-creation-policy-gaps
+  source_revision: 0b36331
+  summary: A Pod author can obtain the registered-cluster identity from a credential-bearing Argo CD Secret in the
+    same namespace without Secret-read RBAC.
+  requires:
+    all_of: []
+    any_of:
+    - - verb: create
+        resource: pods
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: deployments
+        api_group: apps
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: daemonsets
+        api_group: apps
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: statefulsets
+        api_group: apps
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: replicasets
+        api_group: apps
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: replicationcontrollers
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: jobs
+        api_group: batch
+        namespace: '{target.namespace}'
+    - - verb: create
+        resource: cronjobs
+        api_group: batch
+        namespace: '{target.namespace}'
+  target:
+    kind: k8s_remote_cluster
+    outcome: credentials
+    selector:
+      k8s_secret_holds_remote_cluster_credential: argocd.argoproj.io/secret-type=cluster
+    scope: cluster
+    aggregate_as: Argo CD registered-cluster credentials in {cluster}
+  conditions:
+  - id: same_namespace_and_admitted_pod
+    description: A Pod produced by the grant must run in the Secret namespace and be admitted with a Secret volume
+      or environment reference; admission may deny the Pod, reference, image, or controller.
+  - id: usable_remote_cluster_credential
+    description: The Secret config must contain a currently usable bearer token or client certificate. An Argo CD
+      label or exec credential-provider configuration alone does not prove this.
+  blockers:
+  - admission_policy
+  - admission_webhook
+  - kyverno_policy
+  - gatekeeper_constraint
+  confidence: unknown
+  severity: high
+  mitigation: Restrict Pod and controller creation in namespaces holding Argo CD cluster credentials; enforce Secret-reference
+    admission rules.
+  references:
+  - https://kubernetes.io/docs/concepts/configuration/secret/
+  - https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#clusters
+  notes: Draft only. The current selector reads labels, never Secret data; the evaluator must keep this edge UNKNOWN
+    until the credential-evidence fact is collected. Runtime admission and credential validity may still keep it
+    UNKNOWN. The same edge covers the Jenkins Pod-YAML discussion.

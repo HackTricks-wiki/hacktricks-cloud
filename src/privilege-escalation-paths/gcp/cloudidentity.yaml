@@ -1,0 +1,63 @@
+# GCP Cloud Identity (Google Groups) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudidentity-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# cloudidentity.groups.memberships.create is NOT a GCP IAM permission on the group: the evaluator must resolve it from the
+# source's Cloud Identity group role on that group (OWNER or MANAGER), a Workspace Groups Admin / Super Admin role, or a
+# group whose settings allow self-join (see SCHEMA EXTENSIONS: group-management facts).
+
+- id: gcp-cloudidentity-add-member-to-group
+  provider: gcp
+  service: cloudidentity
+  title: Add a controlled principal to a Google group that holds IAM roles
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudidentity-privesc.md#control-an-iam-bound-groups-membership--inherit-its-existing-gcp-roles
+  source_revision: 171e422
+  summary: The source can obtain the privileges of every Google group whose membership it can manage.
+  requires:
+    all_of:
+      - action: cloudidentity.groups.memberships.create
+        resource: "{target.email}"
+  target:
+    kind: gcp_group
+    selector:
+      resource_permission_covers_target: cloudidentity.groups.memberships.create
+    scope: any
+    aggregate_as: "Google groups whose membership the source can manage"
+  conditions:
+    - id: membership_authority
+      description: Requires OWNER/MANAGER role on the group, a tenant Groups Admin/Super Admin role, or a group configured to allow joining; not visible in GCP IAM policies.
+    - id: dynamic_groups
+      description: Dynamic (query-based) groups cannot take direct members; editing the query is an alternate path that needs Cloud Identity Premium.
+    - id: external_members
+      description: Group settings may forbid members outside the organization's domain.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Keep privileged groups owned by a small admin set, disallow self-join and external members, and review group OWNERs/MANAGERs.
+  references:
+    - https://cloud.google.com/identity/docs/groups
+  notes: The group's inherited IAM roles (at any scope) become the source's. IAM group membership changes can take time to propagate. cloudidentity.groups.memberships.create is the Cloud Identity Groups API method (groups.memberships.create), not a Google Cloud IAM permission. Google's IAM permissions reference has no cloudidentity.* permissions, and the method is authorized by group roles (OWNER/MANAGER), Workspace admin roles or the group's join settings. The requirement is therefore synthetic and mapped by the evaluator (see the cloudidentity mapping in SCHEMA_EXTENSIONS.md). The permission categorisation will always flag it.
+
+- id: gcp-groups-self-join-open-group
+  provider: gcp
+  service: cloudidentity
+  title: Self-join a Google Group whose join setting is open to the source
+  source: src/pentesting-cloud/gcp-security/gcp-to-workspace-pivoting/README.md#google-groups-privilege-escalation
+  source_revision: 171e422
+  summary: The source can obtain the IAM roles of Google Groups whose whoCanJoin setting lets it join without approval.
+  source_kind: gcp_user
+  requires: {}
+  target:
+    kind: gcp_group
+    selector:
+      gcp_group_join_open_to_source: true
+    scope: any
+    aggregate_as: "Open-join Google Groups"
+  conditions:
+    - id: groups_settings_not_collected
+      description: Needs the Groups Settings (whoCanJoin, allowExternalMembers) of every IAM-bound group; until the collector stores them the technique is a coverage note and draws no edges.
+  blockers: [gcp_deny_policy]
+  confidence: derived
+  severity: high
+  mitigation: Set whoCanJoin to INVITED_CAN_JOIN or CAN_REQUEST_TO_JOIN on groups bound in IAM and disable allowExternalMembers.
+  notes: Also documents gcp-unauthenticated-enum-and-access/gcp-google-groups-unauthenticated-enum.md#join-a-publicly-open-iam-bound-group-without-victim-tenant-access. The evaluator grades the edge - ANYONE_CAN_JOIN with the source in the group's domain or allowExternalMembers true is derived; allowExternalMembers unknown or ALL_IN_DOMAIN_CAN_JOIN with the same email domain is conditional. The IAM-permission variant is gcp-cloudidentity-add-member-to-group.

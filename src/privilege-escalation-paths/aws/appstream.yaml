@@ -1,0 +1,288 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon AppStream 2.0 (WorkSpaces Applications) privilege escalation techniques.
+# Source: hacktricks-cloud aws-appstream-privesc/README.md (rev 171e422299).
+# Existing-resource updates use collected fleet and builder state and associations.
+
+- id: aws-appstream-createimagebuilderstreamingurl
+  provider: aws
+  service: appstream
+  title: Open a session on an image builder with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilderstreamingurl--administratorroot-access-to-an-existing-builder
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to connect to a running image builder may use its recorded machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to running image builders in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_image_builder_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit using the image builder's machine role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateImageBuilderStreamingURL to approved builders and avoid attaching powerful roles to them.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_ImageBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a RUNNING image builder to its exact IamRoleArn and requires CreateImageBuilderStreamingURL on that builder ARN.
+
+- id: aws-appstream-createappblockbuilderstreamingurl
+  provider: aws
+  service: appstream
+  title: Open a session on an app block builder with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateappblockbuilderstreamingurl--take-over-an-existing-app-package-builder
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to connect to a running app block builder may use its recorded machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to running app block builders in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_app_block_builder_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit using the app block builder's machine role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateAppBlockBuilderStreamingURL to approved builders and avoid attaching powerful roles to them.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_AppBlockBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a RUNNING app block builder to its exact IamRoleArn and requires CreateAppBlockBuilderStreamingURL on that builder ARN.
+
+- id: aws-appstream-createstreamingurl-existing-fleet
+  provider: aws
+  service: appstream
+  title: Open a desktop session on a fleet with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreatestreamingurl--enter-an-existing-fleet-under-its-machine-role
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to open a desktop session on an existing fleet may use that fleet's exact machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to streamable desktop fleets in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_fleet_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit running an application or script that can use the fleet role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateStreamingURL to approved fleets and avoid attaching powerful roles to desktop fleets.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateStreamingURL.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_Fleet.html
+  - https://docs.aws.amazon.com/appstream2/latest/developerguide/how-to-use-iam-role-with-streaming-instances.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a running DESKTOP fleet to its recorded IamRoleArn and an associated stack, requires available capacity and CreateStreamingURL on that fleet ARN, and returns a conditional role reach. No PassRole or fleet mutation is required.
+
+- id: aws-appstream-passrole-createimagebuilder-createfleet
+  provider: aws
+  service: appstream
+  title: Create and stream into a fleet with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any passable role trusting appstream.amazonaws.com.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      source_kind: [aws_user, aws_role]
+      trust_allows_service: appstream.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_new_fleet_with_role
+  conditions:
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: image_and_network
+    description: The chosen image and capacity must allow the fleet to start before a streaming session can begin.
+  - id: streaming_url_scope
+    description: CreateStreamingURL permission must cover both the chosen fleet and its associated stack.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on AppStream roles with iam:PassedToService and specific role ARNs; limit image
+    builder and fleet creation to AppStream administrators.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateFleet.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_StartFleet.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: 'Reach is roles trusting appstream.amazonaws.com in PassRole scope. The new fleet must have an image and an
+    associated stack; an existing stack may be reused.'
+
+- id: aws-appstream-passrole-createappblockbuilder
+  provider: aws
+  service: appstream
+  title: Create and stream into an app block builder with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
+  source_revision: 6fb9ac51fd
+  summary: The source can create an app block builder with a passable role and stream into it.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      source_kind: [aws_user, aws_role]
+      trust_allows_service: appstream.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_new_app_block_builder_with_role
+  conditions:
+  - id: app_block_and_network
+    description: The new builder needs suitable subnets and an app block it can be associated with before it starts.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole and app block builder creation to approved roles and administrators.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlock.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_StartAppBlockBuilder.html
+
+- id: aws-appstream-passrole-createimagebuilder
+  provider: aws
+  service: appstream
+  title: Create and stream into an image builder with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
+  source_revision: 6fb9ac51fd
+  summary: The source can create an image builder with a passable role and stream into it.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      source_kind: [aws_user, aws_role]
+      trust_allows_service: appstream.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_new_image_builder_with_role
+  conditions:
+  - id: image_builder_readiness
+    description: The available image and capacity must allow the new builder to reach a running state before streaming.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole and image builder creation to approved roles and administrators.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_DescribeImages.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilderStreamingURL.html
+
+- id: aws-appstream-passrole-updatefleet
+  provider: aws
+  service: appstream
+  title: Set a passable role on a streamable fleet
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
+  source_revision: 6fb9ac51fd
+  summary: The source can set a passable role on an existing fleet and stream into that fleet.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      source_kind: [aws_user, aws_role]
+      trust_allows_service: appstream.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_fleet_role_swap
+  conditions:
+  - id: fleet_readiness
+    description: The fleet must be associated with a usable stack and able to run streaming sessions after its role changes.
+  - id: streaming_url_scope
+    description: CreateStreamingURL permission must cover both the chosen fleet and its associated stack.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole and UpdateFleet on fleets that can run sessions with privileged roles.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateFleet.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_ListAssociatedStacks.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateStreamingURL.html
+
+- id: aws-appstream-passrole-updateappblockbuilder
+  provider: aws
+  service: appstream
+  title: Set a passable role on a streamable app block builder
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilder--createfleet--iampassrole--session-with-the-passed-roles-credentials
+  source_revision: 6fb9ac51fd
+  summary: The source can set a passable role on an existing app block builder and stream into it.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      source_kind: [aws_user, aws_role]
+      trust_allows_service: appstream.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting appstream.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_app_block_builder_role_swap
+  conditions:
+  - id: builder_readiness
+    description: The builder must be associated with an app block and able to run a streaming session after its role changes.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole and UpdateAppBlockBuilder on builders that can run sessions with privileged roles.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_UpdateAppBlockBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_DescribeAppBlockBuilderAppBlockAssociations.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilderStreamingURL.html

@@ -1,0 +1,42 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS EC2 Image Builder privilege escalation techniques.
+# Source: hacktricks-cloud aws-ec2-image-builder-privesc/README.md.
+
+- id: aws-imagebuilder-component-version-hijack
+  provider: aws
+  service: imagebuilder
+  title: Publish a newer component version consumed by a wildcard recipe and run the pipeline
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-image-builder-privesc/README.md#imagebuildercreatecomponent--imagebuilderstartimagepipelineexecution
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the infrastructure instance-profile role of an Image Builder pipeline whose recipe references an account-owned component by a version wildcard.
+  requires:
+    all_of:
+      - action: imagebuilder:CreateComponent
+        resource: "{target.consumer_input_arn}"
+      - action: imagebuilder:StartImagePipelineExecution
+        resource: "{target.attached_resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      attached_resource_covered_by: imagebuilder:StartImagePipelineExecution
+      consumer_input_writable_via: imagebuilder:CreateComponent
+      via_resource_type: imagebuilder_pipeline
+    scope: same_account
+    aggregate_as: "Image Builder infrastructure roles of pipelines with wildcard components in {account}"
+  conditions:
+    - id: unpinned_component
+      description: The recipe must reference an account-owned component with a version wildcard (x.x.x, 1.x.x, 1.2.x); a pinned semantic version or build ARN and AWS-owned components are not affected. Verified from the collected recipe components when GetImageRecipe was readable.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Pin component build versions in recipes and restrict imagebuilder:CreateComponent for consumed component names.
+  references: []
+  notes: No iam:PassRole is needed. The build role is the instance-profile role of the infrastructure configuration and trusts ec2.amazonaws.com (not imagebuilder.amazonaws.com); {target.attached_resource_arn} is the collected imagebuilder_pipeline whose infrastructure configuration (InstanceProfileName) carries the role. {target.consumer_input_arn} is arn:aws:imagebuilder:<Region>:<account>:component/<name>/* for each account-owned version-wildcard component of the pipeline's image recipe (imagebuilder:GetImageRecipe, component ARNs only), since a new component version is a new ARN under the same name; so name-scoped CreateComponent grants are matched. Pipelines whose recipe was not readable (or container-recipe pipelines) fall back to the Region's component/* and stay conditional (imagebuilder_recipe_components_not_collected); a role whose recipes reference only pinned or AWS-owned components is excluded; accounts without a complete pipeline inventory stay unknown. Scheduled pipelines also pick up the new version without StartImagePipelineExecution (delayed).

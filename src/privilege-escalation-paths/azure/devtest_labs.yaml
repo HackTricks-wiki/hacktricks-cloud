@@ -1,0 +1,71 @@
+# Azure DevTest Labs techniques (declarative only).
+# Source: hacktricks-cloud az-devtest-labs-privesc.md (rev 171e422).
+# A lab VM (Microsoft.DevTestLab/labs/virtualMachines) is backed by a compute VM; the link is not collected,
+# so the target uses azure_host_linked_to_pivot (unknown until collected).
+
+- id: azure-devtestlabs-apply-artifacts
+  provider: azure
+  service: devtest_labs
+  title: Apply an artifact to a lab VM to run code in the guest
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-devtest-labs-privesc.md#applyartifacts--in-guest-rce--managed-identity-theft-marquee
+  source_revision: 171e422
+  summary: Artifacts run as SYSTEM/root in the lab VM, exposing the managed identities of the backing compute VM.
+  requires:
+    all_of:
+      - action: Microsoft.DevTestLab/labs/virtualMachines/ApplyArtifacts/action
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.DevTestLab/labs/virtualMachines
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+      azure_host_linked_to_pivot: devtest_lab_compute_vm
+    scope: inherited_scope
+    aggregate_as: "Managed identities of the compute VM behind lab VM {pivot}"
+  conditions:
+    - id: artifact_source_available
+      description: An artifact source with a script-running artifact (the public repository's Run PowerShell / shell artifacts or a private repo) must be enabled in the lab.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ApplyArtifacts/action, disable unneeded artifact sources and keep lab VM identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm
+  notes: ""
+
+- id: azure-devtestlabs-claim-vm
+  provider: azure
+  service: devtest_labs
+  title: Claim a pooled lab VM
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-devtest-labs-privesc.md#claim--claimanyvm--seize-ownership-of-a-pooled-vm
+  source_revision: 171e422
+  summary: Claiming a claimable lab VM makes the source its owner, giving login and artifact access to the VM and its managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.DevTestLab/labs/virtualMachines/Claim/action
+          scope: "{pivot}"
+      - - action: Microsoft.DevTestLab/labs/ClaimAnyVm/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.DevTestLab/labs|Microsoft.DevTestLab/labs/virtualMachines
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+      azure_host_linked_to_pivot: devtest_lab_compute_vm
+    scope: inherited_scope
+    aggregate_as: "Managed identities of claimable lab VMs in {pivot}"
+  conditions:
+    - id: claimable_vm_exists
+      description: The lab must have an unclaimed VM marked claimable.
+    - id: login_reachable
+      description: Using the VM needs network reachability and its credentials or artifact access granted to the owner.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Avoid claimable VMs carrying privileged identities and restrict Claim/ClaimAnyVm.
+  references:
+    - https://learn.microsoft.com/en-us/azure/devtest-labs/devtest-lab-add-claimable-vm
+  notes: ""

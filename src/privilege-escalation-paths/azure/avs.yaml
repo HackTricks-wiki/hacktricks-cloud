@@ -1,0 +1,71 @@
+# Azure VMware Solution (AVS) privilege escalation techniques (declarative only).
+# Source: hacktricks-cloud az-vmware-solution-avs-privesc.md (rev 171e422).
+# Targets are modelled as data-plane administrators of the private cloud (vCenter CloudAdmin /
+# NSX-T admin), not as Azure/Entra principals.
+
+- id: azure-avs-list-admin-credentials
+  provider: azure
+  service: avs
+  title: Read the AVS private cloud CloudAdmin and NSX-T admin credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#cloudadmin--nsx-t-credential-disclosure-listadmincredentials
+  source_revision: 171e422
+  summary: listAdminCredentials returns the vCenter CloudAdmin and NSX-T admin passwords, giving administrative control of the SDDC and its workload VMs.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/listAdminCredentials/action
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "AVS vCenter CloudAdmin / NSX-T admins of {target.scope}"
+  conditions:
+    - id: management_network_reachable
+      description: Using the credentials needs network access to the private cloud's vCenter and NSX-T endpoints (ExpressRoute, VPN or a peered network).
+    - id: workload_identities_not_modelled
+      description: Control of guest VMs only reaches Azure or Entra identities if those workloads hold credentials (for example Arc-enabled guests or stored service principal secrets); that is not derived.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict listAdminCredentials/action (Contributor and Owner on the private cloud), rotate the CloudAdmin and NSX-T credentials after any exposure, and use an external identity source with named accounts.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-identity
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/rotate-cloudadmin-credentials
+  notes: Uses the existing azure_dataplane_admin kind, so no schema extension is needed.
+
+- id: azure-avs-run-command-script-execution
+  provider: azure
+  service: avs
+  title: Run privileged AVS Run Command cmdlets against vCenter and NSX-T
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#run-command-rce-without-reading-credentials-scriptexecutionswrite
+  source_revision: 171e422
+  summary: Submitting AVS Run Command executions with vendor cmdlet packages performs privileged changes in the SDDC management plane, such as adding identity sources or CloudAdmins, without reading the admin password.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/scriptExecutions/write
+        scope: "{target.scope}"
+      - action: Microsoft.AVS/privateClouds/scriptPackages/read
+        scope: "{target.scope}"
+      - action: Microsoft.AVS/privateClouds/scriptPackages/scriptCmdlets/read
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "AVS vCenter CloudAdmin / NSX-T admins of {target.scope}"
+  conditions:
+    - id: package_capability
+      description: The gain depends on the cmdlets available in the installed packages; only some of them (for example identity-source or group management cmdlets) grant administrative access to the source.
+    - id: management_network_reachable
+      description: Using the resulting vCenter access needs network access to the private cloud management endpoints.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict scriptExecutions/write, review Run Command execution history, and audit vCenter SSO identity sources and CloudAdmins group membership.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/using-azure-vmware-solution-run-command
+  notes: ""

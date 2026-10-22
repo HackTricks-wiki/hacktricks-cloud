@@ -1,0 +1,103 @@
+# Azure Virtual Desktop techniques (declarative only).
+# Source: hacktricks-cloud az-virtual-desktop-post-exploitation.md (rev 171e422).
+# The application group -> host pool -> session host VM link is not collected, so targets use
+# azure_host_linked_to_pivot (unknown until collected).
+
+- id: azure-avd-application-write-session-host-rce
+  provider: azure
+  service: virtual_desktop
+  title: Repoint a published AVD RemoteApp to run attacker commands on session hosts
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md#fleet-rce-via-applicationgroupsapplicationswrite-lolbin-commandlinearguments
+  source_revision: 171e422
+  summary: Changing a RemoteApp's file path and command-line arguments makes session hosts run attacker commands when assigned users launch the app, exposing the session hosts' managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.DesktopVirtualization/applicationgroups/applications/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.DesktopVirtualization/applicationGroups
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+      azure_host_linked_to_pivot: avd_session_host
+    scope: inherited_scope
+    aggregate_as: "Managed identities of session hosts serving application group {pivot}"
+  conditions:
+    - id: user_launches_app
+      description: Code runs only when an assigned user launches the modified RemoteApp.
+    - id: imds_reachable_from_user_context
+      description: The command runs in the launching user's session; reaching the host identity requires IMDS to be reachable from that context (not blocked by host firewall).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Desktop Virtualization Application Group Contributor, alert on application filePath / commandLineArguments changes, and keep session-host identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/virtual-desktop/manage-app-groups
+  notes: The launching users' session context (their tokens and data) is also exposed; that user target is modelled by azure-avd-application-write-launching-users. Also covers the "Common techniques" RemoteApp application-path redirect.
+
+- id: azure-avd-application-write-launching-users
+  provider: azure
+  service: virtual_desktop
+  title: Repoint a published AVD RemoteApp to run attacker commands in assigned users' sessions
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md#fleet-rce-via-applicationgroupsapplicationswrite-lolbin-commandlinearguments
+  source_revision: 171e422
+  summary: Changing a RemoteApp's file path and command-line arguments makes it run attacker commands in the session of each user assigned to the application group, exposing that user's session tokens.
+  requires:
+    all_of:
+      - action: Microsoft.DesktopVirtualization/applicationgroups/applications/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.DesktopVirtualization/applicationGroups
+  target:
+    kind: azure_user
+    selector:
+      azure_users_assigned_to_pivot: true
+    scope: tenant
+    aggregate_as: "Users assigned to application group {pivot}"
+    outcome: credentials
+  conditions:
+    - id: user_launches_app
+      description: Code runs only when an assigned user launches the modified RemoteApp; users who never launch it are not reached.
+    - id: session_token_reuse
+      description: What the source obtains is the user's session context (cached tokens, PRT-bound sessions); token protection or Conditional Access bound to the session host may limit reuse elsewhere.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Desktop Virtualization Application Group Contributor, alert on application filePath / commandLineArguments changes, and set commandLineSetting to DoNotAllow for published apps.
+  references:
+    - https://learn.microsoft.com/en-us/azure/virtual-desktop/manage-app-groups
+    - https://learn.microsoft.com/en-us/azure/virtual-desktop/rbac
+  notes: The session-host managed identity half of the same technique is azure-avd-application-write-session-host-rce. Users are those holding Desktop Virtualization User on the application group (directly or through groups).
+- id: azure-avd-appattach-share-overwrite-assigned-user
+  provider: azure
+  service: virtual_desktop
+  title: Overwrite an assigned App Attach image to reach launching users
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-virtual-desktop-post-exploitation.md#common-techniques
+  summary: Writing the exact Azure Files image of an App Attach package can run an accepted replacement in a user
+    session when the assigned user launches the app.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/write
+      data_action: true
+      scope: '{pivot}'
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_user
+    selector:
+      azure_challenge_fact: azure-avd-appattach-share-overwrite-assigned-user
+    scope: tenant
+    outcome: credentials
+    aggregate_as: Assigned users of App Attach packages stored on {pivot}
+  conditions:
+  - id: accepted_package_and_user_launch
+    description: The replacement image must pass package certificate trust and an assigned user must launch the
+      application; reusable session tokens are conditional.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to App Attach image shares and verify package signatures and assignments.
+  references:
+  - https://learn.microsoft.com/en-us/azure/virtual-desktop/app-attach-setup
+  - https://learn.microsoft.com/en-us/rest/api/desktopvirtualization/app-attach-package/list-by-subscription?view=rest-desktopvirtualization-2025-10-10
+  notes: Inert until exact azure_avd_appattach_share_bindings evidence is collected. The generic host-managed-identity
+    outcome is azure-v3-09-file-share-overwrite; user sessions need separate target evidence.

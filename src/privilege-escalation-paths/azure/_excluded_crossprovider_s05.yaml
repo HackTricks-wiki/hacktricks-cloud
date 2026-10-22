@@ -1,0 +1,173 @@
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-databases.md#enumeration
+  technique: Read managed-database user passwords and connection credentials
+  reason: The database user-list and connection commands can return passwords, but a DigitalOcean principal, effective
+    API rights, selected cluster/user, live password and database trusted-source reachability are absent from the
+    snapshot. Credential contents and database roles must be verified before a database-user edge.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-droplets.md#rce
+  technique: Reset a Droplet root password and enter its recovery console
+  reason: Password reset sends the temporary root password to the account email, and Recovery Console requires that
+    password. DigitalOcean action authority does not prove mailbox possession, successful reset or a working local
+    root login; these runtime and mailbox facts must be joined.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-droplets.md#rce
+  technique: Open a Droplet web console as its guest account
+  reason: Web Console access is a distinct Droplet guest shell, but the snapshot has no DigitalOcean control-panel
+    authorization, agent/SSH state, public address, network rules or resulting guest account. A console button alone
+    does not establish the shell identity.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-droplets.md#basic-information
+  technique: Restore or clone a Droplet disk image and read saved secrets
+  reason: A backup or snapshot is a disk image, not a known credential. The selected image, ability to create a
+    controlled clone or restore, readable filesystem, saved secret bytes and credential validity are uncollected.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-droplets.md#enumeration
+  technique: Read sensitive Droplet user data through metadata from a workload SSRF
+  reason: Droplet metadata may expose user data but has no instance-role credential endpoint. This path requires
+    a reachable SSRF or local workload access, actual secret bytes in user data and a validated target principal;
+    metadata availability alone proves no identity edge.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-functions.md#triggers
+  technique: Extract a namespace API access key from doctl connection traffic
+  reason: doctl trace may expose a Functions namespace key, but the snapshot lacks DigitalOcean namespace authorization,
+    trace output, key validity and a comparison between the key rights and the source rights. A key with only equivalent
+    rights is not escalation.
+
+- source: src/pentesting-cloud/digital-ocean-pentesting/do-services/do-volumes.md#basic-information
+  technique: Attach or move a volume to a controlled Droplet and read stored credentials
+  reason: Volume attach can expose disk bytes, but the snapshot lacks DigitalOcean attach/detach rights, compatible
+    controlled Droplet, encryption state, credential contents and validity. Attachment alone is not a credential
+    gain.
+
+- source: src/pentesting-cloud/confidential-computing/luks2-header-malleability-null-cipher-abuse.md#exploitation-storage-write-access-required
+  technique: Change a CVM LUKS2 segment to a null cipher and expose later plaintext data
+  reason: Changing the LUKS2 segment requires block-device/header write and a guest that trusts the modified header;
+    identity gain additionally requires later plaintext credential writes, storage read and a valid credential.
+    None of these block/guest/content facts is in a cloud IAM or Kubernetes RBAC snapshot.
+
+- source: src/pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md#logical-components
+  technique: Launch an AWX job template with attached credentials against inventory hosts
+  reason: Execute on an AWX job template uses its linked credential for a fixed playbook, but the snapshot has no
+    AWX RBAC, template/playbook/inventory/credential join or proof the template exposes attacker-controlled actions.
+    A launch alone does not prove arbitrary host identity gain.
+
+- source: src/pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md#supported-roles
+  technique: Use Inventory Ad Hoc privilege to execute commands with assigned credentials
+  reason: AWX Inventory Ad Hoc can run commands with a selected machine credential, but AWX inventory RBAC, enabled
+    ad hoc execution, credential assignment, target host and credential validity are not collected.
+
+- source: src/pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md#supported-roles
+  technique: Use Credential Use plus template control to run an attacker playbook with a protected credential
+  reason: AWX Credential Use is not secret read. Escalation requires effective template creation/admin and execute
+    rights, a controllable project playbook, inventory association and a stronger usable credential; these AWX relationships
+    are absent.
+
+- source: src/pentesting-ci-cd/ansible-tower-awx-automation-controller-security.md#supported-roles
+  technique: Modify an AWX project SCM source then execute its playbook through an authorized template
+  reason: Project SCM modification reaches host credentials only if an executable job template uses the modified
+    project and can be launched. AWX project/template/inventory/credential joins and SCM write rights are uncollected.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#web-console-enumeration
+  technique: Read Airflow Connections or Variables containing credentials
+  reason: Airflow Connections and Variables may contain credentials, but UI read access, actual secret values, target
+    principal and credential validity are absent. A visible variable or connection name is insufficient.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#retrieve-variables-values
+  technique: Export or retrieve a masked Airflow Variable secret
+  reason: Masked Variable export is version and permission dependent; current releases restrict sensitive export.
+    The selected value must contain a reusable credential and its target principal must be resolved, none of which
+    is collected.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#privilege-escalation
+  technique: Forge an Airflow Admin session with exposed Flask secret_key
+  reason: Forging an Airflow Admin session requires the effective Flask secret_key, a compatible signed-cookie session
+    backend, a valid target user ID and network access to the webserver. Airflow runtime configuration and secret
+    bytes are uncollected.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#dag-backdoor-rce-in-airflow-worker
+  technique: Write a DAG that executes on an Airflow worker
+  reason: DAG-folder write can run code as an Airflow worker, but self-hosted Airflow DAG storage, worker identity,
+    schedule/trigger and file synchronization are uncollected. AWS MWAA and GCP Composer bucket-write entries cover
+    only their specific cloud permissions and environments.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#dag-backdoor-rce-in-airflow-scheduler
+  technique: Place top-level code in a DAG parsed by scheduler
+  reason: Top-level DAG code may run as the scheduler on parse, but the scheduler must ingest the writable DAG file.
+    DAG path, parser behavior, scheduler identity and shared-storage topology are absent.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#dag-creation
+  technique: Create DAGs on one cluster machine that replicate to other Airflow machines
+  reason: Writing the DAG folder on one machine may replicate code to other Airflow machines, but replication configuration,
+    receiving hosts and their identities are runtime topology facts not in the snapshot. This is a variant of DAG-folder
+    write, not a guaranteed new machine identity.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#dag-code-injection
+  technique: Pass malicious DAG run parameters to a vulnerable DAG command
+  reason: A DAG run parameter becomes code execution only if a particular DAG places it unsafely into a command.
+    The DAG source, parameter use, run permission and worker identity require application-level collection.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/README.md#dag-code-injection
+  technique: Edit an Airflow Variable consumed unsafely by a DAG command
+  reason: Variable edit becomes code execution only if a particular DAG reads that variable into an unsafe command.
+    The variable-to-DAG dataflow, edit permission, execution timing and worker identity are uncollected.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/airflow-configuration.md#configuration-file
+  technique: Read Airflow configuration secrets through console or host access
+  reason: airflow.cfg can contain stale values overridden by environment variables. The effective running secret,
+    file or UI read access, target identity and credential validity must be collected; config-file existence proves
+    no gain.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/airflow-configuration.md#web-authentication
+  technique: Gain anonymous Airflow Admin via AUTH_ROLE_PUBLIC configuration
+  reason: AUTH_ROLE_PUBLIC=Admin could grant anonymous Airflow Admin access, but effective webserver_config.py,
+    deployment reachability and FAB authentication state are not in the snapshot. A file value alone may be overridden.
+
+- source: src/pentesting-ci-cd/apache-airflow-security/airflow-rbac.md#rbac
+  technique: Read configuration as an Airflow Op on affected releases and recover signing secret
+  reason: On affected Airflow versions Op can read effective configuration, which may expose secret_key and permit
+    cookie forgery. Version, effective config, signing key, session backend and a target user are uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#provider-credentials
+  technique: Read Atlantis host provider credentials after obtaining host or container access
+  reason: Atlantis can carry cloud or VCS credentials on its host, but a host/container read path, credential delivery
+    method, actual bytes, validity and target principal are uncollected. Merely hosting Atlantis does not prove
+    credential access.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#repos-configuration
+  technique: Poison a repository-local script executed by an Atlantis server-side hook
+  reason: Server-side hooks run repository-local scripts only when a configured hook names such a path from the
+    PR checkout. Atlantis hook command, SCM write rights, trigger path and runner identity are uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#repos-configuration
+  technique: Define malicious custom workflow commands in atlantis.yml
+  reason: atlantis.yml custom commands execute only when server-side allow_custom_workflows and any workflow override
+    policy permit them. Repository write, PR workflow trigger and runner credentials require Atlantis and SCM facts
+    absent from the snapshot.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#atlantis-plan-rce---config-modification-in-new-pr
+  technique: Execute Terraform external data source or malicious provider during Atlantis plan
+  reason: Plan-time code execution requires write to the Terraform configuration of an allowed repo and a plan of
+    the attacker PR. Atlantis repo allowlist, plan trigger, Terraform content and runner identity are uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#atlantis-plan-secrets-dump
+  technique: Expose Terraform secret variables through nonsensitive plan output or state
+  reason: nonsensitive output exposes a credential only if a Terraform variable contains one and the attacker can
+    see the resulting plan or state. Variable contents, output visibility, state access and credential validity
+    are uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#atlantis-apply-rce---config-modification-in-new-pr
+  technique: Execute local-exec on Atlantis during apply
+  reason: local-exec runs only on a successful apply of malicious Terraform, after any mergeability and approval
+    gates. SCM branch rights, Atlantis apply authorization, gate state, runner identity and credential access are
+    uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#pr-hijacking
+  technique: Trigger another user PR or push malicious config after approval to obtain Atlantis execution
+  reason: A comment can rerun an existing plan, but attacker code execution additionally needs branch write, stale-approval
+    behavior or another passing gate, and an apply or plan path that executes it. These VCS and Atlantis facts are
+    uncollected.
+
+- source: src/pentesting-ci-cd/atlantis-security.md#post-exploitation
+  technique: Read VCS tokens, Terraform state or process credentials from Atlantis files
+  reason: Atlantis data-dir, .git-credentials, state and process environment can contain reusable credentials, but
+    path configuration, host/LFI read access, actual bytes, validity and target principal are absent from the snapshot.

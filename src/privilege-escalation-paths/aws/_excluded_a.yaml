@@ -1,0 +1,335 @@
+# AWS part A: HackTricks privesc sections intentionally NOT modelled as privesc edges.
+# Each item: {source, technique, reason}. Revision a53b46392c.
+
+# --- IAM ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md#iamupdateaccesskey
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateaccesskey
+  source_revision: 3ad99dc7ac
+  technique: iam:UpdateAccessKey
+  reason: Only re-activates an existing key; using it requires already knowing the target's secret access key, so the permission alone does not yield a new identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md#iamresyncmfadevice
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamresyncmfadevice
+  source_revision: 3ad99dc7ac
+  technique: iam:ResyncMFADevice
+  reason: Requires possession of the target's MFA device and password; no new identity from the permission alone.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md#iamupdateopenidconnectproviderthumbprint-iamlistopenidconnectproviders-iamgetopenidconnectprovider
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamupdateopenidconnectproviderthumbprint-iamlistopenidconnectproviders-iamgetopenidconnectprovider
+  source_revision: 3ad99dc7ac
+  technique: iam:UpdateOpenIDConnectProviderThumbprint
+  reason: AWS validates tokens of most major IdPs against its own trusted CA library and ignores thumbprints; exploitation also requires man-in-the-middle of the IdP JWKS endpoint. Not reliably derivable from a snapshot.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iampassrole--a-compute-service
+  technique: iam:PassRole + a compute service (generic)
+  reason: Generic overview; each service-specific PassRole technique is modelled per service with the correct trusted service principal.
+
+# --- STS / federation ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumerolewithsaml
+  technique: sts:AssumeRoleWithSAML
+  reason: Requires a valid SAML assertion from the trusted IdP (possession of IdP credentials); no IAM permission grants it. Provider takeover is modelled as aws-iam-updatesamlprovider.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumerolewithwebidentity
+  technique: sts:AssumeRoleWithWebIdentity
+  reason: Requires a token from the trusted OIDC IdP (external identity possession); trust-policy misconfigurations on OIDC providers are an Exposure finding, not a principal-to-principal edge.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsgetfederationtoken
+  technique: sts:GetFederationToken
+  reason: Federation tokens are the intersection of the caller's own permissions and the session policy; never more privileged than the source. Persistence only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#federation-abuse
+  technique: Federation abuse (generic)
+  reason: Overview pointing to federation pages; requires external IdP control.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#iam-roles-anywhere-privesc
+  technique: IAM Roles Anywhere misconfigured trust policy
+  reason: Requires possession of a certificate issued by a trusted CA (external credential); the overly broad trust is an Exposure finding. CA replacement is modelled as aws-rolesanywhere-updatetrustanchor.
+
+# --- SSO ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sso-and-identitystore-post-exploitation/README.md#ssogetrolecredentials
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssogetrolecredentials
+  technique: sso:GetRoleCredentials
+  reason: Requires an Identity Center access token of a user already assigned the permission set; no new identity beyond what the user already has.
+
+# --- Cognito ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#gathering-credentials-from-identity-pool
+  technique: Unauthenticated identity-pool credentials
+  reason: Anonymous access to identity-pool roles is an Exposure finding (public), not a permission-based edge from a source principal.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadminenableuser
+  technique: cognito-idp:AdminEnableUser
+  reason: Requires already knowing the disabled user's credentials.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadmininitiateauth-cognito-idpadminrespondtoauthchallenge
+  technique: cognito-idp:AdminInitiateAuth + AdminRespondToAuthChallenge
+  reason: Requires the user's password/secret (or a custom-auth flow weakness specific to the app); not derivable from permissions alone.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpadduserpoolclientsecret--inject-an-m2m-application-credential
+  technique: cognito-idp:AddUserPoolClientSecret
+  reason: Client-credentials (M2M) tokens grant OAuth scopes to resource servers, not identity-pool AWS roles (identity pools accept user tokens). Application-level impact only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-idpcreateuserpoolclient--cognito-idpupdateuserpoolclient
+  technique: cognito-idp:CreateUserPoolClient / UpdateUserPoolClient
+  reason: Relaxes client settings (flows, scopes); still needs user credentials to obtain tokens. Application-level.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#cognito-sync-analysis
+  technique: Cognito Sync analysis
+  reason: Data access / tooling notes, no identity gain.
+
+# --- Directory Service ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#aws-management-console
+  technique: Directory console access (descriptive)
+  reason: Descriptive section; the escalation is modelled as aws-ds-resetuserpassword.
+
+# --- Amplify ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifygetapp-amplifygetbranch-amplifylistapps-amplifylistbranches-amplifygetjob--read-deployment-variables-and-build-logs
+  technique: Read deployment variables and build logs
+  reason: Pure data read (secrets exposure); Least Privilege / Exposure.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-amplify-post-exploitation/README.md#amplifygetartifacturl--download-end-to-end-test-artifacts
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifygetartifacturl--download-end-to-end-test-artifacts
+  technique: amplify:GetArtifactUrl
+  reason: Pure data read.
+
+# --- API Gateway ---
+  source_revision: 1fb542ff27
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypost
+  technique: apigateway:POST (API keys)
+  reason: Creates API keys for API access; application-level, no IAM identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md#apigatewayget
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayget
+  technique: apigateway:GET
+  reason: Pure data read (API keys).
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation/README.md#apigatewayupdaterestapipolicy--apigatewaypatch
+  source_revision: fd7d56b0a9
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewayupdaterestapipolicy--apigatewaypatch
+  technique: apigateway:UpdateRestApiPolicy / PATCH
+  reason: Opens API invocation (resource policy); application access, not an IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypatch-apigatewaypost
+  technique: apigateway:PATCH + POST (authorizer/integration changes)
+  reason: Bypasses API authorization of backend apps; application-level, no IAM identity gained.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#http-apis--apigatewayv2-variant
+  technique: HTTP APIs (apigatewayv2) variant
+  reason: Same application-level authorizer/route manipulation as REST variant.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc/README.md#apigatewaypatch-on-a-rest-vpc-link-does-not-permit-nlb-redirection
+  technique: apigateway:PATCH on a REST VPC link
+  reason: HackTricks itself documents this as not exploitable.
+
+# --- App Runner ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#apprunnerdescribeservice--read-plaintext-runtime-variables
+  technique: apprunner:DescribeService
+  reason: Pure data read (plaintext env vars).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#mutable-private-ecr-tag-with-automatic-deployments
+  technique: Mutable ECR tag with App Runner automatic deployments
+  reason: Covered by aws-ecr-push-consumed-tag (refresh boundary recorded there).
+
+# --- Batch ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#mutable-ecr-tag-poisoning-of-an-existing-job-definition
+  technique: Mutable ECR tag poisoning of a job definition
+  reason: Covered by aws-ecr-push-consumed-tag.
+
+# --- Chime ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-chime-sdk-post-exploitation/README.md#legacy-amazon-chime-createapikey-retired
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md#legacy-chimecreateapikey
+  historical_source_revision: 171e422299
+  source_revision: 3ad99dc7ac
+  technique: chime:CreateApiKey
+  reason: Creates a SCIM key for an Amazon Chime account (application-level, no IAM identity); HackTricks marks it TODO and AWS ended Amazon Chime support on 2026-02-20.
+
+# --- CloudFormation ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudformation-trigger-post-exploitation/README.md#cloudformationexecutechangeset-on-a-pre-staged-change-set
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationexecutechangeset-on-a-pre-staged-change-set
+  source_revision: 3ad99dc7ac
+  technique: cloudformation:ExecuteChangeSet on a pre-staged change set
+  reason: The source executes content it did not author; it only triggers an already-reviewed change. No attacker-controlled code under the role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudformation-trigger-post-exploitation/README.md#cloudformationsignalresource--release-a-stack-waiting-on-a-success-signal
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationsignalresource--release-a-stack-waiting-on-a-success-signal
+  source_revision: 3ad99dc7ac
+  technique: cloudformation:SignalResource
+  reason: Releases a gate for a fixed workload; no attacker-controlled execution under the role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#aws-cdk
+  technique: AWS CDK bootstrap roles
+  reason: CDK bootstrap roles are regular roles whose reachability is covered by sts:AssumeRole and CloudFormation PassRole entries.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#determining-the-role-names
+  technique: CDK role-name discovery
+  reason: Reconnaissance only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#adding-malicious-code-to-the-project-source
+  technique: Poisoning CDK project source
+  reason: Source-repository write outside AWS IAM; not evaluable from the AWS snapshot.
+
+# --- CloudFront ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md#cloudfrontupdatedistribution--cloudfrontgetdistributionconfig
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md#cloudfrontupdatedistribution--cloudfrontgetdistributionconfig
+  technique: cloudfront:UpdateDistribution (origin change)
+  reason: Traffic/content hijack of end users; no IAM identity gained.
+  source_revision: 1fb542ff27
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudfront-post-exploitation/README.md#cloudfrontcreatefunction-cloudfrontdescribefunction-cloudfrontpublishfunction-cloudfrontgetdistributionconfig--cloudfrontupdatedistribution
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md#cloudfrontcreatefunction-cloudfrontdescribefunction-cloudfrontpublishfunction-cloudfrontgetdistributionconfig--cloudfrontupdatedistribution
+  technique: CloudFront Functions injection
+  reason: CloudFront Functions have no IAM role; impact is on end-user traffic only.
+
+# --- CodeBuild ---
+  source_revision: 1fb542ff27
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildretrybuild--re-execute-a-completed-build-under-its-stored-role
+  technique: codebuild:RetryBuild
+  reason: Replays the stored build configuration; the source controls nothing that runs under the role unless combined with source poisoning (modelled separately).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
+  technique: ssm:StartSession into CodeBuild sandboxes
+  reason: Cross-reference; SSM techniques are owned by ssm.yaml (part B), sandbox command execution is modelled as aws-codebuild-startcommandexecution.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#codebuildbatchgetprojects-codebuildbatchgetbuilds--read-build-environment-values
+  technique: codebuild:BatchGetProjects / BatchGetBuilds
+  reason: Pure data read (plaintext env values).
+
+# --- CodePipeline ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelinestartpipelineexecution--inject-a-v2-pipeline-variable
+  technique: Inject a V2 pipeline variable
+  reason: Value-only injection whose impact depends on pipeline action semantics; not generically evaluable.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelineretrystageexecution--replay-a-failed-privileged-stage
+  technique: codepipeline:RetryStageExecution
+  reason: Replays a fixed workload; no attacker-controlled execution.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelineenablestagetransition--release-an-execution-waiting-at-a-disabled-transition
+  technique: codepipeline:EnableStageTransition
+  reason: Gate release for a fixed workload.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelineoverridestagecondition--bypass-an-active-stage-condition
+  technique: codepipeline:OverrideStageCondition
+  reason: Gate bypass for a fixed workload.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelinerollbackstage--replay-a-prior-successful-stage-revision
+  technique: codepipeline:RollbackStage
+  reason: Replays a prior reviewed revision; no attacker-controlled execution.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelineputapprovalresult--bypass-a-manual-gate
+  technique: codepipeline:PutApprovalResult
+  reason: Approval bypass only; becomes an escalation only combined with source poisoning (modelled separately).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelineputjobsuccessresult--bypass-a-zero-output-custom-action-gate
+  technique: codepipeline:PutJobSuccessResult
+  reason: Gate bypass for a fixed workload.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codepipeline-data-access-post-exploitation/README.md#codepipelinepollforjobs
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codepipelinepollforjobs
+  technique: codepipeline:PollForJobs
+  reason: Steals custom-action job artifacts/credentials scoped to the pipeline artifact bucket; data access, not a role identity.
+
+# --- CodeStar (service discontinued) ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md#iampassrole-codestarcreateproject
+  technique: iam:PassRole + codestar:CreateProject
+  reason: AWS CodeStar was discontinued on 2024-07-31; the APIs are no longer available.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md#codestarcreateproject-codestarassociateteammember
+  technique: codestar:CreateProject + codestar:AssociateTeamMember
+  reason: AWS CodeStar discontinued (2024-07-31).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/README.md#codestarcreateprojectfromtemplate
+  technique: codestar:CreateProjectFromTemplate
+  reason: AWS CodeStar discontinued (2024-07-31).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/codestar-createproject-codestar-associateteammember.md
+  technique: CodeStar CreateProject + AssociateTeamMember (sub-page)
+  reason: AWS CodeStar discontinued (2024-07-31).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codestar-privesc/iam-passrole-codestar-createproject.md
+  technique: CodeStar PassRole + CreateProject (sub-page)
+  reason: AWS CodeStar discontinued (2024-07-31).
+
+# --- DynamoDB ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#dynamodbputresourcepolicy-and-optionally-dynamodbgetresourcepolicy
+  technique: dynamodb:PutResourcePolicy
+  reason: Grants the source data access to tables; data access, not a new identity.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#post-exploitation
+  technique: Post exploitation cross-reference
+  reason: Cross-reference only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation/README.md#todo-read-data-abusing-data-streams
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#todo-read-data-abusing-data-streams
+  technique: Read data via streams (TODO)
+  reason: Data read; unfinished section.
+
+# --- EBS ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ebslistsnapshotblocks-ebsgetsnapshotblock-ec2describesnapshots
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc/README.md#ebslistsnapshotblocks-ebsgetsnapshotblock-ec2describesnapshots
+  technique: EBS direct snapshot reads
+  reason: Data read (credentials found on disks are not derivable from the snapshot).
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2createsnapshot
+  source_revision: f2aa915198
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ebs-privesc/README.md#ec2createsnapshot
+  technique: ec2:CreateSnapshot
+  reason: Data access to volumes; no new identity.
+
+# --- EC2 ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#replace-security-groups-on-a-running-instance
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#replace-security-groups-on-a-running-instance
+  source_revision: 3ad99dc7ac
+  technique: ec2:ModifyInstanceAttribute (security groups)
+  reason: Network change only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#launch-template-and-auto-scaling-constraints
+  technique: Launch-template and Auto Scaling constraints
+  reason: Clarifying section (constraints); folded into ec2.yaml entries.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#autoscalingsetdesiredcapacity--activate-a-stored-launch-template-and-instance-role
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#autoscalingsetdesiredcapacity--activate-a-stored-launch-template-and-instance-role
+  source_revision: 3ad99dc7ac
+  technique: autoscaling:SetDesiredCapacity
+  reason: Starts a fixed stored workload; the source controls nothing that runs under the role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2-instance-connectsendserialconsolesshpublickey
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2-instance-connectsendserialconsolesshpublickey
+  source_revision: 3ad99dc7ac
+  technique: ec2-instance-connect:SendSerialConsoleSSHPublicKey
+  reason: Serial console still requires a valid OS user password; not derivable from permissions (and serial console must be enabled account-wide).
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2describelaunchtemplateversions-ec2describelaunchtemplates-optional
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2describelaunchtemplateversions-ec2describelaunchtemplates-optional
+  source_revision: 3ad99dc7ac
+  technique: ec2:DescribeLaunchTemplateVersions
+  reason: Data read (secrets in user data).
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2modifyinstancemetadataoptions-imds-downgrade-to-enable-ssrf-credential-theft
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2modifyinstancemetadataoptions-imds-downgrade-to-enable-ssrf-credential-theft
+  source_revision: 3ad99dc7ac
+  technique: ec2:ModifyInstanceMetadataOptions (IMDSv1 downgrade)
+  reason: Requires a separate SSRF vulnerability in the instance's application; not derivable from the snapshot.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2modifyimageattribute-ec2modifysnapshotattribute
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2modifyimageattribute-ec2modifysnapshotattribute
+  source_revision: 3ad99dc7ac
+  technique: ec2:ModifyImageAttribute / ModifySnapshotAttribute
+  reason: Data sharing/exfiltration; no identity gain.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2getpassworddata
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2getpassworddata
+  source_revision: 3ad99dc7ac
+  technique: ec2:GetPasswordData
+  reason: Needs the key-pair private key; yields an OS login, whose instance-role reach depends on network access. Treated as data read.
+
+# --- ECR ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrgetauthorizationtoken-ecrbatchgetimage-ecrgetdownloadurlforlayer
+  technique: ECR image pull
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#global-registry-hijack-via-root-pull-through-cache-rule
+  technique: ROOT pull-through cache rule
+  reason: Folded into aws-ecr-createpullthroughcacherule (condition root_prefix).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrputaccountsetting-registry-policy-scope
+  technique: ecr:PutAccountSetting (registry policy scope downgrade)
+  reason: HackTricks documents the V2-to-V1 downgrade as no longer supported.
+
+# --- ECS ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ecs-post-exploitation/README.md#ecsupdateservice--reactivate-a-dormant-service-with-its-stored-task-role
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsupdateservice--reactivate-a-dormant-service-with-its-stored-task-role
+  source_revision: 3ad99dc7ac
+  technique: ecs:UpdateService (desired count only)
+  reason: Starts a fixed stored workload; no attacker-controlled execution under the role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#mutable-ecr-tag-consumed-by-an-ecs-service-deployment-digest-boundary
+  technique: Mutable ECR tag consumed by an ECS service
+  reason: Covered by aws-ecr-push-consumed-tag (digest boundary recorded there).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#runtime-command-overrides-with-iampassrole-and-ecsruntask
+  technique: Runtime command overrides with iam:PassRole + ecs:RunTask
+  reason: Duplicate of aws-ecs-passrole-runtask-overrides.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ssmstartsession
+  technique: ssm:StartSession (cross-reference)
+  reason: Owned by ssm.yaml (part B).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ec2runinstances
+  technique: iam:PassRole + ec2:RunInstances (cross-reference)
+  reason: Modelled as aws-ec2-runinstances-join-ecs-cluster.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#backdoor-compute-in-cluster-via-ecs-anywhere-external-registration
+  technique: ECS Anywhere EXTERNAL registration
+  reason: Requires iam:PassRole on task roles plus a task launch, already covered by aws-ecs-passrole-registertaskdefinition-starttask / aws-ecs-registercontainerinstance-starttask (plus ssm:CreateActivation).
+
+# --- General ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/README.md
+  technique: AWS privilege escalation index
+  reason: Index page, no techniques.
+
+# --- Merged / duplicate sections (kept for traceability) ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodetachmanagedpolicyfrompermissionset
+  technique: sso:DetachManagedPolicyFromPermissionSet
+  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodetachcustomermanagedpolicyreferencefrompermissionset
+  technique: sso:DetachCustomerManagedPolicyReferenceFromPermissionSet
+  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodeleteinlinepolicyfrompermissionset
+  technique: sso:DeleteInlinePolicyFromPermissionSet
+  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#automatic-tools
+  technique: Automatic tools
+  reason: Tooling references only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md
+  technique: iam:PassRole + cloudformation:CreateStack + cloudformation:DescribeStacks (sub-page)
+  reason: Same edge as aws-cloudformation-passrole-createstack; DescribeStacks only reads outputs.

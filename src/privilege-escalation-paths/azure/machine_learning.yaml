@@ -1,0 +1,406 @@
+# Azure Machine Learning / AI Foundry techniques (declarative only).
+# Source: hacktricks-cloud az-ai-foundry-privesc.md and az-machine-learning-privesc.md (rev 171e422).
+# {target.host_resource.workspace}: the ML workspace that owns the endpoint/compute.
+# pivot_resource_type with '|' means any of the listed resource types.
+
+- id: azure-ml-online-deployment-existing-endpoint
+  provider: azure
+  service: machine_learning
+  title: Deploy code to an existing Azure ML online endpoint
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesonlineendpointswrite-microsoftmachinelearningservicesworkspacesonlineendpointsdeploymentswrite-microsoftmachinelearningservicesworkspacesread
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the online endpoint's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments/write
+        scope: '{target.host_resource}'
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '{target.host_resource.workspace}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/onlineEndpoints
+    scope: inherited_scope
+    aggregate_as: Identity of online endpoint {target.host_resource}
+  conditions:
+    - id: invoke_path
+      description: Triggering the scoring code needs a way to call the endpoint (listKeys, token, or score/action) unless code runs at container start.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict deployment write on online endpoints and keep endpoint identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-access-resources-from-endpoints-managed-identities
+  notes: Endpoint identity is fixed at creation; workspace identity roles do not apply.
+
+- id: azure-ml-online-endpoint-create-with-user-assigned-identity
+  provider: azure
+  service: machine_learning
+  title: Create an Azure ML online endpoint with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesonlineendpointswrite-microsoftmachinelearningservicesworkspacesonlineendpointsdeploymentswrite-microsoftmachinelearningservicesworkspacesread
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/write
+        scope: '{pivot}'
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments/write
+        scope: '{pivot}'
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.MachineLearningServices/workspaces
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: invoke_path
+      description: Triggering the scoring code needs a way to call the endpoint unless code runs at container start.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and online endpoint creation.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-access-resources-from-endpoints-managed-identities
+  notes: ''
+
+- id: azure-ml-jobs-write-compute-identity
+  provider: azure
+  service: machine_learning
+  title: Submit an Azure ML job to a compute target with a managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesjobswrite-and-target-read-permissions
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of the compute target's managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.MachineLearningServices/workspaces/jobs/write
+          scope: '{target.host_resource.workspace}'
+      - - action: Microsoft.MachineLearningServices/workspaces/experiments/runs/write
+          scope: '{target.host_resource.workspace}'
+      - - action: Microsoft.MachineLearningServices/workspaces/notebooks/vm/write
+          scope: '{target.host_resource.workspace}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/computes
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+  conditions:
+    - id: target_reads
+      description: Read permissions on the selected compute, environment and workspace are typically required by clients.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict jobs/write and keep compute identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-identity-based-service-authentication
+  notes: On a compute cluster/instance, identity managed resolves to that compute's identity. Serverless jobs instead use the workspace user-assigned identity (see azure-ml-jobs-write-serverless-workspace-uami). experiments/runs/write and notebooks/vm/write are listed as alternative code-execution verbs in az-machine-learning-privesc.md#compute-as-identity-rce-marquee-privesc (notebook/terminal execution reaches compute instances only).
+
+- id: azure-ml-jobs-write-serverless-workspace-uami
+  provider: azure
+  service: machine_learning
+  title: Submit an Azure ML serverless job running as the workspace user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesjobswrite-and-target-read-permissions
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the user-assigned identity configured on the Azure ML workspace.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/jobs/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces
+      managed_identity_type: user_assigned
+    scope: inherited_scope
+    aggregate_as: User-assigned identity of ML workspace {target.host_resource}
+  conditions:
+    - id: serverless_available
+      description: Serverless compute must be usable in the workspace (quota, network isolation configuration) and the workspace must have a user-assigned identity; system-assigned workspace identities are not supported for serverless jobs.
+    - id: target_reads
+      description: Read permissions on the workspace and environment are typically required by clients.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict jobs/write (AzureML Data Scientist, Contributor) and keep the workspace user-assigned identity least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-use-serverless-compute
+  notes: Reviewer addition from Microsoft Learn (serverless jobs support identity managed using the workspace UAMI); HackTricks at 171e422 only describes compute-target identities and states that attaching a UAMI to the workspace does not change the identity of jobs on a compute target. Combined with workspaces/write plus userAssignedIdentities/assign/action this reaches any assignable UAMI.
+
+- id: azure-ml-workspace-uami-attach-serverless-job
+  provider: azure
+  service: machine_learning
+  title: Attach a user-assigned identity to an Azure ML workspace and run a serverless job as it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#workspace-createmodify-as-an-identity-staging-primitive
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope by attaching them to a workspace whose serverless jobs it can submit.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.MachineLearningServices/workspaces/write
+        scope: '{pivot}'
+      - action: Microsoft.MachineLearningServices/workspaces/jobs/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.MachineLearningServices/workspaces
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: serverless_available
+      description: Serverless compute must be usable in the workspace and the attached identity must be the workspace primary user-assigned identity used by serverless jobs.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workspaces/write and userAssignedIdentities/assign/action; keep identities that can be attached to ML workspaces least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-use-serverless-compute
+  notes: The page describes workspace identity attachment as a staging step whose impact is realised by later code execution; serverless jobs are the code path that runs as the workspace user-assigned identity (see azure-ml-jobs-write-serverless-workspace-uami). AI Foundry hubs/write on the same ARM type is equivalent.
+
+- id: azure-ml-workspace-linked-keys-workload-poisoning
+  provider: azure
+  service: machine_learning
+  title: Poison Azure ML job code or images with the workspace linked-resource keys
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#dump-workspace-linked-resource-keys
+  source_revision: a66f094ede
+  summary: The workspace default storage key and container registry admin credential let the source replace job code, notebooks or images that later run as compute or endpoint managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.MachineLearningServices/workspaces/listKeys/action
+          scope: '{target.host_resource.workspace}'
+      - - action: Microsoft.MachineLearningServices/workspaces/listStorageAccountKeys/action
+          scope: '{target.host_resource.workspace}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service:
+        - Microsoft.MachineLearningServices/workspaces/computes
+        - Microsoft.MachineLearningServices/workspaces/onlineEndpoints
+    scope: inherited_scope
+    aggregate_as: Identities of ML workloads in workspace {target.host_resource.workspace}
+  conditions:
+    - id: workload_reruns_poisoned_artifact
+      description: Another principal or a schedule must run a job, notebook or deployment that loads the replaced storage content or registry image.
+    - id: shared_key_or_registry_admin_enabled
+      description: The default storage account must allow Shared Key authorization, or the linked registry must have the admin user enabled.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workspaces/listKeys and listStorageAccountKeys, disable Shared Key on the workspace storage account and the ACR admin user, and pin images by digest.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/azureml/workspaces/list-keys
+  notes: Second-order code execution; also documented in az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspaceslistkeysaction-and-microsoftmachinelearningservicesworkspacesliststorageaccountkeysaction. Direct key use without poisoning is data access only.
+
+- id: azure-ml-compute-create-with-user-assigned-identity
+  provider: azure
+  service: machine_learning
+  title: Create an Azure ML compute instance with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacescomputeswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.MachineLearningServices/workspaces/computes/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.MachineLearningServices/workspaces
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: compute_access_path
+      description: The source needs a path into the instance (SSH if network allows, setup script, or application access).
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict computes/write and userAssignedIdentities/assign/action; disable public SSH on compute instances.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-create-compute-instance
+  notes: ''
+
+- id: azure-ml-compute-write-existing-identity
+  provider: azure
+  service: machine_learning
+  title: Modify or create Azure ML compute that runs with an existing compute identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacescomputeswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the compute instance's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/computes/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/computes
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+  conditions:
+    - id: compute_access_path
+      description: The source needs a path into the instance (SSH, setup script, or application access).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict computes/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-create-compute-instance
+  notes: HackTricks demonstrates creation of a new instance; reaching an existing instance's identity via update is configuration-dependent.
+
+- id: azure-ml-compute-application-access
+  provider: azure
+  service: machine_learning
+  title: Open Jupyter on a compute instance assigned to the source
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesread--microsoftmachinelearningservicesworkspacescomputesapplicationaccessaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the managed identities of a compute instance assigned to the source.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '{target.host_resource.workspace}'
+      - action: Microsoft.MachineLearningServices/workspaces/computes/applicationaccess/action
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/computes
+      ml_compute_assigned_to_source: true
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+  conditions:
+    - id: instance_running
+      description: The instance must be running (start is a separate permission).
+    - id: network_reachable
+      description: The source must reach the instance application endpoints.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Keep compute-instance identities least-privileged; they are usable by the assigned user.
+  references: []
+  notes: Does not open another user's instance.
+
+- id: azure-ml-connection-secrets
+  provider: azure
+  service: machine_learning
+  title: Read secrets of Azure ML / Foundry connections and datastores
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesconnectionslistsecretsaction-microsoftmachinelearningservicesworkspacesdatastoreslistsecretsaction
+  source_revision: 171e422
+  summary: The source can obtain the privileges of service principals whose credentials are stored in the connection or datastore.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.MachineLearningServices/workspaces/connections/listsecrets/action
+          scope: '{pivot}'
+      - - action: Microsoft.MachineLearningServices/workspaces/datastores/listSecrets/action
+          scope: '{pivot}'
+      - - action: Microsoft.CognitiveServices/accounts/connections/listsecrets/action
+          scope: '{pivot}'
+      - - action: Microsoft.CognitiveServices/accounts/projects/connections/listsecrets/action
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.MachineLearningServices/workspaces|Microsoft.CognitiveServices/accounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only when a connection/datastore uses service-principal secret authentication; other types yield keys/SAS (data access only).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Prefer identity-based connections and restrict listsecrets actions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-connection
+  notes: Credential content unknown from RBAC alone; the CognitiveServices variants are from the same page.
+
+- id: azure-foundry-shared-connection-secrets
+  provider: azure
+  service: machine_learning
+  title: Recover a Foundry account-level connection credential through AIServices data actions
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#ai-foundry-shared-connection-credential-recovery
+  source_revision: 171e422
+  summary: The Foundry project data plane returns the credential of an account-level connection, which can be a service-principal secret.
+  requires:
+    all_of:
+      - action: Microsoft.CognitiveServices/accounts/AIServices/connections/read
+        data_action: true
+        scope: '{pivot}'
+      - action: Microsoft.CognitiveServices/accounts/AIServices/connections/listSecrets/action
+        data_action: true
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.CognitiveServices/accounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: credential_is_sp_secret
+      description: Only when the connection uses service-principal secret authentication; keys, SAS and custom headers are data access only.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Prefer identity-based connections and restrict the AIServices connections listSecrets data action.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/aiproject#connections
+  notes: Data-plane counterpart of the ARM listsecrets actions in azure-ml-connection-secrets; uses an Entra token for the Foundry project endpoint.
+
+- id: azure-ml-compute-code-execution-marquee
+  provider: azure
+  service: machine_learning
+  title: Submit code to existing managed-identity-bearing ML compute (marquee source)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#compute-as-identity-rce-marquee-privesc
+  summary: The source can obtain the privileges of the compute target's managed identities.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.MachineLearningServices/workspaces/jobs/write
+        scope: '{target.host_resource.workspace}'
+    - - action: Microsoft.MachineLearningServices/workspaces/experiments/runs/write
+        scope: '{target.host_resource.workspace}'
+    - - action: Microsoft.MachineLearningServices/workspaces/notebooks/vm/write
+        scope: '{target.host_resource.workspace}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.MachineLearningServices/workspaces/computes
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+    outcome: workload_execution
+  conditions:
+  - id: target_reads
+    description: Read permissions on the selected compute, environment and workspace are typically required by clients.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict jobs/write and keep compute identities least-privileged.
+  references:
+  - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-identity-based-service-authentication
+  notes: 'Source alias for azure-ml-jobs-write-compute-identity; same target and actions. A successful run on the
+    selected compute remains conditional. '

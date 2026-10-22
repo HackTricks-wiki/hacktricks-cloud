@@ -1,0 +1,297 @@
+# Kubernetes admission-control removal: techniques that lift an enforcement control (ValidatingAdmissionPolicy,
+# admission webhooks, Pod Security Admission, Kyverno/Gatekeeper) instead of reaching a principal. Target kind
+# k8s_admission_control (one entity per cluster) with target.removes_blockers; outcome blocker_removal.
+# Lift (schema section 13): a reach held by a blocker is restored when its source also reaches k8s_admission_control
+# through an entry whose removes_blockers covers every blocker of that reach (directly or along a chain).
+# Conventions: see header of rbac.yaml. Source: hacktricks-cloud rev 171e422.
+
+- id: k8s-admission-validating-policy-weaken
+  provider: k8s
+  service: admission
+  title: Weaken or remove a ValidatingAdmissionPolicy or its binding
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: 171e422
+  summary: The source can lift ValidatingAdmissionPolicy enforcement by patching, replacing or deleting a policy or its binding (e.g. validationActions Warn, expression true).
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: validatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: validatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: delete, resource: validatingadmissionpolicies, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: validatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: validatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: delete, resource: validatingadmissionpolicybindings, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [admission_policy]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: binding_currently_enforces
+      description: Only meaningful when a binding currently enforces a policy that matches a request the source wants admitted; other admission layers may still reject it.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Grant write/delete on validatingadmissionpolicies and bindings only to cluster administrators and alert on changes.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/
+  notes: HackTricks (171e422) reproduced binding patch to Warn, policy expression patch to true and policy/binding delete on Kubernetes 1.37 with deny-change-admit controls.
+
+- id: k8s-admission-webhook-configuration-weaken
+  provider: k8s
+  service: admission
+  title: Weaken or delete an admission webhook configuration
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: a66f094ede
+  summary: The source can lift enforcement by patching, replacing or deleting a validating or mutating webhook configuration that actually rejects the desired request.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: delete, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: patch, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: delete, resource: mutatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [admission_webhook]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: webhook_currently_enforces
+      description: Only meaningful when a webhook currently blocks a request the source wants admitted; policy engines may reconcile their webhook configurations back.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Grant write/delete on webhook configurations only to cluster administrators and the policy engine's own controller.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+  notes: HackTricks (171e422) reproduced validatingwebhookconfigurations patch (failurePolicy Fail to Ignore) and mutatingwebhookconfigurations delete. A mutating-webhook grant does not by itself disable Kyverno or Gatekeeper validation; the validating-webhook variant is modelled separately below. Mutating webhook writes that inject code are k8s-workloads-mutating-webhook-injection.
+
+- id: k8s-admission-policy-engine-validating-webhook-weaken
+  provider: k8s
+  service: admission
+  title: Weaken a Kyverno or Gatekeeper validating webhook
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  summary: The source can lift Kyverno or Gatekeeper validation by changing or deleting the validating webhook configuration that enforces a blocking policy.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: update, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+      - - {verb: delete, resource: validatingwebhookconfigurations, api_group: admissionregistration.k8s.io, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [kyverno_policy, gatekeeper_constraint]
+    aggregate_as: "Policy-engine validation of {cluster}"
+  conditions:
+    - id: policy_engine_webhook_selected
+      description: The grant must cover the actual Kyverno or Gatekeeper validating webhook configuration and its rules must match the request; a different webhook or a mutating-only grant does not lift this blocker.
+    - id: policy_engine_reconciliation
+      description: The policy engine may restore its webhook configuration, limiting the bypass window; other admission checks still apply.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict validatingwebhookconfigurations writes and deletions to cluster administrators and the policy-engine controller.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+  notes: Kyverno and Gatekeeper validating webhook names and installation layout vary; verify the configuration that enforces the specific policy before drawing this conditional edge.
+
+- id: k8s-admission-namespace-label-exit
+  provider: k8s
+  service: admission
+  title: Change namespace labels to leave admission selectors or Pod Security levels
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: 171e422
+  summary: The source can lift Pod Security Admission levels and namespaceSelector-scoped policies or webhooks for a namespace by changing its labels, including through namespaces/status or namespaces/finalize.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: namespaces, namespace: "*"}
+      - - {verb: update, resource: namespaces, namespace: "*"}
+      - - {verb: patch, resource: namespaces, subresource: status, namespace: "*"}
+      - - {verb: update, resource: namespaces, subresource: status, namespace: "*"}
+      - - {verb: update, resource: namespaces, subresource: finalize, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [pod_security_admission, admission_policy, admission_webhook]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: label_scoped_enforcement
+      description: Lifts only enforcement selected by namespace labels (PSA pod-security.kubernetes.io labels, binding or webhook namespaceSelector); kubernetes.io/metadata.name is immutable and cluster-wide policies are unaffected.
+    - id: namespace_scoped_effect
+      description: The effect is limited to the namespaces whose labels the source can change.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Treat namespaces patch/update and namespaces/status and namespaces/finalize as privileged; enforce PSA with a cluster default or a policy that protects the labels.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-admission/
+  notes: HackTricks (171e422) reproduced namespace-label exits from a ValidatingAdmissionPolicyBinding, a validating webhook and Pod Security Admission, including via exact patch namespaces/status or update namespaces/finalize on Kubernetes 1.37.
+
+- id: k8s-admission-fail-open-webhook-backend
+  provider: k8s
+  service: admission
+  title: Disrupt the backend of a fail-open admission webhook
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#disrupting-a-fail-open-webhook-backend
+  source_revision: 171e422
+  summary: The source can lift a webhook with failurePolicy Ignore by deleting its Service, scaling or deleting its sole backing Deployment, or forging its backend pod unready.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: delete, resource: services, namespace: "*"}
+      - - {verb: get, resource: deployments, api_group: apps, namespace: "*"}
+        - {verb: patch, resource: deployments, subresource: scale, api_group: apps, namespace: "*"}
+      - - {verb: get, resource: deployments, api_group: apps, namespace: "*"}
+        - {verb: update, resource: deployments, subresource: scale, api_group: apps, namespace: "*"}
+      - - {verb: delete, resource: deployments, api_group: apps, namespace: "*"}
+      - - {verb: patch, resource: pods, subresource: status, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [admission_webhook, kyverno_policy, gatekeeper_constraint]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: webhook_fail_open
+      description: The webhook must use failurePolicy Ignore; failurePolicy Fail turns the disruption into a denial of service, not a bypass. Kyverno and Gatekeeper are lifted only when their own webhooks are fail-open (Gatekeeper defaults to Ignore; Kyverno resource webhooks default to Fail).
+    - id: grant_covers_webhook_namespace
+      description: The grant must cover the webhook backend's namespace and objects (the evaluator checks cluster-wide grants only), and every ready endpoint must belong to the disrupted Service or Deployment.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Use failurePolicy Fail for security webhooks, run several replicas, and restrict writes in the webhook namespace.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy
+  notes: HackTricks (171e422) reproduced each variant on Kubernetes 1.37. Webhook namespaces and failurePolicy values are not yet matched by this entry, so namespace-scoped grants in the webhook namespace are not detected (cluster-wide grants only).
+
+- id: k8s-admission-policy-engine-excluded-namespace
+  provider: k8s
+  service: admission
+  title: Create a namespace excluded by a policy-engine webhook
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: 171e422
+  summary: The source can escape Kyverno or Gatekeeper enforcement by creating a namespace whose name the policy webhook's namespaceSelector excludes but which does not exist yet.
+  requires:
+    all_of:
+      - {verb: create, resource: namespaces, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [kyverno_policy, gatekeeper_constraint, admission_webhook]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: excluded_namespace_absent
+      description: The webhook's namespaceSelector must exclude a namespace name (kubernetes.io/metadata.name NotIn) that does not exist; webhook selectors are not evaluated by this entry.
+    - id: source_can_use_new_namespace
+      description: The source needs cluster-wide workload grants (or becomes admin of the namespace it created) to use the excluded namespace.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Pre-create or remove every namespace name listed in policy-engine exclusions and restrict namespace creation.
+  references:
+    - https://kyverno.io/docs/installation/customization/#namespace-selectors
+  notes: Other patterns on the page (opt-out objectSelector labels, broad policy exceptions) are not modelled.
+
+- id: k8s-admission-kyverno-policy-weaken
+  provider: k8s
+  service: admission
+  title: Weaken, delete or except a Kyverno policy
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  summary: The source can lift Kyverno enforcement by patching (Audit mode, broader exclude block), replacing or deleting a ClusterPolicy, Policy or ValidatingPolicy, or by creating a PolicyException that exempts its own requests.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource: clusterpolicies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: update, resource: clusterpolicies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: delete, resource: clusterpolicies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: patch, resource: policies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: update, resource: policies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: delete, resource: policies, api_group: kyverno.io, namespace: "*"}
+      - - {verb: patch, resource: validatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: update, resource: validatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: delete, resource: validatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: patch, resource: imagevalidatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: update, resource: imagevalidatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: delete, resource: imagevalidatingpolicies, api_group: policies.kyverno.io, namespace: "*"}
+      - - {verb: create, resource: policyexceptions, api_group: kyverno.io, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: policyexceptions, api_group: kyverno.io, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: policyexceptions, api_group: kyverno.io, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: policyexceptions, api_group: policies.kyverno.io, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: policyexceptions, api_group: policies.kyverno.io, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: policyexceptions, api_group: policies.kyverno.io, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [kyverno_policy]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: policy_currently_enforces
+      description: Only meaningful when an Enforce-mode Kyverno rule blocks a request the source wants admitted; Kyverno policies are not collected, so the evaluator cannot tell which policy blocks.
+    - id: namespaced_policy_scope
+      description: A namespaced Policy only applies in its own namespace; weakening it does not lift ClusterPolicies.
+    - id: policy_exceptions_enabled
+      description: PolicyExceptions are honoured only when the feature is enabled and the exception is created in a namespace Kyverno accepts exceptions from (exceptionNamespace).
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict write/delete on Kyverno policies and PolicyException creation to platform administrators; restrict exceptions to a dedicated namespace.
+  references:
+    - https://kyverno.io/docs/exceptions/
+  notes: HackTricks (a66f094ede) lists write access to Kyverno policies or exception resources as a Kyverno/Gatekeeper bypass and rates such writes medium until an end-to-end path is validated (node-permissions-and-status.md#policy-and-scheduling-control-objects). Exception namespaces and policy contents are not collected. Webhook-configuration writes are k8s-admission-webhook-configuration-weaken.
+
+- id: k8s-admission-gatekeeper-constraint-weaken
+  provider: k8s
+  service: admission
+  title: Weaken or delete a Gatekeeper constraint, template or exemption config
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  summary: The source can lift Gatekeeper enforcement by switching a constraint to dryrun or warn, narrowing its match, deleting it or its ConstraintTemplate, or adding its namespace to the Gatekeeper Config exclusions.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: patch, resource_match: any, api_group: constraints.gatekeeper.sh, namespace: "*"}
+      - - {verb: update, resource_match: any, api_group: constraints.gatekeeper.sh, namespace: "*"}
+      - - {verb: delete, resource_match: any, api_group: constraints.gatekeeper.sh, namespace: "*"}
+      - - {verb: patch, resource: constrainttemplates, api_group: templates.gatekeeper.sh, namespace: "*"}
+      - - {verb: update, resource: constrainttemplates, api_group: templates.gatekeeper.sh, namespace: "*"}
+      - - {verb: delete, resource: constrainttemplates, api_group: templates.gatekeeper.sh, namespace: "*"}
+      - - {verb: patch, resource: configs, api_group: config.gatekeeper.sh, namespace: "*"}
+      - - {verb: update, resource: configs, api_group: config.gatekeeper.sh, namespace: "*"}
+  target:
+    kind: k8s_admission_control
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    removes_blockers: [gatekeeper_constraint]
+    aggregate_as: "Admission enforcement of {cluster}"
+  conditions:
+    - id: constraint_currently_enforces
+      description: Only meaningful when a deny-mode constraint blocks a request the source wants admitted; Gatekeeper constraints are not collected, so the evaluator cannot tell which constraint blocks.
+    - id: config_object_namespace
+      description: The Gatekeeper Config object lives in the Gatekeeper namespace (gatekeeper-system by default); a namespaced grant elsewhere does not cover it.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict writes to constraints.gatekeeper.sh, templates.gatekeeper.sh and config.gatekeeper.sh resources to platform administrators.
+  references:
+    - https://open-policy-agent.github.io/gatekeeper/website/docs/exempt-namespaces/
+  notes: HackTricks (a66f094ede) lists write access to Gatekeeper constraints as a Kyverno/Gatekeeper bypass and rates such writes medium until an end-to-end path is validated (node-permissions-and-status.md#policy-and-scheduling-control-objects). Every constraint kind is its own resource in constraints.gatekeeper.sh, hence resource_match any. Webhook-configuration writes are k8s-admission-webhook-configuration-weaken; creating an excluded namespace is k8s-admission-policy-engine-excluded-namespace.

@@ -1,0 +1,91 @@
+- id: azure-purview-add-root-collection-admin
+  provider: azure
+  service: purview
+  title: Add a principal as Purview root collection administrator from the ARM control plane
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewaccountsaddrootcollectionadminaction--arm-contributor-to-full-data-plane-takeover
+  source_revision: 171e422
+  summary: The source can make itself (or any principal) root collection administrator of the Purview account, the top of the Purview data-plane role hierarchy.
+  requires:
+    all_of:
+      - action: Microsoft.Purview/accounts/addrootcollectionadmin/action
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Purview root collection admin of {target.scope}"
+  conditions:
+    - id: purview_dataplane_only
+      description: The gain is Purview data-plane administration (collection roles, data sources, scan credentials, access policies); it does not yield a token for the Purview account's managed identity or for scan credentials stored in Key Vault.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Remove addrootcollectionadmin/action from broad roles (it is included in Contributor) with a custom role or deny assignment, and review Purview root collection role membership.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/analytics#microsoftpurview
+    - https://learn.microsoft.com/en-us/purview/how-to-create-and-manage-collections
+  notes: Granted by Owner and Contributor without Microsoft.Authorization write. Follow-on Purview access policies into governed SQL/Storage sources are data access and are excluded separately. The resulting grant lives in the Purview role model, not in Azure RBAC.
+- id: azure-purview-rogue-shir-scan-credentials
+  provider: azure
+  service: purview
+  title: Bootstrap Purview Data Source Admin and receive scan credentials on a rogue self-hosted integration runtime
+  source: src/pentesting-cloud/azure-security/az-persistence/az-purview-persistence.md#rogue-self-hosted-integration-runtime-as-a-credential-relay
+  source_revision: a66f094ede
+  summary: A root collection administrator can grant itself Data Source Admin, register a self-hosted integration runtime it controls and scan through it; the scan credentials resolved from connected Key Vaults, which can include service-principal secrets, are delivered to that runtime host.
+  requires:
+    all_of:
+      - action: Microsoft.Purview/accounts/addrootcollectionadmin/action
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.Purview/accounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with scan credentials referenced by Purview account {pivot}
+  conditions:
+    - id: scan_credential_is_service_principal
+      description: Only scan credentials that are service-principal secrets are an identity gain; SQL logins and on-premises credentials are data access only.
+    - id: purview_identity_reads_key_vault
+      description: The Purview account identity must be able to read the referenced Key Vault secret for the scan to resolve it.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Remove addrootcollectionadmin/action from broad roles, restrict Data Source Admin, alert on new self-hosted integration runtime registrations, and prefer managed-identity scan authentication.
+  references:
+    - https://learn.microsoft.com/en-us/purview/manage-integration-runtimes
+  notes: Chains azure-purview-add-root-collection-admin. A source that already holds Purview Data Source Admin reaches the same targets, but Purview data-plane roles are not collected.
+- id: azure-audit-microsoftpurviewpolicyelementswrite-purview-access-policies-into-governe
+  provider: azure
+  service: purview
+  title: Microsoft.Purview/policyElements/write — Purview access policies into governed SQL/Storage
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewpolicyelementswrite--purview-access-policies-into-governed-sqlstorage
+  summary: Purview-governed SQL or Storage data access granted to chosen principal
+  requires:
+    all_of:
+    - action: Microsoft.Purview/policyElements/write
+      scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    scope: inherited_scope
+    aggregate_as: Microsoft.Purview/policyElements/write — Purview access policies into governed SQL/Storage on
+      {target.scope}
+    outcome: permission_grant
+    selector:
+      azure_challenge_fact: azure-audit-microsoftpurviewpolicyelementswrite-purview-access-policies-into-governe
+  conditions:
+  - id: collector_fact_required
+    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
+      UNKNOWN.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/rest/api/purview/accounts/list-keys?view=rest-purview-2021-12-01
+  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
+    evaluate UNKNOWN. Collector fact required: purview.governedSources.'

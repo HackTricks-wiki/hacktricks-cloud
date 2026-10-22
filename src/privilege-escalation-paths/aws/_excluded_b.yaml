@@ -1,0 +1,410 @@
+# AWS part B: techniques from assigned hacktricks-cloud pages excluded from the privesc catalog.
+# Each entry: {source, technique, reason}. Reasons follow schema rule 4 (data read, DoS, persistence-only,
+# network pivot, fixed code/workflow invoked with attacker input) or rule 5 (outdated / unverifiable).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemdeletefilesystempolicyelasticfilesystemputfilesystempolicy
+  technique: elasticfilesystem:DeleteFileSystemPolicy / PutFileSystemPolicy
+  reason: Only the exact PutFileSystemPolicy ClientMount self-grant with reviewed before/after authorization is active as aws-efs-putfilesystempolicy-self-grant. DeleteFileSystemPolicy and broader ClientWrite or ClientRootAccess variants remain unproven.
+  source_revision: d11f0e7012
+
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation/README.md#elasticfilesystemclientmount-and-client-action-combinations
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemclientmount-and-client-action-combinations
+  source_revision: f2aa915198
+  technique: elasticfilesystem:ClientMount / ClientWrite / ClientRootAccess combinations
+  reason: File-system data access only; any code-planting effect on hosts that execute from EFS is an unmodelled artifact chain without a stable consumer mapping.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation/README.md#elasticfilesystemcreateaccesspoint--elasticfilesystemclientmount
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemcreateaccesspoint--elasticfilesystemclientmount
+  source_revision: f2aa915198
+  technique: elasticfilesystem:CreateAccessPoint + ClientMount
+  reason: Bypasses POSIX restrictions on file data; data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation/README.md#elasticfilesystemcreatemounttarget
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemcreatemounttarget
+  source_revision: f2aa915198
+  technique: elasticfilesystem:CreateMountTarget
+  reason: Network pivot to reach the file system; no new identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation/README.md#elasticfilesystemmodifymounttargetsecuritygroups
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemmodifymounttargetsecuritygroups
+  source_revision: f2aa915198
+  technique: elasticfilesystem:ModifyMountTargetSecurityGroups
+  reason: Network pivot to reach the file system; no new identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-post-exploitation/README.md#gameliftrequestuploadcredentials
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#gameliftrequestuploadcredentials
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: gamelift:RequestUploadCredentials
+  reason: Returns credentials scoped by GameLift to uploading a build to a service-owned S3 location; does not expose a customer principal's privileges.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc/README.md#kmslistkeyskmsputkeypolicy-kmslistkeypolicies-kmsgetkeypolicy
+  source_revision: a53b46392c
+  technique: kms:PutKeyPolicy
+  reason: Grants control/use of a KMS key (cryptographic/data access); no other principal's privileges obtained.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc/README.md#kmscreategrant
+  source_revision: a53b46392c
+  technique: kms:CreateGrant
+  reason: Grants use of a KMS key; data access only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc/README.md#kmscreatekey-kmsreplicatekey
+  source_revision: a53b46392c
+  technique: kms:CreateKey + kms:ReplicateKey
+  reason: Replicates a multi-Region key with a new policy; key/data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kms-post-exploitation/README.md#kmsdecrypt
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc/README.md#kmsdecrypt
+  source_revision: f2aa915198
+  technique: kms:Decrypt
+  reason: Data read only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsaildownloaddefaultkeypair
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsaildownloaddefaultkeypair
+  source_revision: f2aa915198
+  technique: lightsail:DownloadDefaultKeyPair
+  reason: SSH access to Lightsail instances; Lightsail instances have no customer IAM instance profile, so no IAM principal is obtained (host/data access).
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailgetinstanceaccessdetails
+  source_revision: a53b46392c
+  technique: lightsail:GetInstanceAccessDetails
+  reason: Host access to Lightsail instances without a customer IAM identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailcreatebucketaccesskey
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailcreatebucketaccesskey
+  source_revision: f2aa915198
+  technique: lightsail:CreateBucketAccessKey
+  reason: Creates keys scoped to a Lightsail bucket (service-managed identity); data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailgetrelationaldatabasemasteruserpassword
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailgetrelationaldatabasemasteruserpassword
+  source_revision: f2aa915198
+  technique: lightsail:GetRelationalDatabaseMasterUserPassword
+  reason: Database credential read; data access.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailupdaterelationaldatabase
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailupdaterelationaldatabase
+  source_revision: f2aa915198
+  technique: lightsail:UpdateRelationalDatabase
+  reason: Database password reset/exposure; data access.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailopeninstancepublicports
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailopeninstancepublicports
+  source_revision: f2aa915198
+  technique: lightsail:OpenInstancePublicPorts
+  reason: Network exposure; no new identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailputinstancepublicports
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailputinstancepublicports
+  source_revision: f2aa915198
+  technique: lightsail:PutInstancePublicPorts
+  reason: Network exposure; no new identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailsetresourceaccessforbucket
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailsetresourceaccessforbucket
+  source_revision: f2aa915198
+  technique: lightsail:SetResourceAccessForBucket
+  reason: Bucket data access for an instance; no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lightsail-post-exploitation/README.md#lightsailupdatebucket
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailupdatebucket
+  source_revision: f2aa915198
+  technique: lightsail:UpdateBucket
+  reason: Bucket access/exposure change; data access.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailupdatecontainerservice
+  source_revision: a53b46392c
+  technique: lightsail:UpdateContainerService
+  reason: Container code/env change on Lightsail; no customer IAM role is attached to Lightsail containers.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailcreatedomainentry
+  source_revision: a53b46392c
+  technique: lightsail:CreateDomainEntry
+  reason: DNS manipulation; traffic interception, no new IAM identity.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lightsail-privesc/README.md#lightsailupdatedomainentry
+  source_revision: a53b46392c
+  technique: lightsail:UpdateDomainEntry
+  reason: DNS manipulation; traffic interception, no new IAM identity.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-macie-post-exploitation/README.md#amazon-macie---bypass-reveal-sample-integrity-check
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-macie-privesc/README.md#amazon-macie---bypass-reveal-sample-integrity-check
+  source_revision: f2aa915198
+  technique: Macie reveal-sample integrity bypass
+  reason: Data disclosure only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mediapackage-post-exploitation/README.md#mediapackagedescribechannel
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mediapackage-privesc/README.md#mediapackagedescribechannel
+  source_revision: fd7d56b0a9
+  technique: mediapackage:DescribeChannel
+  reason: Reads ingest credentials of a media channel; data/third-party credential, not an IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mediapackage-post-exploitation/README.md#mediapackagelistchannels
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mediapackage-privesc/README.md#mediapackagelistchannels
+  source_revision: f2aa915198
+  technique: mediapackage:ListChannels
+  reason: Read only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mediapackage-post-exploitation/README.md#mediapackagerotatechannelcredentials
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mediapackage-privesc/README.md#mediapackagerotatechannelcredentials
+  source_revision: f2aa915198
+  technique: mediapackage:RotateChannelCredentials
+  reason: Rotates ingest credentials; media-plane access/DoS, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mediapackage-post-exploitation/README.md#mediapackagerotateingestendpointcredentials
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mediapackage-privesc/README.md#mediapackagerotateingestendpointcredentials
+  source_revision: f2aa915198
+  technique: mediapackage:RotateIngestEndpointCredentials
+  reason: Rotates ingest credentials; media-plane access/DoS, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mq-post-exploitation/README.md#mqcreateuser
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mq-privesc/README.md#mqcreateuser
+  source_revision: f2aa915198
+  technique: mq:CreateUser
+  reason: Creates broker users; message data access, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-mq-post-exploitation/README.md#mqupdateuser
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mq-privesc/README.md#mqupdateuser
+  source_revision: f2aa915198
+  technique: mq:UpdateUser
+  reason: Broker user change; message data access, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-msk-post-exploitation/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
+  source_revision: 1fb542ff27
+  technique: kafka:UpdateSecurity
+  reason: Enables unauthenticated access to topics; data exposure, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-domains-post-exploitation/README.md#route53domainsgetdomaindetail--read-domain-registration-contacts
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-route53-domains-privesc/README.md#route53domainsgetdomaindetail--read-domain-registration-contacts
+  source_revision: f2aa915198
+  technique: route53domains:GetDomainDetail
+  reason: Read only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-domains-post-exploitation/README.md#route53domainsretrievedomainauthcode--steal-a-domain-transfer-credential
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-route53-domains-privesc/README.md#route53domainsretrievedomainauthcode--steal-a-domain-transfer-credential
+  source_revision: fd7d56b0a9
+  technique: route53domains:RetrieveDomainAuthCode
+  reason: Domain transfer credential theft; external asset takeover, no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-secrets-manager-post-exploitation/README.md#secretsmanagergetsecretvalue
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetsecretvalue
+  source_revision: f2aa915198
+  technique: secretsmanager:GetSecretValue
+  reason: Data read; any IAM keys stored in secrets are not modelable from the control plane.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetresourcepolicy-secretsmanagerputresourcepolicy-secretsmanagerlistsecrets
+  source_revision: d11f0e7012
+  technique: secretsmanager:PutResourcePolicy
+  reason: Only the exact same-account IAM-user GetSecretValue self-grant with accepted policy, prior denial, observed new access and KMS authorization is active as aws-secretsmanager-putresourcepolicy-self-grant. Cross-account, other-principal and unreviewed policy grants remain excluded.
+
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation/README.md#snssubscribe
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssubscribe
+  source_revision: f2aa915198
+  technique: sns:Subscribe
+  reason: Message data access.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snsaddpermission
+  source_revision: a53b46392c
+  technique: sns:AddPermission
+  reason: Grants topic access; data/messaging access only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#invoke-a-lambda-by-abusing-wildcard-sns-permission-no-sourcearn
+  source_revision: a53b46392c
+  technique: Lambda invocation via wildcard SNS permission (no SourceArn)
+  reason: Invokes fixed Lambda code with attacker input; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc/README.md#sqsaddpermission
+  source_revision: a53b46392c
+  technique: sqs:AddPermission
+  reason: Grants queue access; data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workdocs-post-exploitation/README.md#workdocscreateuser
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md#workdocscreateuser
+  source_revision: fd7d56b0a9
+  technique: workdocs:CreateUser
+  reason: Application-level user in WorkDocs; no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workdocs-post-exploitation/README.md#workdocs-activity-metadata-and-content-read-chain
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md#workdocs-activity-metadata-and-content-read-chain
+  source_revision: f2aa915198
+  technique: WorkDocs activity/metadata/content read chain
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workdocs-post-exploitation/README.md#workdocsaddresourcepermissions
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md#workdocsaddresourcepermissions
+  source_revision: f2aa915198
+  technique: workdocs:AddResourcePermissions
+  reason: Document access; data only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workdocs-post-exploitation/README.md#workdocsupdateuser
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workdocs-privesc/README.md#workdocsupdateuser
+  source_revision: fd7d56b0a9
+  technique: workdocs:UpdateUser
+  reason: Application-level role change inside WorkDocs; no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputtargets--eventsputevents--invoke-a-resource-policy-authorized-lambda
+  source_revision: a53b46392c
+  technique: events:PutTargets + events:PutEvents
+  reason: Invokes a fixed Lambda with attacker input; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputpermission--self-grant-publishing-through-a-bus-policy
+  source_revision: a53b46392c
+  technique: events:PutPermission
+  reason: Grants event-bus publishing; input injection only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsputrule--enable-a-disabled-rule-with-its-existing-target
+  source_revision: a53b46392c
+  technique: events:PutRule (enable disabled rule)
+  reason: Runs an existing fixed target; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsstartreplay--replay-retained-events-into-unchanged-targets
+  source_revision: a53b46392c
+  technique: events:StartReplay
+  reason: Replays events into fixed targets; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-eventbridge-post-exploitation/README.md#eventsupdateapidestination--redirect-stored-connection-credentials
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventsupdateapidestination--redirect-stored-connection-credentials
+  source_revision: f2aa915198
+  technique: events:UpdateApiDestination
+  reason: Exfiltrates third-party API credentials from a connection; not an IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-route53-dns-takeover-post-exploitation/README.md#route53createhostedzone-route53changeresourcerecordsets-acm-pcaissuecertificate-acm-pcagetcertificate-ec2describevpcs
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer/README.md#route53createhostedzone-route53changeresourcerecordsets-acm-pcaissuecertificate-acm-pcagetcertificate-ec2describevpcs
+  source_revision: fd7d56b0a9
+  technique: route53:CreateHostedZone + ChangeResourceRecordSets + acm-pca:IssueCertificate + GetCertificate
+  reason: Traffic interception (MitM) of in-VPC clients; no IAM principal is obtained directly.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-elastic-beanstalk-post-exploitation/README.md#elasticbeanstalkdescribeenvironmentresources-elasticloadbalancingmodifyloadbalancerattributes-s3putbucketpolicy-s3listbucket-s3getobject-to-enable-alb-access-logs-exfiltration
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkdescribeenvironmentresources-elasticloadbalancingmodifyloadbalancerattributes-s3putbucketpolicy-s3listbucket-s3getobject-to-enable-alb-access-logs-exfiltration
+  source_revision: f2aa915198
+  technique: ALB access-log exfiltration
+  reason: Exfiltration of request metadata; data only.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducecreateeditor-iamlistroles-elasticmapreducelistclusters-iampassrole-elasticmapreducedescribeeditor-elasticmapreduceopeneditorinconsole
+  source_revision: a53b46392c
+  technique: elasticmapreduce:CreateEditor + PassRole (EMR Notebooks)
+  reason: 'Outdated: legacy EMR Notebooks editor API is not in the current service model; cannot be verified.'
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#legacy-elasticmapreduceopeneditorinconsole-boundary
+  source_revision: a53b46392c
+  technique: elasticmapreduce:OpenEditorInConsole
+  reason: Outdated legacy notebook path; the page itself documents it as a boundary/non-path.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaaddpermission
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddpermission
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:AddPermission (alone)
+  reason: Grants invoke on existing fixed code; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#expose-a-pre-existing-authtypenone-function-url
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#expose-a-pre-existing-authtypenone-function-url
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: Expose an existing AuthType NONE Function URL
+  reason: Exposure of fixed code; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaaddlayerversionpermission
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddlayerversionpermission
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:AddLayerVersionPermission
+  reason: Shares layer code (read); data access.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambda-mitm
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambda-mitm
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: Lambda MitM
+  reason: Requires prior code execution in the function; persistence/interception, not a new edge.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaputprovisionedconcurrencyconfig--trigger-initialization-without-invocation
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaputprovisionedconcurrencyconfig--trigger-initialization-without-invocation
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:PutProvisionedConcurrencyConfig
+  reason: Triggers init of fixed code; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdagetfunction--download-a-function-deployment-package
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunction--download-a-function-deployment-package
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:GetFunction
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdagetfunctionconfiguration--read-environment-variables
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunctionconfiguration--read-environment-variables
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:GetFunctionConfiguration
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdagetlayerversion--download-layer-code
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetlayerversion--download-layer-code
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: lambda:GetLayerVersion
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#rdscreatedbinstance
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdscreatedbinstance
+  source_revision: f2aa915198
+  technique: rds:CreateDBInstance into an existing Aurora cluster
+  reason: Does not provide database credentials; no new identity without an existing DB login.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdscreatebluegreendeployment-rdsaddroletodbcluster-iampassrole-rdsswitchoverbluegreendeployment
+  source_revision: a53b46392c
+  technique: rds:CreateBlueGreenDeployment + AddRoleToDBCluster + PassRole + SwitchoverBlueGreenDeployment
+  reason: Reachable set is a subset of aws-rds-addroletodbcluster-passrole; the additional actions add nothing to the target set.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3putbucketpolicy
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketpolicy
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: s3:PutBucketPolicy
+  reason: 'Grants bucket data access. Evaluator note: treat as implying s3:PutObject on that bucket for the artifact entries (s3/glue/emr/sagemaker/elasticbeanstalk).'
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3getbucketacl-s3putbucketacl
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getbucketacl-s3putbucketacl
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: s3:GetBucketAcl + s3:PutBucketAcl
+  reason: Grants bucket data access (only when ACLs are enabled); same evaluator note as PutBucketPolicy.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3getobjectacl-s3putobjectacl
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getobjectacl-s3putobjectacl
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: s3:GetObjectAcl + s3:PutObjectAcl
+  reason: Object data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3getobjectversionacl-s3putobjectversionacl
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3getobjectversionacl-s3putobjectversionacl
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: s3:GetObjectVersionAcl + s3:PutObjectVersionAcl
+  reason: Object data access only.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-s3-post-exploitation/README.md#s3putbucketcors
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketcors
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: s3:PutBucketCORS
+  reason: Browser cross-origin data access; no IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-configuration-access-post-exploitation/README.md#sagemakercreatepresignedmlflowtrackingserverurl-sagemaker-mlflowaccessui-sagemaker-mlflowsearchexperiments
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreatepresignedmlflowtrackingserverurl-sagemaker-mlflowaccessui-sagemaker-mlflowsearchexperiments
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: sagemaker:CreatePresignedMlflowTrackingServerUrl + sagemaker-mlflow:*
+  reason: MLflow UI/artifact data access; no execution role obtained.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakercreateapp-sagemakercreatepresigneddomainurl
+  source_revision: a53b46392c
+  technique: sagemaker:CreateApp + CreatePresignedDomainUrl
+  reason: Subsumed by aws-sagemaker-createpresigneddomainurl (same target set, fewer permissions).
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md#sagemakerstartpipelineexecution--inject-parameters-into-privileged-steps
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerstartpipelineexecution--inject-parameters-into-privileged-steps
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: sagemaker:StartPipelineExecution
+  reason: Runs fixed pipeline steps with attacker parameters; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md#sagemakerretrypipelineexecution--replay-failed-steps-and-stored-parameters
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#sagemakerretrypipelineexecution--replay-failed-steps-and-stored-parameters
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: sagemaker:RetryPipelineExecution
+  reason: Replays fixed steps; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-sagemaker-post-exploitation/README.md#datazonecreateuserprofile-and-iamgetuser-for-project-assignment-without-an-existing-profile
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#datazonecreateuserprofile-and-iamgetuser-for-project-assignment-without-an-existing-profile
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: datazone:CreateUserProfile
+  reason: A profile alone grants nothing; project membership (separate control) is needed to reach project roles.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-service-catalog-appregistry-post-exploitation/README.md#sensitive-cloudformation-outputs-with-servicecataloggetprovisionedproductoutputs
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md#sensitive-cloudformation-outputs-with-servicecataloggetprovisionedproductoutputs
+  source_revision: f2aa915198
+  technique: servicecatalog:GetProvisionedProductOutputs
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ssm-parameter-and-command-access-post-exploitation/README.md#ssmstartassociationsonce--run-a-stored-association-on-its-fixed-targets
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartassociationsonce--run-a-stored-association-on-its-fixed-targets
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: ssm:StartAssociationsOnce
+  reason: Runs fixed associations on fixed targets; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ssm-parameter-and-command-access-post-exploitation/README.md#ssmdescribeparameters-ssmgetparameter--ssmgetparameters--ssmgetparametersbypath
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmdescribeparameters-ssmgetparameter--ssmgetparameters--ssmgetparametersbypath
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: ssm:GetParameter(s)
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ssm-parameter-and-command-access-post-exploitation/README.md#ssmgetparameterhistory--recover-current-and-previous-parameter-values
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetparameterhistory--recover-current-and-previous-parameter-values
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: ssm:GetParameterHistory
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ssm-parameter-and-command-access-post-exploitation/README.md#ssmlistcommands
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmlistcommands
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: ssm:ListCommands
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ssm-parameter-and-command-access-post-exploitation/README.md#ssmgetcommandinvocation-ssmlistcommandinvocations--ssmlistcommands
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmgetcommandinvocation-ssmlistcommandinvocations--ssmlistcommands
+  historical_source_revision: a53b46392c
+  source_revision: 3ad99dc7ac
+  technique: ssm:GetCommandInvocation
+  reason: Data read.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#codebuild
+  source_revision: a53b46392c
+  technique: SSM to CodeBuild session
+  reason: Cross-reference to the CodeBuild page (other agent); no SSM permission combination here.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md#syntheticsstartcanary--run-unchanged-canary-code-under-its-stored-role
+  source_revision: a53b46392c
+  technique: synthetics:StartCanary
+  reason: Runs fixed canary code; no control of code or role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferupdateconnector--redirect-an-sftp-connector-and-capture-its-stored-credential
+  source_revision: a53b46392c
+  technique: transfer:UpdateConnector
+  reason: Captures a third-party SFTP credential; not an IAM principal.
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#transferstartfiletransfer--send-role-readable-s3-data-through-a-stored-connector
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferstartfiletransfer--send-role-readable-s3-data-through-a-stored-connector
+  source_revision: f2aa915198
+  technique: transfer:StartFileTransfer
+  reason: Data exfiltration through a fixed connector role (the role only reads/sends files the caller selects); data access.

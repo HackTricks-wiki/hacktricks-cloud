@@ -1,0 +1,272 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Glue privilege escalation techniques.
+# Source: hacktricks-cloud aws-glue-privesc/README.md (rev a53b46392c; re-pointed to rev 171e422299).
+# Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
+
+- id: aws-glue-passrole-createdevendpoint
+  provider: aws
+  service: glue
+  title: Create a Glue development endpoint with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-a-legacy-development-endpoint-with-a-privileged-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting glue.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: glue:CreateDevEndpoint
+        resource: "*"
+    any_of:
+      - - action: glue:GetDevEndpoint
+          resource: "*"
+      - - action: glue:GetDevEndpoints
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: glue.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting glue.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: dev_endpoint_availability
+      description: Glue development endpoints are a legacy feature (not supported on Glue 2.0+ runtimes); creation may be unavailable in some regions/accounts.
+    - id: network_reachability
+      description: VPC endpoints only expose a private address; the source needs a network path to SSH.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService=glue.amazonaws.com and deny glue:CreateDevEndpoint.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/dg/dev-endpoints.html
+  notes: Legacy feature; kept because the API still exists. Reach is roles trusting glue.amazonaws.com within PassRole scope.
+
+- id: aws-glue-updatedevendpoint
+  provider: aws
+  service: glue
+  title: Add an SSH key to an existing Glue development endpoint
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#replace-the-ssh-key-on-a-legacy-development-endpoint
+  source_revision: 171e422299
+  summary: The source may use the role of an existing Glue development endpoint after adding an SSH key it controls.
+  requires:
+    all_of:
+      - action: glue:UpdateDevEndpoint
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue_dev_endpoint
+    scope: same_account
+    aggregate_as: "Execution roles of accessible Glue development endpoints in {account}"
+    outcome: workload_execution
+  preconditions:
+    - glue_existing_dev_endpoint_ssh_access
+  conditions:
+    - id: ssh_reachability
+      description: The recorded public address may still be blocked by network controls outside the IAM policy model.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict glue:UpdateDevEndpoint to endpoint administrators and keep development endpoint roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_UpdateDevEndpoint.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_DevEndpoint.html
+    - https://docs.aws.amazon.com/glue/latest/dg/glue-specifying-resource-arns.html
+  notes: The endpoint must be READY, have a public address and a free managed SSH-key slot. Private endpoints and legacy single-key configurations need separate reachability or key-change evidence.
+
+- id: aws-glue-startjobrun-override-script
+  provider: aws
+  service: glue
+  title: Run an existing Glue job overriding its script or dependency arguments
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-or-modify-and-run-a-glue-job
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the execution role of existing Glue jobs it can start directly or through a trigger it creates with overriding arguments.
+  requires:
+    any_of:
+      - - action: glue:StartJobRun
+          resource: "{target.resource_arn}"
+      - - action: glue:CreateTrigger
+          resource: "arn:{source.partition}:glue:*:{target.account}:trigger/*"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue
+      via_resource_type: glue_job
+    scope: same_account
+    aggregate_as: Execution roles of Glue jobs startable in {account}
+    outcome: workload_execution
+  preconditions:
+    - glue_job_override_arguments_available
+  conditions:
+    - id: job_role_reads_attacker_object
+      description: The job role must be able to read an S3 location whose content the source controls (its own public/cross-account bucket or a writable bucket the role can read).
+    - id: runtime_packaging
+      description: Dependency override format depends on job type/runtime.
+    - id: trigger_fires
+      description: The CreateTrigger variant needs a scheduled or conditional trigger created as started, or glue:StartTrigger for an on-demand trigger; trigger actions carry the overriding job arguments.
+  blockers:
+    - glue_nonoverridable_arguments
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Pin script and executable dependency arguments, including --python-virtual-env, in NonOverridableArguments and restrict glue:StartJobRun and glue:CreateTrigger to orchestrators.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateTrigger.html
+  notes: A collected unpinned --scriptLocation plus StartJobRun on the exact job, or permission to create a new scheduled trigger in the same Region, establishes a conditional route. Pinned scripts may still have a dependency route through --extra-py-files, --extra-jars, --additional-python-modules or --python-virtual-env; those remain unresolved until their runtime prerequisites are verified. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
+
+
+- id: aws-glue-passrole-createjob-or-updatejob-run
+  provider: aws
+  service: glue
+  title: Create or update a Glue job with a passed role and run it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-or-modify-and-run-a-glue-job
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting glue.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: glue.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting glue.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - glue_job_role_and_execution_bind
+  conditions:
+    - id: script_location_readable
+      description: The passed role must be able to read the script location the source supplies.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: updatejob_existing_job
+      description: The UpdateJob variants need an existing job within the UpdateJob Resource.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService, and restrict job creation/update and trigger creation to the deployment pipeline.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateJob.html
+  notes: The machine precondition checks a creatable unused job or an existing updateable job and StartJobRun on that same job, or a creatable scheduled trigger in its Region. The script must still be readable by the passed role.
+
+- id: aws-glue-updatejob-existing-role
+  provider: aws
+  service: glue
+  title: Replace an existing Glue job definition that keeps its attached role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-or-modify-and-run-a-glue-job
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the execution role of existing Glue jobs it can update.
+  requires:
+    all_of:
+      - action: glue:UpdateJob
+        resource: "{target.resource_arn}"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue
+      via_resource_type: glue_job
+    scope: same_account
+    aggregate_as: "Execution roles of Glue jobs updatable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - glue_existing_job_has_runnable_trigger
+  conditions:
+    - id: job_runs_later
+      description: An active scheduled trigger or a source-startable on-demand trigger is linked to the exact job; the job runs only when that trigger fires.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict glue:UpdateJob to the deployment pipeline on specific job ARNs.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_UpdateJob.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_JobUpdate.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsglue.html
+  notes: HackTricks states UpdateJob alone suffices, but JobUpdate marks Role as required and states the previous job definition is completely overwritten, and the Service Authorization Reference lists iam:PassRole as a dependent action of glue:UpdateJob, so PassRole on the job's role is required. An operator-run possibility is not enough to establish a reachable execution path. Direct StartJobRun is covered by aws-glue-passrole-createjob-or-updatejob-run.
+
+- id: aws-glue-passrole-createsession
+  provider: aws
+  service: glue
+  title: Create a Glue interactive session with a passed role and run statements in it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-an-interactive-session-with-a-privileged-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting glue.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: glue.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting glue.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - glue_new_session_with_statement
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: statement_output
+      description: Reading statement output needs glue:GetStatement; code still runs without it.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService=glue.amazonaws.com, scope glue:CreateSession and glue:RunStatement to owner-tagged sessions, and keep session roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateSession.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_RunStatement.html
+    - https://docs.aws.amazon.com/glue/latest/dg/glue-is-security.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsglue.html
+  notes: Distinct from aws-glue-runstatement-interactive-session (existing session, no PassRole). CreateSession and RunStatement must cover the same unused session ID in one Region; the session may need time to become ready before code runs.
+
+- id: aws-glue-runstatement-interactive-session
+  provider: aws
+  service: glue
+  title: Run code in an existing Glue interactive session
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#execute-code-in-an-existing-interactive-session
+  source_revision: 171e422299
+  summary: The source can run code under the role attached to a ready Glue interactive session it can use.
+  requires:
+    all_of:
+      - action: glue:RunStatement
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue_session
+    scope: same_account
+    aggregate_as: "Execution roles of runnable Glue sessions in {account}"
+    outcome: workload_execution
+  preconditions:
+    - glue_existing_session_ready_for_statement
+  conditions: []
+  blockers:
+    - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Restrict glue:RunStatement to sessions owned by the caller and keep their execution roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_RunStatement.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_Session.html
+  notes: The target role comes from the recorded session rather than a generic Glue service trust. The session must be READY and RunStatement must cover that exact session ARN.

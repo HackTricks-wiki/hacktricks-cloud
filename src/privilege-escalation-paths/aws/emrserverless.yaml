@@ -1,0 +1,159 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon EMR Serverless privilege escalation techniques.
+# Source: hacktricks-cloud aws-emr-serverless-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). EMR Serverless execution roles are chosen
+# per job run or session (executionRoleArn) and trust emr-serverless.amazonaws.com; applications themselves carry no role.
+# EMR on EKS (emr-containers) execution roles trust the EKS cluster OIDC provider with an emr-containers-sa-* service-account
+# subject; they are selected with trust_allows_emr_containers_oidc.
+
+- id: aws-emr-serverless-passrole-startjobrun
+  provider: aws
+  service: emr-serverless
+  title: Start an EMR Serverless job run with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
+  source_revision: 171e422299
+  summary: The source can run job code it controls using a passable EMR Serverless role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: emr-serverless.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: emr-serverless.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting emr-serverless.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: existing_application
+      description: A runnable EMR Serverless application must exist in StartJobRun scope.
+    - id: entrypoint_readable
+      description: The passed role must be able to read the job entry point the source supplies.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  preconditions:
+    - emr_serverless_job_route
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on EMR Serverless roles with iam:PassedToService=emr-serverless.amazonaws.com and restrict StartJobRun to orchestrators.
+  references:
+    - https://docs.aws.amazon.com/emr/latest/EMR-Serverless-UserGuide/security-iam-runtime-role.html
+  notes: The evaluator joins an inventoried runnable application with exact StartJobRun and PassRole grants and a same-Region S3 script object writable by the source and readable by the execution role. The emr-containers:StartJobRun variant is aws-emr-containers-passrole-startjobrun.
+
+- id: aws-emr-containers-passrole-startjobrun
+  provider: aws
+  service: emr-containers
+  title: Start an EMR on EKS job run with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of an EMR on EKS execution role (trusting the EKS cluster OIDC provider for emr-containers-sa-* service accounts) by running its own job code on a virtual cluster under that role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_emr_containers_oidc: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "EMR on EKS execution roles passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: virtual_cluster_exists
+      description: A virtual cluster must exist in StartJobRun scope, mapped to a namespace whose job service accounts the execution role trusts.
+    - id: execution_role_condition_key
+      description: emr-containers:ExecutionRoleArn and iam:PassedToService conditions may restrict which roles can be used.
+  preconditions:
+    - emr_containers_job_route
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on EMR on EKS execution roles, constrain emr-containers:ExecutionRoleArn, and scope trust subjects to specific namespaces.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
+    - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/iam-execution-role.html
+  notes: The evaluator checks StartJobRun on an inventoried RUNNING virtual cluster in the source account. The EKS namespace and role trust remain conditional.
+
+- id: aws-emr-containers-passrole-startjobrun-pod-identity
+  provider: aws
+  service: emr-containers
+  title: Start an EMR on EKS job through EKS Pod Identity
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-serverlessstartjobrun--emr-containersstartjobrun--iampassrole
+  source_revision: 171e422299
+  summary: The source can submit a job with a passable execution role when its EKS Pod Identity trust and all three EMR service-account associations are in place.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: pods.eks.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "EMR on EKS Pod Identity execution roles passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: job_code_readable
+      description: The execution role must be able to read code that the source controls, and the job must run with an EMR release supporting EKS Pod Identity.
+    - id: pod_identity_agent_ready
+      description: The EKS Pod Identity agent must be able to provide credentials to the job pods.
+  preconditions:
+    - emr_containers_pod_identity_job_route
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole to approved Pod Identity roles, scope StartJobRun to authorized virtual clusters, and avoid associating high-privilege roles with tenant-controlled job namespaces.
+  references:
+    - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/setting-up-enable-IAM.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
+  notes: The evaluator binds one RUNNING virtual cluster, an ACTIVE EKS cluster, all three recorded service-account associations, exact PassRole context for pods.eks.amazonaws.com and its EKS cluster ARN, and exact StartJobRun authorization.
+
+- id: aws-emr-containers-getmanagedendpointsessioncredentials
+  provider: aws
+  service: emr-containers
+  title: Open an interactive EMR on EKS session as a managed endpoint's execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-serverless-privesc/README.md#emr-containersgetmanagedendpointsessioncredentials--iampassrole--interactive-spark-session-as-the-execution-role
+  source_revision: 171e422299
+  summary: The source can run interactive Spark code as an EMR on EKS execution role by retrieving managed-endpoint session credentials for that role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_emr_containers_oidc: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "EMR on EKS execution roles of managed endpoints in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: managed_endpoint_exists
+      description: A managed (interactive) endpoint must exist on a virtual cluster and accept the execution role.
+    - id: endpoint_credentials
+      description: The credentials are a session token for the endpoint, not STS keys; the role is used through the Spark code the source runs.
+  preconditions:
+    - emr_containers_endpoint_route
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict emr-containers:GetManagedEndpointSessionCredentials and iam:PassRole on execution roles to notebook owners.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr-containers.html
+    - https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/connect-emr-studio.html
+  notes: The evaluator checks the credentials action on an inventoried ACTIVE endpoint of a RUNNING virtual cluster. Endpoint connection and role trust remain conditional.

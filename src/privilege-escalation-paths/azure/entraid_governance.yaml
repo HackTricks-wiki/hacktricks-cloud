@@ -1,0 +1,94 @@
+- id: azure-entraid-entitlement-catalog-self-grant-group
+  provider: azure
+  service: entraid
+  title: Catalog-scoped self-grant of a group packaged in a catalog the source manages
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entra-id-governance-privesc.md#catalog-scoped-self-grant-privesc
+  source_revision: 171e422
+  summary: A Catalog owner or Access package manager can package a group already in its catalog behind a no-approval policy (an assignment manager can assign an existing package) and obtain membership or ownership of that group.
+  requires:
+    all_of: []
+    any_of:
+      - - entra_catalog_role: Catalog owner
+          catalog: '{target.catalog}'
+      - - entra_catalog_role: Access package manager
+          catalog: '{target.catalog}'
+      - - entra_catalog_role: Access package assignment manager
+          catalog: '{target.catalog}'
+      - - graph_app_permission: EntitlementManagement.ReadWrite.All
+      - - entra_role: Identity Governance Administrator
+  target:
+    kind: entra_group
+    selector:
+      entra_resource_in_catalog: true
+    scope: tenant
+    aggregate_as: "Groups in Entitlement Management catalogs managed by the source"
+  conditions:
+    - id: assignment_manager_existing_packages_only
+      description: An Access package assignment manager can only assign access packages that already contain the group; it cannot create packages or policies.
+    - id: governance_license_required
+      description: Entitlement Management requires Entra ID P2 / ID Governance licensing.
+  blockers:
+    - access_package_approval_by_other_principal
+  confidence: conditional
+  severity: high
+  mitigation: Restrict catalog roles and EntitlementManagement.ReadWrite.All, keep role-assignable and app-owning groups out of delegated catalogs, and require approval by another principal on packages that grant privileged groups.
+  references:
+    - https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-delegate
+    - https://learn.microsoft.com/en-us/graph/api/resources/entitlementmanagement-overview
+  notes: Grants are logged under EntitlementManagement (Fulfill access package assignment), not as group membership adds. The tenant-wide alternatives (Graph permission, Identity Governance Administrator) reach every group in any catalog.
+- id: azure-entraid-access-package-guest-auto-assignment
+  provider: azure
+  service: entraid
+  title: Invite a guest that matches a loose access-package auto-assignment rule
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entra-id-governance-privesc.md#guest-self-enrolment-via-loose-auto-assignment-rule-privesc
+  source_revision: 171e422
+  summary: A principal allowed to invite guests can create a guest whose attributes satisfy an existing automatic-assignment policy and obtain the groups that access package grants, with no approval.
+  requires:
+    all_of:
+      - entra_tenant_setting: guest_invites_allowed_for_source
+  target:
+    kind: entra_group
+    selector:
+      entra_access_package_auto_assignment_open_to_guest: true
+    scope: tenant
+    aggregate_as: "Groups granted by auto-assignment policies open to guests"
+  conditions:
+    - id: auto_assignment_rule_semantics_approximated
+      description: The rule is screened by text (policies not restricted to members and not requiring userType Member); whether a guest the source controls can satisfy it is not proven.
+    - id: guest_controls_matching_attribute
+      description: The guest must control the attribute the rule tests (mail / UPN / domain), and cross-tenant access settings must allow the invitation.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict automatic-assignment policies to member users, avoid contains/startsWith predicates over guest-controllable attributes, and restrict guest invitations.
+  references:
+    - https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-access-package-auto-assignment-policy
+  notes: Analogous to azure-entraid-dynamic-group-guest-invite for dynamic groups.
+- id: azure-entraid-entitlement-auto-assignment-persistence
+  provider: azure
+  service: entraid
+  title: Create an auto-assignment policy that keeps re-granting catalog groups
+  source: src/pentesting-cloud/azure-security/az-persistence/az-entra-id-governance-persistence.md#auto-assignment-policy-abuse-persistence
+  source_revision: 171e422
+  summary: An Identity Governance Administrator or EntitlementManagement.ReadWrite.All holder can attach an automatic-assignment policy matching an attribute it controls and obtain, and keep re-obtaining, the groups packaged in any catalog.
+  requires:
+    all_of: []
+    any_of:
+      - - graph_app_permission: EntitlementManagement.ReadWrite.All
+      - - entra_role: Identity Governance Administrator
+  target:
+    kind: entra_group
+    selector:
+      entra_resource_in_catalog: true
+    scope: tenant
+    aggregate_as: "Groups in Entitlement Management catalogs"
+  conditions:
+    - id: regrant_on_every_cycle
+      description: The policy re-evaluates and re-grants on each cycle, so removing the assignment alone is undone.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Alert on automatic-assignment policy creation and review policies whose attribute rules match few or external principals.
+  references:
+    - https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-access-package-auto-assignment-policy
+  notes: Persistence variant of azure-entraid-entitlement-catalog-self-grant-group; the reached set is the same groups.

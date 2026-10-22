@@ -1,0 +1,50 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Mainframe Modernization (M2) privilege escalation techniques.
+# Source: hacktricks-cloud aws-mainframe-modernization-privesc/README.md.
+
+- id: aws-m2-passrole-createapplication-deploy
+  provider: aws
+  service: m2
+  title: Create, deploy and start an M2 application with a passed application role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mainframe-modernization-privesc/README.md#m2createapplication--iampassrole---execute-a-workload-with-an-application-role
+  source_revision: 171e422299
+  summary: The source may cause an M2 application to use a passable application role for resource actions driven by attacker-controlled artifacts.
+  requires:
+    all_of:
+      - action: m2:CreateApplication
+        resource: "*"
+      - action: m2:CreateDeployment
+        resource: "*"
+      - action: m2:StartApplication
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: m2.amazonaws.com
+    scope: same_account
+    aggregate_as: "Mainframe Modernization application roles in {account}"
+    outcome: workload_execution
+  preconditions:
+    - m2_existing_environment_new_application_deploy
+  conditions:
+    - id: runtime_environment_exists
+      description: An existing managed runtime environment must be available for the deployment (m2:CreateDeployment covers both the new application and that environment).
+    - id: valid_artifacts
+      description: The source must read an S3 application definition and artifacts valid for the chosen engine (s3:GetObject and s3:ListBucket, plus KMS permissions for a customer key).
+    - id: role_use_bounded
+      description: The application role is used by the managed runtime for the resources the workload accesses; the page does not show the role's credentials being exposed to workload code, so the reachable authority is what the workload can drive through the runtime.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict this.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict iam:PassRole on M2 application roles to deployment pipelines with iam:PassedToService and exact role ARNs, and keep application roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/m2/latest/userguide/security-iam.html
+  notes: Creating an application record alone does not use the role; deployment and start are required. The evaluator requires one collected Available runtime environment, exact deployment authorization on it, broad deployment and start authority covering the generated application ID, PassRole to m2.amazonaws.com, and a writable readable S3 definition path. Valid engine artifacts and the role's exact runtime effects remain conditional.

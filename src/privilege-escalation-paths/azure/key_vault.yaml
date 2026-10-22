@@ -1,0 +1,110 @@
+- id: azure-keyvault-secret-read-sp-credentials
+  provider: azure
+  service: key_vault
+  title: Read Key Vault secrets/certificates containing service-principal credentials
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#microsoftkeyvaultvaultsaccesspolicieswrite-microsoftkeyvaultvaultsread
+  source_revision: 171e422
+  summary: The source can obtain the privileges of service principals whose credentials are stored in the vault.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.KeyVault/vaults/accessPolicies/write
+        scope: '{pivot}'
+    - - action: Microsoft.KeyVault/vaults/secrets/getSecret/action
+        data_action: true
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.KeyVault/vaults
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+  - id: permission_model
+    description: accessPolicies/write and vaults/write (which can rewrite the vault's accessPolicies property) apply
+      only when enableRbacAuthorization is false/null; getSecret applies only when it is true.
+  - id: credential_content_unknown
+    description: The vault must actually hold a client secret or certificate private key of a service principal;
+      content is not visible from RBAC.
+  - id: network_reachable
+    description: Vault firewall/private endpoint must allow the source (vaults/write can change network ACLs).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Use Azure RBAC vault permission model, restrict accessPolicies/write, vaults/write (Contributor, Key
+    Vault Contributor) and Secrets User roles, and avoid storing SP secrets where managed identities suffice.
+  references:
+  - https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-access-policy
+  notes: The vaults/write toggle is excluded from this entry until the evaluator can prove a stale access policy
+    for a source-controlled principal with secret read. Direct accessPolicies/write on an access-policy vault and
+    secrets/getSecret remain covered.
+- id: azure-keyvault-key-sign-sp-client-assertion
+  provider: azure
+  service: key_vault
+  title: Sign a service-principal client assertion with a vault-held certificate key
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#forge-signatures-with-microsoftkeyvaultvaultskeyssignaction
+  source_revision: a66f094ede
+  summary: When a non-exportable vault key backs a service principal's certificate credential, signing with it lets the source authenticate as that service principal without ever extracting the key.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.KeyVault/vaults/keys/sign/action
+          data_action: true
+          scope: '{pivot}'
+      - - action: Microsoft.KeyVault/vaults/accessPolicies/write
+          scope: '{pivot}'
+  pivot_resource_type: Microsoft.KeyVault/vaults
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals whose certificate credential key is held in {pivot}
+  conditions:
+    - id: key_backs_sp_certificate
+      description: A key (or certificate) in the vault must be the private key of a certificate registered as a credential on a service principal or app registration; key usage by consumers is not collected.
+    - id: permission_model
+      description: keys/sign applies when enableRbacAuthorization is true; accessPolicies/write (granting the sign key permission) applies to access-policy vaults.
+    - id: network_reachable
+      description: Vault firewall/private endpoint must allow the source.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Scope Key Vault Crypto User and sign permissions to the workloads that own each key, keep application credential keys in dedicated vaults, and alert on first-time KeySign callers.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity-platform/certificate-credentials
+  notes: Exportable certificates are already reachable through secrets/getSecret (azure-keyvault-secret-read-sp-credentials); this entry covers the non-exportable/HSM case. Forgery against non-Entra consumers (custom JWT, SAML, code signing) stays excluded.
+- id: azure-keyvault-template-deployment-secret-reference
+  provider: azure
+  service: key_vault
+  title: Resolve a Key Vault secret through an ARM template deployment
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#microsoftkeyvaultvaultsdeployaction--microsoftresourcesdeploymentswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of service principals whose credentials are stored in the vault.
+  requires:
+    all_of:
+      - action: Microsoft.KeyVault/vaults/deploy/action
+        scope: '{pivot}'
+      - action: Microsoft.Resources/deployments/write
+        scope: '*'
+  pivot_resource_type: Microsoft.KeyVault/vaults
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Service principals with credentials stored in {pivot}
+  conditions:
+    - id: enabled_for_template_deployment
+      description: The vault must have enabledForTemplateDeployment set.
+    - id: credential_content_unknown
+      description: The referenced secret must contain a service-principal credential.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Disable enabledForTemplateDeployment where unused and restrict vaults/deploy/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/key-vault-parameter
+  notes: ''

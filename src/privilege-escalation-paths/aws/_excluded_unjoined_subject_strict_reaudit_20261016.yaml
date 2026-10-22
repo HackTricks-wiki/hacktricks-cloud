@@ -1,0 +1,107 @@
+# Exact originals: docs/privesc-ledgers/aws-scope-archive-20261016/unjoined-subject-strict-re-audit.yaml.txt.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudformation-privesc/README.md#cloudformationupdatestackset
+  source_revision: 6fb9ac51fd
+  technique: Update an existing self-managed StackSet
+  reason: UpdateStackSet changes an existing StackSet, but no collected StackSet-to-administration-role
+    or execution-role join identifies the target; service trust alone overclaims the pivot.
+  prior_id: aws-cloudformation-updatestackset-attached
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appsync-privesc/README.md#appsynccreatedatasource-iampassrole--drive-an-arbitrary-role-through-a-graphql-field
+  source_revision: 171e422299
+  technique: Attach a passed role to an IAM-signed HTTP data source and call it through a resolver
+  reason: Create/UpdateDataSource and resolver changes do not prove the source can call a field
+    under the API authorization mode; callable API/field control is only prose.
+  prior_id: aws-appsync-passrole-datasource-sigv4
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamaddclientidtoopenidconnectprovider--widen-an-existing-federation-trust
+  source_revision: 171e422299
+  technique: Register an attacker-chosen audience on an OIDC provider that roles trust
+  reason: Adding an audience does not prove the source holds an issuer-signed token whose exact
+    claims satisfy the target role trust.
+  prior_id: aws-iam-oidcprovider-add-client-id
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamcreateopenidconnectprovider--iamcreatesamlprovider--bring-your-own-identity-provider
+  source_revision: 171e422299
+  technique: Register an OIDC provider that a role trusts but that no longer exists
+  reason: Creating an OIDC provider at an orphaned ARN does not prove source possession of a signed
+    token with claims satisfying the exact target role trust.
+  prior_id: aws-iam-createoidcprovider-orphaned-trust
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#path-name-and-arn-conditions
+  source_revision: b587e6bd26
+  technique: Create a role in a trusted account to satisfy another account's role trust
+  reason: The selector checks trust against the existing source, not the newly created role; no
+    typed new-role ARN to external trust-pattern join proves the target accepts it.
+  prior_id: aws-iam-createrole-satisfy-cross-account-trust
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-control-tower-privesc/README.md#account-factory--provision-an-account-you-control
+  source_revision: 171e422299
+  technique: Update an Account Factory provisioned account to grant AWSAdministratorAccess to
+    a controlled Identity Center user
+  reason: Product update does not prove the chosen SSO user or mailbox is source-controlled, nor
+    which member-account admin is gained; both joins are prose conditions.
+  prior_id: aws-controltower-accountfactory-update-sso-user
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#sso-directoryupdatepassword
+  source_revision: 171e422299
+  technique: Reset the password of an Identity Center user
+  reason: UpdatePassword may reset another Identity Center user, but the target entity is account-wide
+    and does not bind an exact user, usable sign-in, MFA state, or gained assignment.
+  prior_id: aws-sso-directory-updatepassword
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreateuser--sso-directorycreateuser--group-membership--assignment
+  source_revision: 6fb9ac51fd
+  technique: Create an Identity Center user and add it to a privileged group
+  reason: CreateUser and CreateGroupMembership do not prove the source receives usable sign-in
+    credentials for the new Identity Center user or that the named group maps to the target permission
+    set.
+  prior_id: aws-identitystore-createuser-groupmembership
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#identitystorecreateuser--sso-directorycreateuser--group-membership--assignment
+  source_revision: 6fb9ac51fd
+  technique: Create an Identity Center user and assign it a permission set
+  reason: CreateUser and CreateAccountAssignment do not prove source control of a usable new-user
+    credential or exact permission-set assignment scope.
+  prior_id: aws-identitystore-createuser-createaccountassignment
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adcreatetemplate--publish-a-malicious-certificate-template-esc1--esc9
+  source_revision: 171e422299
+  technique: Publish a malicious certificate template through PCA Connector for AD and enroll
+    as a domain admin
+  reason: Template creation does not prove the source controls an enrollable AD identity or that
+    certificate mapping authenticates as the exact directory admin.
+  prior_id: aws-pca-connector-ad-createtemplate-esc1
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-pca-connector-ad-privesc/README.md#pca-connector-adupdatetemplate--weaken-an-existing-legitimate-template-in-place
+  source_revision: 171e422299
+  technique: Weaken an existing PCA Connector for AD certificate template in place
+  reason: Template update does not prove the source controls an enrollable AD identity or that
+    certificate mapping authenticates as the exact directory admin.
+  prior_id: aws-pca-connector-ad-updatetemplate
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sts-privesc/README.md#stsassumeroot--privileged-root-sessions-into-any-member-account
+  source_revision: 171e422299
+  technique: Obtain a privileged root-user session in a member account with sts:AssumeRoot
+  reason: AssumeRoot returns a short task-policy-scoped root session, not full account-admin authority;
+    task policy and management/delegated-admin source scope are not modeled as bounded grants.
+  prior_id: aws-sts-assumeroot-member-accounts
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#dsresetuserpassword
+  source_revision: 171e422299
+  technique: Reset the password of a directory user with Management Console access
+  reason: ResetUserPassword on a directory does not prove the selected user is assigned the modeled
+    AWS role or that console sign-in with the new password is usable.
+  prior_id: aws-ds-resetuserpassword
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#dsresetuserpassword
+  source_revision: 6fb9ac51fd
+  technique: Reset the password of the built-in directory administrator
+  reason: The directory-admin target is an account-level entity, not an exact resettable user;
+    no evidence joins a specific user, credential usability, and admin rights.
+  prior_id: aws-ds-resetuserpassword-directory-admin
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codeconnections-privesc/README.md#codeconnectionscreatesyncconfiguration--codeconnectionsupdatesyncconfiguration--codeconnectionspassrepository--iampassrole
+  source_revision: 171e422299
+  technique: Point a CloudFormation Git sync configuration at a controlled branch with a passed
+    sync role
+  reason: Git sync configuration plus PassRole does not prove the source can write the monitored
+    repository branch/deployment file; external Git control is only prose.
+  prior_id: aws-codeconnections-gitsync-passrole
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codeconnections-privesc/README.md#redirect-a-repository-link
+  source_revision: b587e6bd26
+  technique: Redirect a repository link consumed by CloudFormation Git sync to a controlled connection
+  reason: Repository link update does not join an existing sync configuration to the target role
+    or prove control of the replacement Git installation and branch.
+  prior_id: aws-codeconnections-updaterepositorylink-gitsync-role
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-supply-chain-privesc/README.md#scnassignadminpermissionstouser
+  source_revision: 171e422299
+  technique: Assign Supply Chain application administrator to a controlled Identity Center user
+  reason: AssignAdminPermissionsToUser names an Identity Center user, but source control and sign-in
+    for that exact user are only prose conditions.
+  prior_id: aws-supplychain-assignadmin

@@ -1,0 +1,378 @@
+# GCP Vertex AI (aiplatform) and Workbench (notebooks) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-vertex-ai-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: vertex_custom_code_agent -> service-<number>@gcp-sa-aiplatform-cc of the project;
+# notebooks_instance -> SA attached to an existing Workbench instance ("{target.host_resource}").
+# vertex_reasoning_engine_agent -> service-<number>@gcp-sa-aiplatform-re of the project (Agent Engine default runtime identity).
+
+- id: gcp-vertex-customjobs-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a Vertex AI custom job or custom training pipeline running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformcustomjobscreate--iamserviceaccountsactas
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by creating a Vertex AI custom job or a custom TrainingPipeline whose workload runs as that service account.
+  requires:
+    all_of:
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+    any_of:
+    - - action: aiplatform.customJobs.create
+        resource: '*'
+    - - action: aiplatform.trainingPipelines.create
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: metadata_reachable
+    description: The workload code must be able to use the attached identity (metadata server or default credentials in the runtime).
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+  notes: A custom TrainingPipeline wraps the same custom job spec, so aiplatform.trainingPipelines.create is an equivalent alternative.
+
+- id: gcp-vertex-pipelinejobs-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a Vertex AI pipeline job running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformpipelinejobscreate--iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: aiplatform.pipelineJobs.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: metadata_reachable
+    description: The workload code must be able to use the attached identity (metadata server or default credentials in the runtime).
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-hptuningjobs-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a hyperparameter tuning job whose trials run as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformhyperparametertuningjobscreate--iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: aiplatform.hyperparameterTuningJobs.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: metadata_reachable
+    description: The workload code must be able to use the attached identity (metadata server or default credentials in the runtime).
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-batchprediction-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a batch prediction job running a source-controlled model as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformbatchpredictionjobscreate--iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: aiplatform.batchPredictionJobs.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: model_control
+    description: Needs a source-controlled model (aiplatform.models.upload) whose container or artifact executes code.
+  - id: service_agent_io
+    description: Vertex still uses its service agent for Cloud Storage/BigQuery I/O even with a custom SA.
+  - id: service_agent_delegation
+    description: The project's Vertex AI Service Agent must hold the documented prediction delegation grant (roles/iam.serviceAccountAdmin) on the custom SA.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-models-upload-endpoint-deploy-actas
+  provider: gcp
+  service: aiplatform
+  title: Deploy a controlled model to a Vertex AI endpoint under a chosen service
+    account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#deploy-an-attacker-controlled-model-to-an-endpoint-as-a-target-service-account
+  source_revision: 6fb9ac51fd
+  summary: The source can run a controlled custom-container model as a chosen service
+    account by deploying it to an existing endpoint.
+  requires:
+    all_of:
+    - action: aiplatform.endpoints.deploy
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: controlled_model
+    description: An attacker-controlled model must already exist. Uploading a new
+      one additionally requires aiplatform.models.upload; deploy alone does not let
+      the caller change an existing model container.
+  - id: endpoint
+    description: An existing endpoint is required. Creating one additionally requires
+      aiplatform.endpoints.create.
+  - id: service_agent_delegation
+    description: The project's Vertex AI Service Agent must hold the documented prediction
+      delegation grant (roles/iam.serviceAccountAdmin) on the custom SA.
+  - id: container_contract
+    description: Custom containers must pass Vertex health/prediction checks for the
+      deployment to stay up.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.*
+    role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-reasoningengines-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Deploy an Agent Engine (reasoning engine) running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformreasoningenginescreate--iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: aiplatform.reasoningEngines.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: metadata_reachable
+    description: The workload code must be able to use the attached identity (metadata server or default credentials in the runtime).
+  - id: identity_type
+    description: The spec must use service-account identity, not identityType AGENT_IDENTITY; a custom build spec SA is a build identity, not the runtime identity.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-notebookexecutionjobs-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a Colab Enterprise notebook execution job running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#aiplatformnotebookexecutionjobscreate--iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: aiplatform.notebookExecutionJobs.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: runtime_template
+    description: Needs a usable notebook runtime template.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+
+- id: gcp-vertex-workbench-instances-create-actas
+  provider: gcp
+  service: aiplatform
+  title: Create a Vertex AI Workbench instance attached to a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#create-a-workbench-instance-with-a-target-service-account
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: notebooks.instances.create
+      resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Vertex AI workload SA in {project}
+  conditions:
+  - id: metadata_reachable
+    description: The workload code must be able to use the attached identity (metadata server or default credentials in the runtime).
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: derived
+  severity: critical
+  mitigation: Grant actAs only on dedicated Vertex AI workload SAs; no aiplatform.* role contains actAs but roles/editor contains both.
+  notes: Covers the Workbench Instances notes on this anchor; the legacy managed/user-managed notebook paths are obsolete.
+
+- id: gcp-vertex-customjob-custom-code-agent
+  provider: gcp
+  service: aiplatform
+  title: Run a Vertex AI job with no service account so it runs as the Custom Code Service Agent
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#omit-serviceaccount-to-run-custom-training-as-the-custom-code-service-agent
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Vertex AI Custom Code Service Agent of every project where it can create custom jobs, hyperparameter tuning jobs or custom training pipelines.
+  requires:
+    any_of:
+    - - action: aiplatform.customJobs.create
+        resource: '*'
+    - - action: aiplatform.hyperparameterTuningJobs.create
+        resource: '*'
+    - - action: aiplatform.trainingPipelines.create
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: vertex_custom_code_agent
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Vertex AI Custom Code Service Agent of {project}
+  conditions:
+  - id: agent_roles
+    description: Power equals the agent's current bindings (roles/aiplatform.customCodeServiceAgent by default, which HackTricks reports as including
+      token minting for project SAs and broad storage/BigQuery access).
+  - id: agent_node
+    description: The agent may not be a collected SA node; the evaluator needs a synthetic node per project.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  references:
+  - https://docs.cloud.google.com/vertex-ai/docs/general/custom-service-account
+  confidence: conditional
+  severity: critical
+  mitigation: Review the bindings of service-<number>@gcp-sa-aiplatform-cc and restrict aiplatform.customJobs.create / pipelineJobs.create (roles/aiplatform.user).
+  notes: No actAs is checked when no service account is pinned (Google documents the Custom Code Service Agent as the default identity of CustomJob, HyperparameterTuningJob and custom TrainingPipeline training containers). PipelineJobs are not documented to default to this agent.
+
+- id: gcp-vertex-workbench-instance-update-or-setiampolicy
+  provider: gcp
+  service: notebooks
+  title: Take over an existing Workbench instance through update/reset or an instance IAM self-grant
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#notebooksinstancesupdate--notebooksinstancesreset-on-an-existing-workbench-instance
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts attached to existing Workbench instances it can update and reset or whose
+    IAM policy it controls.
+  requires:
+    any_of:
+    - - action: notebooks.instances.update
+        resource: '{target.host_resource}'
+      - action: notebooks.instances.reset
+        resource: '{target.host_resource}'
+    - - action: notebooks.instances.setIamPolicy
+        resource: '{target.host_resource}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: notebooks_instance
+    scope: same_project
+    aggregate_as: SAs of Workbench instances the source can take over
+  conditions:
+  - id: followup_access
+    description: After an IAM self-grant the source uses a granted instance role with notebooks.instances.update and notebooks.instances.reset; notebooks.instances.use does not open JupyterLab because the immutable access mode is enforced separately. The guest must run metadata startup scripts.
+  - id: instance_owners
+    description: JupyterLab access follows the instance's immutable access mode (single-user, or service-account mode admitting principals with actAs on the instance SA).
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict notebooks.instances.update/reset/setIamPolicy (roles/notebooks.admin, roles/editor) on instances with privileged SAs and
+    set instance-owners explicitly.
+
+- id: gcp-vertex-reasoningengines-create-default-agent
+  provider: gcp
+  service: aiplatform
+  title: Deploy an Agent Engine with no service account so it runs as the Reasoning Engine Service Agent
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vertex-ai-privesc.md#omit-agent-engine-specserviceaccount-to-run-as-the-reasoning-engine-service-agent
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the AI Platform Reasoning Engine Service Agent of every project where it can create reasoning engines.
+  requires:
+    all_of:
+    - action: aiplatform.reasoningEngines.create
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: vertex_reasoning_engine_agent
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: Reasoning Engine Service Agent of {project}
+  conditions:
+  - id: identity_selection
+    description: spec.serviceAccount must be omitted and identityType AGENT_IDENTITY not selected.
+  - id: agent_roles
+    description: Power equals roles/aiplatform.reasoningEngineServiceAgent (project-scoped Cloud Storage object get/list among others) plus any extra bindings on service-<number>@gcp-sa-aiplatform-re.
+  - id: staging_build
+    description: The staging/build permissions needed to deploy attacker-controlled agent code are also required.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: medium
+  mitigation: Review bindings of the Reasoning Engine Service Agent and restrict aiplatform.reasoningEngines.create (roles/aiplatform.user).
+  references:
+  - https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/manage-agent-access
+  notes: No actAs is checked for the default identity. This is not arbitrary service-account impersonation.

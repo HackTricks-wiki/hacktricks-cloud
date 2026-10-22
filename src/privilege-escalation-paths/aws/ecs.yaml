@@ -1,0 +1,261 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS ECS privilege escalation techniques.
+# Source: hacktricks-cloud aws-ecs-privesc/README.md.
+
+- id: aws-ecs-passrole-registertaskdefinition-runtask
+  provider: aws
+  service: ecs
+  title: Register a task definition with a passed task role and run it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ecsregistertaskdefinition-ecsruntask
+  source_revision: 171e422299
+  summary: The source can run a container image it controls with a passable ECS task role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ecs:RegisterTaskDefinition
+        resource: "*"
+      - action: ecs:RunTask
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict this.
+    - id: cluster_and_network
+      description: A cluster with Fargate or EC2 capacity and (for awsvpc) a subnet is required; ecs:RunTask Resource is the task-definition ARN with an ecs:cluster condition.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on ECS task roles with iam:PassedToService and specific role ARNs.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+  notes: ""
+
+- id: aws-ecs-passrole-runtask-overrides
+  provider: aws
+  service: ecs
+  title: Run an existing task definition with overridden task role and command
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ecsruntask
+  source_revision: 171e422299
+  summary: The source can run an existing ECS task definition with command and task-role overrides when that task can execute.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ecs:RunTask
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: existing_task_definition
+      description: At least one existing task definition covered by ecs:RunTask must exist.
+    - id: execution_role_passrole
+      description: On Fargate the PassRole check also covers the task definition's executionRoleArn, so iam:PassRole must cover that execution role too (the same passable role can be used for both when it can pull the image).
+  preconditions:
+    - ecs_existing_task_override_runnable_with_role
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on ECS task roles and ecs:RunTask to specific task definitions.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_TaskOverride.html
+  notes: The "Runtime command overrides" section of the same page is the same edge. The evaluator binds RunTask to an active, described EC2-compatible task definition and active cluster with registered capacity, and checks a separate execution role if present; image pull and command execution remain conditional.
+
+- id: aws-ecs-passrole-registertaskdefinition-starttask
+  provider: aws
+  service: ecs
+  title: Register a task definition with a passed task role and start it on a container instance
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ecsregistertaskdefinition-ecsstarttask
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting ecs-tasks.amazonaws.com by starting a container it controls with that role on an existing container instance.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ecs:RegisterTaskDefinition
+        resource: "*"
+      - action: ecs:StartTask
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: container_instance_exists
+      description: An EC2 (or EXTERNAL) container instance must exist in a covered cluster.
+  preconditions:
+    - ecs_container_instance_exists
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on ECS task roles.
+  references: []
+  notes: ""
+
+- id: aws-ecs-passrole-registertaskdefinition-service
+  provider: aws
+  service: ecs
+  title: Register a task definition with a passed task role and deploy it as a service
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ecsregistertaskdefinition-ecsupdateserviceecscreateservice
+  source_revision: 171e422299
+  summary: The source can start an ECS service using a task definition and container image it controls with a passable task role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ecs:RegisterTaskDefinition
+        resource: "*"
+    any_of:
+      - - action: ecs:CreateService
+          resource: "*"
+      - - action: ecs:UpdateService
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: update_needs_existing_service
+      description: UpdateService needs an existing service in a covered cluster.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on ECS task roles and service deployment actions.
+  references: []
+  notes: ""
+
+- id: aws-ecs-registertaskdefinition-node-escape
+  provider: aws
+  service: ecs
+  title: Run a privileged container without a task role on EC2 capacity to reach node and co-located task roles
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsregistertaskdefinition-and-a-task-launching-action
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the container-instance role and of task roles of tasks co-located on EC2 container instances by running a privileged/host-mounted container it controls.
+  requires:
+    all_of:
+      - action: ecs:RegisterTaskDefinition
+        resource: "*"
+    any_of:
+      - - action: ecs:RunTask
+          resource: "*"
+      - - action: ecs:StartTask
+          resource: "*"
+      - - action: ecs:CreateService
+          resource: "*"
+      - - action: ecs:UpdateService
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      ecs_container_instance_role_in_cluster_covered_by: ecs:RunTask
+    scope: same_account
+    aggregate_as: "ECS container-instance roles and co-located task roles in clusters covered by the launch action in {account}"
+  conditions:
+    - id: ec2_capacity
+      description: Only EC2-launch-type capacity is affected; Fargate does not allow privileged containers or host access.
+    - id: co_located_tasks
+      description: Other task roles are only reachable for tasks placed on the same instance.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Use Fargate for sensitive workloads, block privileged/host-network containers, and restrict task-definition registration.
+  references: []
+  notes: The selector applies to whichever launch action matched; it covers instance-profile roles of container instances plus task roles of tasks on them (ecs_task_role_on_ec2_capacity restricted to those clusters).
+
+- id: aws-ecs-taskset-primary
+  provider: aws
+  service: ecs
+  title: Create a primary task set with a controlled container on an EXTERNAL-controller service
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#ecsregistertaskdefinition-ecscreatetaskset-ecsupdateserviceprimarytaskset-ecsdescribetasksets
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of passable roles trusting ecs-tasks.amazonaws.com by deploying a task set it controls to a service with the EXTERNAL deployment controller.
+  requires:
+    all_of:
+      - action: ecs:RegisterTaskDefinition
+        resource: "*"
+      - action: ecs:CreateTaskSet
+        resource: "*"
+      - action: ecs:UpdateServicePrimaryTaskSet
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: "Roles trusting ecs-tasks.amazonaws.com in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: external_controller_service
+      description: A service using the EXTERNAL deployment controller must exist in a covered cluster.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on ECS task roles and task-set actions.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_CreateTaskSet.html
+  notes: Without a task role the result is container execution only (no IAM gain).
+
+- id: aws-ecs-ecscape-agent-impersonation
+  provider: aws
+  service: ecs
+  title: Impersonate the ECS agent to obtain credentials of co-located tasks (ECScape)
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/aws-ecscape-privesc.md#impersonate-the-ecs-agent-to-obtain-co-located-task-credentials
+  source_revision: 171e422299
+  summary: A source holding the ECS container-instance role can obtain the task roles of other tasks running on the same EC2 container instance.
+  requires:
+    all_of:
+      - action: ecs:DiscoverPollEndpoint
+        resource: "*"
+      - action: ecs:Poll
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+      ecs_task_colocated_with_source_container_instance: "{source.arn}"
+    scope: same_account
+    aggregate_as: "ECS task roles of tasks co-located with the source's container instances in {account}"
+  conditions:
+    - id: colocated_task
+      description: The target task must run on the same EC2 container instance whose instance-role credentials the source holds (typically obtained by a task reaching IMDS).
+    - id: execution_roles_exposed
+      description: Task execution roles of co-located tasks are delivered by the same channel and are also reachable.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Run sensitive tasks on Fargate or on dedicated hosts separated by privilege, block task access to IMDS (ECS_AWSVPC_BLOCK_IMDS or hop limit 1), and keep the container-instance role minimal.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/security-iam-roles.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+  notes: Sources are restricted to EC2 container-instance roles (instance profile, trusting ec2.amazonaws.com) and targets to task roles of EC2/EXTERNAL-capable task definitions in the same account whose clusters have registered container instances. Co-location is proven only with ECS container-instance and task placement inventory (ec2InstanceId of the source's instances, containerInstanceArn of the target's tasks); without it the target is an unresolved placeholder (unknown), never a FAIL.

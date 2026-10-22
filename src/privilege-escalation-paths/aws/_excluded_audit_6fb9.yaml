@@ -1,0 +1,176 @@
+# AWS: sections reviewed by the HackTricks privesc completeness audit (rev 6fb9ac51fd) and intentionally NOT modelled.
+# Each item: {source, technique, reason}. "NEEDS SCHEMA: <ref>" items are temporary (see privesc-schema-proposals-aws.md).
+
+# --- P0 ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#gameliftcreatefleet--iampassrole--run-code-on-fleet-ec2-as-a-passed-instance-role
+  technique: gamelift:CreateGameServerGroup + iam:PassRole
+  reason: The game server group RoleArn is assumed by GameLift FleetIQ only to manage the Auto Scaling group and its instances; it is not exposed to code on the instances, which run with the launch template's instance profile (modelled by the EC2 launch-template / RunInstances entries). CreateFleet and CreateContainerFleet are modelled in aws-gamelift-passrole-createfleet.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamsetdefaultpolicyversion
+  technique: iam:SetDefaultPolicyVersion on a policy attached to a role the source can assume
+  reason: An existing policy version must be proven to grant administrator access; the v2 selector only covers creating a new default version.
+
+# --- P4 ---
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  technique: "panorama:CreateApplicationInstance / simspaceweaver:StartSimulation + iam:PassRole"
+  reason: "Both services have reached end of support (AWS Panorama and SimSpace Weaver are discontinued for new and existing customers), so no live edge can be produced."
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  technique: "osis/entityresolution/timestream/logs/backup-search/dax/aiops/chime/mediapackage-vod/mediaconvert create + iam:PassRole"
+  reason: "Execution-table rows that run only fixed service logic (ingestion pipelines, matching workflows, scheduled queries, exports, transcoding, DynamoDB caching, telemetry reads) as the passed role; data-access confused deputy without code execution or credentials, same reasoning as #the-pattern."
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  technique: "finspace:CreateKxUser / finspace:UpdateKxUser"
+  reason: "The kdb user's iamRole identifies which IAM principal may obtain a connection string for that user; binding a role does not vend that role's credentials to the source. Code execution as the role is modelled by aws-finspace-passrole-createkxcluster."
+
+# --- R0 ---
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence/README.md#restore-revoked-iam-roles-anywhere-certificates-by-weakening-the-crl
+  technique: Restore a previously revoked IAM Roles Anywhere certificate
+  reason: Requires the source to already possess the revoked end-entity certificate and private key, runtime secrets absent from the configuration snapshot; changing the CRL alone does not identify a reachable role.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-mq-broker-admin-persistence/README.md#rabbitmq-administrator-credentials---persistent-broker-administrator
+  technique: Create a native RabbitMQ administrator from an existing broker administrator
+  reason: Requires a previously known RabbitMQ administrator password and network access; no AWS IAM action grants the starting native broker identity.
+- source: src/pentesting-cloud/aws-security/aws-persistence/aws-rds-persistence/README.md#create-an-admin-user-inside-the-db
+  technique: Create a native database administrator using SQL
+  reason: Requires existing database administrator credentials and engine-level SQL access; no AWS IAM action in this section grants the starting database identity.
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/iam-trust-and-federation-attacks.md#external-id-confused-deputy
+  technique: Third-party provider confused deputy (missing or reused sts:ExternalId)
+  reason: The attacker is a tenant of an external SaaS provider; the provider-side tenant-to-role binding is not in any snapshot. Principals inside the snapshot that can assume an ExternalId-conditioned
+    role are already drawn (conditional) by aws-sts-assumerole-trusted.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/iam-trust-and-federation-attacks.md#oidc-and-saml-over-trust
+  technique: Broad OIDC sub / SAML IdP over-trust
+  reason: Needs a token or assertion from the external IdP (external identity possession), duplicate of the _excluded_a sts:AssumeRoleWithWebIdentity / AssumeRoleWithSAML exclusions. AWS-side provider takeover
+    is aws-iam-updatesamlprovider / aws-iam-oidcprovider-add-client-id; EKS sub-less trusts are k8s-cloud-eks-irsa-create-matching-sa.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/cross-service-confused-deputy-attacks.md#example-cloudtrail-to-s3
+  technique: Service-principal bucket policy without aws:SourceArn/SourceAccount
+  reason: Data/log injection into the victim bucket; no principal privileges are obtained.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/cross-service-confused-deputy-attacks.md#example-service-invocation-of-lambda
+  technique: Lambda permission trusting a service principal without source conditions
+  reason: Lets a foreign account feed event input to existing function code; whether the input yields execution as the role is application logic (no code or configuration control).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/cross-service-confused-deputy-attacks.md#s3-bucket-name-ownership-changes
+  technique: Re-creating a deleted legacy-global S3 bucket name
+  reason: 'Namespace reuse is a dangling-reference Exposure finding: the gain is data delivered to or read from the attacker bucket, and the consumer-to-bucket mapping of deleted buckets is not in the snapshot.'
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#policy-backdoors-and-attacker-resource-lures
+  technique: Resource-policy backdoors and attacker-resource lures
+  reason: Resource-policy backdoors are persistence/data sharing for an external principal; lures depend on a victim workload choosing an attacker-supplied resource (application logic).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#high-value-service-matrix
+  technique: Cross-account resource sharing matrix (S3, KMS, Secrets Manager, SNS/SQS, RAM, snapshots, models, ...)
+  reason: Rows are data exposure, injection or persistence. Role-bearing rows are modelled by their service entries (aws-sts-assumerole-trusted, aws-ecr-push-consumed-tag, aws-lambda-updatefunctionconfiguration,
+    aws-ssm-updatedocument-defaultversion, CodeArtifact entries). A Service Catalog portfolio share provisions in the recipient account under that account's own launch role, and ds:ShareDirectory only lets
+    the consumer domain-join its own workloads.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#messaging-and-event-injection
+  technique: External SNS/SQS/EventBridge/API Gateway input to privileged consumers
+  reason: Input injection into consumers; turning it into execution as the consumer role is application logic.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/organizations-and-central-account-pivots.md#resource-access-manager
+  technique: RAM share management (external / OU / org shares)
+  reason: Data, network and resource-use sharing; no IAM principal is obtained.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md#breaking-the-isolation-2021
+  technique: CloudTrail / Config / SAR cross-account service flaws
+  reason: Fixed AWS service vulnerabilities (historical); the current pattern is data injection only.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md#amplifycognito-public-role-assumption-cve-2024-28056
+  technique: Cross-account assumption of aud-less Cognito roles
+  reason: Fixed vulnerability (CVE-2024-28056); STS now rejects cross-account Cognito role assumption without an aud restriction.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md#shadow-resources-and-bucket-monopoly-2024
+  technique: Pre-created shadow buckets of AWS services
+  reason: Fixed vulnerability (AWS remediated by June 2024).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md#amazon-datazone-associateenvironmentrole-confused-deputy-2024
+  technique: DataZone AssociateEnvironmentRole cross-account confused deputy
+  reason: Fixed vulnerability; the current same-account technique is aws-datazone-passrole-associateenvironmentrole.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-identity-center-and-sso-unauthenticated-enum/README.md#aws-device-code-phishing
+  technique: Identity Center device-code phishing
+  reason: Requires the victim user to approve the device code (social engineering); no permission of a source principal grants it.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-codebuild-unauthenticated-access/README.md#buildspecyml
+  technique: Write access to an external repository consumed by CodeBuild
+  reason: Needs write access to an external SCM repository (GitHub/Bitbucket/GitLab) not represented in the snapshot; AWS-side sources are modelled by aws-codecommit-gitpush-pipeline-source and aws-codebuild-s3-source-poisoning.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-codebuild-unauthenticated-access/README.md#self-hosted-github-actions-runners-in-aws-codebuild
+  technique: GitHub workflow running on a CodeBuild-hosted runner
+  reason: Needs workflow control in the external GitHub repository; not expressible from AWS permissions.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-eks-unauthenticated-enum/README.md#anonymous-privileged-cluster-operations
+  technique: Kubernetes anonymous bindings with exec/write
+  reason: Kubernetes RBAC (system:anonymous bindings) belongs to the k8s catalog; no AWS permission is involved.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-eks-unauthenticated-enum/README.md#workload-ssrf--imds--pod-identity--aws-creds
+  technique: SSRF to IMDS / Pod Identity credentials
+  reason: Needs an application vulnerability (SSRF/RCE).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-ec2-unauthenticated-enum/README.md#ssrf
+  technique: SSRF to EC2 instance metadata credentials
+  reason: Needs an application vulnerability (SSRF).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/README.md#aws-secretsession-token-assignments
+  technique: Leaked access keys / session tokens
+  reason: Requires a leaked secret (runtime-only state no snapshot holds).
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-sagemaker-unauthenticated-enum/README.md#sagemaker-presigned-notebookstudio-urls
+  technique: Leaked SageMaker presigned notebook/Studio URL
+  reason: Requires a leaked URL (runtime secret); minting such URLs is modelled by the SageMaker privesc entries.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-datasync-agent-unauthenticated-access/README.md#authenticated-agent-claim-after-activation-key-disclosure
+  technique: Claim an unactivated DataSync agent with datasync:CreateAgent
+  reason: Gains a network position (appliance ownership) in the victim network; no IAM principal or role is obtained.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-appconfig-unauthenticated-access/README.md#appconfig-agent-configuration-reads
+  technique: Querying a reachable AppConfig Agent
+  reason: Configuration data read through the agent role; no credentials or code execution as the role.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-basic-information/aws-federation-abuse.md#oidc---github-actions-abuse
+  technique: GitHub Actions OIDC over-broad trust
+  reason: Needs a GitHub-issued OIDC token (external identity); duplicate of the sts:AssumeRoleWithWebIdentity exclusion.
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-devops-agent-post-exploitation/README.md#poison-or-expand-an-existing-service-association
+  technique: "aidevops:AssociateService / aidevops:UpdateAssociation (+ iam:PassRole)"
+  reason: "The passed monitoring/elevated role is used by the DevOps Agent for its own investigations; the caller gets no session or code execution as the role unless it also controls the agent's operator plane (see NEEDS SCHEMA X0-1)."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-data-access-post-exploitation/README.md#agentcore-identity--mint-a-workload-token-and-recover-stored-api-keys
+  technique: "bedrock-agentcore:GetWorkloadAccessToken + GetResourceApiKey + secretsmanager:GetSecretValue"
+  reason: "Returns a third-party API key stored for agents, not an AWS principal's credentials (same as the excluded AgentCore credential-vend section of the privesc page)."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-data-access-post-exploitation/README.md#agentcore-identity--recover-stored-oauth-access-tokens
+  technique: "bedrock-agentcore:GetWorkloadAccessToken + GetResourceOauth2Token + secretsmanager:GetSecretValue"
+  reason: "Returns an external OAuth access token bounded by the external provider's scopes; no AWS principal's privileges are obtained."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-acm-pca-scep-post-exploitation/README.md#pca-connector-scepcreatechallenge--getchallengepassword--mint-a-scep-enrollment-secret-rogue-device-certificate-backdoor
+  technique: "pca-connector-scep:CreateChallenge / GetChallengePassword"
+  reason: "Yields a device certificate for network/mTLS authentication bounded by the SCEP certificate profile; the page documents no AWS principal reached (an IAM Roles Anywhere trust anchor on the same CA would be a separate, undocumented chain)."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-token-leakage.md#recover-githubbitbucket-configured-tokens
+  technique: "CodeBuild source-provider token leakage (in-build GetBuildInfo, custom Docker image MitM, insecureSsl)"
+  reason: "Recovers an external GitHub/Bitbucket credential; the prerequisite build-control permissions (CreateProject/UpdateProject/StartBuild) already yield the project role through the modelled CodeBuild entries."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation/aws-codebuild-untrusted-pr-webhook-bypass.md#misconfigurations-that-allow-external-pr-code-execution
+  technique: "Untrusted pull-request execution through weak CodeBuild webhook filters"
+  reason: "The actor is an external Git user exploiting a webhook-filter misconfiguration, not an AWS principal holding IAM permissions; not expressible as a principal-to-principal edge."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cloudwatch-omni-post-exploitation/README.md#cloudwatchcreateonetimedeeplinkcode--mint-an-authenticated-omni-browser-session
+  technique: "cloudwatch:CreateOneTimeDeepLinkCode"
+  reason: "The browser session is bounded by the caller's own IAM identity and space grants; no other principal's privileges are obtained."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-user-pools-post-exploitation/README.md#add-an-app-client-secret-and-mint-an-m2m-token
+  technique: "cognito-idp:AddUserPoolClientSecret (post-exploitation page)"
+  reason: "M2M access tokens carry only the client's custom resource-server scopes (application plane); they are not accepted by identity pools and grant no AWS credentials."
+  source_revision: 6fb9ac51fd
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#bedrock-agentcorecreategatewaytarget--updategatewaytarget--mitm-an-agents-tools-tool-response-injection
+  technique: "bedrock-agentcore:CreateGatewayTarget / UpdateGatewayTarget"
+  reason: "Tool-response injection and capture of tool arguments / outbound third-party credentials; influences an agent through prompt content but does not give the caller the gateway role's session."
+  source_revision: 6fb9ac51fd
+
+# --- X1 ---
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-greengrass-post-exploitation/README.md#related-iot-device-fleet-primitives-same-archetype
+  technique: "iotevents:CreateDetectorModel / iotevents:UpdateDetectorModel + iam:PassRole"
+  reason: "Detector-model actions are a fixed set of AWS integrations (publish to SNS/SQS/IoT topics, Lambda invoke, DynamoDB/Firehose writes) executed by the service with the passed role; the source chooses only action parameters and gains narrow data-plane writes, never the role's general privileges or credentials. Same exclusion class as other confused-deputy data-sink PassRole cases."
+- source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/aws-ebs-snapshot-dump.md#shadow-copy
+  technique: EBS snapshot extraction of Active Directory domain hashes
+  reason: The configuration snapshot cannot identify which EBS volume contains a Domain Controller database and SYSTEM hive or whether their runtime contents yield usable domain credentials; snapshot permission alone does not establish a reachable domain administrator.

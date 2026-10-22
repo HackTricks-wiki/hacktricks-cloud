@@ -1,0 +1,94 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Deadline Cloud privilege escalation techniques.
+# Source: hacktricks-cloud aws-deadline-cloud-privesc/README.md (rev 171e422299).
+# Queue and fleet roles trust credentials.deadline.amazonaws.com; attached_to_service names that principal directly
+# because queue/fleet inventory is not collected (attachment resolves as unknown).
+
+- id: aws-deadline-passrole-createqueue-updatequeue
+  provider: aws
+  service: deadline
+  title: Attach a passed role to a queue and vend its credentials
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatequeueupdatequeue--iampassrole--deadlineassumequeueroleforuser
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: deadline:AssumeQueueRoleForUser
+        resource: "*"
+    any_of:
+      - - action: deadline:CreateQueue
+          resource: "*"
+      - - action: deadline:UpdateQueue
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: credentials.deadline.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
+    outcome: credentials
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: farm_access
+      description: The source needs a farm it can create or update queues in and queue membership allowing credential vending.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Deadline Cloud roles with iam:PassedToService and specific role ARNs; limit queue creation and updates to farm administrators.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateQueue.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_UpdateQueue.html
+  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.
+
+- id: aws-deadline-passrole-fleet-createworker
+  provider: aws
+  service: deadline
+  title: Attach a passed role to a fleet and vend it to a registered worker
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatefleetupdatefleet--iampassrole--deadlinecreateworker--deadlineassumefleetroleforworker
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com through a customer-managed fleet worker it registers.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: deadline:CreateWorker
+        resource: "*"
+      - action: deadline:AssumeFleetRoleForWorker
+        resource: "*"
+    any_of:
+      - - action: deadline:CreateFleet
+          resource: "*"
+      - - action: deadline:UpdateFleet
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: credentials.deadline.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
+    outcome: credentials
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: customer_managed_fleet
+      description: Worker registration and fleet-role vending apply to customer-managed fleets.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Deadline Cloud fleet roles and deadline:CreateWorker / AssumeFleetRoleForWorker to the worker host identities.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateFleet.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
+  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.

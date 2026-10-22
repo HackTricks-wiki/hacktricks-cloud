@@ -1,0 +1,124 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Step Functions privilege escalation techniques.
+# Source: hacktricks-cloud aws-stepfunctions-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-stepfunctions-teststate-passrole
+  provider: aws
+  service: stepfunctions
+  title: Run a supported test state with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statesteststate--iampassrole
+  source_revision: 171e422299
+  summary: The source can run one supported, unmocked AWS SDK task using a passable Step Functions role and read the task result.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: states:TestState
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+    outcome: impersonation
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: supported_unmocked_task
+      description: The requested action must be available as an unmocked TestState task and allowed by the passed role; a single test does not run an arbitrary multi-step workflow.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles with iam:PassedToService=states.amazonaws.com, and restrict states:TestState to developers on non-production roles.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/dg/test-state-isolation.html
+  notes: The Step Functions developer guide confirms TestState assumes the provided role and that iam:PassRole is required for an unmocked task. AWS SDK integrations include IAM. Map, Parallel, Activity, .sync, and waitForTaskToken patterns require mocks in TestState, so they do not exercise the role through this path.
+
+- id: aws-stepfunctions-createstatemachine-passrole-start
+  provider: aws
+  service: stepfunctions
+  title: Create a state machine with a passed role and execute it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statescreatestatemachine--iampassrole--statesstartexecution--statesstartsyncexecution
+  source_revision: 171e422299
+  summary: The source can run a new state machine that makes AWS service calls using a passable Step Functions role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: states:CreateStateMachine
+        resource: "arn:{source.partition}:states:*:{source.account}:stateMachine:*"
+        bind: new_state_machine
+    any_of:
+      - - action: states:StartExecution
+          resource: "arn:{source.partition}:states:*:{source.account}:stateMachine:*"
+          bind: new_state_machine
+      - - action: states:StartSyncExecution
+          resource: "arn:{source.partition}:states:*:{source.account}:stateMachine:*"
+          bind: new_state_machine
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+    outcome: impersonation
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: same_new_state_machine
+      description: Creation and execution must both be allowed on the same new state machine ARN.
+    - id: sync_requires_express
+      description: StartSyncExecution only works for Express state machines (the source chooses the type, so this does not remove the edge).
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles and state machine creation to the deployment pipeline.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/apireference/API_CreateStateMachine.html
+  notes: ""
+
+- id: aws-stepfunctions-updatestatemachine-passrole
+  provider: aws
+  service: stepfunctions
+  title: Modify an existing state machine and swap in a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-stepfunctions-privesc/README.md#statesupdatestatemachine--not-always-required-iampassrole
+  source_revision: 171e422299
+  summary: The source can update and run an existing state machine so it makes AWS service calls using a passable Step Functions role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: states.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
+    outcome: impersonation
+  preconditions:
+    - sfn_existing_state_machine_update_and_start
+  conditions:
+    - id: execution_after_update
+      description: The source must start the same state machine after attaching the passed role and updating its definition.
+    - id: existing_state_machine
+      description: A recorded active state machine must permit both UpdateStateMachine and StartExecution, or StartSyncExecution when it is Express.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Step Functions roles and states:UpdateStateMachine.
+  references:
+    - https://docs.aws.amazon.com/step-functions/latest/apireference/API_UpdateStateMachine.html
+  notes: ""

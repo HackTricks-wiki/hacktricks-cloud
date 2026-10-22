@@ -1,0 +1,65 @@
+# Azure Managed DevOps Pools techniques (declarative only).
+# Source: hacktricks-cloud az-managed-devops-pools-privesc.md (rev 171e422).
+# Agents of a pool run pipeline jobs and can authenticate as the pool's managed identities.
+
+- id: azure-devopspool-assign-user-assigned-identity
+  provider: azure
+  service: managed_devops_pools
+  title: Attach a user-assigned identity to a Managed DevOps Pool
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-devops-pools-privesc.md#bind-a-privileged-identity-to-a-pool-poolswrite--rce-as-identity-via-cicd-jobs
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities it may assign, through jobs that run on the pool's agents.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.DevOpsInfrastructure/pools/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.DevOpsInfrastructure/pools
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: job_execution_path
+      description: Code must run on the pool, which requires the ability to queue a job in the connected Azure DevOps organization or GitHub repository (not collected), or a change to the agent image the pool consumes.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict pools/write and userAssignedIdentities/assign/action, and limit which pipelines may target pools carrying privileged identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/devops/managed-devops-pools/configure-identity
+  notes: ""
+
+- id: azure-devopspool-write-existing-identity
+  provider: azure
+  service: managed_devops_pools
+  title: Repoint the agent image or VM configuration of a pool that carries identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-devops-pools-privesc.md#bind-a-privileged-identity-to-a-pool-poolswrite--rce-as-identity-via-cicd-jobs
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the managed identities already attached to the pool, through attacker-controlled agent images or jobs.
+  requires:
+    all_of:
+      - action: Microsoft.DevOpsInfrastructure/pools/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.DevOpsInfrastructure/pools
+    scope: inherited_scope
+    aggregate_as: "Managed identities of DevOps pool {target.host_resource}"
+  conditions:
+    - id: attacker_image_or_job
+      description: Requires an agent image the source controls and that the pool can read (for example an Azure Compute Gallery image), or the ability to queue jobs on the pool.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict pools/write and pin pool images to trusted galleries.
+  references:
+    - https://learn.microsoft.com/en-us/azure/devops/managed-devops-pools/overview
+  notes: ""

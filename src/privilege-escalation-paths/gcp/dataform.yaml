@@ -1,0 +1,141 @@
+# GCP Dataform privilege escalation techniques (run-as service account limited to BigQuery jobs).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-dataform-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Google enforces "strict act-as mode" on all repositories: the caller needs iam.serviceAccounts.actAs on the effective
+# service account for repository serviceAccount changes, manual workflow invocations, workflow configs and release configs.
+# Scheduled runs are started by the Dataform service agent, which must hold Token Creator (and Service Account User) on
+# the effective SA. Compilation runs in Google's environment; only the resulting BigQuery jobs run as the SA.
+
+- id: gcp-dataform-workflow-invocation-actas
+  provider: gcp
+  service: dataform
+  title: Run a Dataform workflow invocation as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataform-privesc.md#dataformrepositoriescreate--iamserviceaccountsactas--create-an-attacker-controlled-run-as-repository
+  source_revision: 171e422
+  summary: The source can obtain the BigQuery privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+    any_of:
+      - - action: dataform.repositories.create
+          resource: "*"
+      - - action: dataform.repositories.setIamPolicy
+          resource: "*"
+      - - action: dataform.workspaces.create
+          resource: "*"
+        - action: dataform.workspaces.writeFile
+          resource: "*"
+        - action: dataform.compilationResults.create
+          resource: "*"
+        - action: dataform.workflowInvocations.create
+          resource: "*"
+      - - action: dataform.repositories.commit
+          resource: "*"
+        - action: dataform.compilationResults.create
+          resource: "*"
+        - action: dataform.workflowInvocations.create
+          resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Dataform workflow identity in {project}"
+  conditions:
+    - id: service_agent_token_creator
+      description: The Dataform service agent (service-<number>@gcp-sa-dataform) must hold Token Creator on the target SA, otherwise invocations fail.
+    - id: create_self_admin
+      description: repositories.create alone suffices because the creator can be granted roles/dataform.admin on the new repository at creation; repositories.setIamPolicy self-grants the same on an existing repository.
+    - id: bigquery_only
+      description: The SA identity is used only for BigQuery jobs (queries, DDL/DML, EXPORT DATA), not handed to the source as a general token.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Grant actAs only on dedicated Dataform SAs, do not grant the Dataform service agent Token Creator on privileged SAs, and restrict roles/dataform.admin and roles/dataform.editor.
+  references:
+    - https://docs.cloud.google.com/dataform/docs/strict-act-as-mode
+    - https://docs.cloud.google.com/dataform/docs/required-access
+  notes: Covers the repository serviceAccount, per-invocation invocationConfig.serviceAccount, repo setIamPolicy and direct-commit variants. Google's strict act-as mode (enforced for all repositories) requires actAs on the effective SA for repository/workflow-config creation and updates, release-config updates and manual invocations, so actAs is always required here (HackTricks at 171e422 agrees).
+
+
+- id: gcp-dataform-workflowconfig-end-user-invoke
+  provider: gcp
+  service: dataform
+  title: Trigger an existing Dataform workflow configuration that runs with a Google Account's user credentials
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataform-privesc.md#dataformworkflowinvocationscreate--invoke-an-existing-compilation-result-or-user-credential-workflow
+  source_revision: 171e422
+  summary: The source can make the saved actions of a user-credential Dataform workflow configuration run as the
+    Google Account that authorized it, without iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+    - action: dataform.workflowInvocations.create
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_user
+    selector:
+      attached_to_service: dataform_workflow_config_end_user
+    scope: same_project
+    aggregate_as: Google Accounts whose stored Dataform user credentials back workflow configs the source can invoke
+  conditions:
+  - id: preset_actions_only
+    description: Only the release and action selection already saved in the workflow configuration run; invocation
+      authority cannot change the SQL, release config, OAuth owner or scopes, and no user token is returned.
+  - id: valid_user_authorization
+    description: The workflow configuration must carry invocationConfig.endUserAuthConfig with a still-valid Google
+      Account authorization.
+  - id: service_account_variant
+    description: Service-account-backed invocation also requires caller actAs on the effective SA. gcp-dataform-workflow-invocation-actas
+      covers attacker-authored SQL; invocation of a pre-existing compilation result with only workflowInvocations.create
+      plus actAs is a separate fixed-actions path requiring result/SA inventory.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: medium
+  mitigation: Prefer dedicated service accounts over end-user credentials for Dataform workflows, restrict dataform.workflowInvocations.create
+    on such repositories, and deny end_user_auth_config with a custom organization policy constraint.
+  references:
+  - https://docs.cloud.google.com/dataform/docs/schedule-runs
+  - https://docs.cloud.google.com/dataform/reference/rest/v1/InvocationConfig
+  - https://docs.cloud.google.com/dataform/docs/strict-act-as-mode
+  notes: Replaces gcp-dataform-scheduled-workflow-code-tamper; at 171e422 HackTricks no longer treats internal-repository
+    commit poisoning as a current path, because strict act-as mode blocks cron releases for repositories without
+    a third-party remote. Google's docs do not explicitly state which caller permission triggers a user-credential
+    config, so this follows HackTricks.
+- id: gcp-dataform-existing-compilation-result-actas
+  provider: gcp
+  service: dataform
+  title: Invoke saved Dataform actions as their effective service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataform-privesc.md#dataformworkflowinvocationscreate--invoke-an-existing-compilation-result-or-user-credential-workflow
+  source_revision: 0b36331
+  summary: A caller can trigger the saved BigQuery actions of an existing compilation result as its effective service
+    account.
+  requires:
+    all_of:
+    - action: dataform.workflowInvocations.create
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_challenge_fact: gcp-dataform-existing-compilation-result-actas
+    scope: same_project
+  conditions:
+  - id: saved_actions
+    description: A known existing compilation result must contain useful saved actions; the invoker cannot author
+      SQL through this permission alone.
+  - id: service_agent
+    description: The Dataform service agent must be able to mint a token for the effective SA.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workflow invocation and actAs on service accounts used by saved Dataform results.
+  references:
+  - https://docs.cloud.google.com/dataform/reference/rest/v1/projects.locations.repositories.workflowInvocations/create
+  - https://docs.cloud.google.com/dataform/docs/strict-act-as-mode
+  notes: UNKNOWN until compilation result to repository, effective SA, and action inventory are joined.
