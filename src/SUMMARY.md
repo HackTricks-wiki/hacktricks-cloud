@@ -1008,6 +1008,8 @@
     - [AWS - CodeCommit pipeline source Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codecommit-pipeline-source-privesc/README.md)
     - [AWS - CodePipeline job credentials Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-job-credentials-privesc/README.md)
     - [AWS - Resource Explorer Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-resource-explorer-view-privesc/README.md)
+    - [AWS - PCS Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/aws-pcs-privesc/README.md)
+    - [AWS - Greengrass Privilege Escalation](pentesting-cloud/aws-security/aws-privilege-escalation/aws-greengrass-privesc/README.md)
     - [AWS - Lake Formation grants Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-lake-formation-grants-privesc/README.md)
     - [AWS - Cloud Control API handler role Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloud-control-handler-role-privesc/README.md)
     - [AWS - IoT Core Privesc](pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-core-privesc/README.md)
