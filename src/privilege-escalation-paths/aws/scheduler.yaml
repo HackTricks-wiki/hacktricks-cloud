@@ -41,4 +41,39 @@
   references:
     - https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html
     - https://docs.aws.amazon.com/scheduler/latest/UserGuide/setting-up.html
-  notes: The exact new schedule is in the default group. The passed role must trust Scheduler for that schedule and have effective iam:PutUserPolicy or iam:PutRolePolicy on the source IAM principal. The source must lack effective iam:CreateUser beforehand, and its boundary, organization and explicit-deny controls must permit that action after the inline policy is added. The scheduled call and later use remain conditional. The former generic passed-role edge and the UpdateSchedule branch remain unresolved without a selected target operation and an existing schedule.
+  notes: The exact new schedule is in the default group. The passed role must trust Scheduler for that schedule and have effective iam:PutUserPolicy or iam:PutRolePolicy on the source IAM principal. The source must lack effective iam:CreateUser beforehand, and its boundary, organization and explicit-deny controls must permit that action after the inline policy is added. The scheduled call and later use remain conditional. The former generic passed-role edge remains excluded.
+- id: aws-scheduler-passrole-updateschedule-self-grant
+  provider: aws
+  service: scheduler
+  title: Update an existing schedule to add an IAM permission to its editor
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/eventbridgescheduler-privesc/README.md#iampassrole-schedulercreateschedule--schedulerupdateschedule
+  source_revision: cfbbb8b6f8
+  summary: The source can update an existing schedule so a role-authorized IAM inline-policy write grants it a new permission.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.role_arn}"
+        request_context:
+          iam:PassedToService: scheduler.amazonaws.com
+      - action: scheduler:UpdateSchedule
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_scheduler_iam_self_grant_update: true
+    scope: same_account
+    aggregate_as: "Scheduler update IAM inline-policy self-grants in {account}"
+    outcome: permission_grant
+    grants: ["iam:CreateUser after a scheduled inline-policy write to the exact source principal"]
+  conditions:
+    - id: scheduled_iam_policy_write
+      description: The updated schedule must run and its IAM inline-policy call must succeed before the source gains the permission.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict scheduler:UpdateSchedule and iam:PassRole to approved roles, and keep the execution role from changing the editor's IAM policies.
+  references:
+    - https://docs.aws.amazon.com/scheduler/latest/APIReference/API_UpdateSchedule.html
+    - https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html
+  notes: Only one collected existing schedule with no customer-managed KMS key is modeled. The passed role must trust Scheduler for that exact schedule and have effective iam:PutUserPolicy or iam:PutRolePolicy on the source. The source must lack effective iam:CreateUser beforehand, and explicit denies, boundaries and organization policies must permit the new permission. The scheduled write and later use remain conditional.
