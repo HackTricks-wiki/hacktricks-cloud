@@ -180,8 +180,6 @@
           iam:PassedToService: bedrock-agentcore.amazonaws.com
       - action: bedrock-agentcore:CreateAgentRuntime
         resource: "*"
-      - action: bedrock-agentcore:CreateAgentRuntimeEndpoint
-        resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
       - action: bedrock-agentcore:InvokeAgentRuntime
         resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
       - action: bedrock-agentcore:InvokeAgentRuntime
@@ -207,7 +205,7 @@
   mitigation: Scope iam:PassRole for bedrock-agentcore.amazonaws.com roles, restrict runtime creation to the deployment pipeline and allow only approved registries.
   references:
     - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_CreateAgentRuntime.html
-  notes: Generated runtime IDs have a service-chosen ten-character suffix. The precondition checks one fresh name and all suffixes covered by the caller's CreateAgentRuntimeEndpoint, InvokeAgentRuntime, PassRole and trust grants. The aws-bedrock-privesc page describes the same technique.
+  notes: Generated runtime IDs have a service-chosen ten-character suffix. CreateAgentRuntime automatically creates the DEFAULT endpoint; a separate CreateAgentRuntimeEndpoint grant is not required. The precondition checks one fresh name and generated suffix scope covered by InvokeAgentRuntime, PassRole and trust grants. A concrete role edge requires fresh reviewed evidence that a controlled, pullable artifact ran under this exact role in a READY runtime and DEFAULT endpoint, and performed a useful action unavailable directly to the caller. The aws-bedrock-privesc page describes the same technique.
 
 - id: aws-bedrock-agentcore-updateagentruntime-passrole
   provider: aws
@@ -249,4 +247,4 @@
   mitigation: Restrict bedrock-agentcore:UpdateAgentRuntime to the deployment pipeline, scope iam:PassRole for AgentCore roles and alert on role or image changes.
   references:
     - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_UpdateAgentRuntime.html
-  notes: Exact UpdateAgentRuntime, InvokeAgentRuntime on the runtime and DEFAULT endpoint, and associated-resource PassRole are checked by the precondition against collected resources. UpdateGateway needs a separate configured target-action proof.
+  notes: Exact UpdateAgentRuntime, InvokeAgentRuntime on the runtime and DEFAULT endpoint, and associated-resource PassRole are checked by the precondition against collected resources. A concrete role edge also requires fresh reviewed evidence that a controlled replacement artifact reached the current READY version, a new session invoked DEFAULT, and the exact role performed a useful action unavailable directly to the caller. Existing sessions may keep an older version. UpdateGateway needs a separate configured target-action proof.
