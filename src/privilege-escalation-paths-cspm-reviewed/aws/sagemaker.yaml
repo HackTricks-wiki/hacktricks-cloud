@@ -505,3 +505,37 @@
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/dg/studio-lcc.html
   notes: The precondition joins one free JupyterLab or CodeEditor lifecycle-configuration name, the exact user profile and role, CreateStudioLifecycleConfig and UpdateUserProfile permissions, and a creatable app of the same type. Existing apps or incomplete profile, domain, app or lifecycle inventories remain unresolved. Domain defaults and shared spaces need separate joins.
+
+- id: aws-sagemaker-attach-studio-lifecycle-config-shared-space
+  provider: aws
+  service: sagemaker
+  title: Attach controlled startup code to an existing shared Studio space
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sagemaker-privesc/README.md#set-lifecycle-configuration-on-sagemaker-studio
+  source_revision: b587e6bd26
+  summary: The source can attach a new lifecycle configuration to a shared space and start a matching app using its recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: sagemaker
+      via_resource_type: sagemaker_space
+    scope: same_account
+    aggregate_as: Roles of shared Studio spaces whose startup code the source can change in {account}
+    outcome: workload_execution
+  preconditions:
+    - sagemaker_studio_shared_space_lcc_route
+  conditions:
+    - id: successful_space_app_start
+      description: The space update and later app creation must succeed so the new startup script executes.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict Studio lifecycle-configuration creation, UpdateSpace and CreateApp on shared spaces using privileged roles to trusted operators.
+  references:
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateSpace.html
+    - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateApp.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_sagemaker.html
+  notes: The evaluator uses the collected shared space's exact ARN, app type and execution role. It checks a free compatible lifecycle-configuration name, CreateStudioLifecycleConfig, UpdateSpace with the configuration ARN context, and CreateApp plus AddTags on the matching new app. Existing apps, private spaces and incomplete inventory stay unresolved. Startup execution remains conditional.
