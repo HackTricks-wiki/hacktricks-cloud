@@ -1,0 +1,93 @@
+# catalog_description: Active Azure entries require a named source principal, a concrete
+# action, and a verified target principal or additional effective permission. A write
+# action alone is insufficient: these self-grants require exact before/after evidence.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-purview-policy-self-grant
+  provider: azure
+  service: purview
+  title: Grant oneself governed SQL or Storage access through a Purview policy
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewpolicyelementswrite--purview-access-policies-into-governed-sqlstorage
+  source_revision: 90f2568978
+  summary: A verified Purview Policy Author publishes a named policy element granting itself new, verified SQL read or Storage read or write access on the exact governed resource.
+  requires:
+    all_of:
+      - action: Microsoft.Purview/policyElements/write
+        scope: "{target.scope}"
+        data_action: true
+  target:
+    kind: azure_verified_authority
+    selector:
+      azure_challenge_fact: azure-purview-policy-self-grant
+    scope: inherited_scope
+    outcome: permission_grant
+    aggregate_as: Verified Purview self-grants on {target.resource}
+  conditions:
+    - id: exact_self_grant
+      description: A source-bound review must verify the Purview Policy Author role, named policy element, exact account and governed source, publication, the source as grantee, prior denial, and effective new access.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Purview policy-element writes and review policy changes that grant access to the writer.
+  references:
+    - https://learn.microsoft.com/en-us/purview/how-to-create-data-policy
+  notes: The reviewed Purview Policy Author fact supplies the data-action capability; an ARM role grant is not required or sufficient. The target source must be supported and policy enforcement enabled. SQL Modify is not supported. Generic Status=verified records cannot create a path.
+
+- id: azure-storage-adls-acl-self-grant
+  provider: azure
+  service: storage
+  title: Give oneself new ADLS Gen2 path access by changing its ACL
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#hns-acl-takeover-and-blob-super-user-data-action
+  source_revision: 092aafb5cb
+  summary: A principal with modifyPermissions on an exact ADLS Gen2 path changes that path's ACL to gain a verified read, write, or execute permission it previously lacked.
+  requires:
+    all_of:
+      - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/modifyPermissions/action
+        scope: "{target.scope}"
+        data_action: true
+  target:
+    kind: azure_verified_authority
+    selector:
+      azure_challenge_fact: azure-storage-adls-acl-self-grant
+    scope: inherited_scope
+    outcome: permission_grant
+    aggregate_as: Verified ADLS Gen2 self-grants on {target.resource}
+  conditions:
+    - id: exact_self_grant
+      description: A source-bound review must identify an exact ADLS path in an HNS-enabled account, its new ACL permission for the source, prior denial, and verified access after the grant.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Limit ACL modification rights on protected ADLS Gen2 paths and monitor self-directed ACL changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-access-control
+  notes: Uses azure_privesc_challenge_evidence with the typed azure_self_grants contract; a generic ACL write or blob read does not suffice.
+
+- id: azure-storage-files-acl-self-grant
+  provider: azure
+  service: storage
+  title: Give oneself new Azure Files access by changing NTFS permissions
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsfileservicesfilesharesfilesmodifypermissionsaction
+  source_revision: 9fa167259a
+  summary: A principal with modifypermissions on an Azure Files share changes the ACL of an exact file or directory and gains a verified read, write, or execute permission it previously lacked.
+  requires:
+    all_of:
+      - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/modifypermissions/action
+        scope: "{target.scope}"
+        data_action: true
+  target:
+    kind: azure_verified_authority
+    selector:
+      azure_challenge_fact: azure-storage-files-acl-self-grant
+    scope: inherited_scope
+    outcome: permission_grant
+    aggregate_as: Verified Azure Files self-grants on {target.resource}
+  conditions:
+    - id: exact_self_grant
+      description: A source-bound review must identify the data-plane fileshares share and exact file or directory path, its new NTFS permission for the source, prior denial, and verified access after the grant.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Limit NTFS permission modification rights on protected shares and monitor self-directed ACL changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/storage/files/storage-files-identity-ad-ds-configure-permissions
+  notes: Uses azure_privesc_challenge_evidence with the typed azure_self_grants contract. TargetId identifies the exact file or directory as the share data-plane ID plus /files/path; TargetScope and ActionResourceId are the share ID. A grant at a control-plane /shares/ path does not suffice.

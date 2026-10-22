@@ -1,0 +1,50 @@
+# Azure privesc completeness audit (g6-containers): techniques reviewed and intentionally NOT modelled.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-apps-post-exploitation.md#microsoftappmanagedenvironmentsdaprcomponentswrite---redirect-a-future-dapr-operation
+  technique: Dapr component write (blind redirect of a future Dapr operation)
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
+  reason: Redirects future state/pub-sub/binding data flows to an attacker destination; any identity effect depends on what the app later does through the component
+    (application logic), not on RBAC. Component listSecrets is modelled by azure-containerapp-dapr-component-list-secrets.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-service-configuration-disclosure.md#namespace-scoped-kubernetes-writer-secret-reads
+  technique: Namespace-scoped RBAC Writer / Arc Writer / Fleet Writer generic Secret read
+  source_revision: a66f094ede
+  reason: 'A generic Secret read is data disclosure. Modern projected ServiceAccount tokens are not automatically stored in Secret objects. A principal edge would require a verified usable credential in the exact Secret, an accepted named subject, and additional effective permissions; Azure currently lacks this Secret-to-subject evidence join.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: Namespace-scoped AKS RBAC Writer creates a Pod as a more privileged ServiceAccount
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G6-containers-proposals.md#azure-k8s-service-account-targets. A true path exists when the Azure RBAC data action permits Pod creation, the Pod is admitted and scheduled with an exact ServiceAccount, and that account has newly reachable permissions. The Azure catalog has no Azure resource-to-Kubernetes ServiceAccount and admission join, so the generic Writer role alone cannot emit an exact target edge.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: AKS Fleet Manager member data actions (fleets/members/.../bind, escalate, impersonate, exec) across member clusters
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G6-containers-proposals.md#aks-fleet-member-clusters. The actions are granted on the fleet member resource, not the member cluster, and no
+    placeholder maps a cluster target to its fleet membership.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#alternative-cluster-credential-retrieval-apis
+  technique: fleets/listCredentials (fleet hub kubeconfig)
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G6-containers-proposals.md#aks-fleet-member-clusters. The hub kubeconfig is an Entra exec-plugin credential; member-cluster control also
+    needs the fleet member data actions, whose cluster mapping is not expressible.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#aks-cluster-credentials
+  technique: Connected (Arc) and provisioned (AKS Arc) cluster user-credential actions
+  source_revision: a66f094ede
+  reason: The connected/provisioned listClusterUserCredential(s) actions return an Entra- or caller-token-bound kubeconfig whose authority is the caller's own Kubernetes
+    RBAC; no other principal's privileges. The provisioned admin credential is modelled by azure-hybrid-k8s-list-cluster-admin-credential.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#azure-red-hat-openshift-aro-cluster-credentials
+  technique: ARO hosted control plane (hcpOpenShiftClusters) externalAuths/write attacker OIDC provider
+  source_revision: a66f094ede
+  reason: Preview surface; an attacker-controlled identity provider yields cluster privileges only when its mapped users/groups hold OpenShift RBAC, and neither the
+    external auth configuration nor the claim mapping is collected (same reasoning as the AKS external OIDC exclusion).
+- source: src/pentesting-cloud/azure-security/az-persistence/az-kubernetes-persistence.md#trusted-access-role-binding--service-identity-access-through-the-aks-gateway-trustedaccessrolebindingswrite
+  technique: Trusted Access role binding — service identity access through the AKS gateway (`trustedAccessRoleBindings/write`)
+  source_revision: a66f094ede
+  reason: The binding grants a predefined Trusted Access role to another resource's system-assigned identity; the source gains cluster access only if it already controls
+    that resource's behaviour (page), and the Trusted Access role permissions are not collected. Persistence of an already-held foothold.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-spring-apps-persistence.md#spring-apps
+  technique: Attach an identity and grant it RBAC; keep the test endpoint and key
+  source_revision: a66f094ede
+  reason: Identity attachment plus roleAssignments/write is persistence of privileges the source already holds (role assignment write is modelled by the authorization
+    entries; identity attach by azure-springapps-app-write-user-assigned-identity). The test endpoint key gives unauthenticated app HTTP reach only (see the listTestKeys
+    exclusion).
+- source: src/pentesting-cloud/azure-security/az-persistence/az-spring-apps-persistence.md#code-and-artifact-backdoors
+  technique: Config-server repo poisoning, custom builder / buildpack binding, Eureka service registry poisoning
+  source_revision: a66f094ede
+  reason: Configuration and discovery poisoning or build-time tampering of future builds; the result depends on application behaviour and later build activity, not
+    RBAC. The malicious deployment bullet is modelled by azure-springapps-deployment-write-app-identity.

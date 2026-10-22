@@ -1,0 +1,87 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+
+# GCP Config Controller / Config Connector (KCC) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-config-controller-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# The target is a bounded project IAM grant through a collected KCC identity and watched namespace.
+- id: gcp-configcontroller-kcc-resource-write
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: configcontroller
+  title: Change project IAM through Config Connector
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#kubernetes-rbac-over-a-kcc-resource--act-as-the-configured-config-connector-identity
+  source_revision: 171e422
+  summary: The source can gain project IAM control when it can create an IAMPolicyMember or update an existing IAMPolicy or IAMPartialPolicy in a watched namespace and the configured Config Connector identity can read and set that project's IAM policy.
+  requires:
+    any_of:
+    - - action: container.thirdPartyObjects.create
+        resource: '{target.host_resource}'
+    - - action: container.thirdPartyObjects.update
+        resource: '{target.host_resource}'
+    - - action: container.clusters.get
+        resource: '{target.host_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_kcc_project_policy_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - resourcemanager.projects.setIamPolicy
+    aggregate_as: Project IAM grants available through Config Connector
+  conditions:
+  - id: admission
+    description: Policy Controller constraints or validating webhooks can reject the manifest; reconciliation is not proven by IAM permission alone.
+  - id: api_server_reachable
+    description: The principal still needs a usable route and authentication to the cluster API server.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict write access to KCC custom resources (in-cluster RBAC and container.thirdPartyObjects.*) and grant the Config Connector identity only the IAM permissions it needs (never roles/owner).
+  references:
+  - https://docs.cloud.google.com/config-connector/docs/how-to/install-manually
+  - https://docs.cloud.google.com/kubernetes-engine/docs/reference/api-permissions
+  notes: Create and update are bound to different collected resources. The caller can hold GKE IAM object permissions or exact namespace RBAC for create, update, or patch, and needs container.clusters.get for a derived authenticated route. This path grants project IAM control, not the Config Connector service account's full identity. Other KCC resources may create additional paths when their exact prerequisites are established.
+
+- id: gcp-configcontroller-kcc-service-account-key
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: configcontroller
+  title: Obtain a service account key through Config Connector
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#kcc-iamserviceaccountkey-plus-secret-read--mint-a-long-lived-key-for-a-more-privileged-service-account
+  source_revision: 171e422
+  summary: The caller can create an IAMServiceAccountKey through GKE IAM or namespace RBAC and obtain a target service account credential by reading the generated key or providing a public key whose private half it holds.
+  requires:
+    any_of:
+    - - action: container.thirdPartyObjects.create
+        resource: '*'
+    - - action: container.clusters.get
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_kcc_generated_key_secret: true
+    scope: any
+    aggregate_as: Service accounts whose generated Config Connector keys the caller could read
+  conditions:
+  - id: generated_secret
+    description: Config Connector must reconcile a new key. The generated-key routes need Secret or key-resource read; the supplied-public-key route needs the matching private key. A conflicting name or admission policy may prevent reconciliation.
+  - id: api_server_reachable
+    description: The caller needs a usable authenticated route to the cluster API server.
+  blockers:
+  - gcp_deny_policy
+  - disabled_service_account
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict KCC key-resource creation and Secret reads in watched namespaces, limit the controller's service-account-key permissions, and enforce both key-creation and key-upload organization policies.
+  references:
+  - https://docs.cloud.google.com/config-connector/docs/reference/resource-docs/iam/iamserviceaccountkey
+  - https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts.keys/upload
+  - https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts
+  - https://docs.cloud.google.com/kubernetes-engine/docs/reference/api-permissions
+  notes: The actor needs key-resource create through GKE IAM or namespace RBAC and either a key-reading route on the same namespace or a supplied public key. GCP callers need container.clusters.get for a derived authenticated route. The controller's key permissions are checked on the exact target service account. Creation and upload have separate effective organization policies. Missing policy or cluster-access evidence remains unresolved. The private key is not read by the scanner.

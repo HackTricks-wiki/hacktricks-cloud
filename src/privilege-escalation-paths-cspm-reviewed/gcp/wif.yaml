@@ -1,0 +1,136 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Workload Identity Federation privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Provider creation and update each join exact active resources, pool-wide service-account
+# token bindings, and source permissions on the matching pool or provider.
+# Restore paths still require separate provider-state and trust joins. Direct grants to federated principals
+# need a distinct target kind.
+- id: gcp-wif-provider-create
+  provider: gcp
+  service: iam
+  title: Add a provider trusting attacker-controlled credentials to a pool with broad bindings
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workloadidentitypoolproviderscreate--add-trust-to-an-already-authorized-pool
+  source_revision: 171e422
+  summary: The source can create a provider in an active pool whose all-identities principalSet is already allowed to impersonate a named service account.
+  requires:
+    all_of:
+    - action: iam.googleapis.com/workloadIdentityPoolProviders.create
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_wif_active_path: create
+    scope: any
+    aggregate_as: Service accounts impersonable through controllable active WIF pools
+  conditions:
+  - id: pool_wide_binding
+    description: The pool has an all-identities principalSet binding that grants token access to the target service account.
+  - id: pool_active
+    description: The pool must be enabled.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict workloadIdentityPoolProviders.create, avoid pool-wide service account bindings, and restrict allowed providers by org policy.
+- id: gcp-wif-provider-update
+  provider: gcp
+  service: iam
+  title: Change an existing provider's trust configuration
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workloadidentitypoolprovidersupdate--take-over-an-authorized-provider
+  source_revision: 171e422
+  summary: The source can update an existing provider in an active pool whose all-identities principalSet can impersonate a named service account.
+  requires:
+    all_of:
+    - action: iam.googleapis.com/workloadIdentityPoolProviders.update
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_wif_active_path: update
+    scope: any
+    aggregate_as: Service accounts impersonable through updatable WIF providers
+  conditions:
+  - id: matching_binding
+    description: The active pool must have an all-identities binding that grants service-account token access; the updated provider must admit credentials controlled by the source.
+  - id: provider_enabled
+    description: The pool must be enabled. A disabled but active provider can be enabled through the same update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict workloadIdentityPoolProviders.update and alert on provider metadata/issuer changes.
+  notes: SAML metadata updates must keep one current certificate, which does not prevent adding another. An OIDC oidc.jwksJson upload replaces discovery-fetched keys while keeping the issuer URI.
+- id: gcp-wif-pool-provider-restore
+  provider: gcp
+  service: iam
+  title: Re-enable or undelete a pool or provider that still trusts attacker-controlled credentials
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#poolprovider-update--undelete--restore-a-residual-trust-path
+  source_revision: 171e422
+  summary: The source can restore an exact disabled pool, deleted pool or deleted provider that retains a pool-wide service-account token binding.
+  requires:
+    any_of:
+    - - action: iam.googleapis.com/workloadIdentityPoolProviders.undelete
+        resource: '*'
+    - - action: iam.googleapis.com/workloadIdentityPools.update
+        resource: '*'
+    - - action: iam.googleapis.com/workloadIdentityPools.undelete
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_wif_restorable_path: true
+    scope: any
+    aggregate_as: Service accounts bound to restorable WIF pools or providers
+  conditions:
+  - id: residual_trust
+    description: The exact restored provider must accept credentials controlled by the source, and its pool-wide service-account binding must remain.
+  - id: retention
+    description: Deleted pools/providers are restorable for approximately 30 days; provider restore needs an active pool, while pool undelete restores its providers.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Remove IAM bindings of decommissioned pools before deleting them and restrict pool/provider update and undelete.
+  notes: Also covers pools.update (re-enable) and pools.undelete. Provider re-enable through workloadIdentityPoolProviders.update is modelled by gcp-wif-provider-update. Disabling a provider blocks only new exchanges; disabling a pool also blocks use of issued tokens.
+- id: gcp-wif-workforce-provider-control
+  provider: gcp
+  service: iam
+  title: Create, change or restore a workforce pool provider to admit an attacker-controlled external user
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workload-identity-federation-privesc.md#workforce-provider-control-and-trust-restoration--hijack-an-authorized-pool
+  source_revision: 171e422
+  summary: The source can control an exact workforce pool or provider whose pool-wide principalSet can impersonate a service account in the same organization.
+  requires:
+    any_of:
+    - - action: iam.googleapis.com/workforcePoolProviders.create
+        resource: '*'
+    - - action: iam.googleapis.com/workforcePoolProviders.update
+        resource: '*'
+    - - action: iam.googleapis.com/workforcePoolProviders.undelete
+        resource: '*'
+    - - action: iam.googleapis.com/workforcePools.update
+        resource: '*'
+    - - action: iam.googleapis.com/workforcePools.undelete
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_workforce_control_path: true
+    scope: any
+    aggregate_as: Service accounts bound to controllable workforce pools
+  conditions:
+  - id: matching_binding
+    description: An existing all-identities workforce principalSet binding must grant token access to the named service account; the provider must admit credentials controlled by the source.
+  - id: residual_trust
+    description: Pool/provider restore only helps while attacker-usable trust and a matching binding remain, within the recovery window.
+  - id: programmatic_only_jwks
+    description: A locally uploaded OIDC JWKS works only for programmatic STS exchange, not federated console sign-in.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict workforce pool/provider administration (roles/iam.workforcePoolAdmin, roles/iam.workforcePoolEditor) at the organization and avoid pool-wide bindings.
+  references:
+  - https://cloud.google.com/iam/docs/manage-workforce-identity-pools-providers
+  - https://cloud.google.com/iam/docs/workforce-identity-federation
+  notes: Workforce pools are organization-scoped and their principals often receive roles directly; those direct grants need a separate federated-principal target. This rule joins only pool-wide token grants to inventoried service accounts in the same organization.

@@ -1,0 +1,117 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-audit-microsoftstoragestorageaccountslocaluserswrite-microsoftstoragestorageac
+  provider: azure
+  service: storage
+  title: Replace an existing Storage SFTP local user credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslocaluserswrite-microsoftstoragestorageaccountslocalusersread
+  summary: The source can obtain the observed container permissions of this existing
+    Storage local SFTP user by writing an SSH credential it controls. This service
+    identity has no Entra or ARM authority.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/localUsers/write
+      scope: '{target.scope}'
+  target:
+    kind: azure_storage_local_user
+    selector:
+      azure_storage_local_credential: write_credential
+    scope: inherited_scope
+    outcome: credentials
+  conditions:
+  - id: sftp_runtime_network_and_credential_use
+    description: The source must perform the allowed credential operation and reach
+      the account SFTP endpoint. Only this local user and its observed container permission
+      scopes are gained; no Entra or ARM authority follows.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/storage#microsoftstorage
+  notes: Existing local users only. Requires explicit enabled SFTP/local-user settings,
+    unique complete local-user inventory, and the exact existing containers named
+    in permissionScopes. The reset path also requires existing SSH password authentication.
+    Missing facts stay UNKNOWN; no credentials are generated or read. Creating a new
+    local user or expanding its permissions is outside this bounded path.
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  - azure_managed_identity
+  source_revision: 658a097d5c
+- id: azure-storage-local-user-create-with-sftp-access
+  provider: azure
+  service: storage
+  title: Create a Storage SFTP local user with container access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslocaluserswrite-microsoftstoragestorageaccountslocalusersread
+  source_revision: 658a097d5c
+  summary: The source can create an SFTP local user with its own SSH key and read permission on an existing container. The new identity has no Entra or ARM authority.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/localUsers/write
+      scope: '{target.scope}'
+  target:
+    kind: azure_storage_local_user
+    selector:
+      azure_storage_local_credential: create_credential
+    scope: inherited_scope
+    outcome: credentials
+  conditions:
+  - id: sftp_runtime_network_and_credential_use
+    description: The source must create the user with its SSH key and reach the storage account SFTP endpoint.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict localUsers/write on SFTP-enabled storage accounts to administrators who need to manage local users.
+  references:
+  - https://learn.microsoft.com/en-us/azure/storage/blobs/secure-file-transfer-protocol-support-authorize-access
+  notes: Requires verified enabled SFTP and local-user settings, complete user inventory to choose an unused name, and at least one inventoried Blob container. The listed read permission is assignable to a new service identity; no user or credential is actually created by the analyzer.
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  - azure_managed_identity
+- id: azure-audit-microsoftstoragestorageaccountslocalusersregeneratepasswordaction
+  provider: azure
+  service: storage
+  title: Regenerate an existing Storage SFTP local user password
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslocalusersregeneratepasswordaction
+  summary: The source can obtain the observed container permissions of this existing
+    Storage local SFTP user by regenerating its enabled SSH password. This service
+    identity has no Entra or ARM authority.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/localUsers/regeneratePassword/action
+      scope: '{target.scope}'
+  target:
+    kind: azure_storage_local_user
+    selector:
+      azure_storage_local_credential: reset_password
+    scope: inherited_scope
+    outcome: credentials
+  conditions:
+  - id: sftp_runtime_network_and_credential_use
+    description: The source must perform the allowed credential operation and reach
+      the account SFTP endpoint. Only this local user and its observed container permission
+      scopes are gained; no Entra or ARM authority follows.
+  blockers:
+  - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed action to principals that need this service privilege.
+  references:
+  - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/storage#microsoftstorage
+  notes: Existing local users only. Requires explicit enabled SFTP/local-user settings,
+    unique complete local-user inventory, and the exact existing containers named
+    in permissionScopes. The reset path also requires existing SSH password authentication.
+    Missing facts stay UNKNOWN; no credentials are generated or read. Creating a new
+    local user or expanding its permissions is outside this bounded path.
+  source_kind:
+  - azure_user
+  - azure_service_principal
+  - azure_managed_identity
+  source_revision: 658a097d5c

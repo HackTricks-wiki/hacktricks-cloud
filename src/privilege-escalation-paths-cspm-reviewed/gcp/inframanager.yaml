@@ -1,0 +1,39 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Infrastructure Manager privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-infra-manager-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-inframanager-deployments-create-actas
+  provider: gcp
+  service: config
+  title: Create an Infrastructure Manager deployment applied as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-infra-manager-privesc.md#configdeploymentscreate--iamserviceaccountsactas--apply-terraform-as-a-selected-service-account
+  source_revision: 171e422
+  summary: The source can submit Terraform to a project-visible Infrastructure Manager location using an enabled service account with the Infra Manager Agent role, when it can create deployments there and act as that account. Cross-project accounts also need the documented service-agent grants and organization-policy setting.
+  requires:
+    all_of:
+      - action: config.deployments.create
+        resource: "{target.host_resource}"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: inframanager_location
+      gcp_actas_granted_on_target: true
+    scope: any
+    aggregate_as: "Service accounts usable as Infrastructure Manager SA in {project}"
+  conditions:
+    - id: sa_config_agent
+      description: The enabled run-as SA must have an unconditional roles/config.agent binding in the deployment project. Cross-project use also requires the effective organization policy to allow it and the Infra Manager and Cloud Build service-agent grants. The submitted Terraform source must be valid.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated Infrastructure Manager SAs; roles/config.admin lacks actAs but roles/editor has both.
+  references:
+    - https://cloud.google.com/infrastructure-manager/docs/access-control
+    - https://docs.cloud.google.com/infrastructure-manager/docs/configure-service-account
+    - https://docs.cloud.google.com/infrastructure-manager/docs/reference/rest/v1/projects.locations.deployments/create
+  notes: Updating an existing deployment (config.deployments.update) is the same class but not described by HackTricks.

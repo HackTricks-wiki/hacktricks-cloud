@@ -1,0 +1,35 @@
+# catalog_description: Only a source principal's named action that reaches an
+# exact other principal or grants the source a verified new permission is active.
+# Reading a Secret without proof of its credential subject and usability is exposure.
+# This is one reviewed, bounded self-permission gain in the KRTE lab. A generic
+# Helm values writer does not gain RBAC without the exact chart and applier join.
+- id: k8s-helm-values-rbac-privileged-reconciler
+  provider: k8s
+  service: helm
+  title: Patch the KRTE values ConfigMap so its privileged applier grants the tenant ServiceAccount Secret reads
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/helm-template-injection.md#values-to-rbac-through-a-privileged-reconciler
+  source_revision: 171e422
+  summary: A tenant ServiceAccount that can patch krte-sc-source/prod-values changes values.json; the reviewed applier renders a Role and RoleBinding granting that same ServiceAccount get/list on Secrets in krte-sc-prod.
+  source_kind: k8s_service_account
+  requires:
+    all_of:
+      - {verb: patch, resource: configmaps, namespace: krte-sc-source, resource_name: prod-values}
+  target:
+    kind: k8s_verified_authority
+    selector:
+      k8s_helm_values_rbac: true
+    scope: cluster
+    outcome: permission_grant
+    grants: ["get,list secrets in krte-sc-prod to the source ServiceAccount"]
+    aggregate_as: "get,list secrets in krte-sc-prod via reviewed KRTE Helm applier"
+  conditions:
+    - id: reviewed_helm_values_rbac_evidence
+      description: A unique collected k8s_helm_values_rbac_evidence record must bind the exact ConfigMap and values key, chart fields, privileged reconciler, rendered Role and RoleBinding, source ServiceAccount, admitted reconciliation, prior denial and observed new permission.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict writes to values consumed by privileged reconcilers and constrain which subjects, namespaces and RBAC rules the chart may render.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping
+    - https://helm.sh/docs/chart_template_guide/values_files/
+  notes: The target is only the reviewed get/list Secret permission in krte-sc-prod. The collection is an external review attestation, never inferred from a ConfigMap patch alone; missing, partial, duplicate or mismatched records create no path.

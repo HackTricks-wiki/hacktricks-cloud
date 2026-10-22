@@ -1,0 +1,55 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Service Fabric techniques (declarative only).
+# Source: hacktricks-cloud az-service-fabric-privesc.md (rev 171e422).
+# Action names checked against the Azure RBAC permissions reference (Compute > Microsoft.ServiceFabric);
+# RBAC matching is case-insensitive (the reference spells managedclusters / nodetypes in lower case).
+# Cluster nodes are VM scale sets; the cluster -> node VMSS link is not collected, so node-identity
+# targets use azure_host_linked_to_pivot (unknown until collected).
+
+- id: azure-servicefabric-application-user-assigned-identity
+  provider: azure
+  service: service_fabric
+  title: Deploy a Service Fabric application bound to a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#managed-identity-token-theft-via-the-sf-token-service
+  source_revision: 8c54da7d5c
+  summary: An attacker-supplied application bound to a user-assigned identity obtains that identity's tokens from the Service Fabric token service.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+    any_of:
+      - - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/write
+          scope: "*"
+        - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/versions/write
+          scope: "*"
+        - action: Microsoft.ServiceFabric/managedClusters/applications/write
+          scope: "*"
+      - - action: Microsoft.ServiceFabric/clusters/applicationTypes/write
+          scope: "*"
+        - action: Microsoft.ServiceFabric/clusters/applicationTypes/versions/write
+          scope: "*"
+        - action: Microsoft.ServiceFabric/clusters/applications/write
+          scope: "*"
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_servicefabric_application_uami_path: true
+    scope: any
+    aggregate_as: "User-assigned identities in writable Service Fabric applications"
+  conditions:
+    - id: cluster_managed_identity_token_service
+      description: Managed clusters enable the token service when an identity-enabled application is deployed; classic clusters must have the token service enabled and the application must map the identity to its service.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and Service Fabric application writes; keep application identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/service-fabric/concepts-managed-identity
+    - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-service-fabric-app-code
+  notes: The source must be able to write the application type, version, and application under one inventoried cluster and assign the exact UAMI. Application deployment and service identity mapping remain conditional. Other node code cannot use an application's identity without its per-activation secret; node scale-set identities are modeled separately.

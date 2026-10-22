@@ -1,0 +1,146 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Machine Learning / AI Foundry techniques (declarative only).
+# Source: hacktricks-cloud az-ai-foundry-privesc.md and az-machine-learning-privesc.md (rev 171e422).
+# {target.host_resource.workspace}: the ML workspace that owns the endpoint/compute.
+# pivot_resource_type with '|' means any of the listed resource types.
+
+- id: azure-ml-online-deployment-existing-endpoint
+  provider: azure
+  service: machine_learning
+  title: Deploy code to an existing Azure ML online endpoint
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesonlineendpointswrite-microsoftmachinelearningservicesworkspacesonlineendpointsdeploymentswrite-microsoftmachinelearningservicesworkspacesread
+  source_revision: 3f483c8032
+  summary: The source can obtain the privileges of the online endpoint's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments/write
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/write
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_ml_existing_online_deployment_identity_path: true
+    scope: inherited_scope
+    aggregate_as: Identity of online endpoint {target.host_resource}
+  conditions:
+    - id: deployment_init
+      description: The deployment must provision and run attacker-controlled initialization code in the endpoint container.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict deployment write on online endpoints and keep endpoint identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-access-resources-from-endpoints-managed-identities
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-custom-container
+  notes: Endpoint identity is fixed at creation; workspace identity roles do not apply. This route uses container startup code, so a separate scoring invocation is not required.
+
+- id: azure-ml-online-endpoint-create-with-user-assigned-identity
+  provider: azure
+  service: machine_learning
+  title: Create an Azure ML online endpoint with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesonlineendpointswrite-microsoftmachinelearningservicesworkspacesonlineendpointsdeploymentswrite-microsoftmachinelearningservicesworkspacesread
+  source_revision: dd0d2d324b
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/write
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments/write
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_ml_online_endpoint_create_uami_path: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: deployment_init
+      description: The endpoint and deployment must provision and run attacker-controlled initialization code.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and online endpoint creation.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-access-resources-from-endpoints-managed-identities
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-deploy-custom-container
+  notes: The same new endpoint must accept the UAMI and the writable deployment child; container startup is the execution route.
+
+- id: azure-ml-compute-create-with-user-assigned-identity
+  provider: azure
+  service: machine_learning
+  title: Create an Azure ML compute instance with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacescomputeswrite
+  source_revision: 2115b45a60
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/computes/write
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_ml_compute_create_uami_path: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: compute_provisioning
+      description: The compute instance must provision and run the inline creation script with the attached identity.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict computes/write and userAssignedIdentities/assign/action; disable public SSH on compute instances.
+  references:
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-create-compute-instance
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-customize-compute-instance
+  notes: An inline creation script can execute during provisioning, so a later SSH or Jupyter access path is not required for this route.
+
+- id: azure-ml-compute-application-access
+  provider: azure
+  service: machine_learning
+  title: Open an accessible Jupyter app on an ML compute instance
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesread--microsoftmachinelearningservicesworkspacescomputesapplicationaccessaction
+  source_revision: c4ba8da4a3
+  summary: The source can use managed identities on a personal or shared compute instance whose applications it may access.
+  requires:
+    all_of:
+      - action: Microsoft.MachineLearningServices/workspaces/read
+        scope: '*'
+      - action: Microsoft.MachineLearningServices/workspaces/computes/applicationaccess/action
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_ml_compute_application_identity_path: true
+    scope: inherited_scope
+    aggregate_as: Identities of ML compute {target.host_resource}
+  conditions:
+    - id: instance_running
+      description: The instance must run before its applications can be accessed; a stopped instance needs the separate start permission.
+    - id: network_reachable
+      description: The source must reach the instance application endpoints.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Keep compute-instance identities least-privileged; they are usable by the assigned user.
+  references:
+    - https://learn.microsoft.com/en-us/azure/templates/microsoft.machinelearningservices/2021-01-01/workspaces/computes
+    - https://learn.microsoft.com/en-us/azure/machine-learning/how-to-create-manage-compute-instance
+  notes: Personal access requires the assigned user or recorded creator. Shared application policy may allow a workspace user with the required role; either route needs a running or startable instance.

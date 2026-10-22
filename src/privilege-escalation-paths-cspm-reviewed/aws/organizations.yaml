@@ -1,0 +1,88 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Organizations privilege escalation techniques.
+# Source: hacktricks-cloud aws-organizations-prinvesc/README.md.
+
+- id: aws-organizations-management-to-member-accounts
+  provider: aws
+  service: organizations
+  title: Assume trusted roles in usable organization member accounts
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-organizations-prinvesc/README.md#from-management-account-to-children-accounts
+  source_revision: 6fb9ac51fd
+  summary: A management-account principal can obtain the privileges of roles in usable member accounts that trust it.
+  requires:
+    all_of:
+    - action: sts:AssumeRole
+      resource: '{target.arn}'
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_principal_of_source: true
+      org_member_account: true
+    scope: org
+    aggregate_as: Organization access roles in member accounts
+  conditions:
+  - id: role_exists
+    description: OrganizationAccountAccessRole is created for accounts created through Organizations; invited accounts
+      need it added manually. Control Tower enrolled accounts may instead have AWSControlTowerExecution, which trusts
+      the management account and has administrator access.
+  - id: source_in_management_account
+    description: The source must live in the management account that the member-account role trusts.
+  preconditions:
+  - target_in_other_account
+  - source_in_org_management_account
+  blockers:
+  - scp_or_boundary_deny
+  confidence: derived
+  severity: critical
+  mitigation: Keep the management account free of workloads, limit who can assume roles from it, and replace the
+    default role with narrowly trusted roles.
+  references:
+  - https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access-cross-account-role.html
+  - https://docs.aws.amazon.com/controltower/latest/userguide/awscontroltowerexecution.html
+  notes: The role can have any permission level; OrganizationAccountAccessRole and AWSControlTowerExecution often have broad permissions. SCPs apply to the assumed role in the member account. Overlaps with aws-sts-assumerole-trusted; kept to identify the organization relationship.
+
+
+- id: aws-organizations-createaccount-principalorgid-trust
+  provider: aws
+  service: organizations
+  title: Create a member account to satisfy role trusts keyed on aws:PrincipalOrgID
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-organizations-prinvesc/README.md#organizationscreateaccount--spawn-an-account-you-fully-own-inside-the-victim-org
+  source_revision: 171e422299
+  summary: A management-account principal can create a new member account, which it fully controls through OrganizationAccountAccessRole, and from it assume roles whose trust allows any principal of the organization (Principal "*" with aws:PrincipalOrgID / aws:PrincipalOrgPaths).
+  requires:
+    all_of:
+      - action: organizations:CreateAccount
+        resource: "*"
+      - action: sts:AssumeRole
+        resource: "arn:{source.partition}:iam::*:role/*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_principal_org: true
+    scope: any
+    aggregate_as: "Roles trusting any principal of the organization"
+  conditions:
+    - id: org_paths_root
+      description: CreateAccount places the new account in the organization root; trusts restricted with aws:PrincipalOrgPaths to a specific OU additionally need organizations:MoveAccount.
+    - id: target_trust_other_conditions
+      description: Additional trust conditions (source IP, VPC, tags) must be satisfiable from the new account.
+    - id: account_quota
+      description: The organization must have account quota left and CreateAccount is asynchronous and visible in CloudTrail.
+    - id: access_role_name
+      description: The admin role created in the new account is OrganizationAccountAccessRole by default but its name is chosen by the caller, so sts:AssumeRole must cover the chosen role name.
+  preconditions:
+    - source_in_org_management_account
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict organizations:CreateAccount to break-glass roles, avoid Principal "*" trusts that rely only on aws:PrincipalOrgID, and pin trusted accounts or role paths instead.
+  references:
+    - https://docs.aws.amazon.com/organizations/latest/APIReference/API_CreateAccount.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalorgid
+  notes: The trust is evaluated with aws:PrincipalOrgID set to the collected organization id and aws:PrincipalOrgPaths to the root path; without the organization inventory the targets are unresolved placeholders.

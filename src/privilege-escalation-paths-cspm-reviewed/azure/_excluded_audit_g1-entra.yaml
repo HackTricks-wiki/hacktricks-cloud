@@ -1,0 +1,103 @@
+# Azure privesc completeness audit (g1-entra): techniques reviewed and intentionally NOT modelled.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectorydevicelocalcredentialspasswordread
+  technique: deviceLocalCredentials/password/read (Windows LAPS)
+  source_revision: a66f094ede
+  reason: Duplicate of azure-intune-laps-local-admin-device-user (same permission; local admin on the device leads to the session of its users).
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-pim-privesc.md#activate-an-eligible-role-in-model-jit-self-elevation
+  technique: Self-activate an eligible Azure resource (RBAC) role via roleAssignmentScheduleRequests SelfActivate
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G1-entra-proposals.md#azure-rbac-pim-eligibility - the directory-role half is modelled by azure-entraid-pim-eligible-role-activation, but
+    there is no requirement kind or selector for Azure resource role eligibility schedules (Microsoft.Authorization/roleEligibilityScheduleInstances).'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#entra-agent-id-blueprint-credential-abuse-agentidentityblueprintaddremovecredsall
+  technique: Blueprint owner / sponsor reaching the blueprint's child agent identities
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G1-entra-proposals.md#agent-blueprint-owner-child-identities - owners reach the blueprint principal through azure-entraid-app-owner-credentials,
+    but no selector restricts entra_agent_blueprint_principal_or_child_identity to blueprints the source owns or sponsors.'
+- source: src/pentesting-cloud/azure-security/az-services/az-azuread.md#change-user-password
+  technique: Reset another user's password
+  source_revision: a66f094ede
+  reason: Duplicate of azure-entraid-reset-password-password-admin, azure-entraid-reset-password-helpdesk-admin, azure-entraid-reset-password-user-admin, azure-entraid-reset-credentials-authentication-admin
+    and azure-entraid-reset-credentials-privileged-auth-admin (the role-specific reset matrix).
+- source: src/pentesting-cloud/azure-security/az-services/az-azuread.md#service-principals
+  technique: Owner or Graph-permitted principal adds a client secret to service principals / apps
+  source_revision: a66f094ede
+  reason: Duplicate of azure-entraid-sp-owner-credentials, azure-entraid-sp-credentials-update, azure-entraid-app-credentials-update and azure-entraid-graph-application-readwrite-all.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-pim-persistence.md#weaken-the-gate-so-activation-stays-silent
+  technique: roleManagementPolicies/write removes MFA, approval and notifications
+  source_revision: a66f094ede
+  reason: Enabler only; the role is still obtained through an eligibility (azure-entraid-pim-eligible-role-activation). Privileged Role Administrator already reaches
+    every role via azure-entraid-role-assignment-manage.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-pim-persistence.md#self-approval-loop
+  technique: Configure a controlled second principal as PIM approver
+  source_revision: a66f094ede
+  reason: Persistence of already-held rights; needs roleManagementPolicies/write (Privileged Role Administrator, already modelled by azure-entraid-role-assignment-manage)
+    and a second controlled principal.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-pim-persistence.md#plant-eligible-assignments
+  technique: roleEligibilityScheduleRequests AdminAssign
+  source_revision: a66f094ede
+  reason: Needs the same rights as an active assignment - Privileged Role Administrator / RoleManagement.ReadWrite.Directory (azure-entraid-role-assignment-manage,
+    azure-entraid-graph-rolemanagement-readwrite-directory) or Owner / User Access Administrator (azure-authorization-roleassignments-write); persistence variant.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-pim-persistence.md#pim-for-groups-as-durable-indirect-privilege
+  technique: Eligible PIM for Groups membership on a role-assignable group
+  source_revision: a66f094ede
+  reason: Duplicate of azure-entraid-graph-pim-groups-eligibility, azure-entraid-graph-pim-groups-active-assignment and azure-entraid-pim-group-eligible-activation;
+    the policy-write variant is an enabler.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-entra-id-governance-persistence.md#connectedorganization-standing-backdoor-persistence
+  technique: connectedOrganization + no-approval access package for an external tenant
+  source_revision: a66f094ede
+  reason: Persistence for identities outside the scanned tenant; the required Identity Governance Administrator / EntitlementManagement.ReadWrite.All already reaches
+    the catalog groups and roles in azure-entraid-entitlement-catalog-self-grant-group / -role.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-entra-id-governance-persistence.md#backdoor-approver--policy-tamper-on-existing-packages-persistence
+  technique: Add self as approver / remove approval on an existing access package
+  source_revision: a66f094ede
+  reason: Duplicate of azure-entraid-entitlement-catalog-self-grant-group and azure-entraid-entitlement-catalog-self-grant-role (same catalog roles, same reached
+    resources); persistence variant.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-intune-persistence.md#self-healing-persistence--defense-evasion-via-configuration-profiles
+  technique: Re-applied Intune configuration profiles / scripts
+  source_revision: a66f094ede
+  reason: Persistence of the same capability modelled by azure-intune-managed-device-user-code-execution (DeviceManagementConfiguration / DeviceManagementScripts
+    ReadWrite.All).
+- source: src/pentesting-cloud/azure-security/az-persistence/az-intune-persistence.md#recurring-rce-via-proactive-remediations-persistence
+  technique: Scheduled SYSTEM execution via deviceHealthScripts
+  source_revision: a66f094ede
+  reason: Duplicate of azure-intune-managed-device-user-code-execution (DeviceManagementScripts.ReadWrite.All is one of its alternatives); recurring execution is
+    persistence.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-intune-post-exploitation.md#loot-secrets-from-existing-deployed-scripts-read-only
+  technique: Read scriptContent of deployed Intune scripts for embedded credentials
+  source_revision: a66f094ede
+  reason: Depends on secret content inside scripts (runtime data never read by the scanner); there is no secret-holder mapping for Intune scripts, so no target principal
+    can be derived.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-intune-post-exploitation.md#fleet-destruction--dos-via-privileged-device-actions
+  technique: Wipe / retire / lock managed devices
+  source_revision: a66f094ede
+  reason: Availability impact (DoS); grants no principal's privileges.
+- source: src/pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md#foci-tokens-privilege-escalation
+  technique: FOCI refresh-token reuse across family clients
+  source_revision: a66f094ede
+  reason: The same user obtains tokens for other first-party clients and scopes; bounded by that user's own permissions, so no other principal's privileges are gained.
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#the-role-assignment-primitive
+  technique: roleAssignments/write at a scope
+  source_revision: a66f094ede
+  reason: Duplicate of azure-authorization-roleassignments-write (authorization.yaml).
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#global-administrator--root-scope-takeover-elevateaccess
+  technique: Global Administrator elevateAccess to root scope
+  source_revision: a66f094ede
+  reason: Duplicate of azure-authorization-elevateaccess-global-admin (authorization.yaml).
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#management-group-scope-one-assignment-many-subscriptions
+  technique: Management-group-scoped role assignment
+  source_revision: a66f094ede
+  reason: Duplicate of azure-authorization-roleassignments-write (scope inheritance is evaluated for every Azure scope).
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#azure-lighthouse-durable-cross-tenant-control-plane-access
+  technique: Lighthouse registrationDefinitions / registrationAssignments to an attacker tenant
+  source_revision: a66f094ede
+  reason: Onboarding needs Owner-level rights at the scope (already scope owner via azure-authorization-roleassignments-write); the beneficiary principals live in
+    a managing tenant outside the scanned graph (persistence).
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#subscription-to-tenant-transfer-re-homing
+  technique: Change a subscription's directory
+  source_revision: a66f094ede
+  reason: Needs a directly assigned subscription Owner (already scope owner); moves resources to another tenant and deletes RBAC - exfiltration/DoS, no principal
+    gained in the scanned tenant.
+- source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-subscription-rbac-and-management-group-attacks.md#management-group-hierarchy-settings-tamper-default-mg-hijack
+  technique: managementGroups/settings/write default-MG hijack
+  source_revision: a66f094ede
+  reason: Only subscriptions created after the change inherit the attacker MG's assignments (future state); no existing principal or scope is reached at scan time.

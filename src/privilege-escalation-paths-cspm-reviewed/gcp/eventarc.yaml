@@ -1,0 +1,45 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+
+# GCP Eventarc privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-eventarc-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-eventarc-pipeline-oauth-token-actas
+  provider: gcp
+  service: eventarc
+  title: Create an Eventarc Advanced pipeline that sends a service account's OAuth token to an attacker endpoint
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-eventarc-privesc.md#eventarcpipelinescreate--iamserviceaccountsactas--receive-an-oauth-token-for-a-service-account
+  source_revision: 171e422
+  summary: A pipeline that uses a service account's OAuth identity could send its access token to a controlled HTTPS receiver, but only after an enrollment routes a matching bus event through that pipeline and the Eventarc service agent can mint the token.
+  requires:
+    all_of:
+      - action: eventarc.pipelines.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_eventarc_oauth_pipeline_path: true
+    scope: any
+    aggregate_as: "Service accounts reachable through Eventarc pipeline OAuth delivery"
+  conditions:
+    - id: enrollment
+      description: The source must route bus events into the pipeline by creating an enrollment on a usable bus, updating an existing enrollment, or creating a bus that it can publish to. The pipeline and enrollment share a project; all three resources share a region, and the bus may belong to another project.
+    - id: service_agent_token
+      description: The pipeline project's Eventarc service agent must hold iam.serviceAccounts.getAccessToken on the selected SA, including an explicit grant when the SA is in another project.
+    - id: matching_event
+      description: At least one matching event must traverse the enrollment (a legitimate event, or one injected with eventarc.messageBuses.publish); enrollment, pipeline and bus must share a region.
+    - id: reachable_receiver
+      description: The attacker HTTPS endpoint must be reachable from Eventarc (internal endpoints need a network attachment); Google's guidance to use OAuth only for *.googleapis.com is not an enforced host restriction.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated Eventarc SAs, restrict eventarc.pipelines.create and enrollments, and alert on pipelines with non-googleapis.com OAuth destinations.
+  references:
+    - https://docs.cloud.google.com/eventarc/docs/reference/rest/v1/projects.locations.pipelines
+    - https://docs.cloud.google.com/eventarc/advanced/docs/access-control
+  notes: The token scope defaults to cloud-platform. roles/eventarc.developer lacks actAs and messageBuses.use. Standard-trigger OIDC tokens are audience-bound and not modelled.

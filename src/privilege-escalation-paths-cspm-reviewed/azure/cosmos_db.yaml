@@ -1,0 +1,178 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Cosmos DB techniques (declarative only).
+# Source: hacktricks-cloud az-cosmosDB-privesc.md (rev 171e422).
+
+- id: azure-cosmos-sql-role-assignment-write
+  provider: azure
+  service: cosmos_db
+  title: Grant a Cosmos DB native NoSQL data-plane role
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountssqlroledefinitionswrite-microsoftdocumentdbdatabaseaccountssqlroledefinitionsread--microsoftdocumentdbdatabaseaccountssqlroleassignmentswrite-microsoftdocumentdbdatabaseaccountssqlroleassignmentsread
+  source_revision: 171e422
+  summary: The source may grant its Entra identity the built-in NoSQL Data Contributor role on a matching account.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write
+        scope: '*'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_cosmos_sql_role_grant: true
+    scope: inherited_scope
+    aggregate_as: Cosmos DB data-plane admins of {target.scope}
+  conditions:
+    - id: role_definition
+      description: The built-in Data Contributor role must be assignable to the source identity on the exact usable NoSQL account.
+    - id: network_reachable
+      description: The source must have an allowed network path to use the resulting data-plane access.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict sqlRoleAssignments/write and sqlRoleDefinitions/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac
+  notes: Native cosmos_account inventory identifies a usable NoSQL account. The selector requires sqlRoleAssignments/write on that account or an ancestor and a valid Entra source object ID. The built-in Data Contributor role makes roleDefinitions/write unnecessary. A grant limited to one assignment child is unresolved because an arbitrary account-wide grant is not established.
+
+- id: azure-cosmos-mongodb-user-definition-write
+  provider: azure
+  service: cosmos_db
+  title: Create a privileged Cosmos DB for MongoDB user
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountsmongodbroledefinitionswrite--microsoftdocumentdbdatabaseaccountsmongodbroledefinitionsread-microsoftdocumentdbdatabaseaccountsmongodbuserdefinitionswrite--microsoftdocumentdbdatabaseaccountsmongodbuserdefinitionsread
+  source_revision: 171e422
+  summary: The source may create a password-controlled MongoDB user with the built-in dbOwner role on a named database.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/databaseAccounts/mongodbUserDefinitions/write
+        scope: '*'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_cosmos_mongo_user_write: true
+    scope: inherited_scope
+    aggregate_as: MongoDB database access through {target.scope}
+  conditions:
+    - id: mongo_rbac_enabled
+      description: The account must be a usable MongoDB account with native MongoDB RBAC enabled.
+    - id: database_user_created
+      description: The user definition must be accepted for a database that exists, with a controlled password and the built-in dbOwner role.
+    - id: network_reachable
+      description: Account firewall must allow the source.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mongodbUserDefinitions/write; limit mongodbRoleDefinitions/write where custom roles are needed.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/how-to-setup-rbac
+  notes: Native cosmos_account inventory binds the account kind, state and EnableMongoRoleBasedAccessControl capability. The selector requires mongodbUserDefinitions/write inherited from the account or ancestor, which can create users for named databases; roleDefinitions/write is only needed to create a custom role. A child-only grant remains unresolved because it does not establish account-wide coverage.
+
+- id: azure-cosmos-mongocluster-admin-password
+  provider: azure
+  service: cosmos_db
+  title: Change the MongoDB vCore cluster administrator password
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbmongoclustersread--microsoftdocumentdbmongoclusterswrite
+  source_revision: 171e422
+  summary: The source may reset the administrator password of a usable primary MongoDB vCore cluster.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/mongoClusters/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_mongo_cluster_admin_password: true
+    scope: inherited_scope
+    aggregate_as: MongoDB cluster admins of {target.scope}
+  conditions:
+    - id: password_reset_succeeds
+      description: The administrator password update must be accepted by the primary cluster.
+    - id: network_reachable
+      description: Cluster firewall must allow the source (firewallRules/write can add a rule).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mongoClusters/write and prefer Entra authentication.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/vcore/
+  notes: Native mongo_cluster inventory binds the exact primary cluster and its provisioning state. The selector checks mongoClusters/write on that cluster; native authentication can be enabled through the same update permission when necessary. Network access remains conditional.
+
+- id: azure-cosmos-other-api-role-assignment-write
+  provider: azure
+  service: cosmos_db
+  title: Grant a Cosmos DB native data-plane role on the Cassandra, Gremlin, Table or MongoDB API
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#same-native-rbac-self-grant-on-the-other-cosmos-apis-cassandra--gremlin--table--mongodb-account
+  source_revision: a66f094ede
+  summary: The source may grant its own Entra identity data-plane access on a matching Cosmos DB API account.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleDefinitions/write
+          scope: '*'
+        - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleAssignments/write
+          scope: '*'
+      - - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleDefinitions/write
+          scope: '*'
+        - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleAssignments/write
+          scope: '*'
+      - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleDefinitions/write
+          scope: '*'
+        - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
+          scope: '*'
+      - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
+          scope: '*'
+      - - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleDefinitions/write
+          scope: '*'
+        - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleAssignments/write
+          scope: '*'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_cosmos_other_api_role_grant: true
+    scope: inherited_scope
+    aggregate_as: Cosmos DB data-plane admins of {target.scope}
+  conditions:
+    - id: role_assignment_accepted
+      description: The matching API must accept an account-wide role assignment for the source's Entra principal; the Table branch can use a built-in contributor role.
+    - id: network_reachable
+      description: Account firewall must allow the source.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the per-API role assignment and role definition write actions.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/cosmos-db-resource-provider/
+  notes: Native account inventory identifies the API capability and usable state. The selector checks matching role writes on the exact account, including inherited grants and deny assignments. A permission for one API or another account cannot produce this edge. The role assignment and network path remain conditional.
+
+- id: azure-cosmos-mongocluster-user-write
+  provider: azure
+  service: cosmos_db
+  title: Register an Entra principal as a MongoDB vCore cluster user
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbmongoclusterslistconnectionstringsaction--mongoclustersusersread--userswrite
+  source_revision: 171e422
+  summary: The source may grant its own Entra principal the root database role on a usable MongoDB vCore primary cluster.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/mongoClusters/users/write
+        scope: '*'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_mongo_cluster_self_root: true
+    scope: inherited_scope
+    aggregate_as: MongoDB vCore cluster admins of {target.scope}
+  conditions:
+    - id: entra_auth_enabled
+      description: Entra authentication must be enabled, or the source must also be able to enable it with mongoClusters/write.
+    - id: root_assignment_succeeds
+      description: The user's role assignment must be accepted with the root role on the admin database.
+    - id: network_reachable
+      description: Cluster firewall or private endpoint must allow the source.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mongoClusters/users/write and keep clusters on private networking.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/vcore/entra-authentication
+  notes: Native mongo_cluster GET binds the exact usable primary cluster. The selector checks users/write on the source principal's exact users child, accepting inherited parent grants, and checks mongoClusters/write if Entra authentication is disabled. The source must be a usable Entra user, service principal or managed identity; network access remains conditional.

@@ -1,0 +1,153 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Functions privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudfunctions-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Deploying/updating a function requires actAs on the runtime SA and on a user-managed or Compute default build SA (Google
+# documents Service Account User on both); only the legacy Google-owned builder is exempt. Source upload is
+# cloudfunctions.functions.sourceCodeSet on the project/location for GenerateUploadUrl. Triggering the function may need cloudfunctions.functions.invoke (gen1) or run.routes.invoke (gen2).
+
+- id: gcp-cloudfunctions-create-actas
+  provider: gcp
+  service: cloudfunctions
+  title: Create a Cloud Function running as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#cloudfunctionsfunctionscreate--source-upload--iamserviceaccountsactas--create-a-runtime-token-oracle
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cloudfunctions_create_path: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Functions runtime SA in {project}"
+  conditions:
+    - id: supported_location
+      description: The selected region must be returned by the Cloud Functions locations API and have an observed default Cloud Build identity.
+    - id: build_sa_actas
+      description: The selector checks actAs on the observed default build SA unless it is the legacy Google-owned builder; a custom build SA is not inferred.
+    - id: trigger
+      description: The selector checks project-wide invocation rights; event triggers and other callers remain unresolved.
+    - id: prepared_storage_source
+      description: An existing Cloud Storage source may also be deployable but is unresolved without a concrete source object.
+    - id: cross_project_sa
+      description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced; not modelled.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant roles/iam.serviceAccountUser only on specific SAs and restrict roles/cloudfunctions.developer.
+  references:
+    - https://cloud.google.com/functions/docs/securing/function-identity
+    - https://docs.cloud.google.com/functions/docs/reference/rest/v2/projects.locations.functions/generateUploadUrl
+
+- id: gcp-cloudfunctions-update-sourcecodeset-actas
+  provider: gcp
+  service: cloudfunctions
+  title: Replace an existing function's code or attached service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#cloudfunctionsfunctionsupdate--source-upload--replace-an-existing-privileged-function
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by redeploying an existing function.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cloudfunctions_existing_source_update_path: true
+    scope: same_project
+    aggregate_as: "Service accounts attachable to existing functions in {project}"
+  conditions:
+    - id: existing_function
+      description: Needs an active existing function on which update and source-upload rights hold. An observed event trigger or invocation right supports execution; other callers remain unresolved.
+    - id: build_sa_actas
+      description: actAs is also checked on the configured or default build SA, except for the legacy Google-owned Cloud Build account.
+    - id: trigger
+      description: Triggering may require invoke permission or an event the source controls.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict cloudfunctions.functions.update and grant actAs only on specific SAs.
+  notes: Update without actAs on the runtime and build SAs is rejected. A redeploy that omits the SA must preserve the existing runtime/build identity, otherwise the identity (and actAs requirement) changes.
+
+- id: gcp-cloudfunctions-update-env-actas
+  provider: gcp
+  service: cloudfunctions
+  title: Run code through a Node.js function's startup options
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#cloudfunctionsfunctionsupdate--inject-a-startup-loader-without-source-update-permission
+  source_revision: 171e422
+  summary: The source can execute an inline startup module in an active Node.js function when it can update the function's environment and act as its runtime and build service accounts.
+  requires:
+    all_of:
+      - action: cloudfunctions.functions.update
+        resource: "{target.host_resource}"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudfunctions_function
+      gcp_actas_granted_on_target: true
+      gcp_cloudfunctions_env_startup_path: true
+    scope: same_project
+    aggregate_as: "SAs of functions whose configuration the source can update"
+  conditions:
+    - id: inline_node_import
+      description: Node.js 20 and later accept an inline data-URL module through the NODE_OPTIONS --import option, avoiding a pre-existing payload file.
+    - id: build_sa_actas
+      description: The selector checks actAs on the configured or default build SA, except for the legacy Google-owned builder.
+    - id: trigger
+      description: The selector requires an observed event trigger or invocation right on the function or its Cloud Run service.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cloudfunctions.functions.update and actAs on function SAs.
+  notes: Needs no source-upload permission. Other interpreter startup routes stay unresolved unless their payload and execution conditions are recorded.
+  references:
+    - https://nodejs.org/api/cli.html#--importmodule
+    - https://docs.cloud.google.com/functions/docs/reference/iam/roles
+
+- id: gcp-cloudfunctions-source-deploy-build-identity
+  provider: gcp
+  service: cloudfunctions
+  title: Run attacker build hooks as a function's build service account during source deployment
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudfunctions-privesc.md#source-deploy--selected-build-service-account--execute-as-the-builder-before-deployment
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the build service account selected for a function it can create or update from source.
+  requires:
+    all_of: []
+  source_kind:
+    - gcp_user
+    - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_cloudfunctions_source_deploy_build_path: true
+    scope: same_project
+    aggregate_as: Build identity selected for functions in {project}
+  conditions:
+  - id: runtime_sa_actas
+    description: The selector checks actAs on a candidate runtime SA for create or the exact runtime SA of an existing function for update.
+  - id: build_sa_actas
+    description: Existing functions require actAs on a selected Compute or user-managed builder; creation is reported for an observed legacy builder, while an unproven new build stays unresolved.
+  - id: build_hook
+    description: The selected runtime/buildpack must execute a supplied build hook (e.g. a package.json build or gcp-build script) and egress must allow the proof channel.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Configure a dedicated least-privilege build SA for functions and remove Editor from the Compute default and legacy Cloud Build SAs.
+  references:
+  - https://docs.cloud.google.com/functions/docs/securing/build-custom-sa
+  - https://docs.cloud.google.com/build/docs/cloud-build-service-account-updates
+  notes: Build-stage credentials are obtained before the function image is deployed, so invocation is unnecessary. Deployment still needs authorization to use the runtime SA.

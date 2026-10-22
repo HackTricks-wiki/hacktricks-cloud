@@ -1,0 +1,32 @@
+# A redirected service endpoint creates no path until a victim actually sends
+# a usable, subject-bound credential and the source gains a new target action.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: gcp-agentregistry-service-redirect-exact-external-principal
+  provider: gcp
+  service: agentregistry
+  title: Capture one bound agent credential through a service endpoint redirect
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryservicesupdate--redirect-a-bound-target-and-capture-its-agent-identity-credential
+  source_revision: f0f683242a
+  summary: Updating an existing bound Agent Registry service URL may route a later authorized agent invocation to a controlled endpoint and reveal that agent's provider credential, reaching a named external principal only if the credential is captured and newly authorizes an exact API action.
+  requires:
+    all_of:
+    - action: agentregistry.services.update
+      resource: '{target.resource}'
+    - action: serviceusage.services.use
+      resource: '{target.quota_project}'
+  target:
+    kind: gcp_external_principal
+    selector:
+      gcp_external_principal_evidence: true
+      gcp_external_plane: agent_registry_provider
+    scope: any
+    outcome: credentials
+    aggregate_as: Exact provider principal whose credential was captured and tested
+  conditions:
+  - id: bound_agent_credential_capture
+    description: A unique reviewed record must bind the changed Service URL, unchanged projected URN and auth-provider Binding, later authorized victim invocation, controlled receiver capture, usable subject-bound credential, prior source denial, and newly allowed action on the exact provider resource.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Agent Registry service updates and validate destinations of credential-bearing bound services.
+  notes: QuotaProject records the exact project used for serviceusage.services.use and can differ from the Service project. TargetPlane must be agent_registry_provider. TargetServiceResource may be the exact HTTPS provider API resource; TargetPrincipalId and ObservedPrincipalId must be the credential's verified provider subject. Endpoint redirection, an API-key-shaped string, or an uninvoked binding alone creates no edge.

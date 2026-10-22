@@ -1,0 +1,1836 @@
+# GCP resource IAM self-grants. Every entry requires a concrete policy-write action. Artifact Registry, Secret Manager, Cloud KMS, Compute disks, and Pub/Sub also model prospective grants on inventoried resources when current access and policy blockers are checked. Other entries may require typed reviewed evidence of a new effective permission on an exact resource. A policy write alone, or a mere data read, never creates a named path.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: gcp-artifactregistry-repositories-setiampolicy-repository-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: artifactregistry
+  title: Self-grant upload access to an Artifact Registry repository
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriessetiampolicy--self-grant-control-of-a-repository
+  source_revision: 171e422
+  summary: The source can change an inventoried repository's IAM policy to grant itself upload access on that repository when it lacks that permission.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - artifactregistry.repositories.uploadArtifacts
+    aggregate_as: Repository upload access the source could grant itself
+  conditions:
+  - id: exact_repository_policy
+    description: Requires an inventoried standard repository, policy-write authority on that repository, and no current upload grant; incomplete IAM, group, org policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict artifactregistry.repositories.setIamPolicy on repositories with sensitive artifacts or trusted consumers and review self-directed IAM policy changes.
+  notes: A repository Writer role can be granted on one repository. The path is conditional until the IAM mutation succeeds; a reviewed accepted mutation can provide direct evidence.
+- id: gcp-connectors-connections-setiampolicy-connection-self-grant
+  provider: gcp
+  service: connectors
+  title: Self-grant connectors.connections.executeSqlQuery on a connection
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-integration-connectors-privesc.md#connectorsconnectionssetiampolicy--resource-level-self-grant-to-use-a-connection
+  source_revision: a1de13ac34
+  summary: A principal with connectors.connections.setIamPolicy on an exact active connection can grant itself
+    the Connector Invoker role and gain a connection-use permission it did not already have.
+  requires:
+    all_of:
+    - action: connectors.connections.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - connectors.connections.executeSqlQuery
+    aggregate_as: Verified connection self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires either complete source-bound evidence of an accepted self-grant or a unique active connection
+      with collected IAM policy, role, prior-access, and policy-write facts. The inferred path remains conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict connectors.connections.setIamPolicy on protected connection resources and review self-directed IAM
+    policy changes.
+  notes: The policy write alone does not create a path. The gcp_resource_self_grant_evidence record must prove this exact
+    permission gain for the acting principal on GrantedResource.
+- id: gcp-compute-machineimages-setiampolicy-machine-image-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: compute
+  title: Self-grant compute.machineImages.useReadOnly on a machine image
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computemachineimagessetiampolicy
+  source_revision: a1de13ac34
+  summary: The source may grant itself compute.machineImages.useReadOnly on an exact ready machine image when it can safely update that image's IAM policy and did not already have the permission.
+  requires:
+    all_of:
+    - action: compute.machineImages.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.machineImages.useReadOnly
+    aggregate_as: Machine image read-only use the source could grant itself
+  conditions:
+  - id: exact_machine_image_policy
+    description: The exact ready machine image and its IAM policy are collected, the source can get and set that policy, and roles/compute.admin can add a new useReadOnly permission. A reviewed accepted mutation remains another proof route.
+  - id: reconstruction
+    description: Reconstructing data from the machine image needs separate VM or disk creation, any required CMEK access, and a usable service-account choice.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict compute.machineImages.setIamPolicy on protected machine image resources and review self-directed IAM
+    policy changes.
+  notes: Google documents roles/compute.admin as grantable on an individual machine image. The modeled edge is the new machineImages.useReadOnly permission, not direct access to its disk bytes. Missing policy, prior access, role, or effective constraints leave the prospective path unresolved; reviewed accepted self-grant evidence remains supported.
+- id: gcp-compute-snapshots-setiampolicy-snapshot-self-grant
+  provider: gcp
+  service: compute
+  title: Grant yourself read-only use of a snapshot
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computesnapshotssetiampolicy
+  source_revision: a1de13ac34
+  summary: A policy writer on a ready global or regional snapshot may grant itself useReadOnly on that exact snapshot.
+  requires:
+    all_of:
+    - action: compute.snapshots.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.snapshots.useReadOnly
+    aggregate_as: Snapshot self-grant to the source
+  conditions:
+  - id: exact_snapshot_policy
+    description: Requires a unique ready global or regional snapshot, its readable IAM policy, derived policy-write permission, an applicable grantable role, no prior useReadOnly access, and complete deny and organization-policy evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict compute.snapshots.setIamPolicy on protected snapshot resources and review self-directed IAM policy
+    changes.
+  notes: A prospective path is conditional because the policy change is not attempted. roles/compute.storageAdmin includes useReadOnly and is grantable on a snapshot. A reviewed accepted mutation can also prove the exact gain. This permission does not by itself expose disk bytes; later use needs separate creation permissions and any CMEK access.
+- id: gcp-compute-disks-setiampolicy-disk-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: compute
+  title: Self-grant compute.disks.useReadOnly on a disk
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computediskssetiampolicy
+  source_revision: a1de13ac34
+  summary: The source can add its own IAM binding to an exact disk it can administer and gain compute.disks.useReadOnly when it lacks that permission.
+  requires:
+    all_of:
+    - action: compute.disks.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.disks.useReadOnly
+    aggregate_as: Disk read-only use the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: The exact zonal or regional disk is inventoried with a readable IAM policy; the source can set that policy but lacks compute.disks.useReadOnly on the disk. An independently reviewed accepted mutation remains a second supported proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict compute.disks.setIamPolicy on protected disk resources and review self-directed IAM policy changes.
+  notes: The source can add roles/compute.storageAdmin to its own disk policy to gain compute.disks.useReadOnly. This grants a new permission on that disk, but copying, imaging or attaching its bytes requires separate permissions and may face disk or CMEK constraints.
+- id: gcp-gkehub-memberships-setiampolicy-membership-self-grant
+  provider: gcp
+  service: gkehub
+  title: Self-grant gkehub.gateway.generateCredentials on a membership
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-privesc.md#gkehubmembershipssetiampolicy--self-grant-connect-gateway-access
+  source_revision: a1de13ac34
+  summary: The source can use gkehub.memberships.setIamPolicy on an exact membership to add its own IAM binding and gain gkehub.gateway.generateCredentials where that permission is absent.
+  requires:
+    all_of:
+    - action: gkehub.memberships.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - gkehub.gateway.generateCredentials
+    aggregate_as: Verified membership self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: A prospective path needs the exact registered membership, its readable IAM policy, a known Gateway Reader role, and verified absence of prior access. An independently reviewed accepted mutation is a second proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict gkehub.memberships.setIamPolicy on protected membership resources and review self-directed IAM policy changes.
+  notes: A collected, ready membership with a readable resource IAM policy supports a prospective self-grant when the source lacks gateway credentials and can write that policy. A reviewed accepted mutation remains a second proof route. Gateway transport still needs operation-specific permissions and in-cluster RBAC for a Kubernetes action.
+- id: gcp-iap-tunnelinstances-setiampolicy-instance-self-grant
+  provider: gcp
+  service: iap
+  title: Self-grant IAP tunnel access on an instance
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iap-privesc.md#iaptunnelinstancessetiampolicy--iaptunnelzonessetiampolicy
+  source_revision: a1de13ac34
+  summary: The source can add its own IAP tunnel access on an existing VM when it can write that VM's IAP policy and does not already have the permission.
+  requires:
+    all_of:
+    - action: iap.tunnelInstances.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - iap.tunnelInstances.accessViaIAP
+    aggregate_as: Verified instance self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires an exact existing VM, complete IAP instance, zone and project policies, a known Tunnel User role, effective policy-write authority and verified absence of prior tunnel access. An independently reviewed accepted mutation is a second proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iap.tunnelInstances.setIamPolicy on protected instance resources and review self-directed IAM policy
+    changes.
+  notes: The prospective edge represents a new IAP tunnel permission on the exact VM. Firewall, guest authentication and runtime IAM Conditions can still limit use. A reviewed accepted mutation remains a second proof route.
+  references:
+  - https://docs.cloud.google.com/iap/docs/managing-access
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/iap
+- id: gcp-iap-tunnelzones-setiampolicy-zone-self-grant
+  provider: gcp
+  service: iap
+  title: Self-grant IAP tunnel access across a zone
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iap-privesc.md#iaptunnelinstancessetiampolicy--iaptunnelzonessetiampolicy
+  source_revision: a1de13ac34
+  summary: The source can add its own IAP tunnel access to at least one existing VM in a zone when it can write that zone's IAP policy and lacks access to that VM.
+  requires:
+    all_of:
+    - action: iap.tunnelZones.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - iap.tunnelInstances.accessViaIAP
+    aggregate_as: Verified zone self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires an exact existing VM in the zone, complete IAP instance, zone and project policies, a known Tunnel User role, effective zone policy-write authority and verified absence of prior tunnel access to that VM. An independently reviewed accepted mutation is a second proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iap.tunnelZones.setIamPolicy on protected zone resources and review self-directed IAM policy changes.
+  notes: The prospective edge represents a new IAP tunnel permission on at least one named VM in the zone. Firewall, guest authentication and runtime IAM Conditions can still limit use. A reviewed accepted mutation remains a second proof route.
+  references:
+  - https://docs.cloud.google.com/iap/docs/managing-access
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/iap
+- id: gcp-cloudkms-cryptokeys-setiampolicy-crypto-key-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: cloudkms
+  title: Self-grant cloudkms.cryptoKeyVersions.useToDecrypt on a crypto key
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-kms-privesc.md#cloudkmscryptokeyssetiampolicy
+  source_revision: a1de13ac34
+  summary: The source can edit an inventoried crypto key's IAM policy to give itself decrypt permission when it does not already have that permission.
+  requires:
+    all_of:
+    - action: cloudkms.cryptoKeys.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - cloudkms.cryptoKeyVersions.useToDecrypt
+    aggregate_as: Crypto key decrypt access the source could grant itself
+  conditions:
+  - id: exact_crypto_key_policy
+    description: Requires an inventoried decrypt-capable key, an enabled version, policy-write authority on that key, and no current decrypt grant; incomplete key, IAM, group, org policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict cloudkms.cryptoKeys.setIamPolicy on protected crypto key resources and review self-directed IAM policy
+    changes.
+  notes: Crypto Key Decrypter can be granted on one key. A prospective path is conditional because the IAM mutation has not been attempted; a reviewed accepted mutation can also provide direct evidence.
+- id: gcp-secretmanager-secrets-setiampolicy-secret-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: secretmanager
+  title: Self-grant secretmanager.versions.access on a secret
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secretmanager-privesc.md#secretmanagersecretssetiampolicy
+  source_revision: a1de13ac34
+  summary: The source can use secretmanager.secrets.setIamPolicy on an inventoried secret to add its own Secret Accessor binding when it does not already have version access.
+  requires:
+    all_of:
+    - action: secretmanager.secrets.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - secretmanager.versions.access
+    aggregate_as: Secret access the source could grant itself
+  conditions:
+  - id: exact_secret_policy
+    description: Requires an inventoried secret, policy-write authority on that secret, and no current version-access grant; incomplete direct IAM, group membership, org policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict secretmanager.secrets.setIamPolicy on protected secret resources and review self-directed IAM policy
+    changes.
+  notes: A Secret Manager Secret Accessor role can be granted on one secret. A prospective path is conditional because the IAM mutation has not been attempted; a reviewed accepted mutation can also provide direct evidence.
+- id: gcp-compute-recoverablesnapshots-setiampolicy-recoverable-snapshot-self-grant
+  provider: gcp
+  service: compute
+  title: Grant yourself recovery access to a recoverable snapshot
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computerecoverablesnapshotssetiampolicy
+  source_revision: a1de13ac34
+  summary: A policy writer on a ready recoverable snapshot may grant itself recover permission on that exact snapshot.
+  requires:
+    all_of:
+    - action: compute.recoverableSnapshots.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.recoverableSnapshots.recover
+    aggregate_as: Recoverable snapshot self-grant to the source
+  conditions:
+  - id: exact_recoverable_snapshot_policy
+    description: Requires a unique ready recoverable snapshot, its readable IAM policy, derived policy-write permission, an applicable grantable role, no prior recover access, and complete deny and organization-policy evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict compute.recoverableSnapshots.setIamPolicy on protected recoverable snapshot resources and review self-directed
+    IAM policy changes.
+  notes: A prospective path is conditional because the policy change is not attempted. roles/compute.storageAdmin includes recover permission and can be granted on a recoverable snapshot. A reviewed accepted mutation can also prove the exact gain. Recovering the snapshot does not itself prove access to its disk data; later use has separate permissions and encryption requirements.
+- id: gcp-containeranalysis-notes-setiampolicy-note-self-grant
+  provider: gcp
+  service: containeranalysis
+  title: Self-grant containeranalysis.notes.attachOccurrence on a note
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-container-analysis-privesc.md#containeranalysisnotessetiampolicy--self-grant-control-of-one-note
+  source_revision: a1de13ac34
+  summary: Effective containeranalysis.notes.setIamPolicy on an exact note can add an unconditional Notes Attacher
+    binding for the caller and grant containeranalysis.notes.attachOccurrence when that permission was absent before.
+  requires:
+    all_of:
+    - action: containeranalysis.notes.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - containeranalysis.notes.attachOccurrence
+    aggregate_as: Note self-grant to the source
+  conditions:
+  - id: exact_note_self_grant
+    description: Requires an exact global or regional note, effective policy-write access, a grantable Notes Attacher role,
+      absent prior attach access, readable note and ancestor policies, and complete deny and organization-policy evidence; a reviewed accepted mutation can instead prove the exact gain.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict containeranalysis.notes.setIamPolicy on protected note resources and review self-directed IAM policy
+    changes.
+  notes: A prospective path is conditional because the policy change is not attempted. The gain is limited to attaching
+    occurrences to the note; creating an occurrence and meeting Binary Authorization signature requirements are separate.
+    A reviewed accepted mutation can also prove the exact gain.
+- id: gcp-datacatalog-categories-setiampolicy-policy-tag-self-grant
+  provider: gcp
+  service: datacatalog
+  title: Self-grant datacatalog.categories.fineGrainedGet on a policy tag
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataplex-privesc.md#datacatalogcategoriessetiampolicy--self-grant-fine-grained-access-to-policy-tagged-bigquery-columns
+  source_revision: a1de13ac34
+  summary: Effective datacatalog.categories.setIamPolicy on an exact policy tag can add a Fine-Grained Reader binding
+    for the caller and grant datacatalog.categories.fineGrainedGet when that permission was absent before.
+  requires:
+    all_of:
+    - action: datacatalog.categories.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - datacatalog.categories.fineGrainedGet
+    aggregate_as: Policy tag self-grant to the source
+  conditions:
+  - id: exact_policy_tag_self_grant
+    description: Requires an exact policy tag, effective policy-write access, a grantable Fine-Grained Reader role,
+      active fine-grained enforcement, absent prior reader access through the tag hierarchy, readable tag and ancestor
+      policies, and complete deny and organization-policy evidence; a reviewed accepted mutation can instead prove the exact gain.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict datacatalog.categories.setIamPolicy on protected policy tag resources and review self-directed IAM
+    policy changes.
+  notes: A prospective path is conditional because the policy change is not attempted. The grant satisfies the policy-tag
+    permission only; reading a protected BigQuery column also requires ordinary table access, a query job and active
+    column-level enforcement. A reviewed accepted mutation can also prove the exact gain.
+- id: gcp-metastore-services-setiampolicy-metastore-service-self-grant
+  provider: gcp
+  service: metastore
+  title: Self-grant metastore.services.use on a metastore service
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataproc-metastore-privesc.md#metastoreservicessetiampolicy---grant-access-to-grpc-metadata
+  source_revision: a1de13ac34
+  summary: Effective metastore.services.setIamPolicy on an active gRPC service can add a Metadata Viewer binding for
+    the caller and grant metastore.services.use when that permission was absent before.
+  requires:
+    all_of:
+    - action: metastore.services.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - metastore.services.use
+    aggregate_as: Metastore service self-grant to the source
+  conditions:
+  - id: exact_grpc_metastore_service_self_grant
+    description: Requires an exact active gRPC Metastore service, effective policy-write access, a grantable Metadata
+      Viewer role, absent prior service-use permission, readable service and ancestor policies, and complete deny and
+      organization-policy evidence; a reviewed accepted mutation can instead prove the exact gain.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict metastore.services.setIamPolicy on protected metastore service resources and review self-directed IAM
+    policy changes.
+  notes: A prospective path is conditional because the policy change is not attempted. Service-use permission is only
+    one requirement for reading metadata; network and perimeter reachability remain separate. A reviewed accepted
+    mutation must also bind the exact active gRPC service.
+- id: gcp-analyticshub-listings-setiampolicy-listing-self-grant
+  provider: gcp
+  service: analyticshub
+  title: Self-grant analyticshub.listings.subscribe on a listing
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-analytics-hub-privesc.md#analyticshublistingssetiampolicy--analyticshubdataexchangessetiampolicy--self-grant-subscription-authority
+  source_revision: a1de13ac34
+  summary: The source can use analyticshub.listings.setIamPolicy on an exact listing to add its own subscriber
+    binding and gain analyticshub.listings.subscribe if it does not already hold that permission.
+  requires:
+    all_of:
+    - action: analyticshub.listings.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - analyticshub.listings.subscribe
+    aggregate_as: Verified listing self-grant to the source
+  conditions:
+  - id: exact_listing_policy_or_reviewed_mutation
+    description: The exact listing and complete listing and parent exchange policies must show a policy-write right and no existing subscription right, or a unique reviewed mutation must prove the new permission on that listing.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict analyticshub.listings.setIamPolicy on protected listing resources and review self-directed IAM policy
+    changes.
+  notes: The prospective path needs a collected listing, complete listing and parent exchange IAM policies and prior access checks; unresolved group, deny or organization policy facts remain unknown. A reviewed accepted mutation can also prove the exact new permission. Neither path claims a subscription or data read occurred.
+- id: gcp-analyticshub-dataexchanges-setiampolicy-data-exchange-self-grant
+  provider: gcp
+  service: analyticshub
+  title: Self-grant analyticshub.dataExchanges.subscribe on a data exchange
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-analytics-hub-privesc.md#analyticshublistingssetiampolicy--analyticshubdataexchangessetiampolicy--self-grant-subscription-authority
+  source_revision: a1de13ac34
+  summary: The source can use analyticshub.dataExchanges.setIamPolicy on an exact data exchange to add its own subscriber
+    binding and gain analyticshub.dataExchanges.subscribe if it does not already hold that permission.
+  requires:
+    all_of:
+    - action: analyticshub.dataExchanges.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - analyticshub.dataExchanges.subscribe
+    aggregate_as: Verified data exchange self-grant to the source
+  conditions:
+  - id: exact_exchange_policy_or_reviewed_mutation
+    description: The exact exchange and complete policy must show a policy-write right and no existing subscription right, or a unique reviewed mutation must prove the new permission on that exchange.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict analyticshub.dataExchanges.setIamPolicy on protected data exchange resources and review self-directed
+    IAM policy changes.
+  notes: The prospective path needs a collected exchange, complete exchange IAM policy and prior access checks; unresolved group, deny or organization policy facts remain unknown. A reviewed accepted mutation can also prove the exact new permission. Neither path claims a subscription or data read occurred.
+- id: gcp-biglake-catalogs-setiampolicy-catalog-self-grant
+  provider: gcp
+  service: biglake
+  title: Self-grant biglake.catalogs.get on a catalog
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-biglake-privesc.md#biglakecatalogsnamespacestablessetiampolicy--self-grant-on-a-lakehouse-resource
+  source_revision: a1de13ac34
+  summary: The source uses biglake.catalogs.setIamPolicy on an exact catalog to add its own IAM binding and gain biglake.catalogs.get,
+    which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: biglake.catalogs.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - biglake.catalogs.get
+    aggregate_as: Catalog read access the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires an inventoried catalog, its collected IAM policy, effective setIamPolicy authority on that exact catalog,
+      and no existing biglake.catalogs.get access. A verified policy mutation may also prove the grant.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict biglake.catalogs.setIamPolicy on protected catalog resources and review self-directed IAM policy changes.
+  notes: An exact catalog policy write with complete access evidence creates a conditional prospective path. Missing policy,
+    inventory, deny, group, or organization-policy evidence leaves the path unresolved. A verified mutation can prove the grant.
+- id: gcp-biglake-namespaces-setiampolicy-namespace-self-grant
+  provider: gcp
+  service: biglake
+  title: Self-grant biglake.namespaces.get on a namespace
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-biglake-privesc.md#biglakecatalogsnamespacestablessetiampolicy--self-grant-on-a-lakehouse-resource
+  source_revision: a1de13ac34
+  summary: The source uses biglake.namespaces.setIamPolicy on an exact namespace to add its own IAM binding and gain biglake.namespaces.get,
+    which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: biglake.namespaces.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - biglake.namespaces.get
+    aggregate_as: Namespace read access the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires an inventoried namespace, its collected IAM policy and parent catalog policy, effective setIamPolicy authority on that exact namespace,
+      and no existing biglake.namespaces.get access. A verified policy mutation may also prove the grant.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict biglake.namespaces.setIamPolicy on protected namespace resources and review self-directed IAM policy
+    changes.
+  notes: An exact namespace policy write with complete access evidence creates a conditional prospective path. Missing policy,
+    inventory, deny, group, or organization-policy evidence leaves the path unresolved. A verified mutation can prove the grant.
+- id: gcp-biglake-tables-setiampolicy-table-self-grant
+  provider: gcp
+  service: biglake
+  title: Self-grant biglake.tables.get on a table
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-biglake-privesc.md#biglakecatalogsnamespacestablessetiampolicy--self-grant-on-a-lakehouse-resource
+  source_revision: a1de13ac34
+  summary: The source uses biglake.tables.setIamPolicy on an exact table to add its own IAM binding and gain biglake.tables.get,
+    which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: biglake.tables.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - biglake.tables.get
+    aggregate_as: Table metadata access the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires an inventoried table, its collected IAM policy and both parent policies, effective setIamPolicy authority on that exact table,
+      and no existing biglake.tables.get access. A verified policy mutation may also prove the grant.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict biglake.tables.setIamPolicy on protected table resources and review self-directed IAM policy changes.
+  notes: An exact table policy write with complete access evidence creates a conditional prospective path. Missing policy,
+    inventory, deny, group, or organization-policy evidence leaves the path unresolved. A verified mutation can prove the grant.
+- id: gcp-bigquery-datasets-setiampolicy-dataset-iam-self-grant
+  provider: gcp
+  service: bigquery
+  title: Self-grant bigquery.tables.getData on a dataset iam
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerydatasetsupdate--bigquerydatasetssetiampolicy--self-grant-dataset-access
+  source_revision: a1de13ac34
+  summary: The source uses bigquery.datasets.setIamPolicy on an exact dataset iam to add its own IAM binding and gain bigquery.tables.getData,
+    which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: bigquery.datasets.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigquery.tables.getData
+    aggregate_as: Table data access the source could grant itself through the dataset
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires a collected dataset ACL and one exact data table with collected table IAM policy, effective setIamPolicy authority on the dataset,
+      and no existing data read access to that table. A verified policy mutation may also prove the grant.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigquery.datasets.setIamPolicy on protected dataset iam resources and review self-directed IAM policy
+    changes.
+  notes: The prospective path uses BigQuery dataset PATCH with updateMode UPDATE_ACL under fine-grained dataset ACL enforcement.
+    A grant of roles/bigquery.dataViewer on the dataset can add data read access to the named table. Incomplete ACL, table IAM,
+    group, deny, or organization-policy evidence leaves the path unresolved.
+- id: gcp-bigquery-datasets-update-dataset-acl-self-grant
+  provider: gcp
+  service: bigquery
+  title: Self-grant bigquery.tables.getData on a dataset acl
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerydatasetsupdate--bigquerydatasetssetiampolicy--self-grant-dataset-access
+  source_revision: a1de13ac34
+  summary: When fine-grained dataset ACL enforcement is disabled, the source can use bigquery.datasets.update on an exact
+    dataset ACL to grant itself bigquery.tables.getData on a table it could not read before.
+  requires:
+    all_of:
+    - action: bigquery.datasets.update
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigquery.tables.getData
+    aggregate_as: Verified dataset acl self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigquery.datasets.update on protected dataset acl resources and review self-directed IAM policy changes.
+  notes: This path applies only when the effective fine-grained dataset ACL setting is known to be disabled. When enabled,
+    ACL changes require bigquery.datasets.setIamPolicy and are covered by the separate dataset IAM technique. The prospective
+    path also requires an existing named table, complete ACL and table IAM evidence, and no prior table data access.
+- id: gcp-bigquery-connections-setiampolicy-connection-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigquery
+  title: Self-grant bigquery.connections.use on a connection
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryconnectionssetiampolicy--self-grant-connection-use
+  source_revision: a1de13ac34
+  summary: The source can change a named BigQuery connection's IAM policy to grant itself connection use when it lacks that permission.
+  requires:
+    all_of:
+    - action: bigquery.connections.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigquery.connections.use
+    aggregate_as: Verified connection self-grant to the source
+  conditions:
+  - id: exact_connection_policy
+    description: A reviewed accepted mutation must prove the exact new connection-use grant. A prospective path instead needs one named connection, complete connection and project IAM evidence, an effective policy-write grant on that connection, and prior absence of connection use.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigquery.connections.setIamPolicy on protected connection resources and review self-directed IAM policy
+    changes.
+  notes: This grants use of the named connection, not proof that an external query ran or disclosed data. The native prospective path is conditional; an accepted mutation can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-datacatalog-taxonomies-setiampolicy-taxonomy-self-grant
+  provider: gcp
+  service: datacatalog
+  title: Self-grant datacatalog.categories.fineGrainedGet on a taxonomy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#datacatalogtaxonomiessetiampolicy--self-grant-fine-grained-reader
+  source_revision: a1de13ac34
+  summary: Effective datacatalog.taxonomies.setIamPolicy on an exact taxonomy can add a Fine-Grained Reader binding
+    for the caller and grant datacatalog.categories.fineGrainedGet on a descendant tag where it was absent before.
+  requires:
+    all_of:
+    - action: datacatalog.taxonomies.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - datacatalog.categories.fineGrainedGet
+    aggregate_as: Taxonomy self-grant to the source
+  conditions:
+  - id: exact_taxonomy_descendant_self_grant
+    description: Requires an exact taxonomy and descendant policy tag, active fine-grained enforcement, effective taxonomy
+      policy-write access, a grantable Fine-Grained Reader role, absent prior reader access on that tag, readable tag and
+      ancestor policies, and complete deny and organization-policy evidence; a reviewed accepted mutation can prove the exact gain.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict datacatalog.taxonomies.setIamPolicy on protected taxonomy resources and review self-directed IAM policy
+    changes.
+  notes: A prospective path is conditional because the policy change is not attempted. The taxonomy grant applies to
+    descendant tags; a protected BigQuery column still requires ordinary table and query access. A reviewed accepted
+    mutation must bind the exact taxonomy and prove new access on a named descendant tag.
+- id: gcp-bigquery-tables-setiampolicy-table-self-grant
+  provider: gcp
+  service: bigquery
+  title: Self-grant bigquery.tables.getData on a table
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerytablessetiampolicy--self-grant-table-access
+  source_revision: a1de13ac34
+  summary: The source can add its own Data Viewer binding to an inventoried table it can change with bigquery.tables.setIamPolicy, gaining bigquery.tables.getData when it lacks that permission.
+  requires:
+    all_of:
+    - action: bigquery.tables.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigquery.tables.getData
+    aggregate_as: Table read permissions the source could grant itself
+  conditions:
+  - id: exact_table_policy
+    description: Requires an inventoried table, a complete table IAM policy and dataset ACL, policy-write authority on that exact table, and no current read grant. Incomplete IAM, group, organization policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigquery.tables.setIamPolicy on protected table resources and review self-directed IAM policy changes.
+  notes: BigQuery Data Viewer can be bound to one table and includes tables.getData. A prospective grant is conditional until the policy mutation succeeds; a reviewed accepted mutation can provide direct evidence. Row and column restrictions may still limit readable data.
+- id: gcp-bigtable-instances-setiampolicy-instance-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigtable
+  title: Self-grant Bigtable table access through an instance
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtableinstancessetiampolicy--self-grant-across-one-instance
+  source_revision: a1de13ac34
+  summary: The caller can change an inventoried instance's IAM policy to grant itself read access to an existing table in that instance when it lacked that access.
+  requires:
+    all_of:
+    - action: bigtable.instances.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.tables.readRows
+    aggregate_as: Table read access the caller could grant through instance IAM
+  conditions:
+  - id: exact_instance_and_table_policies
+    description: Requires a ready instance, an existing table under it, exact policy-write authority on the instance, no current table read, and complete instance, table, IAM, group, and deny evidence. An accepted mutation can also be supported by reviewed evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.instances.setIamPolicy on protected instance resources and review self-directed IAM policy
+    changes.
+  notes: The prospective grant is conditional until the IAM change succeeds and is limited to the inventoried instance. It does not grant project IAM control or other instances. Incomplete evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-bigtable-instances-setiampolicy-instance-admin-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigtable
+  title: Self-grant Bigtable instance administration
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtableinstancessetiampolicy--self-grant-across-one-instance
+  source_revision: a1de13ac34
+  summary: The caller can change a ready instance's IAM policy to grant itself instance update access when it lacked that access.
+  requires:
+    all_of:
+    - action: bigtable.instances.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.instances.update
+    aggregate_as: Instance administration the caller could grant itself
+  conditions:
+  - id: exact_instance_policy
+    description: Requires an inventoried ready instance, exact policy-write authority, no current instance update permission, and complete instance, IAM, group, org policy, and deny evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.instances.setIamPolicy on instances and review self-directed IAM policy changes.
+  notes: This captures an instance-level permission gain even when the instance has no tables. The prospective grant is conditional until the IAM change succeeds and does not grant project IAM control.
+- id: gcp-bigtable-tables-setiampolicy-table-self-grant
+  provider: gcp
+  service: bigtable
+  title: Self-grant bigtable.tables.readRows on a table
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtabletablessetiampolicy--self-grant-on-one-table
+  source_revision: a1de13ac34
+  summary: The source uses bigtable.tables.setIamPolicy on an exact table to add its own IAM binding and gain bigtable.tables.readRows,
+    which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: bigtable.tables.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.tables.readRows
+    aggregate_as: Verified table self-grant to the source
+  conditions:
+  - id: exact_table_policy
+    description: Requires an inventoried table with exact table and instance IAM policies, a cluster ready to serve reads, a new readRows permission, and permission to change that table's policy. Incomplete evidence stays unresolved; an accepted change can also be shown through reviewed self-grant evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.tables.setIamPolicy on protected table resources and review self-directed IAM policy changes.
+  notes: A prospective grant is conditional until the IAM change succeeds and is limited to the exact table. Incomplete policy or readiness evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-bigtable-backups-setiampolicy-backup-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigtable
+  title: Self-grant Bigtable backup restore access
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtablebackupssetiampolicy--grant-restore-access-to-a-protected-backup
+  source_revision: a1de13ac34
+  summary: The caller can change an inventoried backup's IAM policy to grant itself restore access when that permission is absent and the backup is ready and unexpired.
+  requires:
+    all_of:
+    - action: bigtable.backups.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.backups.restore
+    aggregate_as: Verified backup self-grant to the source
+  conditions:
+  - id: exact_backup_policy
+    description: Requires a ready, unexpired backup with exact instance and backup policies, policy-write authority, no existing restore right, and complete IAM, group, org policy, and deny evidence. CMEK-backed backup usability remains unresolved unless reviewed.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.backups.setIamPolicy on protected backup resources and review self-directed IAM policy changes.
+  notes: The prospective grant is conditional until the IAM change succeeds and is limited to restoring this backup. Reading restored rows also needs a destination instance, table creation, and row-read access. Incomplete evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-bigtable-authorizedviews-setiampolicy-authorized-view-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigtable
+  title: Self-grant Bigtable authorized-view read access
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#authorizedmaterialized-view-setiampolicy--self-grant-scoped-data-access
+  source_revision: a1de13ac34
+  summary: The caller can change an inventoried authorized view's IAM policy to grant itself read access to that view when it lacks both view and base-table row reads.
+  requires:
+    all_of:
+    - action: bigtable.authorizedViews.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.authorizedViews.readRows
+    aggregate_as: Verified authorized view self-grant to the source
+  conditions:
+  - id: exact_authorized_view_policy
+    description: Requires an existing authorized view, exact policy-write authority, no current view or base-table row read, and complete view, table, instance, IAM, group, and deny evidence. An accepted mutation can also be supported by reviewed evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.authorizedViews.setIamPolicy on protected authorized view resources and review self-directed
+    IAM policy changes.
+  notes: The prospective grant is conditional until the IAM change succeeds and permits only the rows and columns exposed by this view. Incomplete policy or prior-access evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-bigtable-materializedviews-setiampolicy-materialized-view-self-grant
+  provider: gcp
+  service: bigtable
+  title: Self-grant bigtable.materializedViews.readRows on a materialized view
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#authorizedmaterialized-view-setiampolicy--self-grant-scoped-data-access
+  source_revision: a1de13ac34
+  summary: The source uses bigtable.materializedViews.setIamPolicy on an exact materialized view to add its own IAM binding
+    and gain bigtable.materializedViews.readRows, which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: bigtable.materializedViews.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.materializedViews.readRows
+    aggregate_as: Verified materialized view self-grant to the source
+  conditions:
+  - id: exact_materialized_view_policy
+    description: Requires an inventoried materialized view with a complete exact view and instance IAM policy, a ready cluster, a new readRows permission, and permission to change that view's policy. Incomplete evidence stays unresolved; an accepted change can also be shown through reviewed self-grant evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.materializedViews.setIamPolicy on protected materialized view resources and review self-directed
+    IAM policy changes.
+  notes: A prospective grant is conditional until the IAM change succeeds and yields only the data exposed by this materialized view. Incomplete policy or readiness evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
+- id: gcp-discoveryengine-engines-setiampolicy-engine-self-grant
+  provider: gcp
+  service: discoveryengine
+  title: Self-grant discoveryengine.engines.update on an engine
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-discovery-engine-privesc.md#discoveryengineenginesdatastorescollectionssetiampolicy--self-grant-app-or-corpus-access
+  source_revision: a1de13ac34
+  summary: The source can add itself to an exact existing engine policy and gain discoveryengine.engines.update,
+    which it does not already hold. The engine must be under a named collection.
+  requires:
+    all_of:
+    - action: discoveryengine.engines.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - discoveryengine.engines.update
+    aggregate_as: Engine policy self-grant paths
+  conditions:
+  - id: prospective_engine_policy
+    description: An exact listed engine and complete current policy must be available; the source must hold policy-write access, lack update access, and be able to add a collected grantable Admin role without an effective deny or member restriction.
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict discoveryengine.engines.setIamPolicy on protected engine resources and review self-directed IAM policy
+    changes.
+  references:
+  - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1/projects.locations.collections.engines/setIamPolicy
+  - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1alpha/projects.locations.collections.engines/list
+  notes: A prospective path requires the exact engine and current policy; a verified mutation record can independently prove the exact gain. The engine grant does not by itself authorize a linked data store or bypass document ACLs.
+- id: gcp-discoveryengine-datastores-setiampolicy-data-store-self-grant
+  provider: gcp
+  service: discoveryengine
+  title: Self-grant discoveryengine.dataStores.update on a data store
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-discovery-engine-privesc.md#discoveryengineenginesdatastorescollectionssetiampolicy--self-grant-app-or-corpus-access
+  source_revision: a1de13ac34
+  summary: The source can add itself to an exact existing data store policy and gain discoveryengine.dataStores.update,
+    which it does not already hold. This covers standalone stores and stores under a collection.
+  requires:
+    all_of:
+    - action: discoveryengine.dataStores.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - discoveryengine.dataStores.update
+    aggregate_as: Data store policy self-grant paths
+  conditions:
+  - id: prospective_data_store_policy
+    description: An exact listed data store and complete current policy must be available; the source must hold policy-write access, lack update access, and be able to add a collected grantable Admin role without an effective deny or member restriction.
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict discoveryengine.dataStores.setIamPolicy on protected data store resources and review self-directed
+    IAM policy changes.
+  references:
+  - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1alpha/projects.locations.dataStores/setIamPolicy
+  - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1/projects.locations.collections.dataStores/setIamPolicy
+  notes: A prospective path requires the exact data store and current policy; a verified mutation record can independently prove the exact gain. The grant does not by itself authorize access to a linked app or bypass document ACLs.
+- id: gcp-discoveryengine-collections-setiampolicy-collection-self-grant
+  provider: gcp
+  service: discoveryengine
+  title: Self-grant discoveryengine.collections.get on a collection
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-discovery-engine-privesc.md#discoveryengineenginesdatastorescollectionssetiampolicy--self-grant-app-or-corpus-access
+  source_revision: a1de13ac34
+  summary: The source can add itself to an exact existing collection policy and gain discoveryengine.collections.get,
+    which it does not already hold. That permission alone does not grant access to a linked app or its data stores.
+  requires:
+    all_of:
+    - action: discoveryengine.collections.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - discoveryengine.collections.get
+    aggregate_as: Collection policy self-grant paths
+  conditions:
+  - id: prospective_collection_policy
+    description: An exact listed collection and complete current policy must be available; the source must hold collection policy-write access, lack collection get access, and be able to add a collected grantable Viewer role without an effective deny or member restriction.
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict discoveryengine.collections.setIamPolicy on protected collection resources and review self-directed
+    IAM policy changes.
+  references:
+  - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1alpha/projects.locations.collections/setIamPolicy
+  - https://docs.cloud.google.com/gemini/enterprise/docs/iam-policy-for-apps-and-data-stores
+  notes: The prospective path is limited to the listed collection and a verified Viewer role that grants collections.get. A verified mutation record can independently prove the exact gain. App and child data-store access need separate grants.
+- id: gcp-identitytoolkit-tenants-setiampolicy-tenant-self-grant
+  provider: gcp
+  service: identitytoolkit
+  title: Self-grant user administration in an Identity Platform tenant
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-firebase-privesc.md#identitytoolkittenantssetiampolicy--self-grant-control-of-an-identity-platform-tenant
+  source_revision: a1de13ac34
+  summary: The source can grant itself user-update permission in an existing Identity Platform tenant when it can write that tenant's IAM policy and lacks the permission now.
+  requires:
+    all_of:
+    - action: identitytoolkit.tenants.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - firebaseauth.users.update
+    aggregate_as: Verified tenant self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires a uniquely listed existing tenant, its complete IAM policy, effective policy-write authority, absence of prior user-update access, a known tenant-grantable Admin role and complete ancestor and deny evidence. An independently reviewed accepted mutation is a second proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict identitytoolkit.tenants.setIamPolicy on protected tenant resources and review self-directed IAM policy
+    changes.
+  notes: The prospective grant applies only to the named tenant. It does not extend to other tenants or the project's default user pool. A reviewed accepted mutation remains a second proof route.
+  references:
+  - https://docs.cloud.google.com/identity-platform/docs/multi-tenancy-access-control
+  - https://docs.cloud.google.com/identity-platform/docs/reference/rest/v2/projects.tenants/getIamPolicy
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/identityplatform
+- id: gcp-healthcare-datasets-setiampolicy-dataset-self-grant
+  provider: gcp
+  service: healthcare
+  title: Gain FHIR store search access through a dataset IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
+  source_revision: a1de13ac34
+  summary: The source can use healthcare.datasets.setIamPolicy on an inventoried dataset to grant itself FHIR store search permission on an existing child store when it lacks that permission today.
+  requires:
+    all_of:
+    - action: healthcare.datasets.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - healthcare.fhirStores.searchResources
+    aggregate_as: FHIR stores reachable through a dataset self-grant
+  conditions:
+  - id: exact_dataset_and_store_policy
+    description: Requires a unique existing FHIR store under the exact dataset, collected dataset and store IAM policies, a grantable FHIR Resource Reader role, and no existing effective search permission. The proposed IAM change and any consent-limited data access remain conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict healthcare.datasets.setIamPolicy on protected dataset resources and review self-directed IAM policy
+    changes.
+  notes: A dataset policy grant inherits to its child FHIR stores. This path reports a prospective permission gain on an existing store; it does not assert that clinical records exist or that consent rules permit reading them. A separately reviewed exact self-grant may also establish the path.
+  references:
+  - https://docs.cloud.google.com/healthcare-api/docs/access-control
+  - https://docs.cloud.google.com/healthcare-api/docs/reference/rest/v1/projects.locations.datasets.fhirStores/list
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/healthcare
+- id: gcp-healthcare-fhirstores-setiampolicy-fhir-store-self-grant
+  provider: gcp
+  service: healthcare
+  title: Gain FHIR resource read access through a FHIR store IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
+  source_revision: a1de13ac34
+  summary: The source can change the IAM policy of an existing FHIR store to add its own FHIR resource read permission when it lacks that permission today.
+  requires:
+    all_of:
+    - action: healthcare.fhirStores.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - healthcare.fhirResources.get
+    aggregate_as: FHIR stores where the source could gain resource read
+  conditions:
+  - id: exact_fhir_store_policy
+    description: Requires a unique existing FHIR store with a collected store and parent dataset IAM policy, an effective store policy-write grant, a grantable FHIR Resource Reader role, and no existing FHIR resource read permission. Actual policy mutation and data access remain conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict healthcare.fhirStores.setIamPolicy on protected fhir store resources and review self-directed IAM policy
+    changes.
+  notes: A prospective permission gain is limited to the exact FHIR store; it does not assert that resources exist or that consent rules permit reading them. A separately reviewed exact self-grant may also establish the path.
+  references:
+  - https://docs.cloud.google.com/healthcare-api/docs/reference/rest/v1/projects.locations.datasets.fhirStores/setIamPolicy
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/healthcare
+- id: gcp-healthcare-dicomstores-setiampolicy-dicom-store-self-grant
+  provider: gcp
+  service: healthcare
+  title: Gain DICOMweb read access through a DICOM store IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
+  source_revision: a1de13ac34
+  summary: The source can change the IAM policy of an existing DICOM store to add its own DICOMweb read permission when it lacks that permission today.
+  requires:
+    all_of:
+    - action: healthcare.dicomStores.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - healthcare.dicomStores.dicomWebRead
+    aggregate_as: DICOM stores where the source could gain DICOMweb read
+  conditions:
+  - id: exact_dicom_store_policy
+    description: Requires a unique existing DICOM store with a collected store and parent dataset IAM policy, an effective store policy-write grant, a grantable DICOM Viewer role, and no existing DICOMweb read permission. Actual policy mutation and data access remain conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict healthcare.dicomStores.setIamPolicy on protected dicom store resources and review self-directed IAM
+    policy changes.
+  notes: A prospective permission gain is limited to the exact DICOM store; it does not assert that images exist. A separately reviewed exact self-grant may also establish the path.
+  references:
+  - https://docs.cloud.google.com/healthcare-api/docs/reference/rest/v1/projects.locations.datasets.dicomStores/list
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/healthcare
+- id: gcp-healthcare-hl7v2stores-setiampolicy-hl7v2-store-self-grant
+  provider: gcp
+  service: healthcare
+  title: Gain HL7v2 message list access through a store IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
+  source_revision: a1de13ac34
+  summary: The source can change the IAM policy of an existing HL7v2 store to add its own message list permission when it lacks that permission today.
+  requires:
+    all_of:
+    - action: healthcare.hl7V2Stores.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - healthcare.hl7V2Messages.list
+    aggregate_as: HL7v2 stores where the source could gain message list
+  conditions:
+  - id: exact_hl7v2_store_policy
+    description: Requires a unique existing HL7v2 store with a collected store and parent dataset IAM policy, an effective store policy-write grant, a grantable HL7v2 Consumer role, and no existing message list permission. Actual policy mutation and message access remain conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict healthcare.hl7V2Stores.setIamPolicy on protected hl7v2 store resources and review self-directed IAM
+    policy changes.
+  notes: Message list is checked on the exact store, unlike message get on one message. A prospective permission gain does not assert that messages exist. A separately reviewed exact self-grant may also establish the path.
+  references:
+  - https://docs.cloud.google.com/healthcare-api/docs/reference/rest/v1/projects.locations.datasets.hl7V2Stores.messages/list
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/healthcare
+- id: gcp-healthcare-consentstores-setiampolicy-consent-store-self-grant
+  provider: gcp
+  service: healthcare
+  title: Self-grant healthcare.consents.get on a consent store
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-healthcare-privesc.md#healthcaresetiampolicy--grant-a-clinical-data-role-to-your-principal
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named consent store may grant itself consent read access there when its existing grants do not already provide it. An accepted, reviewed policy mutation can also establish the gain.
+  requires:
+    all_of:
+    - action: healthcare.consentStores.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - healthcare.consents.get
+    aggregate_as: Consent read access through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_consent_store_policy
+    description: A prospective path needs a unique named consent store, readable store and dataset IAM policies, an effective exact-store policy write and policy read, and a known grantable consent-reader role. Incomplete inventory or uncertain prior access stays unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict healthcare.consentStores.setIamPolicy on protected consent store resources and review self-directed
+    IAM policy changes.
+  notes: The prospective path uses collected consent-store and dataset policies to exclude prior access inherited from the dataset; the reviewed-mutation evidence path remains available for a proven exact grant.
+- id: gcp-networkconnectivity-hubs-setiampolicy-hub-self-grant
+  provider: gcp
+  service: networkconnectivity
+  title: Self-grant networkconnectivity.hubs.update on a hub
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-connectivity-center-privesc.md#resource-iam-self-grants
+  source_revision: a1de13ac34
+  summary: A reviewed, accepted IAM mutation on an exact hub gave the source networkconnectivity.hubs.update when it lacked that permission before. A hub policy write alone does not establish that this role is grantable at hub scope.
+  requires:
+    all_of:
+    - action: networkconnectivity.hubs.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networkconnectivity.hubs.update
+    aggregate_as: Verified hub self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: hub_scope_role_eligibility
+    description: The predefined hubAdmin role is documented as grantable at project scope, so a prospective hub-level write cannot assume it grants hubs.update.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networkconnectivity.hubs.setIamPolicy on protected hub resources and review self-directed IAM policy
+    changes.
+  notes: The gcp_resource_self_grant_evidence record must prove this exact hub-level permission gain. A separate hub-level groupUser grant can allow group use, but it does not imply hubs.update.
+- id: gcp-networkconnectivity-hubs-setiampolicy-group-use-self-grant
+  provider: gcp
+  service: networkconnectivity
+  title: Grant self group use through a hub IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-connectivity-center-privesc.md#resource-iam-self-grants
+  source_revision: a1de13ac34
+  summary: A principal that can write a named hub IAM policy may grant itself roles/networkconnectivity.groupUser on that hub and gain use of its observed groups, provided it lacks that access already.
+  requires:
+    all_of:
+    - action: networkconnectivity.hubs.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networkconnectivity.groups.use
+    aggregate_as: Group use through {target.policy_resource}
+  conditions:
+  - id: exact_hub_group
+    description: Needs a unique named hub and child group, readable hub and group policies, an effective hub-level policy write and read, a known groupUser role, and no prior group-use grant.
+  - id: attachment_prerequisites
+    description: Using the new group permission to attach a spoke also requires authority over the spoke and its referenced network.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict hub IAM policy writes and review grants of groupUser on hubs.
+  notes: Google documents granting roles/networkconnectivity.groupUser on a hub. This grants group use on that hub, not hub update or unrestricted spoke creation.
+- id: gcp-networkconnectivity-groups-setiampolicy-group-self-grant
+  provider: gcp
+  service: networkconnectivity
+  title: Self-grant networkconnectivity.groups.use on a group
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-connectivity-center-privesc.md#resource-iam-self-grants
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named hub group may grant itself group use there when its existing grants do not already provide it. An accepted, reviewed mutation can also establish the gain.
+  requires:
+    all_of:
+    - action: networkconnectivity.groups.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networkconnectivity.groups.use
+    aggregate_as: Group use through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_group_policy
+    description: A prospective path needs a unique named group, readable group and parent hub IAM policies, effective group-level policy write and read, a known groupUser role, and no prior group-use grant.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networkconnectivity.groups.setIamPolicy on protected group resources and review self-directed IAM policy
+    changes.
+  notes: The prospective route uses collected group and parent hub policies to exclude already granted access; reviewed accepted-mutation evidence remains a separate proof path.
+- id: gcp-networksecurity-addressgroups-setiampolicy-address-group-self-grant
+  provider: gcp
+  service: networksecurity
+  title: Self-grant networksecurity.addressGroups.update on an address group
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-networksecurity-privesc.md#networksecuritysetiampolicy---self-grant-control-of-one-policy-resource
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named project address group may grant itself update access there if it does not already hold that permission. A reviewed accepted mutation can also prove the gain.
+  requires:
+    all_of:
+    - action: networksecurity.addressGroups.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networksecurity.addressGroups.update
+    aggregate_as: Address group update through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_address_group_policy
+    description: A prospective path needs a unique named project address group, its readable IAM policy, an effective exact-resource policy write and read, a known editor role, and no prior update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networksecurity.addressGroups.setIamPolicy on protected address group resources and review self-directed
+    IAM policy changes.
+  notes: Both prospective and reviewed routes are limited to project address groups. The organization address-group API has no getIamPolicy or setIamPolicy method. Global and regional project groups are supported.
+- id: gcp-networksecurity-authorizationpolicies-setiampolicy-authorization-policy-self-grant
+  provider: gcp
+  service: networksecurity
+  title: Self-grant update access to an authorization policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-networksecurity-privesc.md#networksecuritysetiampolicy---self-grant-control-of-one-policy-resource
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named project authorization policy may grant itself update access there if it does not already hold that permission. A reviewed accepted mutation can also prove the gain.
+  requires:
+    all_of:
+    - action: networksecurity.authorizationPolicies.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networksecurity.authorizationPolicies.update
+    aggregate_as: Authorization policy update through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_authorization_policy
+    description: A prospective path needs a unique named project authorization policy, its readable IAM policy, an effective exact-resource policy write and read, a known editor role, and no prior update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networksecurity.authorizationPolicies.setIamPolicy on protected authorization policy resources and
+    review self-directed IAM policy changes.
+  notes: Both prospective and reviewed routes require an exact project authorization policy. Global and regional project policies are supported.
+- id: gcp-networksecurity-authzpolicies-setiampolicy-authz-policy-self-grant
+  provider: gcp
+  service: networksecurity
+  title: Self-grant update access to an authz policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-networksecurity-privesc.md#networksecuritysetiampolicy---self-grant-control-of-one-policy-resource
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named project authz policy may grant itself update access there if it does not already hold that permission. A reviewed accepted mutation can also prove the gain.
+  requires:
+    all_of:
+    - action: networksecurity.authzPolicies.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networksecurity.authzPolicies.update
+    aggregate_as: Authz policy update through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_authz_policy
+    description: A prospective path needs a unique named project authz policy, its readable IAM policy, an effective exact-resource policy write and read, a known editor role, and no prior update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networksecurity.authzPolicies.setIamPolicy on protected authz policy resources and review self-directed
+    IAM policy changes.
+  notes: Both prospective and reviewed routes require an exact project authz policy. Global and regional project policies are supported.
+- id: gcp-networksecurity-clienttlspolicies-setiampolicy-client-tls-policy-self-grant
+  provider: gcp
+  service: networksecurity
+  title: Self-grant update access to a client TLS policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-networksecurity-privesc.md#networksecuritysetiampolicy---self-grant-control-of-one-policy-resource
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named project client TLS policy may grant itself update access there if it does not already hold that permission. A reviewed accepted mutation can also prove the gain.
+  requires:
+    all_of:
+    - action: networksecurity.clientTlsPolicies.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networksecurity.clientTlsPolicies.update
+    aggregate_as: Client TLS policy update through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_client_tls_policy
+    description: A prospective path needs a unique named project client TLS policy, its readable IAM policy, an effective exact-resource policy write and read, a known editor role, and no prior update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networksecurity.clientTlsPolicies.setIamPolicy on protected client tls policy resources and review
+    self-directed IAM policy changes.
+  notes: Both prospective and reviewed routes require an exact project client TLS policy. Global and regional project policies are supported.
+- id: gcp-networksecurity-servertlspolicies-setiampolicy-server-tls-policy-self-grant
+  provider: gcp
+  service: networksecurity
+  title: Self-grant update access to a server TLS policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-networksecurity-privesc.md#networksecuritysetiampolicy---self-grant-control-of-one-policy-resource
+  source_revision: a1de13ac34
+  summary: A principal that can write the IAM policy of a named project server TLS policy may grant itself update access there if it does not already hold that permission. A reviewed accepted mutation can also prove the gain.
+  requires:
+    all_of:
+    - action: networksecurity.serverTlsPolicies.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networksecurity.serverTlsPolicies.update
+    aggregate_as: Server TLS policy update through {target.policy_resource}
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  - id: prospective_server_tls_policy
+    description: A prospective path needs a unique named project server TLS policy, its readable IAM policy, an effective exact-resource policy write and read, a known editor role, and no prior update permission.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict networksecurity.serverTlsPolicies.setIamPolicy on protected server tls policy resources and review
+    self-directed IAM policy changes.
+  notes: Both prospective and reviewed routes require an exact project server TLS policy. Global and regional project policies are supported.
+- id: gcp-pubsub-topics-setiampolicy-topic-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: pubsub
+  title: Self-grant pubsub.topics.publish on a topic
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md#pubsubtopicssetiampolicy--pubsubsubscriptionssetiampolicy--self-grant-control-of-one-resource
+  source_revision: a1de13ac34
+  summary: The source can use pubsub.topics.setIamPolicy on an inventoried topic to add its own Publisher binding when it does not already have publish access.
+  requires:
+    all_of:
+    - action: pubsub.topics.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - pubsub.topics.publish
+    aggregate_as: Topic publish access the source could grant itself
+  conditions:
+  - id: exact_topic_policy
+    description: Requires an inventoried topic, policy-write authority on that topic, and no current publish grant; incomplete direct IAM, group membership, org policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict pubsub.topics.setIamPolicy on protected topic resources and review self-directed IAM policy changes.
+  notes: A Pub/Sub Publisher role can be granted on one topic. A prospective path is conditional because the IAM mutation has not been attempted; a reviewed accepted mutation can also provide direct evidence.
+- id: gcp-pubsub-subscriptions-setiampolicy-subscription-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: pubsub
+  title: Self-grant pubsub.subscriptions.consume on a subscription
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pubsub-privesc.md#pubsubtopicssetiampolicy--pubsubsubscriptionssetiampolicy--self-grant-control-of-one-resource
+  source_revision: a1de13ac34
+  summary: The source can use pubsub.subscriptions.setIamPolicy on an inventoried subscription to add its own Subscriber binding when it does not already have consume access.
+  requires:
+    all_of:
+    - action: pubsub.subscriptions.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - pubsub.subscriptions.consume
+    aggregate_as: Subscription consume access the source could grant itself
+  conditions:
+  - id: exact_subscription_policy
+    description: Requires an inventoried subscription, policy-write authority on it, and no current consume grant; only pull delivery yields a named prospective path, while incomplete IAM, group, org policy, or deny evidence leaves it unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict pubsub.subscriptions.setIamPolicy on protected subscription resources and review self-directed IAM
+    policy changes.
+  notes: A Pub/Sub Subscriber role can be granted on one subscription. Pull subscriptions can expose messages after that grant. Push, export, and unknown delivery modes remain unresolved without a separate usable-consume path; a reviewed accepted mutation can also provide direct evidence.
+- id: gcp-vmwareengine-privateclouds-setiampolicy-private-cloud-self-grant
+  provider: gcp
+  service: vmwareengine
+  title: Self-grant vmwareengine.privateClouds.showVcenterCredentials on a private cloud
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vmwareengine-gcve-privesc.md#vmwareengineprivatecloudssetiampolicy--grant-a-credential-reading-role-on-one-private-cloud
+  source_revision: a1de13ac34
+  summary: The source uses vmwareengine.privateClouds.setIamPolicy on an exact private cloud to add its own IAM binding and
+    gain vmwareengine.privateClouds.showVcenterCredentials, which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: vmwareengine.privateClouds.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - vmwareengine.privateClouds.showVcenterCredentials
+    aggregate_as: Verified private cloud self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires complete, unique, source-bound evidence for the exact policy and granted resources, policy-write action, new permission,
+      prior absence, accepted IAM mutation, and effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict vmwareengine.privateClouds.setIamPolicy on protected private cloud resources and review self-directed
+    IAM policy changes.
+  notes: The policy write alone does not create a path. The gcp_resource_self_grant_evidence record must prove this exact
+    permission gain for the acting principal on GrantedResource.
+- id: gcp-privateca-capools-setiampolicy-ca-pool-self-grant
+  provider: gcp
+  service: privateca
+  title: Self-grant privateca.certificates.create on a ca pool
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-certificate-authority-service-privesc.md#privatecacapoolssetiampolicy--grant-certificate-issuance-on-a-ca-pool
+  source_revision: a1de13ac34
+  summary: A caller with privateca.caPools.setIamPolicy on an exact CA pool could add its own unconditional certificateRequester binding
+    and gain privateca.certificates.create where the current policy and inherited grants do not already provide it.
+  requires:
+    all_of:
+    - action: privateca.caPools.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - privateca.certificates.create
+    aggregate_as: Verified ca pool self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires a unique CA pool, its readable IAM policy, derived policy-write authority on that exact pool, no existing certificate-create
+      access, and sufficient ancestor policy, deny, and membership evidence to assess an unconditional self-binding.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict privateca.caPools.setIamPolicy on protected ca pool resources and review self-directed IAM policy changes.
+  notes: The policy write alone does not create a path. The gcp_resource_self_grant_evidence record must prove this exact
+    permission gain for the acting principal on GrantedResource.
+- id: gcp-krmapihosting-krmapihosts-setiampolicy-krm-api-host-self-grant
+  provider: gcp
+  service: krmapihosting
+  title: Self-grant krmapihosting.krmApiHosts.update on a krm api host
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#durable-instance-iam-binding-krmapihostingkrmapihostssetiampolicy
+  source_revision: a1de13ac34
+  summary: The source uses krmapihosting.krmApiHosts.setIamPolicy on an exact krm api host to add its own IAM binding and
+    gain krmapihosting.krmApiHosts.update, which it lacked before the accepted policy mutation.
+  requires:
+    all_of:
+    - action: krmapihosting.krmApiHosts.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - krmapihosting.krmApiHosts.update
+    aggregate_as: Verified krm api host self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: A listed, running host with a unique IAM policy, exact policy-write permission, no prior update access,
+      and a grantable admin role is a conditional path. An accepted mutation with effective post-grant access can verify it.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict krmapihosting.krmApiHosts.setIamPolicy on protected krm api host resources and review self-directed
+    IAM policy changes.
+  notes: The policy write alone does not prove a gained permission. The read-only host and policy inventory supports a
+    conditional path; a complete gcp_resource_self_grant_evidence record can attest the actual grant.
+- id: gcp-compute-images-setiampolicy-image-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: compute
+  title: Self-grant compute.images.useReadOnly on an image
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeimagessetiampolicy--self-grant-image-use
+  source_revision: 669e767e95
+  summary: The source can add its own IAM binding to an exact ready image it can administer and gain compute.images.useReadOnly when it lacks that permission.
+  requires:
+    all_of:
+    - action: compute.images.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.images.useReadOnly
+    aggregate_as: Image read-only use the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: The exact ready image is inventoried with a readable IAM policy; the source can set that policy but lacks compute.images.useReadOnly on the image. An independently reviewed accepted mutation remains a second supported proof route.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict compute.images.setIamPolicy on protected image resources and review self-directed IAM policy changes.
+  notes: The source can add roles/compute.imageUser to its own image policy to gain compute.images.useReadOnly. This grants a new permission on that image, but using its bytes requires separate VM or disk creation permissions and may face CMEK constraints.
+- id: gcp-logging-views-setiampolicy-self-grant
+  provider: gcp
+  service: logging
+  title: Self-grant logging.views.access on a log view
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-logging-privesc.md#change-access-to-a-log-view--loggingviewssetiampolicy
+  source_revision: 669e767e95
+  summary: The acting principal can use logging.views.setIamPolicy on an exact existing log view to grant itself logging.views.access,
+    which it does not already hold.
+  requires:
+    all_of:
+    - action: logging.views.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - logging.views.access
+    aggregate_as: Log view access the source could grant itself
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: A unique listed view with a readable IAM policy, exact policy-write permission, no prior view access,
+      and a grantable view-accessor role supports a conditional path. An accepted mutation with effective post-grant access can verify it.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict logging.views.setIamPolicy on protected log view resources and review self-directed IAM policy changes.
+  notes: The policy write alone does not prove a gained permission. The read-only view and policy inventory supports a
+    conditional path; a complete gcp_resource_self_grant_evidence record can attest the actual grant.
+- id: gcp-domains-registrations-setiampolicy-self-grant
+  provider: gcp
+  service: domains
+  title: Self-grant domains.registrations.configureDns on a domain registration
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-domains-privesc.md#domainsregistrationssetiampolicy--registration-scoped-iam-persistence
+  source_revision: 669e767e95
+  summary: A principal with domains.registrations.setIamPolicy on an active registration could grant itself domains.registrations.configureDns
+    through that registration's IAM policy when it lacks that permission today.
+  requires:
+    all_of:
+    - action: domains.registrations.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - domains.registrations.configureDns
+    aggregate_as: Domain registration DNS self-grant to the source
+  conditions:
+  - id: prospective_or_reviewed_self_grant
+    description: Requires an exact active registration, its collected IAM policy, a source able to write that policy,
+      prior absence of DNS configuration permission, and a collected grantable role; reviewed mutations must also prove effective post-grant access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict domains.registrations.setIamPolicy on protected domain registration resources and review self-directed
+    IAM policy changes.
+  notes: The prospective path uses roles/domains.editor on the exact registration. Complete reviewed mutation evidence can prove another grantable role.
+- id: gcp-contactcenterinsights-authorizedviews-setiampolicy-self-grant
+  provider: gcp
+  service: contactcenterinsights
+  title: Self-grant authorized-view read access
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-contact-center-insights-privesc.md#authorized-view-iam-self-grant-authorizedviewssetiampolicy
+  source_revision: 2bb3ac75c0
+  summary: A principal that can set the IAM policy on an exact authorized view may grant itself the authorizedViewer
+    role and gain view access it did not already have.
+  requires:
+    all_of:
+    - action: contactcenterinsights.authorizedViews.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - contactcenterinsights.authorizedViews.get
+    aggregate_as: Verified authorized-view self-grant to the source
+  conditions:
+  - id: exact_reviewed_self_grant
+    description: Requires either complete source-bound evidence of an accepted self-grant or a unique existing view
+      with collected IAM policy, role, prior-access, and policy-write facts. The inferred path remains conditional.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict contactcenterinsights.authorizedViews.setIamPolicy and review self-directed authorized-view policy
+    changes.
+  notes: View access is an IAM permission gain. Whether matching conversations exist remains conditional.

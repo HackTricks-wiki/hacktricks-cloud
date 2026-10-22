@@ -1,0 +1,122 @@
+# Azure privesc completeness audit (g7-data-ai): techniques reviewed and intentionally NOT modelled.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#attached-compute-credential-theft-with-computeslistkeysaction
+  technique: computes/listKeys on attached compute
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G7-data-ai-proposals.md#ml-attached-compute-listkeys (needs a link from an ML attached compute''s resourceId to the AKS cluster-admin / VM
+    / Databricks target).'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-machine-learning-privesc.md#notebook-credential-theft-with-read-only-verbs-listnotebookkeys--listnotebookaccesstoken
+  technique: listNotebookKeys / listNotebookAccessToken
+  source_revision: a66f094ede
+  reason: Notebook file-store access (data); secrets embedded in notebooks are content-dependent. Planting a poisoned notebook needs another user to open and run
+    it (victim interaction, not derivable from configuration).
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspaceslistkeysaction-and-microsoftmachinelearningservicesworkspacesliststorageaccountkeysaction
+  technique: Workspace listKeys / listStorageAccountKeys
+  source_revision: a66f094ede
+  reason: Covered by azure-ml-workspace-linked-keys-workload-poisoning (both actions as any_of alternatives); direct key use is data access only.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspaceshubswrite-microsoftmachinelearningservicesworkspaceswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  technique: Attach UAMI to AI Hub / workspace
+  source_revision: a66f094ede
+  reason: Covered by azure-ml-workspace-uami-attach-serverless-job (attach + serverless job). Options 1-3 are covered by azure-ml-online-endpoint-create-with-user-assigned-identity,
+    azure-ml-jobs-write-compute-identity and azure-ml-compute-create-with-user-assigned-identity.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftsearchsearchserviceslistadminkeysaction--microsoftsearchsearchservicesregenerateadminkeyaction
+  technique: AI Search admin keys
+  source_revision: a66f094ede
+  reason: Identity path covered by azure-ai-search-skillset-write-identity-token (listAdminKeys / regenerateAdminKey any_of alternatives); document dump/poisoning
+    is data access.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#self-hosted-ir-key-rotation-connection-recon-and-cross-factory-sharing
+  technique: SHIR regenerateauthkey / getconnectioninfo / linkedIntegrationRuntime
+  source_revision: a66f094ede
+  reason: regenerateauthkey is covered by azure-datafactory-rogue-shir-linked-service-credentials (any_of alternative). getconnectioninfo is reconnaissance only;
+    linkedIntegrationRuntime shares the runtime's network position into another factory, where activities use that factory's own credentials (no identity gain).
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#pivot-through-blob-backed-pipeline-configuration-without-data-factory-permissions
+  technique: Poison blob-backed pipeline configuration
+  source_revision: a66f094ede
+  reason: Covered by azure-storage-blob-poisoning-consumer (azure_consumer_of_pivot storage_content reaches the factory identity reading the blob); linked-service
+    credentials used by the run are not an identity edge.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#os-level-rce-on-external-compute-batch--databricks--hdinsight-via-a-pipeline-activity
+  technique: Pipeline Custom Activity / Databricks / HDInsight activity code execution on linked compute
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G7-data-ai-proposals.md#data-factory-linked-compute (needs a link from the factory''s linked services to the Batch pool / HDInsight cluster
+    identities they reach).'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#cluster-init-scripts--notebook-code--rce--steal-the-cluster--workspace-managed-identity
+  technique: Databricks cluster init script / notebook RCE as the cluster or workspace managed identity
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G7-data-ai-proposals.md#databricks-workspace-compute-identity (workspace admin or cluster code execution reaches the dbmanagedidentity user-assigned
+    identity in the workspace managed resource group and identities exposed through the workspace access connector; no selector links a workspace to them). ARM entry
+    point: azure-databricks-assign-workspace-admin.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#secret-scope-theft--databricks-backed-and-key-vault-backed-scopes
+  technique: Databricks secret scope theft
+  source_revision: a66f094ede
+  reason: Secret scope contents and ACLs are Databricks data-plane state that is not collected, so which service-principal secrets a scope holds is not derivable;
+    workspace admin is already modelled by azure-databricks-assign-workspace-admin. Revisit with G7-data-ai-proposals.md#databricks-workspace-compute-identity.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-databricks-persistence.md#personal-access-token-pat-minting-for-persistence
+  technique: Databricks PAT minting
+  source_revision: a66f094ede
+  reason: Persistence of already-held workspace access; no new identity.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-data-factory-persistence.md#redirect-a-schedule-trigger-with-triggerswrite--stopstart
+  technique: Data Factory trigger redirect
+  source_revision: a66f094ede
+  reason: Duplicate of azure-datafactory-parameter-redirection (its any_of includes triggers/write + stop + start).
+- source: src/pentesting-cloud/azure-security/az-persistence/az-purview-persistence.md#over-privileged-scanning-identity-retained
+  technique: Retain Purview scanning identity / SHIR
+  source_revision: a66f094ede
+  reason: Confused-deputy data reads through the Purview identity; no token is disclosed. The credential-capture angle is azure-purview-rogue-shir-scan-credentials.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-purview-persistence.md#collection-role-foothold
+  technique: Purview collection-role foothold
+  source_revision: a66f094ede
+  reason: Persistence of already-held Purview data-plane roles; bootstrap is azure-purview-add-root-collection-admin.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-purview-post-exploitation.md#abuse-the-scanning-identity
+  technique: Abuse the Purview scanning identity
+  source_revision: a66f094ede
+  reason: Confused-deputy data reads through scans; no token for the Purview identity is disclosed.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-fabric-persistence.md#service-principal-persistence-as-a-workspace-admin
+  technique: Fabric SP persistence
+  source_revision: a66f094ede
+  reason: Persistence of already-held workspace Admin rights.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-fabric-persistence.md#git-integration--deployment-pipeline-supply-chain-poisoning
+  technique: Fabric Git / deployment pipeline poisoning
+  source_revision: a66f094ede
+  reason: The Contributor path is duplicate of azure-fabric-notebook-workspace-identity; the repo-write path needs Git provider permissions that are not collected.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-fabric-persistence.md#custom-environment--library-persistence-databricks-init-script-analog
+  technique: Fabric custom environment library persistence
+  source_revision: a66f094ede
+  reason: Duplicate of azure-fabric-notebook-workspace-identity (same Contributor requirement and workspace identity target); runs inside other users' interactive
+    sessions are not derivable.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-healthcare-apis-post-exploitation.md#self-grant-fhirdicom-data-roles-privesc
+  technique: Self-grant FHIR/DICOM data roles
+  source_revision: a66f094ede
+  reason: Duplicate of azure-authorization-roleassignments-write; the gain is FHIR/DICOM data access.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-azure-ai-foundry-post-exploitation.md#recover-managed-identity-tokens-from-an-azure-endpoint
+  technique: Endpoint IMDS token recovery
+  source_revision: a66f094ede
+  reason: Needs prior code execution as the endpoint identity; the ARM paths to it are azure-ml-online-deployment-existing-endpoint and azure-ml-online-endpoint-create-with-user-assigned-identity.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-azure-ai-foundry-post-exploitation.md#poison-a-reused-hugging-face-model-namespace
+  technique: Hugging Face namespace reuse
+  source_revision: a66f094ede
+  reason: Deploying the model already gives code execution through azure-ml-online-deployment-existing-endpoint; the namespace takeover only affects victims who deploy
+    by name, which is not derivable.
+- source: src/pentesting-cloud/azure-security/az-persistence/az-ai-foundry-persistence.md#microsoftcognitiveservicesaccountsaiservicesagentswrite--foundry-agent-poisoning
+  technique: Foundry agent poisoning
+  source_revision: a66f094ede
+  reason: Victim-dependent instruction hijack of agent callers; no identity token is disclosed.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-data-explorer-post-exploitation.md#sandboxed-python--r-plugin--code-execution-on-the-cluster
+  technique: ADX python()/R plugin
+  source_revision: a66f094ede
+  reason: Sandboxed execution with no cluster identity token; reaching one needs a sandbox escape (vulnerability).
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-mysql-post-exploitation.md#microsoftdbformysqlflexibleserversread-microsoftdbformysqlflexibleserverswrite--microsoftmanagedidentityuserassignedidentitiesassignaction
+  technique: Attach UAMI to MySQL server
+  source_revision: a66f094ede
+  reason: The server uses the identity only for Entra admin lookup and service-side calls; no token is exposed to the source (confused deputy). Entra-admin abuse
+    is azure-mysql-flexible-entra-admin-write.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-postgresql-post-exploitation.md#microsoftdbforpostgresqlflexibleserversread-microsoftdbforpostgresqlflexibleserverswrite--microsoftmanagedidentityuserassignedidentitiesassignaction
+  technique: Attach UAMI to PostgreSQL server
+  source_revision: a66f094ede
+  reason: Confused-deputy service-side use of the identity (azure_storage extension reads); no token is exposed to the source.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-postgresql-post-exploitation.md#use-azure_storage-extension-to-access-storage-accounts
+  technique: azure_storage extension storage reads
+  source_revision: a66f094ede
+  reason: Confused-deputy data reads through the server identity; no token is exposed.
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-data-factory-post-exploitation.md#previewexfil-source-data-through-a-data-flow-debug-session
+  technique: Data flow debug preview
+  source_revision: a66f094ede
+  reason: Confused-deputy data reads through linked services; no identity token is exposed (the token-yielding sandbox run is azure-datafactory-debug-sandbox-run).

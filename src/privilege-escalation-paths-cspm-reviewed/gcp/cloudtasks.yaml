@@ -1,0 +1,81 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Tasks privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudtasks-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# HTTP tasks can send OAuth-authenticated requests to *.googleapis.com or deliver an OIDC token with a chosen audience.
+# The Cloud Tasks service agent mints either token; actAs is enforced at enqueue, also for queue-level overrides.
+
+- id: gcp-cloudtasks-tasks-create-actas
+  provider: gcp
+  service: cloudtasks
+  title: Enqueue HTTP tasks authenticated as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudtasks-privesc.md#cloudtaskstaskscreate-iamserviceaccountsactas
+  source_revision: 171e422
+  summary: The source can enqueue selected OAuth-authenticated Google API requests or deliver an audience-bound OIDC identity token as a service account in the queue's project, if a usable queue exists.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cloudtasks_enqueue_path: true
+      gcp_cloudtasks_authenticated_delivery: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Tasks OAuth identity in {project}"
+  conditions:
+    - id: service_agent
+      description: The project's Cloud Tasks service agent must be able to create an OAuth or OIDC token for the target service account.
+    - id: oauth_request_level
+      description: OAuth access is limited to predefined requests to *.googleapis.com, with no token returned to the source.
+    - id: oidc_audience
+      description: An OIDC token can be delivered to a chosen listener but only grants access where the target identity and chosen audience are trusted.
+    - id: existing_queue
+      description: Needs a running queue where tasks.create holds, a paused queue the source can resume, or rights to create both a queue and its task. Queue target overrides remain unresolved.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on specific SAs; roles/editor bundles tasks.create and actAs.
+  references:
+    - https://cloud.google.com/tasks/docs/creating-http-target-tasks
+  notes: The OIDC path can deliver a Google-signed identity token to an external listener; the OAuth path can only drive Google APIs directly.
+
+- id: gcp-cloudtasks-queues-setiampolicy-actas
+  provider: gcp
+  service: cloudtasks
+  title: Self-grant Cloud Tasks admin on a queue and enqueue authenticated tasks
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudtasks-privesc.md#cloudtasksqueuessetiampolicy
+  source_revision: 171e422
+  summary: The source can add task creation access it does not already have on an existing queue, then send an OAuth API request or deliver an audience-bound OIDC token as a service account on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cloudtasks_queue_policy_path: true
+      gcp_cloudtasks_authenticated_delivery: true
+    scope: same_project
+    aggregate_as: "Service accounts usable via self-granted Cloud Tasks queues in {project}"
+  conditions:
+    - id: new_queue_access
+      description: The source needs a new task creation grant on the exact queue; unread policies or IAM member restrictions leave this unresolved.
+    - id: existing_queue
+      description: Needs a running queue on which setIamPolicy holds, or a paused queue the source can resume. A queue target override must be absent or removable with queues.update.
+    - id: service_agent
+      description: The project's Cloud Tasks service agent must be able to create a token for the target service account.
+    - id: oauth_request_level
+      description: OAuth access is limited to predefined requests to *.googleapis.com, with no token returned to the source.
+    - id: oidc_audience
+      description: An OIDC token can be delivered to a chosen listener but only grants access where the target identity and chosen audience are trusted.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict cloudtasks.queues.setIamPolicy (roles/cloudtasks.queueAdmin, roles/cloudtasks.admin) and actAs grants.
+  notes: actAs is still enforced at enqueue, so the queue self-grant alone does not reach any SA.

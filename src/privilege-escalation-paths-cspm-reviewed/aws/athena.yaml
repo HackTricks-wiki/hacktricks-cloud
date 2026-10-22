@@ -1,0 +1,57 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon Athena (Spark workgroups and stored notebooks) privilege escalation techniques.
+# Source: hacktricks-cloud aws-athena-spark-role-privesc/README.md and aws-athena-stored-query-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Athena Spark workgroups carry an
+# ExecutionRole (trusting athena.amazonaws.com) used by every session, calculation and notebook in the workgroup.
+
+- id: aws-athena-passrole-createworkgroup-spark
+  provider: aws
+  service: athena
+  title: Create an Athena Spark workgroup with a passed execution role and run code in it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreateworkgroup--athenastartsession--run-spark-code-as-an-arbitrary-passed-execution-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable role trusting athena.amazonaws.com by binding it to a new Spark workgroup and running calculations there.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: athena.amazonaws.com
+      - action: athena:CreateWorkGroup
+        resource: arn:{source.partition}:athena:*:{source.account}:workgroup/*
+        bind: new_workgroup
+      - action: athena:StartSession
+        resource: arn:{source.partition}:athena:*:{source.account}:workgroup/*
+        bind: new_workgroup
+      - action: athena:StartCalculationExecution
+        resource: arn:{source.partition}:athena:*:{source.account}:workgroup/*
+        bind: new_workgroup
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: athena.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting athena.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: spark_region_support
+      description: Athena for Apache Spark must be available in the region.
+    - id: usable_workgroup
+      description: One available workgroup name must be covered by CreateWorkGroup, StartSession and StartCalculationExecution; the caller must select a Spark engine version that supports the calculation API, since Spark 3.5 uses Spark Connect instead.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Athena Spark execution roles with iam:PassedToService=athena.amazonaws.com and restrict athena:CreateWorkGroup to administrators.
+  references:
+    - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-getting-started.html
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreateWorkGroup.html
+  notes: Generic PassRole path independent of existing sessions.

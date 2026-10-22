@@ -1,0 +1,49 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon Managed Service for Apache Flink privilege escalation techniques.
+# Source: hacktricks-cloud aws-managed-flink-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Applications carry a service execution role
+# trusting kinesisanalytics.amazonaws.com; IAM actions use the kinesisanalytics prefix.
+
+- id: aws-flink-passrole-createapplication
+  provider: aws
+  service: kinesisanalytics
+  title: Create and start a Managed Flink application with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#createapplication--iampassrole--malicious-code
+  source_revision: 171e422299
+  summary: The source can start Flink application code it controls using a passable service role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: kinesisanalytics.amazonaws.com
+      - action: kinesisanalytics:CreateApplication
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: kinesisanalytics.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting kinesisanalytics.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - flink_new_application_startable
+  conditions:
+    - id: controlled_code
+      description: The source can provide application ZIP content in CreateApplication; code supplied from S3 instead needs the execution role to read that object.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on Flink roles with iam:PassedToService=kinesisanalytics.amazonaws.com and restrict CreateApplication to the deployment pipeline.
+  references:
+    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplication.html
+  notes: The service does not expose role credentials directly; the code acts with the role's permissions. CreateApplication is authorized on * and StartApplication on the new application's ARN.

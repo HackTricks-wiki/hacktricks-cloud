@@ -1,0 +1,44 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP API Keys privilege escalation techniques (authorization keys bound to a service account only; standard keys are excluded).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-apikeys-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-apikeys-authorization-key-bound-sa
+  provider: gcp
+  service: apikeys
+  title: Create an authorization API key bound to a more-privileged service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-apikeys-privesc.md#create-an-authorization-key-bound-to-a-more-privileged-service-account
+  source_revision: 171e422
+  summary: The source can create a key that acts as a selected service account only when calling an API that accepts authorization keys and is permitted by the effective key-binding policy.
+  requires:
+    all_of:
+      - action: apikeys.keys.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.resource}"
+      - action: iam.serviceAccountApiKeyBindings.create
+        resource: "{target.resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_bounded_service_execution: apikeys_authorization_key
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    outcome: bounded_authority
+    aggregate_as: "Service accounts usable through supported authorization-key APIs in {project}"
+  conditions:
+    - id: partial_api_scope
+      description: The key only works against APIs that accept authorization keys (documented for Vertex AI / aiplatform and the Gemini API), within the key's API restriction; it is not a credential for every Google Cloud API.
+    - id: effective_key_binding_policy
+      description: The effective managed policy must allow the key's API restriction. Gemini-only keys are allowed by default; changing the policy to allow other services requires an organization.
+  blockers:
+    - gcp_deny_policy
+    - id: org_policy_constraint
+      constraint: iam.managed.disableServiceAccountApiKeyCreation
+  confidence: conditional
+  severity: high
+  mitigation: Restrict service account key-binding and actAs grants, and limit allowed API services in the effective managed policy.
+  references:
+    - https://docs.cloud.google.com/docs/authentication/api-keys
+  notes: Google documents API Keys Admin, Service Usage Viewer, Service Account User and Service Account API Key Binding Admin as the required roles. The managed constraint allows Gemini-only keys by default. The CreateKey operation returns the key string (serviceusage.operations.get is only needed to poll it).

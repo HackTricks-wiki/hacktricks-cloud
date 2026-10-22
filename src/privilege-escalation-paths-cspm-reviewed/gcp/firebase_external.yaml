@@ -1,0 +1,58 @@
+# A signed custom-token path needs reviewed evidence of the exact Firebase user,
+# an accepted token exchange, and newly allowed application access.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: gcp-firebase-signblob-exact-custom-token-user
+  provider: gcp
+  service: firebaseauth
+  title: Sign a custom token as a project service account and reach one Firebase user
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-firebase-privesc.md#service-account-signing-access--mint-firebase-custom-tokens-with-arbitrary-claims
+  source_revision: f0f683242a
+  summary: A principal that can sign a custom Firebase token with a same-project service account may authenticate as an exact UID and gain a named application permission after a successful token exchange.
+  requires:
+    all_of:
+    - action: iam.serviceAccounts.signBlob
+      resource: '{target.resource}'
+  target:
+    kind: gcp_external_principal
+    selector:
+      gcp_external_principal_evidence: true
+      gcp_external_plane: firebase_auth
+    scope: same_project
+    outcome: credentials
+    aggregate_as: Exact Firebase custom-token user with reviewed new access
+  conditions:
+  - id: exact_firebase_custom_token_exchange
+    description: The reviewed record must bind the exact signing service account to the RS256 custom token issuer and subject, the Firebase audience and UID, an accepted exchange for that project, tenant when present, and UID, prior source denial, and a newly allowed application action.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict service-account signing permissions and validate Firebase custom-token issuance.
+  notes: ActionResource is the exact signing service account; TargetServiceResource is the exact Firebase project or tenant user. SignedTokenIssuer and SignedTokenSubject must match that account, SignedTokenUid and ExchangeUid must match the target UID, ExchangeProjectId must match the project, and SignedTokenTenantId and ExchangeTenantId must agree when a tenant is used. A signed JWT without accepted Firebase exchange and new authorization is insufficient.
+
+- id: gcp-firebase-signjwt-exact-custom-token-user
+  provider: gcp
+  service: firebaseauth
+  title: Sign a custom JWT as a project service account and reach one Firebase user
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-firebase-privesc.md#service-account-signing-access--mint-firebase-custom-tokens-with-arbitrary-claims
+  source_revision: f0f683242a
+  summary: A principal that can sign a custom Firebase JWT with a same-project service account may authenticate as an exact UID and gain a named application permission after a successful token exchange.
+  requires:
+    all_of:
+    - action: iam.serviceAccounts.signJwt
+      resource: '{target.resource}'
+  target:
+    kind: gcp_external_principal
+    selector:
+      gcp_external_principal_evidence: true
+      gcp_external_plane: firebase_auth
+    scope: same_project
+    outcome: credentials
+    aggregate_as: Exact Firebase custom-token user with reviewed new access
+  conditions:
+  - id: exact_firebase_custom_jwt_exchange
+    description: The reviewed record must bind the exact signing service account to the RS256 custom JWT issuer and subject, the Firebase audience and UID, an accepted exchange for that project, tenant when present, and UID, prior source denial, and a newly allowed application action.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict service-account signing permissions and validate Firebase custom-token issuance.
+  notes: ActionResource is the exact signing service account; TargetServiceResource is the exact Firebase project or tenant user. SignedTokenIssuer and SignedTokenSubject must match that account, SignedTokenUid and ExchangeUid must match the target UID, ExchangeProjectId must match the project, and SignedTokenTenantId and ExchangeTenantId must agree when a tenant is used. A signed JWT without accepted Firebase exchange and new authorization is insufficient.

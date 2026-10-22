@@ -1,0 +1,47 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon EventBridge Scheduler privilege escalation techniques.
+# Source: hacktricks-cloud eventbridgescheduler-privesc/README.md (rev 171e422299).
+
+- id: aws-scheduler-passrole-createschedule-or-updateschedule
+  provider: aws
+  service: scheduler
+  title: Create or update a schedule that runs with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/eventbridgescheduler-privesc/README.md#iampassrole-schedulercreateschedule--schedulerupdateschedule
+  source_revision: 171e422299
+  summary: The source can make EventBridge Scheduler call a supported target using a passable execution role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+    any_of:
+      - - action: scheduler:CreateSchedule
+          resource: "*"
+      - - action: scheduler:UpdateSchedule
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: scheduler.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting scheduler.amazonaws.com passable in {account}"
+    outcome: impersonation
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: updateschedule_existing
+      description: The UpdateSchedule variant requires an existing schedule within its Resource.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole with iam:PassedToService=scheduler.amazonaws.com to specific roles and restrict schedule creation/update.
+  references:
+    - https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html
+    - https://docs.aws.amazon.com/scheduler/latest/UserGuide/setting-up.html
+  notes: Universal targets let the role call most AWS APIs (write-only, results are not returned), so reach equals the role's write permissions.

@@ -1,0 +1,69 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Logic Apps techniques (declarative only).
+# Source: hacktricks-cloud az-logic-apps-privesc.md (rev 171e422, re-verified).
+# Standard (single-tenant) Logic Apps are Microsoft.Web/sites and are covered by app_services.yaml.
+
+- id: azure-logicapp-workflow-write-existing-identity
+  provider: azure
+  service: logic_apps
+  title: Modify an existing Consumption workflow that runs with managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#microsoftlogicworkflowswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the workflow's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.Logic/workflows/write
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_logicapp_existing_identity_path: true
+    scope: inherited_scope
+    aggregate_as: Identities of Logic App {target.host_resource}
+  conditions:
+    - id: run_path
+      description: 'The modified workflow must run: a recurrence/event trigger, triggers/run/action, or a callback URL.'
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workflows/write and keep workflow identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/logic-apps/authenticate-with-managed-identity
+  notes: HackTricks marks workflows/write as directly changing workflow code (Critical).
+
+- id: azure-logicapp-assign-user-assigned-identity
+  provider: azure
+  service: logic_apps
+  title: Create or update a workflow with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-logic-apps-privesc.md#assign-a-user-assigned-identity-to-a-writable-workflow
+  source_revision: 85987e6273
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '*'
+      - action: Microsoft.Logic/workflows/write
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_logicapp_assign_uami_path: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: run_path
+      description: 'The workflow must run: triggers/run/action, a callback URL, or a recurrence trigger.'
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and workflows/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/logic-apps/authenticate-with-managed-identity
+  notes: Covers both identity-assignment sections of the page.

@@ -1,0 +1,334 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Systems Manager privilege escalation techniques.
+# Source: hacktricks-cloud aws-ssm-privesc/README.md (rev a53b46392c).
+# Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
+
+- id: aws-ssm-sendcommand
+  provider: aws
+  service: ssm
+  title: Run commands on SSM-managed instances
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmsendcommand
+  source_revision: 171e422299
+  summary: The source may reach the instance-profile role by running a shell command on an SSM-managed instance it can target.
+  requires:
+    all_of:
+      - action: ssm:SendCommand
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+  conditions:
+    - id: shell_document_allowed
+      description: ssm:SendCommand must also cover a document that runs arbitrary commands (e.g. AWS-RunShellScript / AWS-RunPowerShellScript); a Resource limited to non-shell documents removes the edge.
+    - id: document_platform
+      description: The permitted shell document must be usable on the instance's operating system.
+    - id: instance_managed
+      description: The instance must be online in SSM (agent running, network path to SSM, managed-instance role).
+    - id: ssm_resource_tag_condition
+      description: ssm:resourceTag conditions may limit covered instances.
+  preconditions:
+    - ec2_instance_running
+    - ssm_managed_instance
+    - ssm_shell_document_on_online_instance
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope ssm:SendCommand to specific instance ARNs/tags and to non-shell documents; restrict shell documents to administrators.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-rc-setting-up-cmdsec.html
+  notes: SendCommand authorizes both the instance and the document ARNs. The evaluator checks same-Region AWS shell documents; a potentially usable custom document remains unresolved. Hybrid managed nodes (mi-*) yield their service role credentials only via the node, not an EC2 instance profile.
+
+- id: aws-ssm-startsession
+  provider: aws
+  service: ssm
+  title: Open a Session Manager shell on managed instances
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartsession
+  source_revision: 171e422299
+  summary: The source may reach the instance-profile role through a shell session on an SSM-managed instance it can target.
+  requires:
+    all_of:
+      - action: ssm:StartSession
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+  conditions:
+    - id: session_document_restriction
+      description: If StartSession is limited to a document ARN that only allows port forwarding or a constrained command, no shell is obtained.
+    - id: session_data_channel
+      description: The source also needs ssmmessages:OpenDataChannel on the session it starts.
+    - id: instance_managed
+      description: The instance must be online in SSM.
+  preconditions:
+    - ec2_instance_running
+    - ssm_managed_instance
+    - ssm_shell_session_on_online_instance
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Scope ssm:StartSession to specific instances and require ssm:SessionDocumentAccessCheck with restricted session documents.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-quickstart.html
+  notes: The evaluator checks StartSession on an online instance and its same-Region SSM-SessionManagerRunShell document, plus an OpenDataChannel grant for a future session in that account and Region. The exact generated session ID and instance-level shell restrictions remain conditional.
+
+- id: aws-ssm-createassociation
+  provider: aws
+  service: ssm
+  title: Create a State Manager association that runs commands on instances
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#privileged-execution-through-a-state-manager-association
+  source_revision: 171e422299
+  summary: The source may run a shell document on an SSM-managed instance by creating an association that targets its instance ID.
+  requires:
+    all_of:
+      - action: ssm:CreateAssociation
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+  conditions:
+    - id: shell_document_allowed
+      description: CreateAssociation must cover a shell document as well as the new association resource.
+    - id: instance_managed
+      description: The instance must be online in SSM.
+    - id: targets_parameter
+      description: The Targets parameter can name the instance ID directly; an instance ARN restriction is enforced only for the deprecated InstanceId parameter.
+  preconditions:
+    - ec2_instance_running
+    - ssm_managed_instance
+    - ssm_shell_association_targets
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ssm:CreateAssociation to configuration-management principals and to approved documents.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/state-manager-associations.html
+  notes: The evaluator checks the Targets route with an exact instance ID, an association ARN, and a same-Region AWS shell document. A custom shell document remains unresolved if its command behavior is not collected.
+
+- id: aws-ssm-maintenancewindow-register-task-target
+  provider: aws
+  service: ssm
+  title: Register or update a Run Command task on an existing maintenance window
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmregistertaskwithmaintenancewindow-ssmregistertargetwithmaintenancewindow-ssmdescribemaintenancewindows--ec2describeinstances
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the instance-profile role of SSM-managed instances by having an existing maintenance window run a command task it registered or modified on them.
+  requires:
+    any_of:
+      - - action: ssm:RegisterTaskWithMaintenanceWindow
+          resource: "*"
+      - - action: ssm:UpdateMaintenanceWindowTask
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: window_schedule
+      description: An enabled maintenance window must exist and reach its next scheduled run; the task can omit a service role (the service-linked role is used) or needs iam:PassRole for a custom one.
+    - id: task_targets
+      description: Without ssm:RegisterTargetWithMaintenanceWindow the task reaches only the window's existing targets or instances it names directly as task targets; with it the source can add any managed instance to the window.
+    - id: instance_managed
+      description: Target instances must be online in SSM.
+  preconditions:
+    - ec2_instance_running
+    - ssm_managed_instance
+    - ssm_maintenance_window_run_command_target
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict maintenance-window task registration and update APIs to operations principals, reconcile window tasks against IaC and alert on new or changed window tasks.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows-permissions.html
+    - https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_UpdateMaintenanceWindowTask.html
+  notes: A registered Run Command task can name an online instance directly with Targets InstanceIds. Updating a task requires an existing RUN_COMMAND task and authorization on both its maintenance window and its windowtask ARN. The passed-service-role Automation variant is aws-ssm-maintenancewindow-automation-task-passrole.
+
+
+- id: aws-ssm-createdocument-startautomationexecution-passrole
+  provider: aws
+  service: ssm
+  title: Create an Automation runbook with a passed assume role and start it
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
+  source_revision: 171e422299
+  summary: The source can run an Automation document it authored using a passable SSM role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm.amazonaws.com
+      - action: ssm:CreateDocument
+        resource: "*"
+      - action: ssm:StartAutomationExecution
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: trust_confused_deputy_conditions
+      description: aws:SourceAccount / aws:SourceArn conditions in the role trust limit it to Automation executions of the stated account.
+  preconditions:
+    - ssm_new_automation_document_executable
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Automation roles with iam:PassedToService, restrict ssm:CreateDocument to administrators, and keep Automation roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-setup-iam.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awssystemsmanager.html
+  notes: The evaluator binds CreateDocument and StartAutomationExecution to one new Automation document name in one Region, and checks authorization on generated automation-execution resources. The passed role may be supplied through the runbook or the execution request.
+
+- id: aws-ssm-passrole-createactivation
+  provider: aws
+  service: ssm
+  title: Create a hybrid activation bound to a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmcreateactivation-iampassrole--mint-a-hybrid-activation-that-hands-out-a-role
+  source_revision: 171e422299
+  summary: The source can register a machine it controls as an SSM hybrid managed node using a passable role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm.amazonaws.com
+      - action: ssm:CreateActivation
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: activation_code_bearer
+      description: The activation code returned to the caller is a bearer credential that keeps working after the caller loses access, until the activation is deleted and the registered nodes are deregistered.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ssm:CreateActivation to node-onboarding administrators, scope iam:PassRole on hybrid service roles with iam:PassedToService=ssm.amazonaws.com, and alert on CreateActivation and RegisterManagedInstance from unexpected sources.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/hybrid-multicloud-service-role.html
+    - https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_CreateActivation.html
+  notes: The hybrid service role must trust ssm.amazonaws.com; the node needs no EC2 instance, VPC or ec2:RunInstances.
+
+- id: aws-ssm-jit-startaccessrequest-getaccesstoken
+  provider: aws
+  service: ssm
+  title: Obtain just-in-time node access credentials and open a session
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartaccessrequest--ssmgetaccesstoken--vend-jit-credentials-for-a-session-manager-shell
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the instance-profile role of managed nodes for which its just-in-time access request is approved.
+  requires:
+    all_of:
+      - action: ssm:StartAccessRequest
+        resource: "{target.resource_arn}"
+      - action: ssm:GetAccessToken
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: "Instance-profile roles of SSM-managed instances reachable by just-in-time access in {account}"
+  conditions:
+    - id: jit_enabled_and_approved
+      description: Just-in-time node access must be enabled in the account and Region, and an auto-approval policy or all manual approvers must approve the request; a deny-access policy wins.
+    - id: assumed_role_caller
+      description: The requester must use supported sts:AssumeRole credentials; IAM users are not supported.
+    - id: instance_managed
+      description: The instance must be online in SSM.
+  preconditions:
+    - ec2_instance_running
+    - ssm_managed_instance
+    - ssm_jit_approved_online_instance
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Keep JIT approval policies narrow (explicit requesters, tagged nodes, manual approval for sensitive nodes), scope ssm:StartAccessRequest by node, and set Session Manager maximum duration and idle timeouts.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-just-in-time-node-access.html
+  notes: StartAccessRequest is authorized on the EC2 instance ARN for an EC2 managed node. An approval policy or an existing approved request must be proven for the source and node before this path can become a reported edge; until then the route remains unresolved.
+
+- id: aws-ssm-maintenancewindow-automation-task-passrole
+  provider: aws
+  service: ssm
+  title: Register or update a maintenance-window Automation task with a passed service role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmregistertaskwithmaintenancewindow-ssmregistertargetwithmaintenancewindow-ssmdescribemaintenancewindows--ec2describeinstances
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of a passable role trusting ssm.amazonaws.com by having a maintenance window run an Automation runbook it authored under that service role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm.amazonaws.com
+      - action: ssm:CreateDocument
+        resource: "*"
+    any_of:
+      - - action: ssm:RegisterTaskWithMaintenanceWindow
+          resource: "*"
+      - - action: ssm:UpdateMaintenanceWindowTask
+          resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: window_schedule
+      description: An enabled maintenance window must exist and reach its next scheduled run; the effect is delayed until then.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: automation_task_type
+      description: Only Automation tasks execute steps under the passed service role; Run Command tasks use it only for notifications and run as the node's role.
+  preconditions:
+    - ssm_maintenance_window_automation_task_ready
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict maintenance-window task registration and update to operations principals, scope iam:PassRole on SSM service roles with iam:PassedToService, and restrict ssm:CreateDocument.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/maintenance-windows-permissions.html
+  notes: The page states that with a passed service role the window task runs under that role. Same reach as aws-ssm-createdocument-startautomationexecution-passrole, delayed to the window schedule.

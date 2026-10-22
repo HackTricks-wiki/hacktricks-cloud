@@ -1,0 +1,39 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Agent Registry privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-agent-registry-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# A reviewed execution record must identify the exact Agent Registry Skill and consumer.
+- id: gcp-agentregistry-skill-default-revision-replace
+  provider: gcp
+  service: agentregistry
+  title: Publish a Skill revision used by an agent
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryskillrevisionscreate--agentregistryskillsupdate--replace-an-executable-skills-default-revision
+  source_revision: 171e422
+  summary: Publishing a new Agent Registry Skill revision may let the source run a bounded action in a consumer that resolves that Skill's floating default.
+  requires:
+    all_of:
+    - action: agentregistry.skillRevisions.create
+      resource: '{target.artifact_arn}'
+    - action: serviceusage.services.use
+      resource: '{target.quota_project}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_agentregistry_skill_evidence: true
+    scope: any
+    outcome: bounded_authority
+    aggregate_as: Exact downstream actions observed through consumers of a changed Agent Registry Skill
+  conditions:
+  - id: exact_skill_consumer
+    description: A reviewed record must show the consumer resolves this Agent Registry Skill's logical name and changed default revision, not a pinned revision or a similarly named Skill Registry resource.
+  - id: observed_bounded_action
+    description: The consumer must load the replacement payload and perform a named action on an exact resource that the source could not access before.
+  - id: explicit_pointer_update
+    description: If the record says the pointer was changed explicitly, the source also needs agentregistry.skills.update on the exact Skill.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/agentregistry.user, editor and admin on Skills, pin agents to immutable revisions and keep security scanning enabled.
+  notes: Preview service. Creating a revision automatically makes it active according to Google documentation. A verified record binds the exact Skill, quota project, consumer, runtime identity, changed revision, and newly successful bounded action; no generic service-account attachment is inferred.

@@ -1,0 +1,41 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Analysis Services techniques (declarative only).
+# Source: hacktricks-cloud az-analysis-services-privesc.md (rev db5b136660).
+
+- id: azure-analysisservices-server-admin-write
+  provider: azure
+  service: analysis_services
+  title: Add a principal to the Analysis Services server administrators
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-analysis-services-privesc.md#server-admin-self-add--full-model-exfil-marquee
+  source_revision: db5b136660
+  summary: The source can add a controlled login-capable tenant principal to the server administrators and thereby gain administrative access to hosted models.
+  requires:
+    all_of:
+      - action: Microsoft.AnalysisServices/servers/write
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Analysis Services server admins of {target.scope}"
+  conditions:
+    - id: controlled_login_capable_tenant_principal
+      description: The source must control a user or service principal in the server tenant that can sign in to Analysis Services; a managed identity cannot sign in to the service.
+    - id: network_reachable
+      description: The server firewall must allow the source (servers/write can also change it).
+    - id: server_active_or_resumable
+      description: A paused or suspended server must be resumed before its models can be accessed.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict servers/write and monitor changes to asAdministrators.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/analysisservices/servers/update
+    - https://learn.microsoft.com/en-us/azure/analysis-services/analysis-services-server-admins
+  notes: The ARM write grants the ability to change asAdministrators on the exact server. The target is server-level data-plane administration, not observed access to any particular model.

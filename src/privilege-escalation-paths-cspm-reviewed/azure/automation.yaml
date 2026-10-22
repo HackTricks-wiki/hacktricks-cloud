@@ -1,0 +1,166 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Automation account privilege escalation techniques.
+# Source: hacktricks-cloud az-automation-accounts-privesc.md (rev 171e422).
+# Placeholder conventions: see catalog/azure/authorization.yaml header.
+
+- id: azure-automation-runbook-author-and-run
+  provider: azure
+  service: automation
+  title: Create or modify a runbook and run it as the Automation account identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobswrite-microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsjobsoutputread-microsoftautomationautomationaccountsrunbookspublishaction-microsoftresourcessubscriptionsresourcegroupsread-microsoftautomationautomationaccountsrunbookswrite
+  source_revision: 171e422
+  summary: The source runs arbitrary runbook code inside the Automation account sandbox and obtains tokens for the account's system- and user-assigned managed identities.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "*"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "*"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Automation/automationAccounts
+      azure_automation_runbook_identity_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of Automation account {target.host_resource}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Limit runbook authoring/publish/job permissions (Automation Contributor, Automation Operator + Runbook Operator, Contributor) and give the Automation account identity only the roles its runbooks need.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-role-based-access-control
+    - https://learn.microsoft.com/en-us/azure/automation/enable-managed-identity-for-automation
+  notes: The selector joins a complete create-and-run or exact existing-runbook publish/job or test-job route on the same inventoried Automation account carrying the identity. Grants limited to a named runbook are supported. Output-read permissions are only needed to read results and are not required for the gain. Credential and encrypted-variable assets are modelled separately (azure-automation-runbook-credential-assets); Hybrid Worker VM identities separately (azure-automation-runbook-hybrid-worker).
+
+- id: azure-automation-runbook-hybrid-worker
+  provider: azure
+  service: automation
+  title: Run runbook code on a Hybrid Runbook Worker VM and use the VM's managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#hybrid-workers-group
+  source_revision: a66f094ede
+  summary: Runbook jobs targeted at a Hybrid Worker group execute on the worker machine, so an Azure VM worker's managed identities become reachable through IMDS.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Automation/automationAccounts/runbooks/write
+          scope: "*"
+      - - action: Microsoft.Automation/automationAccounts/runbooks/draft/write
+          scope: "*"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service:
+        - Microsoft.Compute/virtualMachines
+        - Microsoft.HybridCompute/machines
+      azure_automation_hybrid_worker_path: true
+    scope: any
+    aggregate_as: "Managed identities of Hybrid Worker VMs / Arc machines of Automation account {pivot}"
+  conditions:
+    - id: worker_selection_and_identity_use
+      description: A job must execute on the linked VM within its Hybrid Worker group, and code must use an identity available on that host.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict runbook authoring on accounts with Hybrid Worker groups and do not attach privileged managed identities to worker VMs.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/automation-hrw-run-runbooks
+  notes: The selector requires a complete runbook authoring and execution path on the exact Automation account with the linked worker. Worker-group scheduling and identity use remain conditional. Jobs run as SYSTEM or nxautomation on the worker. Arc-enabled server workers can expose the Arc machine identity when the Automation account has no managed identity.
+
+- id: azure-automation-assign-user-assigned-identity
+  provider: azure
+  service: automation
+  title: Attach a user-assigned managed identity to an Automation account and run code as it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: 171e422
+  summary: The source attaches any user-assigned identity it can assign to an Automation account it controls and then uses runbook code to obtain that identity's tokens.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.Automation/automationAccounts/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_automation_assignable_uami: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict Microsoft.ManagedIdentity/userAssignedIdentities/assign/action (Managed Identity Operator, Contributor, Owner) to deployment principals and scope it to individual identities.
+  references:
+    - https://learn.microsoft.com/en-us/azure/automation/add-user-assigned-identity
+  notes: The selector joins exact UAMI assignment, Automation account write, and a complete create-runbook or existing-runbook execution route on the same account. A new account is conditional and requires an inventoried resource group. Missing account or runbook inventory stays unresolved.
+
+- id: azure-automation-job-output-credential
+  provider: azure
+  service: automation
+  title: Read a service principal credential from Automation job output
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#harvest-secrets-from-prior-job-output-and-streams
+  source_revision: 658a097d5c
+  summary: Read a verified usable service principal client secret from historical Automation job output and gain that principal's permissions.
+  requires:
+    all_of: []
+    any_of:
+    - - action: Microsoft.Automation/automationAccounts/jobs/output/read
+        scope: '*'
+    - - action: Microsoft.Automation/automationAccounts/jobs/streams/read
+        scope: '*'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates this edge; uncollected, partial, or unverified content creates no path.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: A known job name can be read with output/read or streams/read without jobs/read. Reviewed evidence must identify the exact job, returned content, and usable service-principal client secret; the selector checks the read action on that job. A short-lived audience-bound access token is not treated as full principal control. Missing or incomplete review creates no path.
+- id: azure-automation-runbook-source-credential
+  provider: azure
+  service: automation
+  title: Read hardcoded credentials from runbook source
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#read-runbook-source-for-hardcoded-secrets
+  source_revision: 658a097d5c
+  summary: Read a verified usable credential from published Automation runbook source and gain its Entra service principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Automation/automationAccounts/runbooks/content/read
+      scope: '*'
+  pivot_resource_type: Microsoft.Automation/automationAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates this edge; uncollected, partial, or unverified content creates no path.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/automation/manage-runbooks
+  notes: Reviewed azure_privesc_challenge_evidence must identify the exact published runbook, returned source, and usable credential mapped to a named Entra service principal. The selector checks content/read on that runbook, including a grant limited to the named runbook. Missing or incomplete review creates no path.

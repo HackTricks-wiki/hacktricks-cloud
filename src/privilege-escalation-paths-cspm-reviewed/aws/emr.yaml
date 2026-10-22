@@ -1,0 +1,82 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon EMR privilege escalation techniques.
+# Source: hacktricks-cloud aws-emr-privesc/README.md (rev a53b46392c; GetClusterSessionCredentials at 171e422299).
+# Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
+
+- id: aws-emr-passrole-runjobflow
+  provider: aws
+  service: emr
+  title: Launch an EMR cluster with a passed EC2 instance profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#iampassrole-elasticmapreducerunjobflow
+  source_revision: 171e422299
+  summary: The source can launch an EMR cluster with a passable EC2 instance profile and run bootstrap code on its instances.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: elasticmapreduce:RunJobFlow
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "EC2 instance-profile roles passable in {account}"
+    outcome: workload_execution
+  conditions:
+    - id: emr_service_role_passable
+      description: RunJobFlow also requires passing an EMR service role (or the default EMR_DefaultRole must exist and be passable); PassRole must cover it too.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on EC2 instance-profile and EMR service roles with iam:PassedToService, and restrict elasticmapreduce:RunJobFlow.
+  references:
+    - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-role-for-ec2.html
+  notes: The EMR service role itself is not reachable (only used by the EMR control plane); the reachable role is the EC2 instance profile role.
+
+- id: aws-emr-getclustersessioncredentials-runtime-role
+  provider: aws
+  service: emr
+  title: Vend endpoint credentials for an EMR runtime role without iam:PassRole
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducegetclustersessioncredentials--vend-a-runtime-roles-credentials-without-iampassrole
+  source_revision: 171e422299
+  summary: The source can act as an EMR runtime role on a fine-grained-access-control cluster (submitting work to the cluster endpoints as that role) by retrieving the cluster session credentials for it, without holding iam:PassRole on the role.
+  requires:
+    all_of:
+      - action: elasticmapreduce:GetClusterSessionCredentials
+        resource: "arn:{source.partition}:elasticmapreduce:*:{target.account}:cluster/*"
+  target:
+    kind: aws_role
+    selector:
+      emr_runtime_role_of_cluster: true
+    scope: same_account
+    aggregate_as: "EMR runtime roles of clusters with a security configuration in {account}"
+  conditions:
+    - id: credentials_are_endpoint_credentials
+      description: The API returns HTTP basic credentials for the cluster's endpoints (Livy / Spark through EMR Studio-style integrations) acting as the runtime role, not STS keys; the source uses the role through workloads it submits to the cluster.
+    - id: execution_role_condition_key
+      description: elasticmapreduce:ExecutionRoleArn conditions on the grant can restrict which runtime roles credentials can be retrieved for.
+    - id: cluster_running_with_runtime_roles
+      description: The cluster must be running with a security configuration that enables runtime roles (and Lake Formation / FGAC where applicable).
+  preconditions:
+    - emr_cluster_session_runtime_role
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Constrain elasticmapreduce:GetClusterSessionCredentials with elasticmapreduce:ExecutionRoleArn to the caller's own runtime roles and keep runtime roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr.html
+    - https://docs.aws.amazon.com/emr/latest/APIReference/API_GetClusterSessionCredentials.html
+    - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-steps-runtime-roles.html
+  notes: The evaluator joins target role trust to the EC2 instance profile on a WAITING or RUNNING cluster whose named security configuration enables runtime roles. It checks the exact cluster and requested ExecutionRoleArn. An exact sts:ExternalId trust value is compared with a SHA-256 digest from the configuration, without retaining the raw value; missing evidence stays unresolved.

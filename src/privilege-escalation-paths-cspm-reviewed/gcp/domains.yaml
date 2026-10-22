@@ -1,0 +1,64 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Domains privilege escalation techniques.
+# Source: hacktricks-cloud gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md (rev 171e422).
+# Joins ACTIVE registrations to the Workspace customer's recorded primary domain.
+
+- id: gcp-domains-configuredns-workspace-admin-recovery
+  provider: gcp
+  service: domains
+  title: Repoint a Cloud Domains registration's name servers to recover the Workspace super administrator
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workspace-privesc.md#cloud-dns-to-workspace-administrator-recovery
+  source_revision: 4e9b5eaaa6
+  summary: The source can obtain the privileges of Workspace super administrators of tenants whose primary domain is a Cloud Domains registration whose DNS settings it can change.
+  requires:
+    all_of:
+      - action: domains.registrations.configureDns
+        resource: "{target.domain_registration}"
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_workspace_super_admin_with_registered_domain: true
+    scope: any
+    aggregate_as: "Workspace super administrators of domains registered in Cloud Domains"
+  conditions:
+    - id: dnssec
+      description: Published DS records must be removed and aged out first, otherwise the change breaks resolution instead of redirecting it.
+    - id: recovery_process
+      description: Depends on Google's administrator-recovery process accepting the DNS domain-verification challenge for the tenant.
+    - id: attacker_name_servers
+      description: The source must operate the replacement authoritative name servers.
+  blockers: [gcp_deny_policy]
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict domains.registrations.configureDns on registrations of Workspace domains and monitor name-server changes and admin-recovery events.
+  notes: Same end state as gcp-workspace-cloud-dns-admin-recovery, with the registration (not a Cloud DNS zone) as the control point.
+
+- id: gcp-domains-configuremanagement-transfer-workspace-admin-recovery
+  provider: gcp
+  service: domains
+  title: Transfer a Cloud Domains registration to attempt Workspace administrator recovery
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workspace-privesc.md#cloud-dns-to-workspace-administrator-recovery
+  source_revision: 4e9b5eaaa6
+  summary: The source can retrieve a transfer authorization code or initiate a push transfer for an eligible Cloud Domains registration. A completed transfer to a controlled registrar could give it DNS control of the matching Workspace customer's primary domain, which may support administrator recovery.
+  requires:
+    all_of:
+      - action: domains.registrations.configureManagement
+        resource: "{target.domain_registration}"
+  target:
+    kind: gcp_workspace_user
+    selector:
+      gcp_workspace_super_admin_with_registered_domain: true
+    scope: any
+    aggregate_as: "Workspace super administrators of domains registered in Cloud Domains"
+  conditions:
+    - id: transfer_eligibility
+      description: Authorization-code retrieval requires the initial registration to be at least 60 days old. The registration must meet lock, registry and TLD transfer rules; push-transfer TLDs need a receiving registrar tag instead of an authorization code.
+    - id: receiving_registrar
+      description: The source must complete any required registrar or registrant confirmation, transfer the domain to a registrar it controls, and publish DNS for the domain.
+    - id: recovery_process
+      description: Depends on Google's administrator-recovery process accepting the DNS domain-verification challenge for the tenant.
+  blockers: [gcp_deny_policy]
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict domains.registrations.configureManagement on registrations of Workspace domains, keep the registrar lock on, and monitor authorization-code retrieval, lock changes and transfer events.
+  notes: Same end state as gcp-domains-configuredns-workspace-admin-recovery and gcp-workspace-cloud-dns-admin-recovery; the control point is the registrar transfer instead of the name-server setting.

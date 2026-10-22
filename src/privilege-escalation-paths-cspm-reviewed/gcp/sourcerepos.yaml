@@ -1,0 +1,61 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Source Repositories privilege escalation techniques (legacy service, unavailable to new customers).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-sourcerepos-privesc.md (rev 171e422).
+# gcp_sourcerepo_trigger_path joins a collected repository to a push trigger and its exact build service account.
+- id: gcp-sourcerepos-update-build-trigger
+  provider: gcp
+  service: source
+  title: Push code to a Cloud Source repository that feeds a Cloud Build trigger
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-sourcerepos-privesc.md#sourcereposupdate--poison-source-consumed-by-a-privileged-cloud-build-trigger
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the build service accounts of triggers that build from Cloud Source repositories on which it holds source.repos.update.
+  requires:
+    all_of:
+    - action: source.repos.update
+      resource: '{target.artifact_arn}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_sourcerepo_trigger_path: push
+    scope: any
+    aggregate_as: Build SAs of triggers on writable Cloud Source repositories
+  conditions:
+  - id: trigger
+    description: An existing enabled Cloud Build trigger on the repository must accept the push (ref, included/ignored-file filters, no unmet approval) and execute repository-controlled content; the trigger's pinned service account is used and a serviceAccount field in the repo build config is ignored.
+  - id: end_of_sale
+    description: Cloud Source Repositories is unavailable to new customers since 2024-06-17; only existing eligible organizations still use it.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict source.repos.update (roles/source.writer, roles/source.editor, roles/source.admin, roles/editor) on repositories with build triggers and require approval on triggers.
+  references:
+  - https://docs.cloud.google.com/build/docs/securing-builds/configure-access-control
+  notes: No cloudbuild.builds.create or iam.serviceAccounts.actAs is needed to cause the repository event; the writer cannot choose the build identity.
+- id: gcp-sourcerepos-setiampolicy
+  provider: gcp
+  service: source
+  title: Self-grant repository write access through the repository IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-sourcerepos-privesc.md#sourcerepossetiampolicy--self-grant-repository-write-access
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the build service accounts of triggers that build from Cloud Source repositories whose IAM policy it controls.
+  requires:
+    all_of:
+    - action: source.repos.setIamPolicy
+      resource: '{target.artifact_arn}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_sourcerepo_trigger_path: selfgrant
+    scope: any
+    aggregate_as: Build SAs of triggers on Cloud Source repositories whose IAM the source controls
+  conditions:
+  - id: followup_push
+    description: The self-granted roles/source.writer (or admin) is then used as in gcp-sourcerepos-update-build-trigger, with all of its trigger prerequisites.
+  - id: no_public_members
+    description: Cloud Source Repositories rejects allUsers/allAuthenticatedUsers bindings; the grantee must be an attacker-controlled IAM principal.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict source.repos.setIamPolicy (roles/source.admin, roles/owner).

@@ -1,0 +1,219 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Storage privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-storage-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Service-specific bucket write techniques (Composer, Cloud Functions, App Engine, Dataflow) live in those service files.
+
+- id: gcp-storage-hmackeys-create
+  provider: gcp
+  service: storage
+  title: Create an HMAC key for an in-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagehmackeyscreate--mint-a-cloud-storage-credential-for-another-service-account
+  source_revision: 171e422
+  summary: The source may create a Cloud Storage HMAC credential for an enabled service account in a project where it holds storage.hmacKeys.create. The credential grants only that account's Cloud Storage XML API access.
+  requires:
+    all_of:
+      - action: storage.hmacKeys.create
+        resource: "*"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_hmac_storage_identity: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    outcome: bounded_authority
+    aggregate_as: "Cloud Storage HMAC access through service accounts in {project}"
+  conditions:
+    - id: storage_only
+      description: An HMAC key authenticates only to the Cloud Storage XML (S3-interoperable) API, so only the SA's Cloud Storage permissions are obtained, not its other IAM permissions.
+    - id: hmac_constraint
+      description: Org policy storage.restrictAuthTypes rejects creation and use only when its denied values cover service-account HMAC signed requests.
+    - id: key_quota
+      description: The service account must have fewer than 10 non-deleted HMAC keys.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+    - {id: org_policy_constraint, constraint: storage.restrictAuthTypes}
+    - {id: org_policy_constraint, constraint: iam.disableServiceAccountKeyCreation}
+    - {id: org_policy_constraint, constraint: iam.managed.disableServiceAccountKeyCreation}
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.hmacKeys.create (roles/storage.hmacKeyAdmin, roles/storage.admin at project level) and enforce storage.restrictAuthTypes.
+  references:
+    - https://cloud.google.com/storage/docs/authentication/hmackeys
+    - https://docs.cloud.google.com/storage/docs/authentication/managing-hmackeys
+    - https://docs.cloud.google.com/storage/docs/json_api/v1/projects/hmacKeys/create
+  notes: No actAs or SA-level permission is needed; any enabled in-project SA email is accepted (HackTricks). The distinct bounded-authority target prevents an HMAC credential from being treated as a full service-account pivot.
+
+- id: gcp-storage-buckets-setiampolicy-code-consumers
+  provider: gcp
+  service: storage
+  title: Self-grant object write on a bucket used by Dataproc or an unpinned Cloud Build source
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source may obtain the privileges of a Dataproc cluster or a recorded Cloud Build service account when it can change the IAM policy of a bucket holding code the workload later loads.
+  requires:
+    all_of:
+      - action: storage.buckets.setIamPolicy
+        resource: "{target.host_resource.content_storage}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service:
+        - dataproc_cluster
+        - cloudbuild_unpinned_storage_source
+    scope: any
+    aggregate_as: "SAs of workloads loading code from buckets whose IAM the source controls"
+  conditions:
+    - id: followup_replace
+      description: The self-granted role must include storage.objects.create and storage.objects.delete so the consumed object can be replaced; a later Dataproc node startup or retry of a recorded non-triggered Cloud Build must load it without a pinned generation.
+    - id: blind_replace
+      description: setIamPolicy alone replaces the whole policy; a non-destructive read-modify-write also needs the matching getIamPolicy permission.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.buckets.setIamPolicy on buckets that hold executable code or build sources.
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+
+- id: gcp-storage-managedfolders-setiampolicy-dataproc-init
+  provider: gcp
+  service: storage
+  title: Self-grant write access to a Dataproc initialization script folder
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source may grant itself write access to a managed folder holding a Dataproc initialization script that could run again on a new cluster node.
+  requires:
+    all_of:
+      - action: storage.managedFolders.setIamPolicy
+        resource: '{target.dataproc_init_managed_folder}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: dataproc_cluster
+    scope: any
+    aggregate_as: SAs of Dataproc clusters with an initialization script in a writable managed folder
+  conditions:
+    - id: exact_init_script_folder
+      description: The collected initialization action must name a GCS object in the exact managed folder, and the bucket must use uniform bucket-level access.
+    - id: future_node_startup
+      description: A new cluster node must load the modified script after the folder grant and object replacement.
+    - id: followup_object_replace
+      description: The self-granted role must permit replacement of the referenced object, subject to holds and retention.
+  blockers: [gcp_deny_policy, vpc_sc_perimeter]
+  confidence: conditional
+  severity: high
+  mitigation: Restrict managed-folder IAM changes on paths holding Dataproc initialization scripts.
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+    - https://docs.cloud.google.com/managed-spark/docs/concepts/configuring-clusters/init-actions
+- id: gcp-storage-buckets-setiampolicy-composer
+  provider: gcp
+  service: storage
+  title: Self-grant write on a Composer environment bucket through the bucket IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of every Composer environment whose bucket IAM policy it controls.
+  requires:
+    all_of:
+    - action: storage.buckets.setIamPolicy
+      resource: '{target.host_resource.content_storage}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: composer_environment
+      gcp_composer_storage_policy_path: bucket
+    scope: any
+    aggregate_as: SAs of Composer environments whose bucket IAM the source controls
+  conditions:
+  - id: followup_write
+    description: The self-granted object write then drops a DAG that runs as the environment SA (see gcp-composer-bucket-write).
+  - id: allowed_member_domains
+    description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  - id: blind_replace
+    description: setIamPolicy alone replaces the whole bucket policy; a non-destructive read-modify-write also needs storage.buckets.getIamPolicy.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  references:
+  - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+  - https://docs.cloud.google.com/composer/docs/composer-3/access-control
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict storage.buckets.setIamPolicy (roles/storage.admin) on Composer and other code-bearing buckets.
+  notes: Dataproc staging and unpinned Cloud Build StorageSource consumers are modelled by gcp-storage-buckets-setiampolicy-code-consumers; function source and App Engine staging bucket techniques are race-conditional and not duplicated here.
+- id: gcp-storage-managedfolders-setiampolicy-composer
+  provider: gcp
+  service: storage
+  title: Self-grant Composer DAG write access through a managed-folder IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source may grant itself write access to a Composer DAG prefix when it can change the IAM policy of a managed folder covering that prefix.
+  requires:
+    all_of:
+    - action: storage.managedFolders.setIamPolicy
+      resource: '{target.composer_dag_managed_folder}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: composer_environment
+      gcp_composer_storage_policy_path: managed_folder
+    scope: any
+    aggregate_as: SAs of Composer environments with a potentially writable DAG managed folder
+  conditions:
+  - id: managed_dag_folder
+    description: The bucket must use uniform bucket-level access and an existing managed folder must contain or sit inside the Composer DAG prefix; the permission must apply to that exact folder.
+  - id: followup_write
+    description: The new folder binding must grant object creation under dags/ so the scheduler loads the new DAG.
+  - id: allowed_member_domains
+    description: An external source may be prevented from adding itself to the folder policy by the allowed-member-domains organization policy.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit managed-folder IAM policy changes on Composer DAG prefixes to environment administrators.
+  references:
+  - https://docs.cloud.google.com/storage/docs/creating-managing-managed-folders
+  - https://docs.cloud.google.com/composer/docs/composer-3/access-control
+- id: gcp-storage-cloudbuild-unpinned-storagesource-poison
+  provider: gcp
+  service: storage
+  title: Replace an unpinned Cloud Build StorageSource archive consumed by a later build
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storageobjectscreate--storageobjectsdelete--poison-an-unpinned-cloud-build-storagesource
+  source_revision: 171e422
+  summary: The source may obtain the build service account's privileges if a recorded non-triggered Cloud Build is retried after its unpinned source archive is replaced.
+  requires:
+    all_of:
+    - action: storage.objects.create
+      resource: '{target.cloudbuild_source_object}'
+    - action: storage.objects.delete
+      resource: '{target.cloudbuild_source_object}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudbuild_unpinned_storage_source
+    scope: any
+    aggregate_as: Build SAs of builds consuming source archives the source can replace
+  conditions:
+  - id: unpinned_reuse
+    description: A later legitimate builds.retry must reuse the exact bucket and object from the collected non-triggered build, with StorageSource.generation omitted; generation-pinned sources are unaffected.
+  - id: executes_source
+    description: The build steps must execute or trust content from the archive; replacing cloudbuild.yaml inside it is insufficient when steps are supplied separately to the API.
+  - id: object_protection
+    description: Retention locks, object holds or IAM Deny on the object block replacement.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Pin StorageSource.generation, keep build source buckets writable only by the build submitters, and avoid retrying builds from mutable sources.
+  references:
+  - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#StorageSource
+  - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.builds/retry
+  - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+  notes: No cloudbuild.builds.create or actAs is needed when another principal retries the vulnerable build. The model derives an exact target only for a collected build with an explicit service account; future automation and default build identities remain unresolved.

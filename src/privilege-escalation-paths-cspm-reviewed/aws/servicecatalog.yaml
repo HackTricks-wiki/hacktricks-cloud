@@ -1,0 +1,90 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Service Catalog privilege escalation techniques.
+# Source: hacktricks-cloud aws-service-catalog-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-servicecatalog-createprovisioningartifact-provisionproduct
+  provider: aws
+  service: servicecatalog
+  title: Add a product version and provision it under the launch-constraint role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md#servicecatalogcreateprovisioningartifact--servicecatalogprovisionproduct
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the launch-constraint role of products it can modify and provision.
+  requires:
+    all_of:
+      - action: servicecatalog:CreateProvisioningArtifact
+        resource: "{target.resource_arn}"
+      - action: servicecatalog:ProvisionProduct
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: servicecatalog.amazonaws.com
+      via_resource_type: servicecatalog_product
+    scope: same_account
+    aggregate_as: "Service Catalog launch-constraint roles in {account}"
+  conditions:
+    - id: product_owned
+      description: The product must be owned by (not merely shared into) the account so artifacts can be added.
+    - id: portfolio_end_user
+      description: The source must be an end user (principal association) of a portfolio containing the product with a launch constraint.
+    - id: template_url
+      description: The source needs a template location (S3 or GitHub) the service accepts.
+    - id: resource_constraints
+      description: Launch-role permission boundaries or template/resource constraints may limit what the role can create.
+    - id: launch_role_confused_deputy_conditions
+      description: aws:SourceAccount / aws:SourceArn conditions in the launch-role trust policy limit which account's provisioning calls can use the role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict servicecatalog:CreateProvisioningArtifact to catalog administrators and keep launch-constraint roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/servicecatalog/latest/adminguide/constraints-launch.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsservicecatalog.html
+  notes: The launch-constraint guide states the launch role's trust policy must allow the Service Catalog service to assume it, which matches the selector. The Service Authorization Reference lists no dependent actions for servicecatalog:ProvisionProduct, so the end user needs no iam:PassRole; iam:PassRole is only needed by the administrator who creates the launch constraint. The evaluator should still take the role from the launch constraint rather than from the trust policy alone.
+
+- id: aws-servicecatalog-associateprincipal-createartifact-provision
+  provider: aws
+  service: servicecatalog
+  title: Grant itself portfolio access, add a product version and provision it under the launch role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-service-catalog-privesc/README.md#servicecatalogassociateprincipalwithportfolio--grant-a-principal-or-yourself-portfolio-access-to-reach-the-launch-role
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of the launch-constraint role of products it can modify, even without being a portfolio end user, by associating itself with the portfolio.
+  requires:
+    all_of:
+      - action: servicecatalog:AssociatePrincipalWithPortfolio
+        resource: "{target.portfolio_arn}"
+      - action: servicecatalog:CreateProvisioningArtifact
+        resource: "{target.resource_arn}"
+      - action: servicecatalog:ProvisionProduct
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: servicecatalog.amazonaws.com
+      via_resource_type: servicecatalog_product
+      portfolio_of_target_product_covered_by: servicecatalog:AssociatePrincipalWithPortfolio
+    scope: same_account
+    aggregate_as: "Service Catalog launch-constraint roles of portfolios the source can join in {account}"
+  conditions:
+    - id: portfolio_covered
+      description: servicecatalog:AssociatePrincipalWithPortfolio must cover the portfolio that holds the product and its launch constraint.
+    - id: product_owned
+      description: The product must be owned by (not merely shared into) the account so artifacts can be added.
+    - id: template_url
+      description: The source needs a template location (S3 or GitHub) the service accepts.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict servicecatalog:AssociatePrincipalWithPortfolio and CreateProvisioningArtifact to catalog administrators; review portfolio principal associations (including name patterns) and keep launch roles least-privileged.
+  references:
+    - https://docs.aws.amazon.com/servicecatalog/latest/dg/API_AssociatePrincipalWithPortfolio.html
+    - https://docs.aws.amazon.com/servicecatalog/latest/adminguide/constraints-launch.html
+  notes: Variant of aws-servicecatalog-createprovisioningartifact-provisionproduct that removes its portfolio_end_user condition. {target.portfolio_arn} is the portfolio whose LAUNCH constraint names the role (servicecatalog:ListPortfolios + ListConstraintsForPortfolio); without that inventory the targets are unresolved placeholders. Provisioning an unmodified product runs an administrator-approved template and is not an edge, so CreateProvisioningArtifact stays required.
