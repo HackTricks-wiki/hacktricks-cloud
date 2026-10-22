@@ -163,9 +163,11 @@
     scope: same_account
     aggregate_as: "Roles trusting lambda.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - lambda_new_dynamodb_stream_function_and_role
   conditions:
     - id: role_reads_stream
-      description: The passed role must hold dynamodb:DescribeStream / GetRecords / GetShardIterator / ListStreams on the new table's stream (for example via AWSLambdaDynamoDBExecutionRole), or the mapping creation fails.
+      description: The passed role must be able to read the new table's stream with dynamodb:DescribeStream, GetShardIterator, and GetRecords; ListStreams is checked as a resource-less action for the documented Lambda stream policy.
     - id: passrole_condition_key
       description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict which roles can be passed.
   blockers:
@@ -176,7 +178,7 @@
   references:
     - https://docs.aws.amazon.com/lambda/latest/dg/with-ddb.html
     - https://github.com/RhinoSecurityLabs/pacu/tree/master/pacu/modules/iam__privesc_scan
-  notes: Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo. The table is created with StreamSpecification enabled (part of dynamodb:CreateTable); the item write fires the mapping. Removes the event_source_available condition of aws-lambda-passrole-createfunction-createeventsourcemapping.
+  notes: Pacu PassExistingRoleToNewLambdaThenTriggerWithNewDynamo. A new table is created with StreamSpecification enabled, a new function uses the exact passed role, and an enabled mapping targets that function. PutItem on the same table supplies a stream record. The evaluator joins one available table and function name in one Region, stream-reading role grants, PassRole bound to that function, and a resource-less CreateEventSourceMapping grant with lambda:FunctionArn context. A conditional permission or unavailable inventory stays unresolved.
 
 - id: aws-lambda-updatefunctioncode
   provider: aws
