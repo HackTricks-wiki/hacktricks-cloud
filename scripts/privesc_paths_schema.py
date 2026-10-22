@@ -8,10 +8,109 @@ so an unknown selector key can never silently widen or narrow a target set.
 from __future__ import annotations
 
 import functools
+from collections import OrderedDict
+from copy import deepcopy
+import sys
+from threading import RLock
 import re
 from pathlib import Path
 
 import yaml
+
+# LibYAML's safe constructor preserves the schema while avoiding the large
+# temporary parser graphs of the Python implementation. Keep a safe fallback.
+SAFE_YAML_LOADER = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+
+
+# Parsed documents are private; every consumer validates a fresh deep copy.
+# The key includes exact freshly read contents and the selected safe parser.
+# Path/mtime caches cannot safely establish catalog contents or provenance.
+_PARSED_YAML_MAX_DOCUMENTS = 512
+_PARSED_YAML_MAX_SOURCE_BYTES = 4 * 1024 * 1024
+_PARSED_YAML_MAX_GRAPH_BYTES = 16 * 1024 * 1024
+_PARSED_YAML_CACHE = OrderedDict()
+_PARSED_YAML_SOURCE_BYTES = 0
+_PARSED_YAML_GRAPH_BYTES = 0
+_PARSED_YAML_LOCK = RLock()
+
+
+def _graph_bytes(value):
+    """Bound retained object graphs, including aliases/cycles, once per miss."""
+    seen = set()
+    def visit(item):
+        identity = id(item)
+        if identity in seen:
+            return 0
+        seen.add(identity)
+        total = sys.getsizeof(item)
+        if isinstance(item, dict):
+            total += sum(visit(k) + visit(v) for k, v in item.items())
+        elif isinstance(item, (list, tuple, set, frozenset)):
+            total += sum(visit(v) for v in item)
+        return total
+    return visit(value)
+
+
+def _clear_parsed_yaml_cache():
+    global _PARSED_YAML_SOURCE_BYTES, _PARSED_YAML_GRAPH_BYTES
+    with _PARSED_YAML_LOCK:
+        _PARSED_YAML_CACHE.clear()
+        _PARSED_YAML_SOURCE_BYTES = _PARSED_YAML_GRAPH_BYTES = 0
+
+
+def _parsed_yaml_cache_info():
+    with _PARSED_YAML_LOCK:
+        return {"documents": len(_PARSED_YAML_CACHE),
+                "source_bytes": _PARSED_YAML_SOURCE_BYTES,
+                "graph_bytes": _PARSED_YAML_GRAPH_BYTES}
+
+
+def _catalog_document(text):
+    """Return caller-owned data and an optional uncommitted parsed candidate.
+
+    Invalid YAML is never cached. The loader commits a candidate only after
+    its complete per-file schema validation succeeds. Independent strict
+    loading and versioned catalog verification remain unchanged.
+    """
+    key = (SAFE_YAML_LOADER, text)
+    with _PARSED_YAML_LOCK:
+        cached = _PARSED_YAML_CACHE.get(key)
+        if cached is not None:
+            _PARSED_YAML_CACHE.move_to_end(key)
+    if cached is not None:
+        return deepcopy(cached[0]), None
+    parsed = yaml.load(text, Loader=SAFE_YAML_LOADER)
+    return deepcopy(parsed), (key, parsed)
+
+
+def _remember_catalog_document(candidate):
+    global _PARSED_YAML_SOURCE_BYTES, _PARSED_YAML_GRAPH_BYTES
+    if candidate is None:
+        return
+    key, parsed = candidate
+    source_bytes = len(key[1].encode("utf-8"))
+    if source_bytes > _PARSED_YAML_MAX_SOURCE_BYTES:
+        return
+    graph_bytes = _graph_bytes(parsed)
+    if graph_bytes > _PARSED_YAML_MAX_GRAPH_BYTES:
+        return
+    with _PARSED_YAML_LOCK:
+        if key in _PARSED_YAML_CACHE:
+            _PARSED_YAML_CACHE.move_to_end(key)
+            return
+        while _PARSED_YAML_CACHE and (
+                len(_PARSED_YAML_CACHE) >= _PARSED_YAML_MAX_DOCUMENTS or
+                _PARSED_YAML_SOURCE_BYTES + source_bytes > _PARSED_YAML_MAX_SOURCE_BYTES or
+                _PARSED_YAML_GRAPH_BYTES + graph_bytes > _PARSED_YAML_MAX_GRAPH_BYTES):
+            _, (_, old_source, old_graph) = _PARSED_YAML_CACHE.popitem(last=False)
+            _PARSED_YAML_SOURCE_BYTES -= old_source
+            _PARSED_YAML_GRAPH_BYTES -= old_graph
+        if _PARSED_YAML_MAX_DOCUMENTS < 1:
+            return
+        _PARSED_YAML_CACHE[key] = (parsed, source_bytes, graph_bytes)
+        _PARSED_YAML_SOURCE_BYTES += source_bytes
+        _PARSED_YAML_GRAPH_BYTES += graph_bytes
+
 
 PROVIDERS = ("aws", "gcp", "azure", "k8s")
 CATALOG_DIR = Path(__file__).resolve().parent / "catalog"
@@ -35,12 +134,15 @@ TARGET_KINDS = {
     "gcp_user": ("gcp", "principal"),
     "gcp_group": ("gcp", "principal"),
     "gcp_workspace_user": ("gcp", "principal"),
+    "gcp_external_principal": ("gcp", "principal"),
     "gcp_scope_owner": ("gcp", "entity"),
     "gcp_verified_authority": ("gcp", "entity"),
     "gcp_challenge_foothold": ("gcp", "principal"),
     "azure_managed_identity": ("azure", "principal"),
     "azure_service_principal": ("azure", "principal"),
     "azure_user": ("azure", "principal"),
+    "azure_external_principal": ("azure", "principal"),
+    "azure_storage_local_user": ("azure", "principal"),
     "azure_challenge_foothold": ("azure", "principal"),
     "azure_verified_authority": ("azure", "entity"),
     "azure_scope_owner": ("azure", "entity"),
@@ -52,6 +154,7 @@ TARGET_KINDS = {
     "k8s_group": ("k8s", "principal"),
     "k8s_node": ("k8s", "principal"),
     "k8s_cluster_admin": ("k8s", "entity"),
+    "k8s_verified_authority": ("k8s", "entity"),
     "k8s_admission_control": ("k8s", "entity"),
     "k8s_remote_cluster": ("k8s", "principal"),
     "cloud_identity": ("k8s", "principal"),
@@ -76,8 +179,18 @@ def kind_allowed(kind, provider):
 # bool, string, string_or_list, namespace, action, any.
 SELECTOR_KEYS = {
     # ---- generic ---------------------------------------------------------
+    "azure_storage_local_credential": (("azure",), "string", "Azure Storage SFTP local user credential; reset_password, write_credential, or create_credential. Requires exact account settings and verified container rights."),
     "azure_challenge_fact": (("azure",), "string", "Exact reviewed Azure technique/source/target/scope evidence; never a definite path."),
+    "azure_external_principal_evidence": (("azure",), "bool_true", "Unique complete reviewed evidence binds a declared ARM action to one named adjacent-plane principal, usable credential or grant, prior denial, and a newly allowed target action."),
+    "azure_external_plane": (("azure",), "string", "Exact adjacent authorization plane of a reviewed Azure external-principal gain."),
     "k8s_challenge_fact": (("k8s",), "string", "Exact reviewed Kubernetes technique/source/target/scope evidence."),
+    "k8s_helm_values_rbac": (("k8s",), "bool_true", "Reviewed exact ConfigMap-to-Helm-to-RoleBinding permission grant for the lab documented by the source."),
+    "k8s_verified_pivot": (("k8s",), "string", "Unique fresh reviewed evidence binds the exact source action and object to one accepted remote principal or newly granted Kubernetes permission."),
+    "k8s_bound_role_gain": (("k8s",), "bool_true", "Collected Role rules contain a concrete permission the source lacks; the source can bind that exact Role in the target namespace."),
+    "k8s_existing_rolebinding_gain": (("k8s",), "bool_true", "An existing RoleBinding targets the exact Role, the source can modify that binding and bind the Role, and the Role grants a new permission."),
+    "k8s_clusterrolebinding_gain": (("k8s",), "bool_true", "A collected ClusterRole grants a new cluster-wide permission and the source can bind that exact role."),
+    "k8s_existing_clusterrolebinding_gain": (("k8s",), "bool_true", "An existing ClusterRoleBinding targets the exact ClusterRole and the source can modify that binding to gain a new cluster-wide permission."),
+    "k8s_aggregated_rolebinding_namespace": (("k8s",), "bool_true", "The source is bound in the target namespace to a ClusterRole whose aggregationRule selects new ClusterRoles."),
     "attached_to_service": (("aws", "gcp", "azure"), "string_or_list",
         "Identity is attached to a collected resource of that service (Lambda Role, EC2 instance profile, "
         "GCE/GKE service account, Azure resource identity incl. full ARM types). Uncollected attachment "
@@ -88,10 +201,18 @@ SELECTOR_KEYS = {
         "The source must also hold this action on the target resource ({target.arn}/{target.email}/{target.scope}/{target.namespace})."),
     "any_principal_in_scope": (("gcp", "azure", "k8s", "aws"), "bool_true",
         "Entity target covering every principal of the scope where the requirement holds (scope owner / cluster-admin / account admin)."),
+    "azure_root_scope_only": (("azure",), "bool_true",
+        "Restrict an Azure root-scope authorization target to the tenant root (/)."),
     # ---- AWS -------------------------------------------------------------
     "aws_challenge_fact": (("aws",), "string",
         "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
         "Missing or incomplete evidence is unresolved; a different source or target never matches."),
+    "aws_s3_policy_self_grant": (("aws",), "bool_true", "Reviewed exact S3 bucket-policy self-grant for the caller and a bounded object prefix."),
+    "aws_s3_access_grants_self_grant": (("aws",), "bool_true", "Reviewed exact S3 Access Grants session with new READ permission on a bounded prefix."),
+    "aws_secretsmanager_policy_self_grant": (("aws",), "bool_true", "Reviewed GetSecretValue self-grant for the exact IAM user and secret."),
+    "aws_efs_policy_self_grant": (("aws",), "bool_true", "Reviewed ClientMount self-grant for the exact EFS file system."),
+    "aws_cases_tag_self_grant": (("aws",), "bool_true", "Reviewed Cases domain tag change unlocking PutCaseEventConfiguration for the source."),
+    "aws_sitewise_portal_self_grant": (("aws",), "bool_true", "Reviewed SiteWise Monitor portal ADMINISTRATOR grant to the source identity."),
     "trust_allows_service": (("aws",), "string_or_list",
         "Role trust policy has an Allow for sts:AssumeRole* whose Principal.Service includes the value."),
     "trust_allows_principal_of_source": (("aws",), "bool_true",
@@ -156,7 +277,7 @@ SELECTOR_KEYS = {
         "Role trust allows Principal '*' restricted by aws:PrincipalOrgID / aws:PrincipalOrgPaths, satisfied by an account "
         "of the snapshot's organization (unknown without the organization id)."),
     "org_member_account": (("aws",), "bool_true",
-        "aws_account_admin target is an organization member account (not the management account); unknown without organization_account."),
+        "Target belongs to an operational organization member account (not the management account); unknown without organization_account."),
     "emr_runtime_role_of_cluster": (("aws",), "bool_true",
         "Role trust names an EC2 instance-profile role used by an EMR cluster with a security configuration "
         "(runtime roles); unknown without emr_cluster inventory."),
@@ -177,17 +298,128 @@ SELECTOR_KEYS = {
     "gcp_challenge_fact": (("gcp",), "string",
         "Exact reviewed technique/source/target/scope evidence from gcp_privesc_challenge_evidence. "
         "Only verified preconditions produce a conditional path; missing or incomplete evidence is unresolved."),
+    "gcp_resource_self_grant": (("gcp",), "bool_true",
+        "A reviewed accepted self-grant or a modeled exact-resource policy write that adds a new permission; prospective resources include Secret Manager secrets, Cloud KMS keys, Pub/Sub topics and subscriptions, standard Artifact Registry repositories, and Analytics Hub exchanges and listings."),
+    "gcp_external_principal_evidence": (("gcp",), "bool_true",
+        "Unique complete reviewed evidence binds a declared action to one named external-plane principal, usable credential, and a newly allowed target action."),
+    "gcp_agentregistry_skill_evidence": (("gcp",), "bool_true",
+        "Unique reviewed evidence ties a changed Agent Registry Skill to one floating consumer, runtime identity, and newly successful bounded action."),
+    "gcp_external_plane": (("gcp",), "string",
+        "Exact external authorization plane named by the reviewed principal-gain record."),
+    "gcp_bounded_access_gain": (("gcp",), "bool_true",
+        "Unique reviewed evidence proves a newly allowed bounded action through one created or authorized intermediate resource."),
+    "gcp_bounded_mechanism": (("gcp",), "string",
+        "Exact indirect-access mechanism in the bounded-access evidence record."),
+    "gcp_clouddeploy_custom_render_path": (("gcp",), "bool_true",
+        "A collected pipeline stage, custom target, custom target type, and render service account are joined to exact update and release-create grants."),
+    "gcp_clouddeploy_existing_custom_render_path": (("gcp",), "bool_true",
+        "A collected pipeline stage and custom target render account are joined to release creation on the exact pipeline."),
+    "gcp_clouddeploy_pipeline_policy_custom_render_path": (("gcp",), "bool_true",
+        "A collected custom target render account is joined to setIamPolicy on its exact delivery pipeline."),
+    "gcp_clouddeploy_configurable_custom_render_path": (("gcp",), "bool_true",
+        "Source can create or update an exact custom target and pipeline route, then create its release with the selected render account."),
+    "gcp_cloudbuild_writable_trigger_token_path": (("gcp",), "bool_true",
+        "An exact repository token grant is joined to an enabled push trigger whose repository build config and service account are recorded."),
+    "gcp_cloudbuild_writable_trigger_policy_path": (("gcp",), "bool_true",
+        "An exact connection policy grant can self-grant repository token access for an enabled push trigger with a recorded build identity."),
+    "gcp_workflows_update_execute_same_workflow": (("gcp",), "bool_true",
+        "Source can update and execute the same active workflow attached to the target service account."),
+    "gcp_workflows_update_attach_path": (("gcp",), "bool_true",
+        "Source can update and execute an existing active workflow in the target service account's project."),
+    "gcp_workflows_observed_external_execution": (("gcp",), "bool_true",
+        "An enabled Scheduler job is recorded to execute an exact workflow the source can update; other possible triggers remain unresolved."),
+    "gcp_cloudscheduler_update_job_path": (("gcp",), "bool_true",
+        "Source can update an enabled scheduler job, or update and resume a paused job, in the target service account's project."),
+    "gcp_cloudscheduler_authenticated_delivery": (("gcp",), "bool_true",
+        "The project's Cloud Scheduler service agent has its required role for authenticated job delivery."),
+    "gcp_cloudtasks_enqueue_path": (("gcp",), "bool_true",
+        "Source can create a task in a running queue, resume a paused queue, or create a new queue and task in the target account's project."),
+    "gcp_cloudtasks_authenticated_delivery": (("gcp",), "bool_true",
+        "The Cloud Tasks service agent has its project role and access to the exact target service account."),
+    "gcp_cloudtasks_queue_policy_path": (("gcp",), "bool_true",
+        "Source can add task creation on an exact queue it does not already control, remove a target override when permitted, and dispatch from a running or resumable queue."),
+    "gcp_cloudfunctions_create_path": (("gcp",), "bool_true",
+        "Source can create a function with uploaded source and a known build account it can use, and can invoke it."),
+    "gcp_cloudfunctions_existing_source_update_path": (("gcp",), "bool_true",
+        "Source can update the source of an active function, act as its build identity, and reach an observed invocation route."),
+    "gcp_cloudfunctions_env_startup_path": (("gcp",), "bool_true",
+        "Source can update an active Node.js 20 or later function, use its build identity, and reach an execution route."),
+    "gcp_cloudfunctions_source_deploy_build_path": (("gcp",), "bool_true",
+        "Source can create or update a function built as an observed legacy Cloud Build default identity and can act as the function runtime identity."),
+    "gcp_vertex_new_model_endpoint_path": (("gcp",), "bool_true",
+        "Source can upload a custom model, create an endpoint, deploy it, and use a target service account delegated to the Vertex AI service agent."),
+    "gcp_vertex_batch_prediction_path": (("gcp",), "bool_true",
+        "Source can create a batch prediction job with an inline container and use a target service account delegated to the Vertex AI service agent."),
+    "gcp_workbench_existing_takeover_path": (("gcp",), "bool_true",
+        "Source can update and boot the same existing Workbench instance or self-grant its instance administration rights."),
+    "gcp_run_job_override_path": (("gcp",), "bool_true",
+        "Source can run a collected Cloud Run job and override that same job's execution under its pinned service account."),
+    "gcp_run_job_policy_override_path": (("gcp",), "bool_true",
+        "Source can set the IAM policy of a collected Cloud Run job pinned to the target service account."),
+    "gcp_run_service_update_path": (("gcp",), "bool_true",
+        "Source can update an exact collected Cloud Run service in the target service account's project."),
+    "gcp_run_job_update_execute_path": (("gcp",), "bool_true",
+        "Source can update and run the same collected Cloud Run job in the target service account's project."),
+    "gcp_run_instance_create_or_update_path": (("gcp",), "bool_true",
+        "Source can create a Cloud Run instance in the target project or update an exact existing instance there."),
+    "gcp_run_instance_ssh_path": (("gcp",), "bool_true",
+        "Source has SSH permission on an attached Cloud Run instance that is running or can be started."),
+    "gcp_run_service_ssh_path": (("gcp",), "bool_true",
+        "Source has SSH permission on an attached, ready second-generation Cloud Run service with SSH enabled."),
+    "gcp_appengine_instance_ssh_path": (("gcp",), "bool_true",
+        "Exact flexible App Engine instance, backing VM, runtime identity, login method and SSH route."),
+    "gcp_appengine_deploy_path": (("gcp",), "bool_true",
+        "Existing App Engine application, source staging bucket, and target runtime service-account repository access."),
+    "gcp_appengine_legacy_actas_unenforced": (("gcp",), "bool_true",
+        "Visible legacy App Engine actAs constraint with effective enforcement disabled for the target project."),
+    "gcp_appintegration_run_as_path": (("gcp",), "bool_true",
+        "Enabled Application Integration service, one observed integration, same-integration invocation or publication rights, and actAs on the selected service account."),
+    "gcp_gcr_namespace_path": (("gcp",), "bool_true",
+        "Fully redirected gcr.io host with a missing matching repository, create and upload rights there, and an exact tagged workload consumer identity."),
+    "gcp_artifact_policy_consumer_path": (("gcp",), "bool_true",
+        "Exact standard Docker repository, tagged Cloud Run consumer and runtime account, plus repository policy-write authority."),
+    "gcp_agentidentity_retrieve_path": (("gcp",), "bool_true",
+        "Exact enabled Google OAuth provider and active authorization with useful granted scopes."),
+    "gcp_agentidentity_update_path": (("gcp",), "bool_true",
+        "Exact enabled Google OAuth provider and active authorization whose later refresh could reach a changed token endpoint."),
+    "gcp_batch_agent_reporter_on_target": (("gcp",), "bool_true",
+        "The target service account holds batch.states.report in its Batch job project."),
+    "gcp_run_worker_pool_create_or_update_path": (("gcp",), "bool_true",
+        "Source can create a worker pool in the target project or update an exact existing worker pool there."),
     "gcp_actas_granted_on_target": (("gcp",), "bool_true",
         "Source holds iam.serviceAccounts.actAs on the target SA (SA policy or project/folder/org inheritance)."),
     "gcp_sa_in_scope_of_permission": (("gcp",), "bool_true",
         "Requirements with resource '*' must hold on the target SA's project (or the SA / an ancestor)."),
+    "gcp_hmac_storage_identity": (("gcp",), "bool_true",
+        "Each enabled inventoried service account becomes a separate Cloud Storage-only HMAC authority target."),
+    "gcp_bounded_service_execution": (("gcp",), "string",
+        "An enabled service account becomes a separate bounded service authority target for the named mechanism."),
+    "gcp_wif_restorable_path": (("gcp",), "bool_true",
+        "An exact disabled or deleted workload pool or provider is joined to a pool-wide service-account token binding and the source's restore action."),
+    "gcp_wif_active_path": (("gcp",), "string",
+        "An exact active workload pool or provider is joined to a pool-wide service-account token binding and the source's control action."),
+    "gcp_workforce_control_path": (("gcp",), "bool_true",
+        "An exact workforce pool or provider control action is joined to an organization-local pool-wide service-account token binding."),
+    "gcp_bounded_workspace_oauth": (("gcp",), "string",
+        "A named Workspace user becomes a scope-limited OAuth authority target for the named mechanism."),
+    "gcp_cross_project_run_service": (("gcp",), "bool_true",
+        "A Cloud Run service can be created in a different collected project with the target SA only when the "
+        "target project's effective cross-project org policy permits it and its service agent has token access."),
+    "gcp_cross_project_run_job": (("gcp",), "bool_true",
+        "A Cloud Run job can be created and run in a different collected project with the target SA only when the "
+        "target project's effective cross-project org policy permits it and its service agent has token access."),
+    "gcp_cross_project_cloudbuild": (("gcp",), "bool_true",
+        "A build in another collected project can use the target SA only when the effective cross-project policy "
+        "permits it and that project's Cloud Build service agent has token access."),
+    "gcp_cross_project_workflows": (("gcp",), "bool_true",
+        "A workflow in another collected project can use the target SA only when the effective cross-project policy "
+        "permits it and that project's Workflows service agent has token access."),
     "gcp_implicit_delegation_chain": (("gcp",), "bool_true",
         "Target SA is one a delegate chain can mint credentials for: the source holds iam.serviceAccounts.implicitDelegation "
         "on delegate D1, each Di holds implicitDelegation on Di+1 (transitively), and some Dk holds getAccessToken, signBlob "
         "or signJwt on the target. Delegates are not targets themselves (implicitDelegation does not yield their own token)."),
     "gcp_custom_role_bound_to_source": (("gcp",), "bool_true",
-        "Target scope (gcp_scope_owner) is one where the source has a binding to a custom role defined in that scope "
-        "or an ancestor (projects/<p>/roles/* or organizations/<o>/roles/*)."),
+        "Target is the exact scope where the source has a binding to a collected custom role, and the source can update that exact role."),
     "gcp_actas_granted_to_service_agent": (("gcp",), "string",
         "Target SA is one on which the named Google service agent (cloudservices = Google APIs service agent "
         "<project-number>@cloudservices.gserviceaccount.com, used by managed instance groups) holds iam.serviceAccounts.actAs "
@@ -199,6 +431,84 @@ SELECTOR_KEYS = {
     "azure_identity_assignable_in_scope": (("azure",), "bool_true",
         "Requirements with scope '*' must hold on a scope that contains the identity's attached resource "
         "(or the user-assigned identity resource)."),
+    "azure_automation_assignable_uami": (("azure",), "bool_true",
+        "The source can assign the exact user-assigned identity to an inventoried Automation account or create one in an inventoried group, then create or edit and run a runbook there."),
+    "azure_automation_runbook_identity_path": (("azure",), "bool_true",
+        "The source can create or edit and run a runbook on the exact Automation account carrying this managed identity."),
+    "azure_automation_hybrid_worker_path": (("azure",), "bool_true",
+        "The source can create or edit and run a runbook on the Automation account with an inventoried Hybrid Worker VM carrying this identity."),
+    "azure_batch_job_pool_identity": (("azure",), "bool_true",
+        "The source can create a Batch job or schedule on the exact Entra-enabled account with a runnable native pool carrying this user-assigned identity."),
+    "azure_batch_shared_key_pool_identity": (("azure",), "bool_true",
+        "The source can obtain a Shared Key from the exact Batch account with a native pool carrying this verified user-assigned identity."),
+    "azure_batch_pool_starttask_identity": (("azure",), "bool_true",
+        "The source can write the exact native Batch pool that carries this verified user-assigned identity."),
+    "azure_batch_pool_assignable_uami": (("azure",), "bool_true",
+        "The source can write an exact existing Batch pool or a new pool under an inventoried account and can assign the target user-assigned identity."),
+    "azure_containerapp_assignable_uami": (("azure",), "bool_true",
+        "The source can write an exact inventoried Container App, attach the target user-assigned identity, and run a controlled revision."),
+    "azure_containerapp_create_uami_path": (("azure",), "bool_true",
+        "The source can create an app under an inventoried resource group and join an existing or creatable managed environment in the same subscription."),
+    "azure_containerapp_exec_identity": (("azure",), "bool_true",
+        "The source can obtain a console token and execute or debug on the same Container App with a running revision whose current identity is available to its main container."),
+    "azure_containerapp_job_assignable_uami": (("azure",), "bool_true",
+        "The source can assign the verified user-assigned identity to an exact writable job in a usable managed environment, or create a scheduled job in an inventoried group and joinable environment."),
+    "azure_confidential_ledger_admin_path": (("azure",), "bool_true",
+        "The source has an Entra principal and the target is an inventoried usable Confidential Ledger whose ARM principal list can be updated."),
+    "azure_appservice_assignable_uami": (("azure",), "bool_true",
+        "The source can assign the exact inventoried user-assigned identity to an existing app it can write and control code in, or create an app in an inventoried resource group using a joinable plan."),
+    "azure_appservice_backup_restore_code_path": (("azure",), "bool_true",
+        "The source can restore a backup on the exact supported-tier App Service carrying the target identity; backup compatibility and code execution remain conditional."),
+    "azure_appservice_config_code_path": (("azure",), "bool_true",
+        "The target identity is attached to the exact app whose web or app-settings config child the source can write; the app's runtime must support a code-bearing configuration path."),
+    "azure_appservice_enable_publishing_credentials_code_path": (("azure",), "bool_true",
+        "The source can enable the exact app's SCM basic auth policy and read its publishing credentials; the app carries the target identity and can run deployed code."),
+    "azure_appservice_kudu_code_path": (("azure",), "bool_true",
+        "The target identity is attached to the exact App Service for which the source holds publish/action, with a supported Kudu hosting plan and an app that can run."),
+    "azure_appservice_onedeploy_code_path": (("azure",), "bool_true",
+        "The source can write the exact app's extensions/onedeploy child; the attached identity belongs to that app, and its runtime loads deployed packages."),
+    "azure_appservice_publishing_credentials_code_path": (("azure",), "bool_true",
+        "The source can read publishing credentials for the exact app carrying the target identity, SCM basic auth is enabled, and the runtime can load deployed code."),
+    "azure_appservice_sitecontainers_code_path": (("azure",), "bool_true",
+        "The source can write a SiteContainer child of the exact Linux app carrying the target identity, and that app uses SiteContainers mode."),
+    "azure_appservice_siteextensions_code_path": (("azure",), "bool_true",
+        "The source can install a site extension with a selectable package name on the exact Windows code app carrying the target identity."),
+    "azure_appservice_slot_code_path": (("azure",), "bool_true",
+        "The source has a code-bearing publish, source control, config, or SiteContainer route on the exact slot carrying the target identity."),
+    "azure_appservice_slot_swap_code_path": (("azure",), "bool_true",
+        "The source can stage code and swap the same inventoried slot into the exact production app carrying the target identity."),
+    "azure_appservice_sourcecontrol_code_path": (("azure",), "bool_true",
+        "The source can write the exact identity app's sourcecontrols/web child and that app can execute deployed repository code."),
+    "azure_arc_entra_admin_ssh_path": (("azure",), "bool_true",
+        "The source can read Arc relay credentials for the exact machine endpoint and log in as administrator through configured Entra SSH."),
+    "azure_arc_custom_script_code_path": (("azure",), "bool_true",
+        "The source can create or update a Custom Script child on the exact Arc identity machine while its connected agent permits that extension."),
+    "azure_arc_run_command_code_path": (("azure",), "bool_true",
+        "The source can create or update a Run Command child on the exact Arc identity machine while its connected agent permits the handler."),
+    "azure_deployment_script_uami_path": (("azure",), "bool_true",
+        "The source can create or update a deployment script with the exact assignable UAMI and can manage its required support resources."),
+    "azure_appservice_slot_publishing_credentials_code_path": (("azure",), "bool_true",
+        "The source can read publishing credentials for the exact slot carrying the target identity, and that slot's SCM basic auth policy allows credential use."),
+    "azure_acr_assignable_uami": (("azure",), "bool_true",
+        "The source can write a task on an inventoried ACR registry or existing task and assign an exact, verified user-assigned identity resource."),
+    "azure_acr_existing_task_identity": (("azure",), "bool_true",
+        "The exact inventoried ACR task carries the target managed identity and the source can write that task."),
+    "azure_aks_rbac_group_impersonation": (("azure",), "bool_true",
+        "The exact AKS cluster enables Azure RBAC for Kubernetes, and the source can authenticate to its Kubernetes API."),
+    "azure_aks_rbac_cluster_binding": (("azure",), "bool_true",
+        "The exact AKS cluster enables Azure RBAC for Kubernetes, and the source can authenticate to its Kubernetes API before creating a ClusterRoleBinding."),
+    "azure_flux_cluster_path": (("azure",), "bool_true",
+        "A writable Flux configuration belongs to the exact AKS or Arc cluster and has cluster scope."),
+    "azure_vmss_instance_identity": (("azure",), "bool_true",
+        "The selected scale-set VM instance belongs to a scale set carrying this managed identity."),
+    "azure_aci_assignable_uami": (("azure",), "bool_true",
+        "The source can assign the exact user-assigned identity and write an inventoried ACI container group or create one in an inventoried resource group; missing inventory stays unresolved."),
+    "azure_aci_exec_running_identity": (("azure",), "bool_true",
+        "The exact native ACI container group carries the target managed identity, has a running container, and the source can execute a command there."),
+    "azure_aci_existing_write_identity": (("azure",), "bool_true",
+        "The source can update an exact existing running ACI group that carries the target managed identity; terminated groups do not qualify."),
+    "azure_apim_restorable_backup": (("azure",), "bool_true",
+        "One fresh reviewed record binds a valid APIM-created backup, storage access, compatible restore target, controlled policy, and the exact attached identity."),
     "managed_identity_type": (("azure",), "string",
         "Managed identity is user_assigned or system_assigned."),
     "custom_role_assigned_to_source": (("azure",), "bool_true",
@@ -273,6 +583,10 @@ SELECTOR_KEYS = {
         "Group isAssignableToRole equals the value."),
     "entra_group_membership_type": (("azure",), "string",
         "Group membership is 'assigned' or 'dynamic' (groupTypes contains DynamicMembership)."),
+    "entra_group_membership_cloud_writable": (("azure",), "bool_true",
+        "Synchronized or missing group source-of-authority facts keep a membership-write path conditional."),
+    "entra_group_source_self_membership": (("azure",), "bool_true",
+        "An application source needs Graph group-write and application-write permission to add its own service principal as a member."),
     "entra_group_type_covered_by_permission": (("azure",), "bool_true",
         "Group type (security / Microsoft 365) is covered by the entra_permission variant (groups.security / groups.unified)."),
     "entra_dynamic_rule_attributes_writable_by_source": (("azure",), "bool_true",
@@ -300,7 +614,8 @@ SELECTOR_KEYS = {
     "k8s_sa_used_by_running_pod": (("k8s", "gcp"), "bool_true", "Service account is used by a running pod with an available token."),
     "k8s_sa_used_by_controller_managed_pod": (("k8s",), "bool_true",
         "Service account is used by a pod owned by a controller (ownerReferences)."),
-    "k8s_node_schedulable": (("k8s",), "bool_true", "Node is not cordoned (spec.unschedulable is not true)."),
+    "k8s_node_schedulable": (("k8s",), "bool_true",
+        "Node can be targeted by direct pod placement with spec.nodeName even when cordoned; unconfirmed readiness is conditional."),
     "k8s_node_hosting_pods_in_namespace": (("k8s",), "namespace", "Node hosts pods of that namespace."),
     "k8s_node_hosting_privileged_pod_in_namespace": (("k8s",), "namespace",
         "Node hosts a pod of that namespace with a privileged container (containers, initContainers or "
@@ -341,7 +656,8 @@ SELECTOR_KEYS = {
     "assumable_by_pivot_role": (("aws",), "bool_true",
         "Role the pivot role ({pivot}, e.g. a StackSet administration role) can assume: its trust admits the pivot role "
         "(or its account) and the pivot's identity policy allows sts:AssumeRole on it (trust naming the pivot ARN in the same "
-        "account suffices). The pivot itself is excluded; roles in other accounts are included."),
+        "account suffices). For StackSets, a new or existing self-managed StackSet route must also reach the target "
+        "account. The pivot itself is excluded; roles in other accounts are included."),
     "k8s_sa_has_legacy_token_secret": (("k8s",), "bool_true",
         "ServiceAccounts referenced by a kubernetes.io/service-account-token Secret in their namespace "
         "(annotation kubernetes.io/service-account.name, from secret metadata; never data)."),
@@ -390,6 +706,8 @@ SELECTOR_KEYS = {
 }
 # Keys allowed under the top-level `source_selector` (restricts which principals act as sources).
 SOURCE_SELECTOR_KEYS = {
+    "azure_member_user": (("azure",), "bool",
+        "Source is a directory user whose collected userType is Member; absent or Guest userType does not satisfy this selector."),
     "include_service_managed": (("aws", "gcp", "azure", "k8s"), "bool",
         "Allow service-managed identities (AWS service-linked roles, Google-managed agents, Microsoft first-party "
         "service principals) as sources; they are skipped by default because customers cannot act as them."),
@@ -412,10 +730,72 @@ SOURCE_SELECTOR_KEYS = {
 }
 # Collection types/fields a selector or requirement needs; reported in coverage when missing.
 FACTS_NEEDED = {
+    "gcp_clouddeploy_custom_render_path": "Cloud Deploy pipelines, targets, custom target types, and their render execution service accounts",
+    "gcp_clouddeploy_existing_custom_render_path": "Cloud Deploy pipelines, targets, custom target types, and their render execution service accounts",
+    "gcp_clouddeploy_pipeline_policy_custom_render_path": "Cloud Deploy pipelines, targets, custom target types, and their render execution service accounts",
+    "gcp_clouddeploy_configurable_custom_render_path": "Cloud Deploy pipelines, targets, custom target types, and their render execution service accounts",
+    "gcp_cloudbuild_writable_trigger_token_path": "Cloud Build repository push triggers, source build config, and explicit service accounts",
+    "gcp_cloudbuild_writable_trigger_policy_path": "Cloud Build repository push triggers, source build config, and explicit service accounts",
+    "gcp_workflows_update_execute_same_workflow": "Active Workflows resources, their attached service accounts, and exact workflow permissions",
+    "gcp_workflows_update_attach_path": "Active Workflows resources and exact workflow update and execution permissions",
+    "gcp_workflows_observed_external_execution": "Active Workflows resources and recorded Cloud Scheduler execution targets",
+    "gcp_cloudscheduler_update_job_path": "Cloud Scheduler jobs, their state, and exact update or resume permissions",
+    "gcp_cloudscheduler_authenticated_delivery": "Project number and Cloud Scheduler service agent role binding",
+    "gcp_cloudtasks_enqueue_path": "Cloud Tasks queues, state, target overrides, queue IAM, and exact task creation grants",
+    "gcp_cloudtasks_authenticated_delivery": "Project number, Cloud Tasks service agent role, and access to the target service account",
+    "gcp_cloudtasks_queue_policy_path": "Cloud Tasks queue state and IAM, prior task grants, exact policy and override-update grants, deny policy, and IAM member restrictions",
+    "gcp_cloudfunctions_create_path": "Cloud Build default identity by location, Cloud Functions create and source-upload rights, build actAs, and invocation rights",
+    "gcp_cloudfunctions_existing_source_update_path": "Cloud Functions inventory, exact update and upload rights, build identity, and invocation route",
+    "gcp_cloudfunctions_env_startup_path": "Active Cloud Functions with a Node.js 20 or later runtime, exact update rights, build actAs, and an invocation route",
+    "gcp_cloudfunctions_source_deploy_build_path": "Cloud Build legacy default identity, function create or update and source-upload rights, and runtime service-account actAs",
+    "gcp_vertex_new_model_endpoint_path": "Vertex model upload, endpoint create and deploy permissions, project number, and service-agent delegation to the target service account",
+    "gcp_vertex_batch_prediction_path": "Vertex batch prediction job creation, project number, and service-agent delegation to the target service account",
+    "gcp_workbench_existing_takeover_path": "Workbench instance inventory with attached service account, state, instance IAM policy, and exact update and boot or policy-write rights",
+    "gcp_run_job_override_path": "Cloud Run job inventory with pinned service account and run plus runWithOverrides on the same job",
+    "gcp_run_job_policy_override_path": "Cloud Run job inventory with pinned service account and setIamPolicy on that job",
+    "gcp_run_service_update_path": "Cloud Run service inventory and update permission on an existing service in the target project",
+    "gcp_run_job_update_execute_path": "Cloud Run job inventory and update plus run permissions on the same existing job in the target project",
+    "gcp_run_instance_create_or_update_path": "Cloud Run instance inventory, project-level create permission, and exact existing-instance update permission",
+    "gcp_run_instance_ssh_path": "Cloud Run instance inventory, its SSH setting and state, and exact SSH and start permissions",
+    "gcp_run_service_ssh_path": "Cloud Run service inventory, SSH flag, second-generation environment, readiness, and exact SSH permission",
+    "gcp_appengine_instance_ssh_path": "Flexible App Engine instance, backing VM, runtime identity, debug or OS Login rights, and SSH route",
+    "gcp_appengine_deploy_path": "Existing App Engine app, staging bucket, and target runtime service-account Docker repository access",
+    "gcp_appengine_legacy_actas_unenforced": "Project constraint visibility and effective policy for the legacy App Engine default service-account exception",
+    "gcp_appintegration_run_as_path": "Application Integration service state, observed integration versions, exact source IAM permissions, and target service-account actAs",
+    "gcp_gcr_namespace_path": "Artifact Registry redirection and repository coverage, exact create and upload grants, and a tagged Cloud Run consumer with its runtime service account",
+    "gcp_artifact_policy_consumer_path": "Exact standard Docker repository, mutable tagged Cloud Run consumer, runtime account, and repository-scoped IAM policy write",
+    "gcp_agentidentity_retrieve_path": "Exact enabled Google OAuth provider and active authorization with useful granted scopes",
+    "gcp_agentidentity_update_path": "Exact enabled Google OAuth provider and active authorization with a possible later refresh through a changed token endpoint",
+    "gcp_batch_agent_reporter_on_target": "Target service account's effective batch.states.report grant in the job project",
+    "gcp_run_worker_pool_create_or_update_path": "Cloud Run worker pool inventory, project-level create permission, and exact existing-pool update permission",
+    "gcp_cross_project_run_service": "effective cross-project service-account policy, Cloud Run host project number, and the host service agent's target service-account grant",
+    "gcp_cross_project_run_job": "effective cross-project service-account policy, Cloud Run job host project number, and the host service agent's target service-account grant",
+    "gcp_cross_project_cloudbuild": "effective cross-project service-account policy, Cloud Build host project number, and the host service agent's target service-account grant",
+    "gcp_cross_project_workflows": "effective cross-project service-account policy, Workflows host project number, and the host service agent's target service-account grant",
+    "iam_user_access_keys_not_collected": "the target IAM user's access-key list",
+    "lambda_code_signing_not_collected": "the Lambda function's code-signing attachment and configuration",
+    "lambda_code_signing_function_binding_unclear": "a match between the permitted Lambda function and its enforced code-signing setting",
+    "source_permissions_boundary_not_collected": "the source role or user's permissions boundary policy document",
+    "source_permissions_boundary_conditions": "the source permissions boundary conditions needed to decide full account administration",
+    "source_boundary_policy_version_contents": "stored versions of the source permissions boundary policy",
+    "source_boundary_replacement_authorization": "the replacement boundary policy and request conditions on changing the source boundary",
+    "aws_s3_policy_self_grant": "unique collected aws_s3_policy_self_grant_evidence with exact source, bucket, prefix, policy principal/resource and observed before/after GetObject authorization",
+    "aws_s3_access_grants_self_grant": "unique collected aws_s3_access_grants_self_grant_evidence with exact source, location role, grant, target prefix, scoped session and observed before/after GetObject authorization",
+    "aws_secretsmanager_policy_self_grant": "unique reviewed exact-source, exact-secret policy grant with observed before/after GetSecretValue and KMS authorization",
+    "aws_efs_policy_self_grant": "unique reviewed exact-source, exact-file-system policy grant with observed before/after ClientMount authorization",
+    "aws_cases_tag_self_grant": "unique reviewed exact-source Cases domain tag mutation and before/after PutCaseEventConfiguration authorization",
+    "aws_sitewise_portal_self_grant": "unique reviewed exact-source SiteWise Monitor portal ADMINISTRATOR access policy with observed before/after access",
+    "k8s_helm_values_rbac": "unique collected k8s_helm_values_rbac_evidence with the exact source ConfigMap, values key, chart fields, reconciler authority, generated Role/RoleBinding, source ServiceAccount, prior denial and admitted observed grant",
+    "k8s_verified_pivot": "unique collected k8s_verified_pivot_evidence with exact source, Secret/RoleBinding/Pod object, accepted target subject, and a newly allowed named action",
     "azure_challenge_fact": "azure_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
+    "azure_external_principal_evidence": "unique collected azure_external_principal_evidence binding exact source action/resource, named adjacent-plane subject, usable credential or grant, prior denial and newly allowed action",
     "k8s_challenge_fact": "k8s_privesc_challenge_evidence with exact TechniqueId, SourceId, TargetKind, TargetId, TargetScope, EvidenceRef, Status and VerifiedPreconditions",
     "gcp_challenge_fact": "gcp_privesc_challenge_evidence with TechniqueId, SourceId, TargetKind, TargetId, "
                           "TargetScope, Status and VerifiedPreconditions for the exact exploit preconditions",
+    "gcp_resource_self_grant": "unique accepted mutation evidence, or complete exact-resource inventory and IAM policy with a supported prospective self-grant; absent prerequisites stay unresolved",
+    "gcp_external_principal_evidence": "unique collected gcp_external_principal_evidence binding the exact action, target service/subject, usable credential, prior source denial and observed new permission",
+    "gcp_agentregistry_skill_evidence": "unique collected gcp_agentregistry_skill_evidence binding an exact Agent Registry Skill revision, floating consumer, runtime identity, and newly successful bounded action",
+    "gcp_bounded_access_gain": "unique collected gcp_bounded_access_gain_evidence binding exact source actions/resources, intermediate object, protected resource and before/after action",
     "aws_challenge_fact": "aws_privesc_challenge_evidence with exact TechniqueId, SourceArn, TargetKind, TargetId, TargetAccount, Status and VerifiedPreconditions",
     "via_resource_type": "AWS: per-type workload inventories carrying the role (ecs task definitions, glue jobs, sagemaker, ...), "
                          "fully collected in every region: imagebuilder_pipeline (imagebuilder:ListImagePipelines + "
@@ -464,6 +844,8 @@ FACTS_NEEDED = {
     "entra_user_upn_on_federatable_custom_domain": "Azure: directory_domain {id,authenticationType,isVerified} + user UPNs",
     "entra_group_role_assignable": "Azure: directory_group.isAssignableToRole",
     "entra_group_membership_type": "Azure: directory_group.groupTypes (collected)",
+    "entra_group_membership_cloud_writable": "Azure: directory_group.onPremisesSyncEnabled and cloud source-of-authority status for synchronized groups",
+    "entra_group_source_self_membership": "Azure: source principal type and directory_app_role_assignment Graph application permissions",
     "entra_dynamic_rule_attributes_writable_by_source": "Azure: directory_group.membershipRule",
     "entra_dynamic_rule_satisfiable_by_invited_guest": "Azure: directory_group.membershipRule + authorizationPolicy.allowInvitesFrom",
     "azure_host_linked_to_pivot": "Azure: avd_session_host {id, properties.resourceId} scoped to the host pool id "
@@ -475,6 +857,22 @@ FACTS_NEEDED = {
     "azure_deployer_of_pivot": "Azure: deployment script / pipeline runner identities",
     "ml_compute_assigned_to_source": "Azure: machine learning compute instances personal assignment",
     "credential_stored_in_scope": "Azure: secret holder mapping (never secret values)",
+    "azure_appservice_config_code_path": "Azure: exact App Service kind, hosting plan, attached identity and config child scope; Windows and app-settings-only routes need executable package or payload evidence",
+    "azure_appservice_kudu_code_path": "Azure: exact App Service kind, hosting plan, running state and source publish/start permissions on that app; SCM network reachability remains conditional",
+    "azure_appservice_onedeploy_code_path": "Azure: exact App Service kind, attached identity, extensions/onedeploy permission and running state; custom container package execution needs evidence",
+    "azure_appservice_backup_restore_code_path": "Azure: exact App Service restore permission, supported hosting tier and runtime, attached identity, and running state; backup validity, storage access and execution remain conditional",
+    "azure_appservice_enable_publishing_credentials_code_path": "Azure: exact app SCM policy child write plus publishing credential read, app kind and running state; policy change, SCM reachability and execution remain conditional",
+    "azure_appservice_publishing_credentials_code_path": "Azure: exact App Service publishxml or config/list permission, collected SCM basic auth policy, app kind and running state; SCM reachability and package execution remain conditional",
+    "azure_appservice_sitecontainers_code_path": "Azure: exact app SiteContainer child write, Linux SiteContainers runtime mode, attached identity and running state; image run and identity access remain conditional",
+    "azure_appservice_siteextensions_code_path": "Azure: exact Windows App Service site extension write, attached identity and running state; package availability and app-content execution remain conditional",
+    "azure_appservice_slot_code_path": "Azure: exact deployment slot identity and executable slot-scoped publish, source-control, config or SiteContainer route; runtime and deployment stay conditional",
+    "azure_appservice_slot_swap_code_path": "Azure: exact production app identity, inventoried source slot, code-bearing slot route and site-level or same-slot swap action",
+    "azure_appservice_sourcecontrol_code_path": "Azure: exact production app sourcecontrols/web write, code app runtime and start availability; deployment remains conditional",
+    "azure_arc_entra_admin_ssh_path": "Azure: exact Arc machine and default endpoint rights, configured SSH service and provisioned Entra SSH extension; agent and OS login remain conditional",
+    "azure_arc_custom_script_code_path": "Azure: exact Arc identity machine and Custom Script child write, connected agent, enabled full-mode extension manager and compatible allow/block lists",
+    "azure_arc_run_command_code_path": "Azure: exact Arc identity machine and Run Command child write, agent v1.33 or later, enabled handler and compatible local allow/block lists",
+    "azure_deployment_script_uami_path": "Azure: exact script create/update and assignable UAMI with storage/ACI support rights in the script resource group",
+    "azure_appservice_slot_publishing_credentials_code_path": "Azure: exact slot publishxml or config/list permission, collected slot SCM basic auth policy, runtime and running state; SCM reachability and deployment remain conditional",
     "k8s_sa_cloud_binding": "Cloud: IRSA annotations + IAM trust, EKS pod identity associations, GKE WI bindings, AKS FICs",
     "trust_allows_k8s_sa_oidc_subject": "AWS: iam_role trust policies in the cluster's account",
     "gcp_workload_identity_user_granted_to_k8s_sa": "GCP: service_account iamPolicy",
@@ -525,7 +923,11 @@ FACTS_NEEDED = {
     "eks_access_entry_type": "AWS (related snapshot): eks_access_entry (eks:DescribeAccessEntry {type}) of the EKS cluster",
     # Placeholders the models deliberately leave unresolved (the requirement is checked on ANY resource, unknown).
     "target.host_resource.content_storage": "Azure/GCP: the host's content storage (Function App AzureWebJobsStorage account, "
-                                            "Composer / Dataproc / Cloud Build staging bucket) - not collected",
+                                            "Composer DAG bucket, or other staging bucket); Composer bucket joins use collected environment metadata",
+    "target.composer_dag_managed_folder": "GCP: collected managed folder whose prefix intersects a Composer environment's DAG prefix",
+    "target.dataproc_init_managed_folder": "GCP: collected managed folder containing an exact Dataproc initialization action object",
+    "target.dataproc_init_object": "GCP: exact Cloud Storage object named by a collected Dataproc initialization action",
+    "target.cloudbuild_source_object": "GCP: exact unpinned StorageSource archive of a collected non-triggered Cloud Build",
     "target.host_resource.workspace": "Azure: the Machine Learning workspace of the compute / endpoint host - not collected",
     "graph_app_permission": "Azure: directory_app_role_assignment (servicePrincipals/{id}/appRoleAssignments) incl. resourceId+appRoleId",
     "entra_owner_of": "Azure: directory_owner {object_id, object_type, owner_ids}",
@@ -567,9 +969,266 @@ FACTS_NEEDED = {
 # an "Unresolved" placeholder (unknown confidence, never FAIL). mode "target" depends only on the target and the
 # inventory (shared candidate set); mode "source" also depends on the source principal.
 PRECONDITIONS = {
+    "flink_new_application_startable": (("aws",), "source",
+      "The caller can create and start one unused application name in the same Region.",
+      "AWS: complete kinesisanalytics:ListApplications inventory in a Region, CreateApplication on *, and StartApplication on one available application ARN"),
+    "ec2_spot_fleet_roles_ready": (("aws",), "source",
+      "The caller can pass a Spot Fleet role, and the required service-linked roles exist or can be created.",
+      "AWS: IAM role inventory, spotfleet.amazonaws.com trust, PassRole with PassedToService, and CreateServiceLinkedRole with AWSServiceName"),
+    "quicksight_subscribed": (("aws",), "source",
+      "The account has an active IAM-compatible QuickSight subscription and the source user's name is available.",
+      "AWS: QuickSight subscription ACCOUNT_CREATED with IAM_ONLY or IAM_AND_QUICKSIGHT, and complete ListUsers in the registration Region"),
+    "ec2_userdata_restart_execution_reviewed": (("aws",), "source",
+      "The exact role-bearing EC2 instance executes changed user data on its next start.",
+      "AWS: a fresh verified aws_privesc_challenge_evidence record naming the source, target role and instance, "
+      "reviewed restart execution and role credential access; collected instance/profile state and exact "
+      "ModifyInstanceAttribute(userData), StartInstances and, when running, StopInstances authorization"),
+    "grafana_api_key_workspace_eligible": (("aws",), "source",
+      "The selected Managed Grafana workspace still supports API keys through the AWS API.",
+      "AWS: collected workspace ARN, ACTIVE status and Grafana version earlier than 12"),
+    "grafana_service_account_workspace_eligible": (("aws",), "source",
+      "The selected Managed Grafana workspace supports service accounts.",
+      "AWS: collected workspace ARN, ACTIVE status and Grafana version 9 or later"),
+    "grafana_saml_workspace_active": (("aws",), "source",
+      "The selected Managed Grafana workspace can accept an authentication update.",
+      "AWS: collected workspace ARN and ACTIVE status"),
+    "batch_new_job_and_ec2_queue_authorized": (("aws",), "source",
+      "One new Batch job definition can be registered and submitted through a usable EC2 job queue.",
+      "AWS: batch:DescribeJobDefinitions, batch:DescribeJobQueues and batch:DescribeComputeEnvironments in the same Region; RegisterJobDefinition covers an unused name and SubmitJob covers its revision and one enabled valid EC2 queue"),
+    "amplifybackend_create_token_backend_scope": (("aws",), "source",
+      "The CreateToken grant covers a backend environment path as well as the challenge token path for the same app.",
+      "AWS: a collected Amplify Gen 1 backend environment and amplifybackend:CreateToken on that app's backend environment path; a token-only grant remains unresolved"),
+    "cloudcontrol_source_can_create_admin_user": (("aws",), "source",
+      "The caller can pass a CloudFormation role that can create a new IAM user with a chosen console password and administrator permissions.",
+      "AWS: PassRole to a CloudFormation-trusting role, then CreateUser, GetUser, CreateLoginProfile, and either AttachUserPolicy with AdministratorAccess or PutUserPolicy on one new user ARN"),
+    "sagemaker_studio_profile_iam_domain_ready": (("aws",), "source",
+        "The selected Studio profile belongs to an active IAM domain and can run a code app using its role.",
+        "AWS: the exact user profile attached to the target role and its same-region domain are both InService, DescribeDomain reports AuthMode IAM, and a profile code app is InService or the source can CreateApp and AddTags on a matching app ARN"),
+    "sfn_existing_state_machine_update_and_start": (("aws",), "source",
+        "The source can update and start one active state machine using a passed execution role.",
+        "AWS: a collected ACTIVE state machine ARN is covered by UpdateStateMachine and StartExecution, or by StartSyncExecution if the machine is EXPRESS"),
+    "sagemaker_notebook_instance_accessible": (("aws",), "source",
+        "The source can open a running notebook, or start a stopped notebook before opening it.",
+        "AWS: the exact notebook attached to the target role is InService, or it is Stopped on a restartable platform and the source can call StartNotebookInstance on that notebook ARN"),
+    "sagemaker_new_notebook_creation_and_url_authorized": (("aws",), "source",
+        "The source can create and open one new notebook instance using the passed role.",
+        "AWS: a free notebook name in a collected Region is authorized for both CreateNotebookInstance and CreatePresignedNotebookInstanceUrl on the same ARN"),
+    "apprunner_existing_customer_account": (("aws",), "source",
+        "The account already uses App Runner, so it remains eligible to create services.",
+        "AWS: a collected App Runner service with an ARN in the source account establishes prior App Runner use; no recorded service leaves eligibility unresolved"),
+    "apprunner_existing_image_service_update": (("aws",), "source",
+        "The source can update a running image-based App Runner service to use the passed instance role and a chosen image.",
+        "AWS: a complete App Runner service inventory includes an exact RUNNING service ARN whose described SourceConfiguration uses ImageRepository; UpdateService covers that same ARN"),
+    "glue_existing_dev_endpoint_ssh_access": (("aws",), "source",
+        "The source can add an SSH key to a ready Glue development endpoint with a public address.",
+        "AWS: a complete development endpoint inventory records the exact role, READY status, public address, no legacy key and fewer than five managed keys; UpdateDevEndpoint and one endpoint-read action cover the same endpoint"),
+    "glue_existing_session_ready_for_statement": (("aws",), "source",
+        "The source can run a statement in a ready existing Glue session attached to the target role.",
+        "AWS: a complete session inventory records the exact session ID, its execution role and READY status; RunStatement covers that session ARN"),
+    "glue_new_session_with_statement": (("aws",), "source",
+        "The source can create an interactive Glue session using the target role and run a statement in it.",
+        "AWS: complete interactive session ID inventory in one Region; CreateSession and RunStatement both cover one unused session ARN chosen by the source"),
+    "glue_existing_job_has_runnable_trigger": (("aws",), "source",
+        "An existing Glue job that the source can update has a recorded way to run afterward.",
+        "AWS: a recorded trigger in the job's Region names the same job; an active scheduled trigger has a schedule, or an on-demand trigger is startable by the source on that trigger ARN"),
+    "glue_job_role_and_execution_bind": (("aws",), "source",
+        "The source can create or update one Glue job with the passed role and cause that job to run.",
+        "AWS: complete job inventory in one Region; CreateJob on one unused job ARN or UpdateJob on one existing job ARN; StartJobRun on that same job or CreateTrigger on an unused scheduled trigger ARN in the job's Region"),
+    "glue_job_override_arguments_available": (("aws",), "source",
+        "An existing Glue job can run with a script override supplied by the source.",
+        "AWS: the job's command type and non-overridable code argument names are collected; --scriptLocation is not pinned; StartJobRun covers that job or CreateTrigger covers a new scheduled trigger name in its Region. Dependency-only routes remain unresolved until their runtime prerequisites are verified"),
+    "appstream_new_app_block_builder_with_role": (("aws",), "source",
+        "The source can create and start one app block builder with the target role and stream into it.",
+        "AWS: complete builder and app-block name inventory, two available subnets in separate Availability Zones of one VPC, and CreateAppBlockBuilder, AssociateAppBlockBuilderAppBlock, StartAppBlockBuilder and CreateAppBlockBuilderStreamingURL on the same unused builder ARN; the associated APPSTREAM2 app block must be unassociated already, or be newly creatable with a regional S3 bucket"),
+    "appstream_new_fleet_with_role": (("aws",), "source",
+        "The source can create and start one fleet with the target role and stream through a stack.",
+        "AWS: complete fleet, image and stack inventory in one Region; an AVAILABLE image that can run a fleet; CreateFleet authorized on the image and one unused fleet ARN; StartFleet, AssociateFleet and CreateStreamingURL on that same fleet; an existing stack or one creatable and associable by the source"),
+    "appstream_new_image_builder_with_role": (("aws",), "source",
+        "The source can create one unused image builder name from an available image and stream into it.",
+        "AWS: complete image and image-builder inventory in one Region; an AVAILABLE image that supports image builders; CreateImageBuilder authorized on that image and one unused builder ARN; CreateImageBuilderStreamingURL authorized on the same builder ARN"),
+    "appstream_existing_fleet_role_swap": (("aws",), "source",
+        "The source can set the target role on one existing AppStream fleet and start a streaming session.",
+        "AWS: a recorded stopped fleet, or a running fleet the source can stop; UpdateFleet, StartFleet and CreateStreamingURL on that same fleet ARN, plus an associated stack or permission to create and associate one new stack"),
+    "appstream_existing_fleet_role_session": (("aws",), "source",
+        "The source can open a desktop session on one running fleet that already has the target role.",
+        "AWS: complete fleet inventory; the same running fleet has the exact target IamRoleArn, DESKTOP stream view, available capacity and a collected associated stack; CreateStreamingURL is authorized on that fleet ARN"),
+    "appstream_existing_image_builder_role_session": (("aws",), "source",
+        "The source can open a session on one running image builder that already has the target role.",
+        "AWS: complete image-builder inventory; one RUNNING builder has the exact target IamRoleArn and CreateImageBuilderStreamingURL is authorized on that builder ARN"),
+    "appstream_existing_app_block_builder_role_session": (("aws",), "source",
+        "The source can open a session on one running app block builder that already has the target role.",
+        "AWS: complete app-block-builder inventory; one RUNNING builder has the exact target IamRoleArn and CreateAppBlockBuilderStreamingURL is authorized on that builder ARN"),
+    "appstream_existing_app_block_builder_role_swap": (("aws",), "source",
+        "The source can set the target role on one existing AppStream app block builder and start a streaming session.",
+        "AWS: a recorded stopped builder, or a running builder the source can stop; a recorded app block association; UpdateAppBlockBuilder, StartAppBlockBuilder and CreateAppBlockBuilderStreamingURL on the same builder ARN"),
+    "codepipeline_new_s3_project_route": (("aws",), "source",
+        "The source can create a pipeline and a CodeBuild project using the target role and start that pipeline.",
+        "AWS: unused pipeline and project names in one Region; a versioned S3 source and artifact bucket, writable source ZIP key, readable source and artifacts, passable CodeBuild and CodePipeline roles, CreatePipeline and StartPipelineExecution on the same pipeline ARN, CreateProject and the pipeline role's StartBuild on the same project ARN"),
+    "codepipeline_new_codecommit_project_route": (("aws",), "source",
+        "The source can create a CodeCommit sourced pipeline and a CodeBuild project using the target role.",
+        "AWS: an existing CodeCommit repository with a recorded branch or one the source can push, a pipeline role allowed to read and archive that repository, an accessible artifact bucket, unused pipeline and project names, passable service roles, and exact CreatePipeline, StartPipelineExecution, CreateProject and StartBuild permissions"),
+    "codepipeline_new_ecr_project_route": (("aws",), "source",
+        "The source can create an ECR sourced pipeline and a CodeBuild project using the target role.",
+        "AWS: an existing ECR repository with a recorded tagged image that the pipeline role can describe, an accessible artifact bucket, unused pipeline and project names, passable service roles, and exact CreatePipeline, StartPipelineExecution, CreateProject and StartBuild permissions"),
+    "codepipeline_existing_project_update_buildspec": (("aws",), "source",
+        "The source can change a configured CodeBuild project's buildspec and start its pipeline.",
+        "AWS: recorded source artifacts feed the CodeBuild action on the exact project without a buildspec override; the source can UpdateProject with inline buildspec and StartPipelineExecution on that pipeline; the pipeline role or action role can start the project, including batch and service-role override requirements"),
+    "codebuild_existing_project_buildspec_override": (("aws",), "source",
+        "The source can start an existing CodeBuild project with controlled build commands.",
+        "AWS: a recorded CodeBuild project using the target role; StartBuild with inline buildspec on its ARN, or StartBuildBatch with inline buildspec and a recorded batch service role able to start child builds"),
+    "codebuild_existing_project_update_buildspec": (("aws",), "source",
+        "The source can change a recorded CodeBuild project's buildspec and start it with the target role.",
+        "AWS: codebuild_project detail with the target service role; UpdateProject with a controlled buildspec and StartBuild on the same ARN, or StartBuildBatch with an existing batch role able to start child builds"),
+    "codebuild_running_sandbox_command": (("aws",), "source",
+        "The source can run a command in a recorded running CodeBuild sandbox using the target role.",
+        "AWS: codebuild_sandbox inventory with a RUN_SANDBOX record, exact sandbox ARN and serviceRole; effective codebuild:StartCommandExecution on that ARN"),
+    "codebuild_running_sandbox_connection": (("aws",), "source",
+        "The source can connect to a recorded running CodeBuild sandbox using the target role.",
+        "AWS: codebuild_sandbox inventory with a RUN_SANDBOX record, exact sandbox ARN and serviceRole; effective codebuild:StartSandboxConnection on that ARN"),
+    "codebuild_new_project_role_and_build": (("aws",), "source",
+        "The source can create and run one unused CodeBuild project name with the target role.",
+        "AWS: complete codebuild_project name inventory in a Region; CreateProject and StartBuild or StartBuildBatch on one unused project ARN, with codebuild:serviceRole set to the target and an inline buildspec allowed at creation or build start; batch mode may use a distinct passable role able to start child builds"),
+    "codebuild_existing_project_role_and_build": (("aws",), "source",
+        "The source can change and run the same recorded CodeBuild project using controlled build commands.",
+        "AWS: codebuild_project inventory with a project ARN; codebuild:UpdateProject and StartBuild or StartBuildBatch on that ARN; an inline buildspec allowed either in UpdateProject or at build start; batch mode needs a configured or creatable batch role able to start child builds"),
+    "cloudfront_edge_distribution_and_service_roles": (("aws",), "source",
+        "The source can update a recorded CloudFront distribution and the required Lambda@Edge service-linked roles exist or can be created.",
+        "AWS: cloudfront_distribution inventory with an ARN covered by cloudfront:UpdateDistribution; IAM role inventory for AWSServiceRoleForLambdaReplicator and AWSServiceRoleForCloudFrontLogger, or iam:CreateServiceLinkedRole with the appropriate iam:AWSServiceName"),
+    "lambda_microvm_shell_runnable_image_and_role": (("aws",), "source",
+        "The MicroVM role allows Lambda session tagging and one runnable image is covered by run and shell-token grants.",
+        "AWS: IAM trust grants sts:TagSession to lambda.amazonaws.com; lambda_microvm_image in CREATED or UPDATED state with latestActiveImageVersion; RunMicrovm and CreateMicrovmShellAuthToken on the same image ARN"),
+    "lambda_existing_zip_function_direct_invoke_ready": (("aws",), "source",
+        "The source can update and invoke one existing ZIP function using the target role.",
+        "AWS: a collected active ZIP function has a supported runtime, completed its prior update, available concurrency, and no enforced code signing; UpdateFunctionCode and InvokeFunction cover its exact ARN"),
+    "lambda_existing_zip_function_role_swap_ready": (("aws",), "source",
+        "The source can repoint, replace code in, and invoke one existing ZIP function using the target role.",
+        "AWS: one collected active ZIP function has a supported runtime, completed its prior update, available concurrency, and no enforced code signing; UpdateFunctionConfiguration, UpdateFunctionCode, and InvokeFunction cover that ARN, and PassRole permits the target role for that function"),
+    "lambda_policy_rewrite_zip_code_and_invoke_ready": (("aws",), "source",
+        "The source can replace one ZIP function policy to grant itself code update and invocation.",
+        "AWS: one collected active ZIP function uses the target role, can run new unsigned code, and the source can rewrite its policy with a direct same-account grant that is not blocked by explicit denies or organization limits"),
+    "lambda_enforced_zip_function_signing_bypass_and_invoke": (("aws",), "source",
+        "The source can bypass enforced code signing, update, and invoke one existing ZIP function.",
+        "AWS: the exact active function has enforced signing, supported runtime, completed update, and free concurrency; UpdateFunctionCode and InvokeFunction cover it, and DeleteFunctionCodeSigningConfig covers its ARN or Put/Update covers a collected code signing config ARN"),
+    "agentcore_new_interpreter_broad_name_and_role_ready": (("aws",), "source",
+        "The source can choose a fresh interpreter name and run code under a passed role.",
+        "AWS: CreateCodeInterpreter is allowed in one Region; StartCodeInterpreterSession and InvokeCodeInterpreter cover every generated suffix for a freely chosen name, and the role trusts AgentCore"),
+    "eks_existing_self_access_entry_can_receive_cluster_admin": (("aws",), "source",
+        "The source can give its own existing STANDARD EKS access entry cluster-wide administrator access.",
+        "AWS: collected eks_access_entry with principalArn equal to the source and type STANDARD; exact accessEntryArn; AssociatedAccessPolicies without an existing cluster-wide AmazonEKSClusterAdminPolicy; AssociateAccessPolicy on that ARN with the administrator policy and cluster scope"),
+    "eks_new_self_access_entry_can_receive_cluster_admin": (("aws",), "source",
+        "The source can create an access entry for its own IAM principal and give that entry cluster-wide administrator access.",
+        "AWS: eks_access_entry inventory for the cluster; CreateAccessEntry with eks:principalArn set to the source and type STANDARD; AssociateAccessPolicy on the resulting access-entry ARN with AmazonEKSClusterAdminPolicy and cluster scope"),
+    "eventbridge_subscriber_has_active_bus_and_bound_permissions": (("aws",), "source",
+        "The source can create a subscriber on an active custom event bus with a passed role.",
+        "AWS: recorded eventbridge_custom_bus EventBusArn and usable State (ACTIVE or UPDATE_FAILED), no unverified customer KMS key, events:CreateSubscriber on that bus and a new subscriber ARN, and events:PutEvents on the same bus"),
+    "mwaa_existing_environment_update_with_dag_code": (("aws",), "source",
+        "The source can update one usable MWAA environment to use the target role and upload a DAG that the role can read.",
+        "AWS: collected mwaa_environment ARN, AVAILABLE or UPDATE_FAILED status, SourceBucketArn and DagS3Path; exact airflow:UpdateEnvironment and s3:PutObject for one new DAG, plus target role s3:ListBucket and s3:GetObject for that DAG"),
+    "mwaa_serverless_new_workflow_definition_and_start": (("aws",), "source",
+        "The source can create a new workflow from a controlled S3 definition and start that exact workflow under the target role.",
+        "AWS: complete workflow inventory and free name; same-Region versioned, private owned S3 bucket plus source Put/Get/List for a new YAML object; broad StartWorkflowRun covering generated workflow IDs, exact PassRole with iam:PassedToService=airflow-serverless.amazonaws.com, and required logging and service-linked-role permissions"),
+    "m2_existing_environment_new_application_deploy": (("aws",), "source",
+        "The source can create an M2 application with the target role, deploy it to an available environment, and start it.",
+        "AWS: collected mainframe_environment in Available state; CreateDeployment on that exact environment and all new application IDs, StartApplication on all new application IDs, CreateApplication, PassRole with iam:PassedToService=m2.amazonaws.com, and source write/read access to one owned S3 definition object"),
+    "mgh_automation_unit_home_region_target_and_run": (("aws",), "source",
+        "The source can create a custom Migration Hub automation unit, attach the target role, and run a controlled target.",
+        "AWS: Migration Hub home Region us-east-1 and feature access; a source-controlled runnable SSM document or Lambda function; the new automation-unit ARN authorized for AssociateAutomationUnitRole; CreateAutomationRun; PassRole to migrationhub.amazonaws.com; target role trust and target invocation permissions"),
+    "migrationhub_orchestrator_bound_workflow_script_and_managed_target": (("aws",), "source",
+        "The source can add or update a runnable automated workflow step that sends a controlled script to an online SSM-managed instance carrying the target role.",
+        "AWS: collected Orchestrator workflow and step group/graph with same-workflow action grants; target EC2 instance selected by that workflow and online in SSM; service-linked role and usable migrationhub-orchestrator-* S3 script object the source can write; startable or retryable workflow state"),
+    "ssm_incident_response_plan_runs_new_automation_document": (("aws",), "source",
+        "The source can create an Automation document and start an incident under a response plan that names it and the target role.",
+        "AWS: ssmincidents_account active ReplicationSets or existing ResponsePlans; ssm_document_metadata and CreateDocument; CreateResponsePlan or UpdateResponsePlan plus StartIncident on the same plan ARN"),
+    "cloudformation_service_managed_stackset_targetable": (("aws",), "source",
+        "Organizations access is enabled and the source can deploy a new service-managed StackSet to the member account's OU.",
+        "AWS: cloudformation_organizations_access Status=ENABLED; organization_parent member OU; CreateStackSet and CreateStackInstances on one generated StackSet, OU target, and IAM role resource type"),
+    "cloudformation_extension_package_and_invocation": (("aws",), "source",
+        "The source can upload and read one handler package and invoke its registered private resource type.",
+        "AWS: recorded S3 bucket; s3:PutObject and GetObject on the same package object; cloudformation:CreateResource or CreateStack/UpdateStack on a usable stack"),
+    "cloudformation_new_stack_with_role": (("aws",), "source",
+        "The source can create a new stack with a caller-controlled inline template and the target service role.",
+        "AWS: cloudformation:CreateStack on one unused stack name across generated stack IDs, with cloudformation:RoleArn set to the target role"),
+    "cloudformation_new_changeset_with_role": (("aws",), "source",
+        "The source can create and execute a CREATE-type change set on the same new stack using the target service role.",
+        "AWS: cloudformation:CreateChangeSet and ExecuteChangeSet on one unused stack name across generated stack IDs, with cloudformation:RoleArn set to the target role"),
+    "cloudformation_existing_stack_updatable_with_role": (("aws",), "source",
+        "An existing stack in an updatable state can be changed with the target CloudFormation service role.",
+        "AWS: cloudformation_stack {StackId, StackStatus} by Region; exact cloudformation:UpdateStack permission on the stack ARN with cloudformation:RoleArn set to the target role"),
+    "cloudformation_attached_role_stack_updatable": (("aws",), "source",
+        "An existing updatable stack already carries the target service role and the source can update that stack.",
+        "AWS: cloudformation_stack {StackId, StackStatus, RoleARN} by Region; exact cloudformation:UpdateStack permission on that StackId"),
+    "cloudformation_attached_role_changeset_executable": (("aws",), "source",
+        "An existing updatable stack already carries the target service role and the source can create and execute a change set on that stack.",
+        "AWS: cloudformation_stack {StackId, StackStatus, RoleARN} by Region; exact cloudformation:CreateChangeSet and ExecuteChangeSet permissions on the same StackId"),
+    "ssm_shell_document_on_online_instance": (("aws",), "source",
+        "The source can use a shell-capable Run Command document on the same online instance carrying the target role.",
+        "AWS: ssm:SendCommand on an online EC2 instance and AWS-RunShellScript or AWS-RunPowerShellScript in its Region"),
+    "ssm_shell_session_on_online_instance": (("aws",), "source",
+        "The source can open the default shell session document and data channel on the same online instance carrying the target role.",
+        "AWS: ssm:StartSession on an online EC2 instance and its SSM-SessionManagerRunShell document, plus ssmmessages:OpenDataChannel"),
+    "ssm_shell_association_targets": (("aws",), "source",
+        "The source can create an association for a shell-capable document in the Region of an online target instance.",
+        "AWS: ssm:CreateAssociation on a new association ARN and AWS-RunShellScript or AWS-RunPowerShellScript document in the instance Region; Targets can name its InstanceIds value"),
+    "ssm_maintenance_window_run_command_target": (("aws",), "source",
+        "An enabled maintenance window can schedule a Run Command task for an online instance carrying the target role.",
+        "AWS: ssm_maintenance_window {WindowId, Enabled, NextExecutionTime, Tasks} in the instance Region; exact RegisterTaskWithMaintenanceWindow permission on the window or UpdateMaintenanceWindowTask permission on the window and an existing RUN_COMMAND task"),
+    "ssm_maintenance_window_automation_task_ready": (("aws",), "source",
+        "An enabled maintenance window can schedule a newly created Automation document under the target service role.",
+        "AWS: ssm_maintenance_window {WindowId, Enabled, NextExecutionTime, Tasks}; exact RegisterTaskWithMaintenanceWindow permission on the window or UpdateMaintenanceWindowTask permission on the window and an existing AUTOMATION task; CreateDocument on a new Automation document in that Region"),
+    "ssm_jit_approved_online_instance": (("aws",), "source",
+        "The assumed source role can request a token for the exact online instance, and its access is approved.",
+        "AWS: ssm:StartAccessRequest on arn:...:ec2:Region:Account:instance/InstanceId, source kind aws_role, online ssm_managed_instance, and a proven auto-approval policy or current approved access request for this role and instance"),
+    "ssm_new_automation_document_executable": (("aws",), "source",
+        "The source can create an Automation document and start that same document in one Region.",
+        "AWS: ssm:CreateDocument with ssm:DocumentType Automation on a new document ARN, ssm:StartAutomationExecution on the same document ARN and generated automation-execution ARN, plus ssm_document_metadata for exact-name collisions"),
+    "target_codecommit_git_permission": (("aws",), "target",
+        "The IAM user has a recorded CodeCommit Git permission that an uploaded SSH key could exercise.",
+        "AWS: target IAM user identity and inherited policies granting codecommit:GitPull or codecommit:GitPush"),
+    "target_ssh_public_key_capacity": (("aws",), "source",
+        "The target IAM user has room for another SSH public key, or the source can delete an existing key after listing its ID.",
+        "AWS: iam_user SSHPublicKeys list and the source's effective iam:DeleteSSHPublicKey and iam:ListSSHPublicKeys permissions on the target user"),
+    "service_specific_credential_ready": (("aws",), "source",
+        "The target IAM user has room for a supported service credential or an active credential the source can reset.",
+        "AWS: iam_user ServiceSpecificCredentials and service-scoped CreateServiceSpecificCredential or ResetServiceSpecificCredential permission"),
+    "mfa_enrollment_credential_ready": (("aws",), "source",
+        "The target IAM user can accept another MFA device and at least one credential action can supply usable credentials.",
+        "AWS: IAM user MFADevices, AccessKeys, LoginProfile, and effective credential and MFA-device permissions"),
+    "mfa_removal_password_ready": (("aws",), "source",
+        "The target IAM user has an MFA device to remove and a password action matching its login-profile state.",
+        "AWS: IAM user MFADevices, LoginProfile, and effective CreateLoginProfile or UpdateLoginProfile permission"),
+    "target_console_login_without_mfa": (("aws",), "target",
+        "The target IAM user has no MFA device that would prevent password-only console sign-in.",
+        "AWS: iam_user MFADevices list for the exact target user"),
+    "role_trust_rewrite_assumable": (("aws",), "source",
+        "The role is editable and the source can assume it after naming itself in the trust policy.",
+        "AWS: role path, source sts:AssumeRole explicit denies, permissions boundary, and applicable SCPs"),
+    "group_adds_policy_to_source": (("aws",), "source",
+        "Joining the group gives the source user a newly usable action on a resource.",
+        "AWS: exact group membership and policies, the source user's effective action/resource access before and after joining, and applicable permissions boundary and SCP"),
+    "source_attached_admin_policy_version_exists": (("aws",), "source",
+        "An attached customer-managed policy has a nondefault version that clearly grants full account permissions.",
+        "AWS: attached customer-managed policy versions with their documents and effective iam:SetDefaultPolicyVersion permission"),
+    "source_attached_policy_version_capacity": (("aws",), "source",
+        "An attached customer-managed policy can receive a new version, or the source can delete a nondefault version first.",
+        "AWS: attached customer-managed policy versions and effective iam:DeletePolicyVersion permission when five versions exist"),
+    "assumable_role_allows_account_admin": (("aws",), "source",
+        "A role the source can assume and modify can gain full account permissions without a restrictive permissions boundary.",
+        "AWS: exact assumable role, IAM policy mutation permission on that role, and the role's permissions boundary document"),
+    "source_boundary_allows_account_admin": (("aws",), "source",
+        "The source identity's permissions boundary permits full account administration after the policy change, or the source can remove that boundary.",
+        "AWS: iam_role/iam_user PermissionsBoundary, its managed policy document, and effective permission to remove the boundary"),
+    "lambda_enforcing_code_signing": (("aws",), "target",
+        "A Lambda function attached to the target role has a code-signing configuration that enforces trusted artifacts.",
+        "AWS: lambda_function CodeSigning and matching CodeSigningConfig details for the function"),
+    "iam_user_access_key_capacity": (("aws",), "source",
+        "The target IAM user has room for another access key, or the source can delete one of its existing keys first.",
+        "AWS: iam_user AccessKeys list and the source's effective iam:DeleteAccessKey and iam:ListAccessKeys permissions on the target user"),
     "ec2_instance_running": (("aws",), "target",
         "The target role is attached (instance profile) to at least one EC2 instance in state pending/running.",
         "AWS: instance {InstanceId, State, IamInstanceProfile} in every region + iam_role InstanceProfileList"),
+    "ec2_instance_connect_same_running_role_host": (("aws",), "source",
+        "The source can push a key to the same running Linux instance that carries the target role, with instance metadata enabled.",
+        "AWS: exact instance attachment, running state, platform, MetadataOptions, and SendSSHPublicKey permission"),
     "ssm_managed_instance": (("aws",), "target",
         "At least one running EC2 instance of the target role is registered with Systems Manager (PingStatus Online).",
         "AWS: ssm_managed_instance (ssm:DescribeInstanceInformation {InstanceId, PingStatus}) in every region + instance"),
@@ -579,12 +1238,39 @@ PRECONDITIONS = {
     "ecs_task_definition_exists": (("aws",), "target",
         "At least one ECS task definition exists in the target's account (the technique overrides an existing one).",
         "AWS: ecs_task_definition in every region"),
+    "ecs_existing_task_override_runnable_with_role": (("aws",), "source",
+        "One active EC2 task definition with a container can run in an active cluster with capacity, using the target task role override.",
+        "AWS: described ECS task definition and cluster, exact ecs:RunTask grant, and iam:PassRole on its execution role if present"),
     "eks_cluster_exists": (("aws",), "target",
         "At least one EKS cluster exists in the target's account (the technique attaches to an existing cluster).",
         "AWS: eks_cluster (eks:ListClusters) in every region"),
     "source_in_org_management_account": (("aws",), "source",
         "The source lives in the organization management account (only it can call the API).",
         "AWS: organization_account Arn (organizations:ListAccounts) to identify the management account"),
+    "emr_containers_job_route": (("aws",), "source",
+        "One running EMR on EKS virtual cluster allows this source to start a job with the target role.",
+        "AWS: emr_container_virtual_cluster and exact StartJobRun authorization with ExecutionRoleArn context"),
+    "emr_serverless_job_route": (("aws",), "source",
+        "One runnable EMR Serverless application can use the target role to read a script the source can write.",
+        "AWS: described EMR Serverless application, exact StartJobRun and PassRole grants, and a same-Region S3 object writable by source and readable by target"),
+    "emr_containers_pod_identity_job_route": (("aws",), "source",
+        "One running EMR on EKS virtual cluster has all three EKS Pod Identity associations for the target role and permits this source to submit a job.",
+        "AWS: virtual cluster, EKS cluster, complete pod identity associations, exact PassRole and StartJobRun authorization"),
+    "emr_cluster_session_runtime_role": (("aws",), "source",
+        "The source can request session credentials for the target runtime role on one live EMR cluster with runtime roles enabled.",
+        "AWS: described EMR cluster, matching security configuration, instance profile and role trust, exact GetClusterSessionCredentials grant"),
+    "emr_containers_endpoint_route": (("aws",), "source",
+        "One active EMR on EKS endpoint in a running virtual cluster allows this source to request a session with the target role.",
+        "AWS: emr_container_virtual_cluster, emr_container_endpoint, and exact GetManagedEndpointSessionCredentials authorization"),
+    "rolesanywhere_anchor_profile_trust_join": (("aws",), "source",
+        "The source can update an enabled trust anchor in the same Region as an enabled profile listing the target role, and the role trust admits that exact anchor.",
+        "AWS: rolesanywhere_trust_anchor, rolesanywhere_profile, target role trust policy, and effective rolesanywhere:UpdateTrustAnchor"),
+    "rolesanywhere_new_anchor_profile_role_ready": (("aws",), "source",
+        "The source can create an enabled trust anchor and profile in one Region, pass the target role, and satisfy the role's Roles Anywhere trust.",
+        "AWS: exact source CreateTrustAnchor, CreateProfile, iam:PassRole, target role trust policy, and regional trust anchor/profile inventory"),
+    "sagemaker_job_execution_route_unverified": (("aws",), "source",
+        "A SageMaker job needs a runnable source-controlled image and a feasible input/output path under the passed role before a role execution path is reported.",
+        "AWS: exact SageMaker job ARN, image metadata, target role image/data permissions, and effective job creation and PassRole permissions"),
     "target_in_other_account": (("aws",), "source",
         "The target lives in a different account than the source (cross-account technique).",
         "AWS: target and source account ids (always known)"),
@@ -621,7 +1307,7 @@ MAX_ALTERNATIVES = 64       # DNF expansion cap (alternatives evaluated per entr
 # request_context (AWS): condition-key values the technique's own API request carries (machine-checked against
 # Allow/Deny Condition blocks of identity policies, boundaries, SCPs/RCPs and resource policies).
 REQUEST_CONTEXT_PROVIDERS = ("aws",)
-REQUEST_CONTEXT_SPECIAL = ("absent", "chosen", "values")
+REQUEST_CONTEXT_SPECIAL = ("absent", "chosen", "values", "admin_managed_policy", "source_principal")
 MAX_CONTEXT_CHOICES = 16
 _BIND = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 SECRET_PROVIDERS = ("aws", "gcp", "azure", "any")
@@ -642,9 +1328,10 @@ OUTCOMES = {
     "role_activation": "Activates/assigns a privileged role or permission set (PIM, Identity Center, Entra directory role).",
     "scope_control": "Gains IAM control of a scope (set IAM policy / role assignments) -> every principal of the scope.",
     "application_admin": "Becomes administrator of a managed service's own application plane (not an IAM principal).",
+    "bounded_authority": "Evidence-bound effect on the exact non-principal target, defined only by the rule and verified facts; implies no IAM scope control, application administration, principal access, or further permissions.",
     "blocker_removal": "Lifts an enforcement control (target.removes_blockers) that gates other techniques; reaches no principal.",
 }
-ENTITY_OUTCOMES = ("permission_grant", "role_activation", "scope_control", "application_admin", "blocker_removal")
+ENTITY_OUTCOMES = ("permission_grant", "role_activation", "scope_control", "application_admin", "bounded_authority", "blocker_removal")
 GROUP_TARGET_KINDS = {"aws_group", "gcp_group", "entra_group", "k8s_group"}
 GENERIC_SELECTORS = {"target_id_glob", "target_name_glob", "exclude_target_id_glob"}
 GENERIC_SOURCE_SELECTORS = {"source_id_glob"}
@@ -663,6 +1350,18 @@ AZURE_CONSUMER_BINDINGS = ("key_vault_reference", "storage_content", "app_config
 PIM_GROUP_ACCESS = ("member", "owner")
 # Selectors valid only on these target kinds (Azure extensions).
 AZURE_SELECTOR_KINDS = {
+    "azure_containerapp_create_uami_path": ("azure_managed_identity",),
+    "azure_containerapp_exec_identity": ("azure_managed_identity",),
+    "azure_containerapp_job_assignable_uami": ("azure_managed_identity",),
+    "azure_containerapp_assignable_uami": ("azure_managed_identity",),
+    "azure_confidential_ledger_admin_path": ("azure_dataplane_admin",),
+    "azure_batch_shared_key_pool_identity": ("azure_managed_identity",),
+    "azure_batch_pool_starttask_identity": ("azure_managed_identity",),
+    "azure_batch_pool_assignable_uami": ("azure_managed_identity",),
+    "azure_aci_assignable_uami": ("azure_managed_identity",),
+    "azure_aci_exec_running_identity": ("azure_managed_identity",),
+    "azure_aci_existing_write_identity": ("azure_managed_identity",),
+    "azure_apim_restorable_backup": ("azure_managed_identity",),
     "azure_consumer_of_pivot": ("azure_managed_identity",),
     "azure_assignable_via_identity_holding": ("azure_managed_identity",),
     "azure_users_assigned_to_pivot": ("azure_user",),
@@ -675,15 +1374,19 @@ AZURE_SELECTOR_KINDS = {
     "intune_managed_device_user": ("azure_user",),
 }
 PLACEHOLDERS = {
-    "target.arn", "target.email", "target.id", "target.scope", "target.namespace", "target.name", "target.account",
+    "target.resource", "target.policy_resource",
+    "target.arn", "target.email", "target.id", "target.scope", "target.quota_project", "target.namespace", "target.name", "target.account", "target.region",
+    "target.role_arn", "target.location_arn", "target.grant_arn",
     "target.project", "target.node", "target.client_id", "target.application_id",
     "target.resource_arn", "target.attached_resource_arn", "target.artifact_arn", "target.consumer_input_arn",
     "target.saml_provider_arn", "target.trust_anchor_arn", "target.oidc_provider_arn", "target.portfolio_arn",
-    "target.rolesanywhere_profile_arn", "target.codebuild_sandbox_arn", "target.redshift_dbuser_arn",
+    "target.rolesanywhere_profile_arn", "target.codebuild_sandbox_arn", "target.codebuild_running_sandbox_arn", "target.redshift_dbuser_arn",
     "target.amplifybackend_token_arn", "target.amplifybackend_backend_arn",
-    "target.host_resource", "target.host_resource.content_storage", "target.host_resource.workspace", "target.catalog",
+    "target.host_resource", "target.apim_api_resource", "target.apim_api_policy_resource",
+    "target.apim_operation_policy_resource", "target.apim_product_policy_resource",
+    "target.host_resource.content_storage", "target.composer_dag_managed_folder", "target.dataproc_init_managed_folder", "target.dataproc_init_object", "target.cloudbuild_source_object", "target.host_resource.workspace", "target.catalog",
     "target.domain_registration", "target.image_family_project",
-    "source", "source.account", "source.arn", "source.id", "source.email", "source.namespace", "source.name",
+    "source", "source.account", "source.partition", "source.arn", "source.id", "source.email", "source.namespace", "source.name",
     "source.scope", "source.attached_policy_arn", "source.group_arn", "source.assumable_role_arn",
     "source.assumable_role_attached_policy_arn",
     "source.controlled_user", "target.user",
@@ -698,7 +1401,9 @@ REQUIRED_FIELDS = ("id", "provider", "service", "title", "source", "summary", "r
 # Blockers the evaluator evaluates from snapshot facts; every other known blocker is reported
 # in finding evidence as `blockers_not_evaluated` (it never silently removes or downgrades an edge).
 # Blockers a provider model evaluates from optional snapshot facts (listed as not evaluated when the facts are absent).
-MODEL_BLOCKERS = {"aws": {"ecr_tag_immutability"},
+MODEL_BLOCKERS = {"aws": {"ecr_tag_immutability", "lambda_code_signing_enforced"},
+                  "gcp": {"org_policy_constraint", "vpc_sc_perimeter"},
+                  "azure": {"aks_local_accounts_disabled", "aks_local_accounts_enabled", "aks_entra_integration_enabled", "aks_run_command_disabled"},
                   # Workload-admission blockers of techniques that create / patch pods (peaso.privesc.effective_permissions.k8s):
                   # 'blocked' only for definitive facts (PSA enforce label), 'possibly_blocked' (edge kept, conditional) for
                   # enforcing policies whose effect cannot be decided offline (CEL policies, webhooks, Kyverno, Gatekeeper).
@@ -710,15 +1415,17 @@ BLOCKER_ALIASES = {"pod_security_admission": {"pivot_namespace_psa_enforce_basel
 # Placeholders that resolve on entity targets (account admin, scope owner, cluster-admin, ...). Any other
 # {target.*} placeholder on an entity target can never resolve and would silently make every edge unknown.
 ENTITY_TARGET_PLACEHOLDERS = {
-    "aws_verified_authority": {"target.scope", "target.account", "target.resource_arn", "target.arn"},
+    "gcp_verified_authority": {"target.scope", "target.resource", "target.policy_resource", "target.host_resource", "target.artifact_arn", "target.quota_project"},
+    "aws_verified_authority": {"target.scope", "target.account", "target.resource_arn", "target.arn", "target.role_arn", "target.location_arn", "target.grant_arn"},
     "aws_account_admin": {"target.scope", "target.account"},
     "aws_identity_center_permission_set": {"target.scope", "target.account", "target.arn", "target.id"},
     "gcp_scope_owner": {"target.scope", "target.project", "target.id", "target.name"},
     "azure_scope_owner": {"target.scope"},
     "azure_dataplane_admin": {"target.scope"},
     "k8s_cluster_admin": {"target.scope", "target.cluster", "target.account", "target.name"},
+    "k8s_verified_authority": {"target.scope", "target.namespace"},
     "aws_directory_domain_admin": {"target.scope", "target.account"},
-    "aws_service_plane_admin": {"target.scope", "target.account", "target.resource_arn", "target.arn",
+    "aws_service_plane_admin": {"target.scope", "target.account", "target.region", "target.resource_arn", "target.arn",
                                 "target.amplifybackend_token_arn", "target.amplifybackend_backend_arn"},
     "k8s_admission_control": {"target.scope", "target.cluster"},
     "entra_role": {"target.scope", "target.id", "target.name", "target.catalog"},
@@ -731,7 +1438,7 @@ KNOWN_BLOCKERS = EVALUATED_BLOCKERS | {
     "sp_lock_configuration_credentials", "ecr_tag_immutability", "lambda_code_signing_enforced",
     "scm_and_ftp_basic_auth_disabled", "service_principal_conditional_access_block", "glue_nonoverridable_arguments",
     "role_assignment_condition_is_allowlist", "pim_approval_required_by_other_principal",
-    "target_upn_on_initial_onmicrosoft_domain", "aks_local_accounts_disabled", "aks_entra_integration_enabled",
+    "target_upn_on_initial_onmicrosoft_domain", "aks_local_accounts_disabled", "aks_local_accounts_enabled", "aks_entra_integration_enabled", "aks_run_command_disabled",
     "pivot_namespace_psa_enforce_baseline_or_restricted", "vpc_sc_perimeter", "org_policy_constraint",
     "pod_security_admission", "admission_policy",
     # K8s admission enforcement lifted by k8s_admission_control techniques (target.removes_blockers).
@@ -897,14 +1604,22 @@ def _validate_request_context(value, provider, where, errors):
             (kind, arg), = val.items()
             if kind in ("absent", "chosen") and arg is True:
                 continue
+            if kind == "source_principal" and arg is True and key.lower() in ("lambda:principal", "quicksight:iamarn"):
+                continue
+            if kind == "admin_managed_policy" and arg is True and key.lower() == "iam:policyarn":
+                continue
             if kind == "values" and isinstance(arg, list) and arg and all(isinstance(x, str) for x in arg):
                 continue
         errors.append(f"{where}: request_context {key}: value must be a string, a list of strings (the requester picks "
-                      f"one), {{values: [..]}} (multi-valued key), {{absent: true}} or {{chosen: true}}")
+                      f"one), {{values: [..]}} (multi-valued key), {{absent: true}}, {{chosen: true}}, or "
+                      f"{{admin_managed_policy: true}} for iam:PolicyARN, or "
+                      f"{{source_principal: true}} for lambda:Principal or quicksight:IamArn")
     if choices > MAX_CONTEXT_CHOICES:
         errors.append(f"{where}: request_context has more than {MAX_CONTEXT_CHOICES} value combinations")
     bad = set().union(*(_placeholders(x) for v in value.values() for x in (v if isinstance(v, list) else [v])
                         if isinstance(x, str)))
+    if provider == "aws":
+        bad -= {"source.partition"}
     if bad:
         errors.append(f"{where}: request_context values cannot use placeholders ({sorted(bad)})")
 
@@ -999,6 +1714,8 @@ def default_outcome(target):
     if kind == "k8s_remote_cluster" or (kind == "cloud_identity" and isinstance(selector, dict)
                                         and "k8s_secret_holds_cloud_credential" in selector):
         return "credentials"
+    if kind in ("aws_verified_authority", "gcp_verified_authority", "azure_verified_authority", "k8s_verified_authority"):
+        return "permission_grant" if isinstance(selector, dict) and selector.get("same_as_source") else "bounded_authority"
     if kind in ENTITY_KINDS:
         return "permission_grant" if isinstance(selector, dict) and selector.get("same_as_source") else "scope_control"
     return "identity"
@@ -1022,6 +1739,8 @@ def _validate_outcome(target, kind, selector, where, errors):
         errors.append(f"{where}: outcome {outcome} needs an entity target kind or selector same_as_source")
     elif outcome == "application_admin" and not entity:
         errors.append(f"{where}: outcome application_admin needs an entity target kind, not {kind}")
+    elif outcome == "bounded_authority" and kind not in ("aws_verified_authority", "gcp_verified_authority", "azure_verified_authority", "k8s_verified_authority"):
+        errors.append(f"{where}: outcome bounded_authority needs a verified-authority entity target kind, not {kind}")
     elif outcome == "blocker_removal" and kind != "k8s_admission_control":
         errors.append(f"{where}: outcome blocker_removal needs target kind k8s_admission_control")
 
@@ -1166,8 +1885,15 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
             errors.append(f"{where}: aws_service_plane_admin targets need selector service_plane ({'|'.join(SERVICE_PLANES)})")
         if "service_plane" in selector and kind != "aws_service_plane_admin":
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
-        if kind == "aws_verified_authority" and not selector.get("aws_challenge_fact"):
-            errors.append(f"{where}: aws_verified_authority needs selector aws_challenge_fact")
+        aws_authority_selectors = (
+            "aws_challenge_fact", "aws_s3_policy_self_grant", "aws_s3_access_grants_self_grant",
+            "aws_secretsmanager_policy_self_grant", "aws_efs_policy_self_grant",
+            "aws_cases_tag_self_grant", "aws_sitewise_portal_self_grant")
+        selected_authority = [key for key in aws_authority_selectors if selector.get(key)]
+        if kind == "aws_verified_authority" and len(selected_authority) != 1:
+            errors.append(f"{where}: aws_verified_authority needs exactly one reviewed authority selector")
+        if kind != "aws_verified_authority" and any(selector.get(key) for key in aws_authority_selectors[1:]):
+            errors.append(f"{where}: reviewed AWS self-grant selectors need aws_verified_authority")
         if str(entry.get("id", "")).startswith("aws-v3-") and not selector.get("aws_challenge_fact"):
             errors.append(f"{where}: AWS v3 challenge entries need an exact evidence selector")
         if kind == "aws_challenge_foothold":
@@ -1185,10 +1911,116 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
                     errors.append(f"{where}: {fact_key} must remain conditional")
                 if kind in ("azure_challenge_foothold",):
                     errors.append(f"{where}: {fact_key} needs a bounded target")
+        if kind == "azure_storage_local_user" and (selector.get("azure_storage_local_credential") not in
+                ("reset_password", "write_credential", "create_credential") or entry.get("confidence") != "conditional"):
+            errors.append(f"{where}: storage local users need a supported credential selector and conditional confidence")
         if kind == "azure_verified_authority" and not selector.get("azure_challenge_fact"):
             errors.append(f"{where}: verified authority needs an exact evidence selector")
-        if kind == "gcp_verified_authority" and not selector.get("gcp_challenge_fact"):
-            errors.append(f"{where}: gcp_verified_authority needs selector gcp_challenge_fact")
+        if kind == "azure_external_principal" and not selector.get("azure_external_principal_evidence"):
+            errors.append(f"{where}: azure_external_principal needs typed evidence")
+        if selector.get("azure_external_principal_evidence"):
+            from peaso.privesc.effective_permissions.azure_external_principal import CONTRACT
+            contract = CONTRACT.get(entry.get("id"))
+            expected_outcome = "credentials" if contract and contract[2] == "credential" else "identity"
+            if (kind != "azure_external_principal"
+                    or set(selector) != {"azure_external_principal_evidence", "azure_external_plane"}
+                    or contract is None or selector.get("azure_external_plane") != contract[1]
+                    or (entry.get("target") or {}).get("outcome") != expected_outcome
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: Azure external-principal evidence needs a registered action/plane, matching target outcome and conditional confidence")
+        if kind == "gcp_verified_authority" and not (selector.get("gcp_challenge_fact") or selector.get("gcp_resource_self_grant")
+                                                        or selector.get("gcp_bounded_access_gain") or selector.get("gcp_agentidentity_retrieve_path") or selector.get("gcp_agentidentity_update_path") or selector.get("gcp_hmac_storage_identity")
+                                                        or selector.get("gcp_bounded_service_execution") or selector.get("gcp_bounded_workspace_oauth") or selector.get("gcp_agentregistry_skill_evidence")):
+            errors.append(f"{where}: gcp_verified_authority needs an exact evidence selector")
+        if selector.get("gcp_agentregistry_skill_evidence"):
+            if (entry.get("id") != "gcp-agentregistry-skill-default-revision-replace"
+                    or kind != "gcp_verified_authority"
+                    or set(selector) != {"gcp_agentregistry_skill_evidence"}
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: Agent Registry Skill needs exact bounded execution evidence")
+        if selector.get("gcp_hmac_storage_identity"):
+            if (kind != "gcp_verified_authority" or set(selector) != {"gcp_hmac_storage_identity", "gcp_sa_in_scope_of_permission"}
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"
+                    or entry.get("id") != "gcp-storage-hmackeys-create"):
+                errors.append(f"{where}: HMAC authority needs its exact bounded target and project-local selector")
+        if selector.get("gcp_bounded_service_execution"):
+            service_by_entry = {
+                "gcp-bigquery-transfers-scheduled-query-actas": "bigquery_scheduled_query",
+                "gcp-bigquery-continuous-query-actas": "bigquery_continuous_query",
+                "gcp-dataform-workflow-invocation-actas": "dataform_workflow",
+                "gcp-apikeys-authorization-key-bound-sa": "apikeys_authorization_key",
+            }
+            if (kind != "gcp_verified_authority"
+                    or set(selector) != {"gcp_bounded_service_execution", "gcp_actas_granted_on_target", "gcp_sa_in_scope_of_permission"}
+                    or selector["gcp_bounded_service_execution"] != service_by_entry.get(entry.get("id"))
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"):
+                errors.append(f"{where}: bounded service authority needs its exact mechanism and project-local actAs selector")
+        if selector.get("gcp_bounded_workspace_oauth"):
+            workspace_by_entry = {
+                "gcp-workspace-dwd-keyless-signjwt": ("dwd", "workspace_dwd_delegation"),
+                "gcp-workspace-dwd-key-create": ("dwd", "workspace_dwd_delegation"),
+                "gcp-workspace-addons-deployment-update": ("addon", "workspace_addon_user"),
+            }
+            expected = workspace_by_entry.get(entry.get("id"))
+            if (kind != "gcp_verified_authority" or set(selector) != {"gcp_bounded_workspace_oauth", "attached_to_service"}
+                    or expected != (selector["gcp_bounded_workspace_oauth"], selector["attached_to_service"])
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"):
+                errors.append(f"{where}: Workspace OAuth authority needs an exact mechanism and user attachment")
+        if selector.get("gcp_resource_self_grant"):
+            if (kind != "gcp_verified_authority" or selector.get("gcp_challenge_fact")
+                    or (entry.get("target") or {}).get("outcome") != "permission_grant"
+                    or not (entry.get("target") or {}).get("grants")
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: gcp_resource_self_grant needs verified-authority permission_grant, named grants and conditional confidence")
+        if selector.get("gcp_agentidentity_retrieve_path"):
+            if (entry.get("id") != "gcp-agentidentity-retrieve-credentials"
+                    or kind != "gcp_verified_authority"
+                    or set(selector) != {"gcp_agentidentity_retrieve_path"}
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: Agent Identity retrieval needs its exact bounded authorization target")
+        if selector.get("gcp_agentidentity_update_path"):
+            if (entry.get("id") != "gcp-agentidentity-update-token-url"
+                    or kind != "gcp_verified_authority"
+                    or set(selector) != {"gcp_agentidentity_update_path"}
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: Agent Identity endpoint change needs its exact bounded authorization target")
+        if kind == "gcp_external_principal" and not selector.get("gcp_external_principal_evidence"):
+            errors.append(f"{where}: gcp_external_principal needs typed external-principal evidence")
+        if selector.get("gcp_external_principal_evidence"):
+            if (kind != "gcp_external_principal" or set(selector) != {"gcp_external_principal_evidence", "gcp_external_plane"}
+                    or not isinstance(selector.get("gcp_external_plane"), str)
+                    or not selector["gcp_external_plane"].strip()
+                    or (entry.get("target") or {}).get("outcome") != "credentials"
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: external-principal evidence needs an exact plane, credentials target and conditional confidence")
+        if selector.get("gcp_bounded_access_gain"):
+            if (kind != "gcp_verified_authority"
+                    or set(selector) != {"gcp_bounded_access_gain", "gcp_bounded_mechanism"}
+                    or selector.get("gcp_bounded_mechanism") not in (
+                        "biglake_connection_table", "bigquery_remote_function",
+                        "bigquery_authorized_routine", "bigquery_authorized_view",
+                        "bigquery_authorized_dataset")
+                    or (entry.get("target") or {}).get("outcome") != "bounded_authority"
+                    or len((entry.get("target") or {}).get("grants") or []) != 1
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: bounded access needs one exact mechanism and named action on a conditional verified-authority target")
+        if kind == "k8s_verified_authority" and not (selector.get("k8s_helm_values_rbac") or selector.get("k8s_verified_pivot") or selector.get("k8s_bound_role_gain") or selector.get("k8s_existing_rolebinding_gain") or selector.get("k8s_clusterrolebinding_gain") or selector.get("k8s_existing_clusterrolebinding_gain")):
+            errors.append(f"{where}: k8s_verified_authority needs typed role-binding, Helm, or verified-pivot evidence")
+        if selector.get("k8s_helm_values_rbac") and (kind != "k8s_verified_authority" or selector.get("k8s_challenge_fact")):
+            errors.append(f"{where}: k8s_helm_values_rbac needs an exclusive k8s_verified_authority target")
+        if selector.get("k8s_verified_pivot"):
+            from peaso.privesc.effective_permissions.k8s_verified_pivots import KINDS
+            if (selector["k8s_verified_pivot"] != entry.get("id")
+                    or set(selector) != {"k8s_verified_pivot"}
+                    or kind != KINDS.get(entry.get("id"))
+                    or (entry.get("target") or {}).get("outcome") !=
+                    ("permission_grant" if kind == "k8s_verified_authority" else "credentials")
+                    or (kind == "k8s_verified_authority" and not (entry.get("target") or {}).get("grants"))
+                    or entry.get("confidence") != "conditional"):
+                errors.append(f"{where}: k8s_verified_pivot needs an exclusive matching typed target and conditional outcome")
         if str(entry.get("id", "")).startswith("gcp-v3-") and not selector.get("gcp_challenge_fact"):
             errors.append(f"{where}: GCP v3 challenge entries need an exact evidence selector")
         if selector.get("gcp_challenge_fact"):
@@ -1221,8 +2053,8 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
         for key, wanted in AZURE_SELECTOR_KINDS.items():
             if key in selector and kind not in wanted:
                 errors.append(f"{where}: selector {key} needs target kind {' or '.join(wanted)}")
-        if kind == "k8s_remote_cluster" and "k8s_secret_holds_remote_cluster_credential" not in selector:
-            errors.append(f"{where}: k8s_remote_cluster targets need selector k8s_secret_holds_remote_cluster_credential")
+        if kind == "k8s_remote_cluster" and not ({"k8s_secret_holds_remote_cluster_credential", "k8s_verified_pivot"} & set(selector)):
+            errors.append(f"{where}: k8s_remote_cluster targets need a remote-cluster credential selector")
         removes = target.get("removes_blockers")
         if kind == "k8s_admission_control" and removes is None:
             errors.append(f"{where}: k8s_admission_control targets need removes_blockers (blocker ids the technique lifts)")
@@ -1294,7 +2126,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
                     break
         if kind == "k8s_service_account" and provider == "k8s" and isinstance(requires, dict):
             text = repr(requires) + repr(selector)
-            if "{target.namespace}" not in text and "k8s_sa_in_namespace" not in selector and target.get("scope") != "same_namespace":
+            if "{target.namespace}" not in text and "k8s_sa_in_namespace" not in selector and "k8s_aggregated_rolebinding_namespace" not in selector and target.get("scope") != "same_namespace":
                 warnings.append(f"{where}: k8s service-account target without a namespace restriction reaches every namespace")
     source_kind = entry.get("source_kind")
     if source_kind is not None:
@@ -1317,7 +2149,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
                     errors.append(f"{where}: source_selector {key} must be a glob string or list of glob strings")
                 elif SOURCE_SELECTOR_KEYS[key][1] == "target_kind" and value not in TARGET_KINDS:
                     errors.append(f"{where}: source_selector {key} must be a target kind")
-                elif SOURCE_SELECTOR_KEYS[key][1] == "bound_scope" and value not in (True, "cluster"):
+                elif SOURCE_SELECTOR_KEYS[key][1] == "bound_scope" and value not in (True, "cluster", "namespace"):
                     errors.append(f"{where}: source_selector {key} must be true or 'cluster'")
     pivot_type = entry.get("pivot_resource_type")
     uses_pivot = "{pivot}" in repr(requires) + repr((target or {}).get("selector") if isinstance(target, dict) else "")
@@ -1394,13 +2226,18 @@ def load_catalog(catalog_dir=None, *, strict=False, hacktricks_root=None):
         rel = str(path.relative_to(root))
         provider = path.relative_to(root).parts[0] if len(path.relative_to(root).parts) > 1 else None
         try:
-            data = yaml.safe_load(path.read_text())
+            # Always read the file again; only content-identical construction
+            # is shared. Hash-bound callers still verify actual file bytes.
+            data, candidate = _catalog_document(path.read_text())
         except yaml.YAMLError as exc:
             errors.append(f"{rel}: YAML parse error: {str(exc).splitlines()[0]}")
             files.append({"file": rel, "entries": 0, "valid": 0})
             continue
         if path.name.startswith("_excluded"):
-            errors.extend(validate_excluded(data, rel))
+            excluded_errors = validate_excluded(data, rel)
+            errors.extend(excluded_errors)
+            if not excluded_errors:
+                _remember_catalog_document(candidate)
             excluded += len(data or [])
             files.append({"file": rel, "entries": 0, "excluded": len(data or [])})
             continue
@@ -1410,6 +2247,7 @@ def load_catalog(catalog_dir=None, *, strict=False, hacktricks_root=None):
             errors.append(f"{rel}: catalog file must be a YAML list")
             continue
         valid = 0
+        error_count = len(errors)
         for index, entry in enumerate(data):
             entry_errors, entry_warnings = validate_entry(entry, expected_provider=provider if provider in PROVIDERS else None,
                                                           hacktricks_root=hacktricks_root)
@@ -1425,6 +2263,8 @@ def load_catalog(catalog_dir=None, *, strict=False, hacktricks_root=None):
                 item["_file"] = rel
                 entries.append(item)
                 valid += 1
+        if len(errors) == error_count:
+            _remember_catalog_document(candidate)
         files.append({"file": rel, "entries": len(data), "valid": valid})
     if strict and errors:
         raise CatalogError("; ".join(errors[:20]))
@@ -1455,7 +2295,7 @@ def _value_schema(value_kind):
         "label_selector": {"anyOf": [{"const": True}, {"type": "string", "pattern": _LABEL_SEL.pattern},
                                      {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": _LABEL_SEL.pattern}}]},
         "target_kind": {"enum": sorted(TARGET_KINDS)},
-        "bound_scope": {"anyOf": [{"const": True}, {"const": "cluster"}]},
+        "bound_scope": {"anyOf": [{"const": True}, {"const": "cluster"}, {"const": "namespace"}]},
     }[value_kind]
 
 def _leaf_schema(provider):
@@ -1468,6 +2308,10 @@ def _leaf_schema(provider):
             {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "The requester picks one value."},
             {"type": "object", "additionalProperties": False, "required": ["absent"], "properties": {"absent": {"const": True}}},
             {"type": "object", "additionalProperties": False, "required": ["chosen"], "properties": {"chosen": {"const": True}}},
+            {"type": "object", "additionalProperties": False, "required": ["admin_managed_policy"],
+             "properties": {"admin_managed_policy": {"const": True}}},
+            {"type": "object", "additionalProperties": False, "required": ["source_principal"],
+             "properties": {"source_principal": {"const": True}}},
             {"type": "object", "additionalProperties": False, "required": ["values"],
              "properties": {"values": {"type": "array", "minItems": 1, "items": {"type": "string"}}}}]}
         return {"type": "object", "additionalProperties": False, "required": ["action"], "properties": {

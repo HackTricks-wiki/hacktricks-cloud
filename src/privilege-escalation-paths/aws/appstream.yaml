@@ -8,6 +8,68 @@
 # Source: hacktricks-cloud aws-appstream-privesc/README.md (rev 171e422299).
 # Existing-resource updates use collected fleet and builder state and associations.
 
+- id: aws-appstream-createimagebuilderstreamingurl
+  provider: aws
+  service: appstream
+  title: Open a session on an image builder with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateimagebuilderstreamingurl--administratorroot-access-to-an-existing-builder
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to connect to a running image builder may use its recorded machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to running image builders in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_image_builder_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit using the image builder's machine role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateImageBuilderStreamingURL to approved builders and avoid attaching powerful roles to them.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_ImageBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateImageBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a RUNNING image builder to its exact IamRoleArn and requires CreateImageBuilderStreamingURL on that builder ARN.
+
+- id: aws-appstream-createappblockbuilderstreamingurl
+  provider: aws
+  service: appstream
+  title: Open a session on an app block builder with an existing IAM role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appstream-privesc/README.md#appstreamcreateappblockbuilderstreamingurl--take-over-an-existing-app-package-builder
+  source_revision: 6fb9ac51fd
+  summary: A principal allowed to connect to a running app block builder may use its recorded machine role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Roles attached to running app block builders in {account}
+    outcome: workload_execution
+  preconditions:
+  - appstream_existing_app_block_builder_role_session
+  conditions:
+  - id: desktop_execution
+    description: The desktop session must permit using the app block builder's machine role profile.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CreateAppBlockBuilderStreamingURL to approved builders and avoid attaching powerful roles to them.
+  references:
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_AppBlockBuilder.html
+  - https://docs.aws.amazon.com/appstream2/latest/APIReference/API_CreateAppBlockBuilderStreamingURL.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_appstream.html
+  notes: The evaluator joins a RUNNING app block builder to its exact IamRoleArn and requires CreateAppBlockBuilderStreamingURL on that builder ARN.
+
 - id: aws-appstream-createstreamingurl-existing-fleet
   provider: aws
   service: appstream
