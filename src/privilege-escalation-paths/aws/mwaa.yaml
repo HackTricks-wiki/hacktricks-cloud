@@ -54,10 +54,6 @@
         resource: "*"
       - action: airflow-serverless:StartWorkflowRun
         resource: "*"
-      - action: iam:CreateServiceLinkedRole
-        resource: "*"
-        request_context:
-          iam:AWSServiceName: airflow-serverless.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -80,7 +76,7 @@
   mitigation: Constrain iam:PassRole for airflow-serverless.amazonaws.com to approved roles and restrict airflow-serverless:CreateWorkflow.
   references:
     - https://docs.aws.amazon.com/mwaa/latest/mwaa-serverless-userguide/what-is-mwaa-serverless.html
-  notes: The source demonstrates a DAG-factory YAML object in S3 and a subsequent StartWorkflowRun call on the ARN returned by CreateWorkflow. The evaluator accepts a new workflow only when complete inventory shows a free name, a same-Region versioned private bucket can hold source-written YAML, broad StartWorkflowRun covers every generated ID, and both caller and role have the required logging permissions. Narrower workflow grants, other bucket paths, and runtime behavior remain unresolved. The page documents iam:CreateServiceLinkedRole for airflow-serverless.amazonaws.com as required even when the service-linked role exists.
+  notes: The source demonstrates a DAG-factory YAML object in S3 and a subsequent StartWorkflowRun call on the ARN returned by CreateWorkflow. The evaluator accepts a new workflow only when complete inventory shows a free name, a same-Region versioned private bucket can hold source-written YAML, broad StartWorkflowRun covers every generated ID, and both caller and role have the required logging permissions. If the AWSServiceRoleForAmazonMWAAServerless role is absent, the caller must have iam:CreateServiceLinkedRole on that exact role ARN with iam:AWSServiceName=airflow-serverless.amazonaws.com. Narrower workflow grants, other bucket paths, and runtime behavior remain unresolved.
 
 - id: aws-mwaa-passrole-updateenvironment
   provider: aws
