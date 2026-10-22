@@ -10,20 +10,16 @@
 - id: aws-amplify-updateapp-passrole
   provider: aws
   service: amplify
-  title: Repoint an Amplify app's service or compute role to a passed role and build it
+  title: Assign a passed service role to an Amplify app build
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifyupdateapp--iampassrole--repoint-the-app-onto-a-more-privileged-role
   source_revision: 171e422299
-  summary: The source can obtain the privileges of passable roles trusting amplify.amazonaws.com by assigning them as an app's service (build) or compute role and running code under them.
+  summary: The source may run a controlled build under a passable Amplify service role if it can update the app, start a job for its branch and control the effective build commands.
   requires:
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
         request_context:
           iam:PassedToService: amplify.amazonaws.com
-      - action: amplify:UpdateApp
-        resource: "*"
-      - action: amplify:StartJob
-        resource: "*"
   target:
     kind: aws_role
     selector:
@@ -32,6 +28,8 @@
     scope: same_account
     aggregate_as: "Roles trusting amplify.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - amplify_service_role_build_effect_unverified
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService conditions on the PassRole grant may restrict passing roles to Amplify.
@@ -92,8 +90,6 @@
       resource: '{target.arn}'
       request_context:
         iam:PassedToService: amplify.amazonaws.com
-    - action: amplify:UpdateApp
-      resource: '*'
   target:
     kind: aws_role
     selector:
@@ -102,6 +98,8 @@
     scope: same_account
     aggregate_as: Roles trusting amplify.amazonaws.com passable in {account}
     outcome: workload_execution
+  preconditions:
+    - amplify_compute_role_ssr_effect_unverified
   conditions:
   - id: controlled_ssr
     description: The existing app must deploy attacker-controlled SSR code and an HTTP request must reach that SSR route under the new compute role.
