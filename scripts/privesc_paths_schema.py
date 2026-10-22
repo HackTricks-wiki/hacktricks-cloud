@@ -969,6 +969,9 @@ FACTS_NEEDED = {
 # an "Unresolved" placeholder (unknown confidence, never FAIL). mode "target" depends only on the target and the
 # inventory (shared candidate set); mode "source" also depends on the source principal.
 PRECONDITIONS = {
+    "gameliftstreams_live_role_session_admin_shell": (("aws",), "source",
+      "The caller can open an admin shell in one live GameLift Streams session carrying the target role.",
+      "AWS: complete per-Region ListStreamGroups/ListStreamSessions inventory with the same session ARN, live status, exact RoleArn and parent group ARN; CreateStreamSessionAdminShell must allow that group"),
     "athena_existing_session_calculation_role": (("aws",), "source",
       "The caller can submit code to an idle PySpark 3 session with the target execution role.",
       "AWS: complete Athena ListSessions/GetSession inventory with exact SessionConfiguration.ExecutionRole, IDLE state, PySpark engine version 3, and StartCalculationExecution on its workgroup ARN"),

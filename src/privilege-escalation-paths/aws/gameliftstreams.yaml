@@ -8,6 +8,40 @@
 # Source: hacktricks-cloud aws-gamelift-streams-privesc/README.md (rev 171e422299).
 # Session roles must trust gameliftstreams.amazonaws.com and be named GameLiftStreams-* (StartStreamSession API reference).
 
+- id: aws-gameliftstreams-createstreamsessionadminshell
+  provider: aws
+  service: gameliftstreams
+  title: Open a role-bearing live stream session through its admin shell
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift-streams-privesc/README.md#gameliftstreamscreatestreamsessionadminshell-on-a-session-with-a-role
+  source_revision: 6eb7cfecdc
+  summary: The source can enter a live stream session that already holds a different IAM role when CreateStreamSessionAdminShell covers that session's parent stream group.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: gameliftstreams:CreateStreamSessionAdminShell
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      name_prefix: GameLiftStreams-
+    scope: same_account
+    outcome: impersonation
+    aggregate_as: "Roles in live GameLift Streams sessions reachable by admin shell in {account}"
+  preconditions:
+    - gameliftstreams_live_role_session_admin_shell
+  conditions:
+    - id: live_session
+      description: The role-bearing session must still be live when the shell is opened.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateStreamSessionAdminShell to trusted operators on exact stream groups and limit session-role permissions.
+  references:
+    - https://docs.aws.amazon.com/gameliftstreams/latest/developerguide/troubleshoot-admin-shell-guide.html
+    - https://docs.aws.amazon.com/gameliftstreams/latest/apireference/API_ListStreamSessions.html
+  notes: The parent stream group and RoleArn come from the same listed live session. This route does not need PassRole because the role was attached before the shell was opened.
+
 - id: aws-gameliftstreams-passrole-startstreamsession
   provider: aws
   service: gameliftstreams
