@@ -124,10 +124,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-      - action: ecs:RegisterTaskDefinition
-        resource: "*"
-      - action: ecs:StartTask
-        resource: "*"
+        request_context:
+          iam:PassedToService: ecs-tasks.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -137,16 +135,18 @@
     outcome: workload_execution
   conditions:
     - id: container_instance_exists
-      description: An EC2 (or EXTERNAL) container instance must exist in a covered cluster.
+      description: An active connected EC2 container instance must exist in the same-Region cluster and be covered by ecs:StartTask conditions.
   preconditions:
-    - ecs_container_instance_exists
+    - ecs_new_task_definition_starttask_ready
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on ECS task roles.
-  references: []
-  notes: ""
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_StartTask.html
+  notes: Registration and StartTask must cover every revision of one new task-definition family. The evaluator checks the ecs:cluster and ecs:container-instances conditions for the same active connected host and PassRole for the target task role. Image pull and placement remain conditional.
 
 - id: aws-ecs-passrole-registertaskdefinition-service
   provider: aws
