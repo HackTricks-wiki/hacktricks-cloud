@@ -42,29 +42,23 @@
 - id: aws-emr-passrole-runjobflow
   provider: aws
   service: emr
+  source_kind: [aws_user, aws_role]
   title: Launch an EMR cluster with a passed EC2 instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#iampassrole-elasticmapreducerunjobflow
   source_revision: 171e422299
   summary: The source can launch an EMR cluster with a passable EC2 instance profile and run bootstrap code on its instances.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-        request_context:
-          iam:PassedToService: ec2.amazonaws.com
-      - action: elasticmapreduce:RunJobFlow
-        resource: "*"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: ec2.amazonaws.com
       has_instance_profile: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "EC2 instance-profile roles passable in {account}"
     outcome: workload_execution
   preconditions:
-    - emr_new_cluster_role_execution_unverified
+    - emr_new_cluster_instance_role_effect_reviewed
   conditions:
     - id: emr_service_role_passable
       description: RunJobFlow also requires passing an EMR service role (or the default EMR_DefaultRole must exist and be passable); PassRole must cover it too.
@@ -79,7 +73,7 @@
   mitigation: Restrict iam:PassRole on EC2 instance-profile and EMR service roles with iam:PassedToService, and restrict elasticmapreduce:RunJobFlow.
   references:
     - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-role-for-ec2.html
-  notes: The EMR service role itself is not reachable (only used by the EMR control plane); the reachable role is the EC2 instance profile role.
+  notes: RunJobFlow has no resource type, while the selected EC2 instance-profile role and distinct EMR service role both need PassRole. A role edge requires fresh reviewed evidence of an accepted cluster launch, exact service and instance role IDs, an instance belonging to that cluster with the profile applied, controlled bootstrap or step execution and a useful action under the instance role. A requested Auto Scaling role and Spot service-linked role must also be ready when used. Missing launch or execution evidence remains unresolved.
 
 - id: aws-emr-addjobflowsteps-runtime-role
   provider: aws
