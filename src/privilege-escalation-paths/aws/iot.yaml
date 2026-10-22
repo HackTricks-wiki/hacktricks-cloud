@@ -13,7 +13,7 @@
   title: Create an IoT role alias and certificate policy to assume a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-privesc/README.md#iotcreaterolealias--updaterolealias--iampassrole--assume-an-arbitrary-role-via-a-device-certificate
   source_revision: 6fb9ac51fd
-  summary: The source can create a new role alias and an active certificate with its own IoT policy, then obtain credentials for a passable role trusting the IoT credential provider.
+  summary: The source can create a new role alias and IoT policy, then use an active certificate it generates or registers to obtain credentials for a passable role trusting the IoT credential provider.
   requires:
     all_of:
       - action: iam:PassRole
@@ -26,28 +26,30 @@
         resource: "*"
       - action: iot:CreatePolicy
         resource: "*"
-      - action: iot:CreateKeysAndCertificate
-        resource: "*"
+    any_of:
+      - - action: iot:CreateKeysAndCertificate
+          resource: "*"
+      - - action: iot:RegisterCertificateWithoutCA
+          resource: "*"
   target:
     kind: aws_role
     selector:
       trust_allows_service: credentials.iot.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting credentials.iot.amazonaws.com passable in {account}"
     outcome: credentials
   conditions:
     - id: fresh_alias_and_policy
-      description: The caller creates a new role alias and IoT policy allowing iot:AssumeRoleWithCertificate on that alias, then attaches the policy to the active certificate whose private key it holds.
+      description: The caller creates a new role alias and IoT policy allowing iot:AssumeRoleWithCertificate on that alias, then attaches the policy to an active generated or self-registered certificate whose private key it holds.
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on IoT credential-provider roles and iot:CreateRoleAlias / UpdateRoleAlias / AttachPolicy / certificate creation and registration to IoT administrators.
+  mitigation: Restrict iam:PassRole on IoT credential-provider roles and the IoT alias, policy and certificate permissions to IoT administrators.
   references:
     - https://docs.aws.amazon.com/iot/latest/developerguide/authorizing-direct-aws.html
     - https://docs.aws.amazon.com/iot/latest/apireference/API_CreateRoleAlias.html
     - https://docs.aws.amazon.com/iot/latest/apireference/API_RegisterCertificateWithoutCA.html
-  notes: This is the self-contained new-alias/new-policy/new-certificate path. Repointing an existing alias, attaching an existing permissive policy, registering a self-signed certificate and using an already held active certificate require separate exact alias/policy/certificate joins. The aws-iot-core-privesc page documents the same family.
+  notes: This is the self-contained new-alias/new-policy/new-certificate path, including a locally generated certificate registered without a CA. Repointing an existing alias, attaching an existing permissive policy and using an already held active certificate require separate exact alias/policy/certificate joins. The aws-iot-core-privesc page documents the same family.
