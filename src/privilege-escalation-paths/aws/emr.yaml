@@ -116,14 +116,13 @@
 - id: aws-emr-getclustersessioncredentials-runtime-role
   provider: aws
   service: emr
+  source_kind: [aws_user, aws_role]
   title: Vend endpoint credentials for an EMR runtime role without iam:PassRole
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-emr-privesc/README.md#elasticmapreducegetclustersessioncredentials--connect-to-a-runtime-role-cluster-endpoint
   source_revision: 171e422299
   summary: A caller may submit work under an EMR runtime role if it can obtain endpoint credentials for that role, reach a compatible endpoint and run a permitted workload.
   requires:
-    all_of:
-      - action: elasticmapreduce:GetClusterSessionCredentials
-        resource: "arn:{source.partition}:elasticmapreduce:*:{target.account}:cluster/*"
+    all_of: []
   target:
     kind: aws_role
     selector:
@@ -141,7 +140,6 @@
       description: The returned credentials authenticate only to supported HTTP endpoints; the source needs endpoint reachability and a permitted workload to obtain any role-authorized AWS effect.
   preconditions:
     - emr_cluster_session_runtime_role
-    - emr_cluster_endpoint_role_effect_unverified
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -151,4 +149,4 @@
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_emr.html
     - https://docs.aws.amazon.com/emr/latest/APIReference/API_GetClusterSessionCredentials.html
     - https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-steps-runtime-roles.html
-  notes: The evaluator joins target role trust to the EC2 instance profile on a WAITING or RUNNING cluster whose named security configuration enables runtime roles. It checks the exact cluster and requested ExecutionRoleArn. An exact sts:ExternalId trust value is compared with a SHA-256 digest from the configuration, without retaining the raw value; missing evidence stays unresolved.
+  notes: The evaluator joins target role trust to the EC2 instance profile on a WAITING or RUNNING cluster whose named security configuration enables runtime roles. It checks GetClusterSessionCredentials on that exact cluster and requested ExecutionRoleArn. A role edge also requires fresh reviewed evidence that HTTP credentials connected to a supported endpoint, controlled work ran under the runtime role, and a useful role action succeeded. An exact sts:ExternalId trust value is compared with a SHA-256 digest from the configuration; missing evidence stays unresolved.
