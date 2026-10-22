@@ -7,6 +7,36 @@
 # Amazon MWAA (Managed Workflows for Apache Airflow) privilege escalation techniques.
 # Source: hacktricks-cloud aws-post-exploitation/aws-mwaa-post-exploitation/README.md (rev 171e422299).
 
+- id: aws-mwaa-s3-putobject-dag
+  provider: aws
+  service: airflow
+  title: Upload a Python DAG to an existing MWAA environment
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mwaa-privesc/README.md#write-a-dag-file-into-an-mwaa-environments-dag-bucket-and-run-code-as-its-execution-role
+  source_revision: aa345c4cbe
+  summary: The source can place a Python DAG in an existing environment's configured S3 DAG folder, where MWAA may parse it under the environment's recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of MWAA environments whose DAG folders are writable in {account}
+    outcome: workload_execution
+  preconditions:
+    - mwaa_existing_dag_object_execution_role
+  conditions:
+    - id: dag_sync_and_python_parse
+      description: The uploaded Python file must be synchronized and parsed by MWAA; object encryption and runtime failures may still block code execution.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit write access to each MWAA DAG folder to trusted deployment principals and keep environment execution roles narrow.
+  references:
+    - https://docs.aws.amazon.com/mwaa/latest/userguide/configuring-dag-folder.html
+    - https://docs.aws.amazon.com/mwaa/latest/API/API_GetEnvironment.html
+  notes: The evaluator binds a collected AVAILABLE environment's exact ExecutionRoleArn, bucket and DAG path to a source-writable Python object and the role's read/list grants. It also tests exact .py keys named by the source policy, not only a fixed generated file. It never infers a role from a token or from a different environment's DAG bucket.
+
 - id: aws-mwaa-serverless-passrole-createworkflow
   provider: aws
   service: airflow-serverless
