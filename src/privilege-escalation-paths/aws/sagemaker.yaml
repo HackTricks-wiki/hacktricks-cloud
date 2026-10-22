@@ -173,12 +173,12 @@
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
   preconditions:
-    - sagemaker_job_execution_route_unverified
+    - sagemaker_training_inline_entrypoint_route
   conditions:
-    - id: egress_or_role_side_effects
-      description: Credential use from inside the job needs outbound network or direct role actions by the payload.
-    - id: output_bucket_writable_by_role
-      description: The passed role must be able to write the job's S3 output path.
+    - id: managed_image_and_capacity
+      description: A compatible SageMaker-managed Python image and selected training instance must be available in the Region.
+    - id: job_running
+      description: The created job must reach running state with network isolation off before its inline entrypoint can use the passed role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -187,7 +187,7 @@
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateTrainingJob.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_sagemaker.html
-  notes: CreateTrainingJob authorizes the caller-selected training-job ARN. The code, image, data, output path and job conditions still need a joined execution witness.
+  notes: CreateTrainingJob authorizes the caller-selected training-job ARN and accepts caller-supplied ContainerEntrypoint and ContainerArguments. SageMaker-managed images are pulled with service-owned credentials, while OutputDataConfig requires an S3 path writable by the passed role. A free job name, exact creation and PassRole permissions, service trust, non-isolated request and viable output path still need a joined execution witness.
 
 - id: aws-sagemaker-passrole-createhyperparametertuningjob
   provider: aws
@@ -223,7 +223,7 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:CreateHyperParameterTuningJob.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateHyperParameterTuningJob.html
-  notes: ""
+  notes: A tuning job can launch training jobs under the passed role, but its training definition must provide executable code and usable S3 code, input and output paths. A public code bucket or ACL must not be assumed usable when account or organization S3 public access blocks apply. The selected job name, exact creation and PassRole permissions, service trust and executable training definition need a joined witness.
 
 - id: aws-sagemaker-updateuserprofile-passrole-createapp
   provider: aws
