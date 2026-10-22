@@ -7,64 +7,32 @@
 # AWS Elastic Beanstalk privilege escalation techniques.
 # Source: hacktricks-cloud aws-elastic-beanstalk-privesc/README.md (rev a53b46392c).
 # Uses {target.resource_arn}, {target.artifact_arn}, via_resource_type and via_artifact_type (see header of lambda.yaml).
-# Beanstalk performs environment changes with the CALLER's credentials (CloudFormation, EC2, Auto Scaling, ELB, S3),
-# so these entries are conditional on the broad supporting permissions noted in each entry.
+# Environment role execution requires a bound application version, environment,
+# instance profile and actual code execution; IAM grants alone cannot prove it.
 
 - id: aws-elasticbeanstalk-passrole-create-environment
   provider: aws
   service: elasticbeanstalk
+  source_kind: [aws_user, aws_role]
   title: Create a Beanstalk application and environment with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc/README.md#elasticbeanstalkcreateapplication-elasticbeanstalkcreateenvironment-elasticbeanstalkcreateapplicationversion-elasticbeanstalkupdateenvironment-iampassrole-and-more
   source_revision: 6fb9ac51fd
   summary: The source can obtain the privileges of any passable EC2-trusting role with an instance profile, used as the instance profile of a new Beanstalk environment or of an existing one it updates.
   requires:
-    all_of:
-    - action: iam:PassRole
-      resource: '{target.arn}'
-      request_context:
-        iam:PassedToService: ec2.amazonaws.com
-    - action: elasticbeanstalk:CreateApplicationVersion
-      resource: '*'
-    - action: s3:PutObject
-      resource: '*'
-    any_of:
-    - - action: elasticbeanstalk:CreateApplication
-        resource: '*'
-      - action: elasticbeanstalk:CreateEnvironment
-        resource: '*'
-      - action: elasticbeanstalk:UpdateEnvironment
-        resource: '*'
-      - action: cloudformation:CreateStack
-        resource: '*'
-      - action: ec2:RunInstances
-        resource: '*'
-      - action: autoscaling:CreateAutoScalingGroup
-        resource: '*'
-    - - action: elasticbeanstalk:UpdateEnvironment
-        resource: '*'
-      - action: cloudformation:UpdateStack
-        resource: '*'
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: ec2.amazonaws.com
       has_instance_profile: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: EC2 instance-profile roles passable in {account}
     outcome: workload_execution
   preconditions:
-  - elasticbeanstalk_environment_role_execution_unverified
+  - elasticbeanstalk_environment_role_effect_reviewed
   conditions:
-  - id: supporting_permissions
-    description: The full set of S3, EC2, CloudFormation, Auto Scaling and Elastic Load Balancing permissions Beanstalk needs (cf. AdministratorAccess-AWSElasticBeanstalk) is approximated by the listed
-      actions.
-  - id: existing_environment_variant
-    description: The update-only alternative needs an existing environment within UpdateEnvironment scope; the instance profile is changed and the attacker application version deployed to it.
-  - id: source_and_runtime
-    description: The application version must use a same-Region source bundle readable by the deployment path, and the environment must successfully launch instances with the selected profile and run the controlled application.
-  - id: passrole_condition_key
-    description: iam:PassedToService conditions may restrict which roles can be passed.
+  - id: exact_environment_role_effect
+    description: Fresh reviewed evidence must bind the exact application version, environment, instance profile, launched instance and useful role action performed by controlled code.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
@@ -72,4 +40,4 @@
   mitigation: Restrict iam:PassRole on instance-profile roles and grant Beanstalk environment-creation rights only to deployment principals.
   references:
   - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess-AWSElasticBeanstalk.html
-  notes: A principal with these supporting permissions (ec2:RunInstances + PassRole) is usually already covered by the EC2 PassRole edge; this entry records the Beanstalk route.
+  notes: CreateEnvironment and UpdateEnvironment authorize the exact environment; CreateApplicationVersion authorizes the application and version. A source-controlled S3 bundle must deploy to the same environment, and a launched instance must execute it with the passed role. The service role and any required underlying resource permissions must actually support the operation; an accepted deployment witness establishes this. The PassRole service and associated resource context must be recorded and evaluated.
