@@ -73,6 +73,8 @@
       description: The organization must have account quota left and CreateAccount is asynchronous and visible in CloudTrail.
     - id: access_role_name
       description: The admin role created in the new account is OrganizationAccountAccessRole by default but its name is chosen by the caller, so sts:AssumeRole must cover the chosen role name.
+    - id: root_scp_and_target_rcp
+      description: Root SCPs must allow sts:AssumeRole from the new member account, and target-account RCPs must not deny it on the trusted role.
   preconditions:
     - source_in_org_management_account
     - created_org_access_role_assumable
@@ -84,4 +86,6 @@
   references:
     - https://docs.aws.amazon.com/organizations/latest/APIReference/API_CreateAccount.html
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalorgid
-  notes: The trust is evaluated with aws:PrincipalOrgID set to the collected organization id and aws:PrincipalOrgPaths to the root path; without the organization inventory the targets are unresolved placeholders.
+    - https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_evaluation.html
+    - https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html
+  notes: The trust is evaluated with aws:PrincipalOrgID set to the collected organization id and aws:PrincipalOrgPaths to the root path. Incomplete organization, root SCP, target RCP or additional trust-condition evidence leaves the role route unresolved. Account creation and activation remain conditional.
