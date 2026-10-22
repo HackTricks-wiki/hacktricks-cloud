@@ -841,9 +841,9 @@
     another AWS principal. Treat this as application-session takeover, not an IAM role edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-web-post-exploitation/README.md#add-or-replace-an-attacker-controlled-identity-provider
   technique: aws-v3-18-attach-an-attacker-idp-to-a-workspaces-secure-browser-p
-  reason: 'Attach an attacker IdP to a WorkSpaces Secure Browser portal: actions workspaces-web:CreateIdentityProvider
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Same portal IdP route as aws-v3-05. A configured attacker provider can issue valid assertions
+    for WorkSpaces Secure Browser access, but the portal login is not an IAM role session. The page does
+    not identify an exact AWS principal gained by the source.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-sitewise-privesc/README.md#grant-yourself-access-to-a-legacy-sitewise-monitor-portal
   technique: aws-v3-19-grant-a-controlled-identity-sitewise-monitor-administra
   reason: Only the exact self-admin grant on one existing portal with reviewed before/after access is active as aws-sitewise-createaccesspolicy-portal-self-grant. The legacy controlled-other-identity target lacks a typed source-control join and remains excluded.
@@ -858,9 +858,10 @@
     chat impersonation risk outside the AWS principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-audit-manager-post-exploitation/README.md#delegate-a-control-set-to-another-role
   technique: aws-v3-21-delegate-audit-manager-control-set-authority-to-an-atta
-  reason: 'Delegate Audit Manager control-set authority to an attacker-controlled role: actions auditmanager:BatchCreateDelegationByAssessment
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact role authority change. BatchCreateDelegationByAssessment names a role and
+    grants it control-set review authority, but an edge from the source requires proof that the source
+    controls or can assume that exact role, effective permission on the assessment and control set,
+    and the resulting delegation. This does not itself grant sts:AssumeRole or general role permissions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-wireless-post-exploitation/README.md#recover-wireless-device-onboarding-and-session-secrets
   technique: aws-v3-22-clone-a-wireless-device-with-recovered-lorawan-or-sidew
   reason: 'GetWirelessDevice may expose LoRaWAN or Sidewalk device keys, which can enable
@@ -870,9 +871,10 @@
     principal escalation graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-supply-chain-post-exploitation/README.md#redirect-an-erp-connection-to-expose-credentials-used-by-the-instance-role
   technique: aws-v3-23-redirect-a-supply-chain-erp-connector-to-capture-a-dele
-  reason: 'Redirect a Supply Chain ERP connector to capture a delegated ERP credential: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'Redirecting a Supply Chain ERP connector may send a stored ERP username and password to
+    an attacker endpoint if the service authenticates there. The credential belongs to the downstream
+    ERP or database, not to the AWS instance role that reads it. No reusable AWS principal credential
+    or exact principal-to-principal edge is identified by this route.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-invoicing-and-billing-post-exploitation/README.md#steal-or-sabotage-a-procurement-portal-connection
   technique: aws-v3-24-recover-or-redirect-procurement-portal-authentication-m
   reason: 'Recover or redirect procurement-portal authentication material: actions invoicing:GetProcurementPortalPreference
@@ -880,9 +882,10 @@
     new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-directory-secret-disclosure-post-exploitation/README.md#iam-reads-that-expose-directory-data-and-idp-client-secrets
   technique: aws-v3-25-use-a-cognito-idp-client-secret-as-the-oauth-applicatio
-  reason: 'Use a Cognito IdP client secret as the OAuth application client: actions cognito-idp:DescribeUserPoolClient
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'DescribeUserPoolClient may reveal a confidential Cognito application client secret.
+    The secret can authenticate an OAuth client for permitted flows, but it is not an IAM user or
+    role credential and does not by itself grant AWS API authority as another principal. A separate
+    identity-pool role mapping would need exact proof before modeling an IAM edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-managed-blockchain-post-exploitation/README.md#recover-an-accessor-bearer-token
   technique: aws-v3-26-reuse-an-amazon-managed-blockchain-accessor-billing-tok
   reason: 'GetAccessor can return a BILLING_TOKEN for Ethereum or Polygon JSON-RPC access
@@ -899,14 +902,16 @@
     not a transition to another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statesstartexecution---input-injection-into-dangerous-sinks
   technique: aws-v3-28-reach-a-lambda-execution-role-through-unsafe-workflow-i
-  reason: 'Reach a Lambda execution role through unsafe workflow input deserialization: actions states:StartExecution
-    are stated, but the role edge still relies on an uncollected challenge fact and does not establish a concrete
-    usable target role from current evidence.'
+  reason: 'Candidate Lambda role route only when an exact state machine passes caller-controlled input
+    to a known Lambda handler whose reviewed code executes that input. StartExecution permission,
+    state-machine definition, Lambda target and handler behavior must be joined before naming its
+    execution role as reachable. A mere invocation never proves code execution.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statesstartexecution---input-injection-into-dangerous-sinks
   technique: aws-v3-29-redirect-a-credentialed-step-functions-http-task-to-cap
-  reason: 'Redirect a credentialed Step Functions HTTP Task to capture its connection credential: actions states:StartExecution
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A dynamic HTTP Task endpoint may receive the fixed EventBridge Connection credential
+    when caller input controls the URL and the execution role permits the request. This can expose
+    an API key or remote-service credential, but the route does not name another IAM principal or
+    grant the caller the state-machine execution role. Preserve it as a separate credential risk.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambda-durable-callback-result-injection
   technique: aws-v3-30-inject-a-lambda-durable-callback-result-that-triggers-a
   reason: 'Inject a Lambda durable callback result that triggers a privileged workflow branch: actions lambda:SendDurableExecutionCallbackSuccess
