@@ -110,7 +110,7 @@
     aggregate_as: "Execution roles of Lambda functions behind Bedrock agent action groups in {account}"
   conditions:
     - id: function_is_action_group
-      description: The covered function must be the executor of an action group of a Bedrock agent alias that the source can invoke (bedrock:InvokeAgent Resource is the agent-alias ARN).
+      description: The covered, unqualified Lambda function must be the enabled executor of an action group on a ready Bedrock agent alias that the source can invoke (bedrock:InvokeAgent Resource is the agent-alias ARN).
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -118,7 +118,7 @@
   mitigation: Restrict lambda:UpdateFunctionCode on agent tool functions and keep their execution roles least-privileged.
   references:
     - https://docs.aws.amazon.com/bedrock/latest/APIReference/API_agent_AgentActionGroup.html
-  notes: Alternative trigger to lambda:InvokeFunction; the generic UpdateFunctionCode technique is in lambda.yaml (part B). Caller grants alone do not identify an invocable deployed agent alias whose action group invokes the same mutable Lambda function. That alias, its routed version, the action-group executor and the required Lambda invocation permission must be joined before reporting a role edge.
+  notes: Alternative trigger to lambda:InvokeFunction; the generic UpdateFunctionCode technique is in lambda.yaml (part B). Updating function code changes $LATEST, not an immutable published Lambda version. A role edge needs the exact unqualified function ARN, its current code hash and execution role, a ready invocable agent alias and routed version, an enabled action group using that function, Bedrock permission to invoke it, and a fresh witnessed invocation that performs a useful role action. Missing or disjoint facts remain unknown.
 
 - id: aws-bedrock-agentcore-createharness-passrole
   provider: aws
