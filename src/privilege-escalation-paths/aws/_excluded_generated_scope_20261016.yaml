@@ -952,9 +952,9 @@
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md#chimecreateappinstanceuser--chimecreateappinstanceadmin
   source_revision: 3ad99dc7ac
   technique: aws-v3-36-chime-createappinstanceuser-admin
-  reason: 'Chime CreateAppInstanceUser/Admin: actions chime:CreateAppInstanceUser, chime:CreateAppInstanceAdmin
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A Chime AppInstance user or bot can be promoted to messaging administrator, but this
+    service identity is not another IAM principal. Chime still checks the calling AWS session''s
+    IAM permissions for each messaging action, so the promotion alone creates no AWS role edge.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-organizations-prinvesc/README.md#dismantling-scp-guardrails--organizationsdetachpolicy-updatepolicy-disablepolicytype-moveaccount
   technique: aws-v3-37-scp-guardrail-removal
   reason: 'SCP guardrail removal: actions organizations:DetachPolicy are stated, but the aws_verified_authority
@@ -967,14 +967,16 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-appstream-persistence/README.md#appstreamcreateuser--batchassociateuserstack--regional-user-pool-foothold
   technique: aws-v3-39-appstream-user-pool-stack-login
-  reason: 'AppStream user-pool stack login: actions appstream:CreateUser, appstream:BatchAssociateUserStack are
-    stated, but the role edge still relies on an uncollected challenge fact and does not establish a concrete usable
-    target role from current evidence.'
+  reason: 'Candidate conditional fleet-role path. CreateUser and BatchAssociateUserStack give a
+    service-local portal login after the email/password flow; an AWS role edge additionally needs
+    an assigned usable stack, application or desktop command execution, and a fleet with an
+    IAM machine role whose credentials are accessible from that session.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-cloudwatch-omni-persistence/README.md#cloudwatchcreateaccessgrant--install-a-space-admin-principal
   technique: aws-v3-40-cloudwatch-omni-space-admin
-  reason: 'CloudWatch Omni Space Admin: actions cloudwatch:CreateAccessGrant are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact grant to a named IAM principal. CreateAccessGrant can give that user
+    or role SPACE_ADMIN in one Omni space, but the source needs proven control of that principal
+    and the target still needs valid authentication, IAM authorization and the space operator
+    role. The grant does not create credentials or make a role assumable.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-elasticache-persistence/README.md#elasticachemodifyuser--hijack-or-widen-an-existing-rbac-user
   technique: aws-v3-41-elasticache-attached-rbac-user-takeover
   reason: 'ElastiCache attached RBAC user takeover: actions elasticache:ModifyUser are stated, but the aws_verified_authority
@@ -997,18 +999,22 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-chime-sdk-persistence/README.md#add-an-attacker-controlled-messaging-identity
   technique: aws-v3-45-chime-sdk-admin-persistence
-  reason: 'Chime SDK admin persistence: actions chime:CreateAppInstanceAdmin are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'CreateAppInstanceAdmin can grant a controlled Chime user or bot persistent messaging
+    admin status. It does not grant that identity AWS IAM permissions; later calls still require
+    the caller''s own authorized AWS session. This duplicates the bounded service identity risk
+    reviewed under aws-v3-36 rather than an IAM principal transition.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#set-lifecycle-configuration-on-sagemaker-studio
   technique: aws-v3-46-sagemaker-domain-lifecycle
-  reason: 'SageMaker domain lifecycle: actions sagemaker:UpdateDomain are stated, but the role edge still relies
-    on an uncollected challenge fact and does not establish a concrete usable target role from current evidence.'
+  reason: 'Candidate domain-level Studio lifecycle route. The active catalog models the narrower
+    user-profile update as aws-sagemaker-attach-studio-lifecycle-config-user-profile. A domain
+    default needs an exact target profile or space, compatible controlled lifecycle config,
+    effective UpdateDomain permission and later app start before naming the execution role.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-connect-persistence/README.md#create-a-durable-connect-administrator
   technique: aws-v3-47-connect-createuser
-  reason: 'Connect CreateUser: actions connect:CreateUser are stated, but the aws_verified_authority target does
-    not identify an exact principal or encode a verified new effective permission. The entry is explicitly unresolved
-    pending reviewed challenge evidence.'
+  reason: 'CreateUser can create a Connect-managed administrator login when the exact instance,
+    Admin security profile and routing profile are authorized. The login controls the contact
+    center, but it does not create AWS IAM credentials or grant another AWS principal authority.
+    SAML mode has additional federation prerequisites rather than an automatic role session.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-redshift-persistence/README.md#redshift-serverlessupdatenamespace---reset-the-serverless-database-administrator
   technique: aws-v3-48-redshift-serverless-admin-reset
   reason: 'Redshift Serverless ADMIN reset: actions redshift-serverless:UpdateNamespace are stated, but the aws_verified_authority
