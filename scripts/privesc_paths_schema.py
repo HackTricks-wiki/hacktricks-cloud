@@ -1004,6 +1004,9 @@ FACTS_NEEDED = {
 # an "Unresolved" placeholder (unknown confidence, never FAIL). mode "target" depends only on the target and the
 # inventory (shared candidate set); mode "source" also depends on the source principal.
 PRECONDITIONS = {
+    "datapipeline_existing_customer_role_pair_and_runnable_ec2": (("aws",), "source",
+      "A legacy Data Pipeline customer can create and run one command-bearing EC2 pipeline with both passable service and instance roles.",
+      "AWS: existing-customer availability, a creatable pipeline ID, PutPipelineDefinition and ActivatePipeline on that generated pipeline, separately passable Data Pipeline and EC2 roles, effective pipeline-role EC2 launch permissions, and a runnable command-bearing definition"),
     "braket_createjob_device_authorized": (("aws",), "source",
       "The caller can create a Braket hybrid job on a usable device rather than only on a job ARN.",
       "AWS: CreateJob must authorize a device ARN; a job-only grant cannot launch a hybrid job. Exact device grants outside the known simulator need device availability evidence."),
