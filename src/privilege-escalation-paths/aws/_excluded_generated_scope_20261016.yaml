@@ -786,24 +786,37 @@
     remains excluded; separately modeled code-control routes may reach the role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-migration-hub-strategy-recommendations-post-exploitation/README.md#harvest-credentials-from-a-compromised-collector-host
   technique: aws-v3-11-harvest-the-strategy-recommendations-collector-aws-keys
-  reason: 'Harvest the Strategy Recommendations collector AWS keys from local configuration: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'A configured Strategy Recommendations collector host may store AWS access keys
+    in its local Docker configuration, but this route starts with local root, Docker control
+    or equivalent filesystem access, not with a defined Migration Hub IAM action. An AWS
+    principal edge needs proof that the source controls that exact host, the actual complete
+    usable key tuple, its verified IAM subject and added authority. CSPM IAM inventory
+    cannot infer local host compromise or secret contents, so keep this post-exploitation
+    route excluded.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-privileged-event-consumer-injection.md#preconditions-and-discovery-without-list-permissions
   technique: aws-v3-12-drive-a-privileged-lambda-consumer-through-a-writable-e
-  reason: 'Drive a privileged Lambda consumer through a writable event source: actions sns:Publish are stated, but
-    the aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A producer can write to an SNS, SQS, Kinesis, DynamoDB, Logs or metric source
+    that an existing Lambda consumes, without direct InvokeFunction or PassRole. Invocation
+    alone is not a role edge: the exact enabled source-to-function join, function role, input
+    filter and handler behavior must show that a caller-controlled field drives a specific
+    privileged AWS operation and useful result. The CSPM does not inspect or verify handler
+    input-to-action semantics, so a producer grant alone cannot prove this route.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-core-post-exploitation/README.md#cross-service-pivot-publish-into-an-existing-iot-rule-and-lambda
   technique: aws-v3-13-publish-to-an-iot-rule-whose-lambda-action-misuses-atta
-  reason: 'Publish to an IoT rule whose Lambda action misuses attacker-controlled fields: actions iot:Publish are
-    stated, but the aws_verified_authority target does not identify an exact principal or encode a verified new
-    effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'iot:Publish can reach a Lambda only through an enabled rule whose SQL matches
+    the exact writable topic, whose Lambda action names the function, and whose function
+    policy allows the rule to invoke it. To establish a role edge, the handler must also
+    use attacker-controlled message fields to perform a specific privileged action under
+    its recorded role. The CSPM lacks that rule-to-function and handler-semantic proof, so
+    a matching topic permission or role ARN alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lex-v2-post-exploitation/README.md#abuse-an-existing-code-hook-through-runtime-access
   technique: aws-v3-14-trigger-privileged-business-actions-through-a-lex-fulfi
-  reason: 'Trigger privileged business actions through a Lex fulfillment hook: actions lex:RecognizeText are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Lex runtime calls can supply slots to a configured fulfillment Lambda only when
+    the exact alias and intent have that hook enabled and the dialog reaches fulfillment.
+    This gives no raw Lambda role access; a principal edge would require observed handler
+    logic that maps caller-controlled slots to a specific privileged AWS action, the hook
+    function role and a useful result. The CSPM does not collect bot dialog or handler
+    semantics, so RecognizeText permission alone cannot prove such an edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
   technique: aws-v3-15-replay-a-victim-application-session-recovered-from-waf
   reason: 'Replay a victim application session recovered from WAF records: actions logs:FilterLogEvents are stated,
