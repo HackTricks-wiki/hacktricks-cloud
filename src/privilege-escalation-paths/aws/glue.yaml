@@ -14,41 +14,34 @@
   title: Create a Glue development endpoint with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-a-legacy-development-endpoint-with-a-privileged-role
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting glue.amazonaws.com.
+  summary: The source can create a public Glue development endpoint with an SSH key it controls, read its address and use a passable execution role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: glue:CreateDevEndpoint
-        resource: "*"
-    any_of:
-      - - action: glue:GetDevEndpoint
-          resource: "*"
-      - - action: glue:GetDevEndpoints
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
       trust_allows_service: glue.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting glue.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - glue_new_public_dev_endpoint_role
   conditions:
     - id: dev_endpoint_availability
-      description: Glue development endpoints are a legacy feature (not supported on Glue 2.0+ runtimes); creation may be unavailable in some regions/accounts.
-    - id: network_reachability
-      description: VPC endpoints only expose a private address; the source needs a network path to SSH.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: A complete Glue endpoint read must show that the chosen Region and account still support the legacy endpoint API, and a new endpoint name is available.
+    - id: public_ssh_path
+      description: The source can create a non-VPC endpoint with its SSH public key, and GetDevEndpoint on the new endpoint or GetDevEndpoints on the account lets it read the public address after provisioning.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService=glue.amazonaws.com and deny glue:CreateDevEndpoint.
   references:
-    - https://docs.aws.amazon.com/glue/latest/dg/dev-endpoints.html
-  notes: Legacy feature; kept because the API still exists. Reach is roles trusting glue.amazonaws.com within PassRole scope.
+    - https://docs.aws.amazon.com/glue/latest/dg/development.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateDevEndpoint.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_GetDevEndpoints.html
+  notes: The evaluator checks CreateDevEndpoint on *, one unused endpoint name, a matching endpoint read permission and exact iam:PassRole. It excludes recorded disabled or unsupported Region/account states; provisioning, quotas and SSH connectivity remain conditional.
 
 - id: aws-glue-updatedevendpoint
   provider: aws
