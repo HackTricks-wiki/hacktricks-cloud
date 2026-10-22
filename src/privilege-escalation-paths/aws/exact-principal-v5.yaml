@@ -51,37 +51,36 @@
   title: Connect to a paused CodeBuild build through Session Manager
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
   source_revision: 57bd5c07df
-  summary: A live paused CodeBuild debug session gives shell access with the project
-    service role. Conditional principal access requires the exact inventoried identity,
-    usable authority equivalent to its observed full IAM rights, fresh evidence and
-    matching authorization fingerprint. A scoped token/session is insufficient.
+  summary: A live paused CodeBuild debug session may give shell access under the
+    role used by that exact build when Session Manager access and an actual role
+    action are observed.
+  source_kind: [aws_user, aws_role]
   requires:
-    all_of:
-    - action: ssm:StartSession
-      resource: '*'
+    all_of: []
+  preconditions:
+  - codebuild_ssm_debug_session_role_effect_reviewed
   target:
     kind: aws_role
     selector:
-      aws_challenge_fact: aws-codebuild-ssm-debug-session-role
+      trust_allows_service: codebuild.amazonaws.com
     scope: same_account
     outcome: workload_execution
   conditions:
   - id: live_breakpoint
-    description: A build with session connections enabled must be paused at codebuild-breakpoint.
+    description: The exact running build must have session connections enabled and be paused at codebuild-breakpoint.
   - id: verified_collector_fact
-    description: The requested collector fact must bind the source, exact resource,
-      newly reachable authority and all runtime prerequisites; without it the result
-      is UNKNOWN.
+    description: A fresh reviewed session must bind the build's sessionTarget, its actual service role, StartSession authorization and a useful action performed with that role.
   confidence: conditional
   severity: high
   mitigation: Restrict the named operation to trusted administrators and review downstream
     grants.
   references:
-  - https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/session-manager.html
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_DebugSession.html
+  notes: A CodeBuild Sandbox or an unpaused build does not establish this path. IAM
+    permission on another Session Manager target and the project's configured role
+    do not prove access to this build, which may use a role override. Missing runtime
+    joins or shell effects remain UNKNOWN.
 - id: aws-devicefarm-schedulerun-existing-test-spec-passrole
   provider: aws
   service: devicefarm
