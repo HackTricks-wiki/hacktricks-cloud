@@ -40,39 +40,36 @@
 - id: aws-gamelift-passrole-createfleet
   provider: aws
   service: gamelift
-  title: Create a GameLift fleet with a passed instance or container-fleet role
+  title: Create a GameLift EC2 fleet with a controlled build and passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#gameliftcreatefleet--iampassrole--run-code-on-fleet-ec2-as-a-passed-instance-role
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of any passable role trusting gamelift.amazonaws.com by running a server build or container it controls on a fleet created with that role.
+  source_revision: 3b6983e5a8
+  summary: The source can create and upload a game build, run it on a new EC2 fleet, and use the exact passable fleet instance role.
+  source_kind: [aws_user, aws_role]
   requires:
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-    any_of:
-      - - action: gamelift:CreateFleet
-          resource: "*"
-      - - action: gamelift:CreateContainerFleet
-          resource: "*"
+        request_context:
+          iam:PassedToService: gamelift.amazonaws.com
   target:
     kind: aws_role
     selector:
       trust_allows_service: gamelift.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting gamelift.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - gamelift_new_controlled_build_fleet_role
   conditions:
     - id: controlled_build
-      description: The fleet must run a build, script or container group definition the source controls (an existing one, or gamelift:CreateBuild / CreateScript / CreateContainerGroupDefinition with an upload or image).
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: The source must upload a runnable server build using the credentials returned by CreateBuild and the new EC2 fleet must run that build.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: high
-  mitigation: Restrict iam:PassRole on GameLift instance and fleet roles and gamelift:CreateFleet / CreateContainerFleet to build pipelines.
+  mitigation: Restrict iam:PassRole on GameLift instance roles and CreateBuild/CreateFleet to approved build pipelines.
   references:
     - https://docs.aws.amazon.com/gamelift/latest/developerguide/setting-up-role.html
     - https://docs.aws.amazon.com/gamelift/latest/apireference/API_CreateFleet.html
-    - https://docs.aws.amazon.com/gamelift/latest/apireference/API_CreateContainerFleet.html
-  notes: The InstanceRoleArn (CreateFleet) or FleetRoleArn (CreateContainerFleet) credentials are available to processes on fleet instances or containers. CreateGameServerGroup is excluded separately (its role is used by FleetIQ to manage the Auto Scaling group, not exposed to instance code).
+    - https://docs.aws.amazon.com/gameliftservers/latest/apireference/API_CreateBuild.html
+  notes: CreateBuild without StorageLocation returns initial upload credentials, so RequestUploadCredentials is needed only to refresh them. The evaluator joins CreateBuild and CreateFleet grants in one Region. Existing builds, scripts and container fleets need a separate controlled-artifact proof and remain unresolved. CreateGameServerGroup is excluded separately because its role manages FleetIQ rather than instance code.
