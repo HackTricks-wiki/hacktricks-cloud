@@ -10,39 +10,39 @@
   title: Use existing parameterized Automation runbook with runtime PassRole
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
   source_revision: 57bd5c07df
-  summary: The source can execute caller-selected runbook steps as passable role only
-    when the exact target and prerequisites are verified. Conditional principal access
-    requires the exact inventoried identity, usable authority equivalent to its observed
-    full IAM rights, fresh evidence and matching authorization fingerprint. A scoped
-    token/session is insufficient.
+  summary: The source can run an existing Automation document with a passable role
+    supplied through its assumeRole parameter when an observed step performs an action
+    that the source cannot perform directly.
   requires:
     all_of:
-    - action: ssm:StartAutomationExecution
-      resource: '*'
     - action: iam:PassRole
-      resource: '*'
+      resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: ssm.amazonaws.com
+  preconditions:
+  - ssm_existing_automation_runtime_role_effect_reviewed
   target:
     kind: aws_role
     selector:
-      aws_challenge_fact: aws-audit-use-existing-parameterized-automation-runbook-with-runtime-passrole
+      trust_allows_service: ssm.amazonaws.com
     scope: same_account
     outcome: workload_execution
   conditions:
   - id: exact_verified_prerequisites
-    description: 'Evidence must bind source, exact target, and these prerequisites:
-      Existing runbook accepts AutomationAssumeRole parameter and uses it as role;
-      source can start it with allowed parameters; iam:PassRole covers exact role
-      trusting ssm.amazonaws.com; step must have useful privileged effect.'
+    description: 'A reviewed execution must bind the exact immutable Automation
+      document version, an assumeRole parameter supplied with the passed role,
+      StartAutomationExecution authorization for that document, and a successful
+      useful step performed under that role.'
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed actions to approved operators and review the exact
     target configuration.
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  notes: A fixed-role runbook does not allow a caller to select this role. IAM grants
+    on unrelated Automation documents or a passable role alone do not establish an
+    execution path. The document version, passed role, actual execution and useful
+    role action must be joined; missing facts stay UNKNOWN.
   references:
   - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
 - id: aws-codebuild-ssm-debug-session-role
