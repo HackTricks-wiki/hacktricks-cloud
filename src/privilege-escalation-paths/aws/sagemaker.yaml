@@ -320,6 +320,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: sagemaker.amazonaws.com
       - action: sagemaker:CreateUserProfile
         resource: "*"
       - action: sagemaker:CreateApp
@@ -334,6 +336,8 @@
     scope: same_account
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - sagemaker_new_profile_app_route
   conditions:
     - id: existing_domain
       description: A Studio domain covered by CreateUserProfile must exist; CreateApp and CreatePresignedDomainUrl must cover the new profile and app ARNs.
@@ -349,7 +353,7 @@
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateUserProfile.html
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UserSettings.html
-  notes: Not a separate HackTricks section; it is the explicit-role variant of the UpdateDomain section (UserSettings.ExecutionRole on CreateUserProfile), which avoids UpdateDomain and the no-InService-apps restriction.
+  notes: This explicit-role variant of the UpdateDomain section sets UserSettings.ExecutionRole on a new profile. The precondition joins an IAM-authenticated domain, a free valid profile name, exact CreateUserProfile, PassRole, CreateApp and CreatePresignedDomainUrl grants, app tagging permission and SageMaker service trust. The profile request omits optional tags. Profile creation, app startup and URL access remain conditional.
 
 - id: aws-sagemaker-updateclustersoftware-custom-ami
   provider: aws
