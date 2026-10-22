@@ -100,43 +100,6 @@
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management#programmability
   notes: Microsoft states Group.ReadWrite.All does not work on role-assignable groups (RoleManagement.ReadWrite.Directory is required). Microsoft 365 groups cannot contain service principals, and mail-enabled security groups are read-only in Graph. A separate controlled-user path covers an app that lacks application-write permission but can add a user it controls.
 
-- id: azure-entraid-graph-group-readwrite-all-controlled-user
-  provider: azure
-  service: entraid
-  title: Graph group permissions add a controlled user to groups
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#sensitive-graph-permissions
-  source_revision: 171e422
-  summary: A service principal with Graph group-write permission can add a user it controls to a cloud-managed security or Microsoft 365 group outside a restricted administrative unit.
-  source_selector:
-    source_reaches_kind: azure_user
-    source_reaches_user_outside_target_group: true
-  requires:
-    any_of:
-      - - graph_app_permission: Group.ReadWrite.All
-      - - graph_app_permission: GroupMember.ReadWrite.All
-      - - graph_app_permission: Directory.ReadWrite.All
-  target:
-    kind: entra_group
-    selector:
-      entra_group_role_assignable: false
-      entra_group_membership_type: assigned
-      entra_group_membership_cloud_writable: true
-      entra_graph_group_user_membership: true
-      entra_target_not_in_restricted_au: true
-    scope: tenant
-    aggregate_as: "Groups that could receive a user controlled by {source}"
-  conditions:
-    - id: controlled_user_not_already_member
-      description: The controlled user must not already have the group's access.
-  blockers:
-    - restricted_management_au
-  confidence: conditional
-  severity: high
-  mitigation: Limit Graph group-write grants and protect privileged groups with role-assignable or restricted administrative unit controls.
-  references:
-    - https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0
-  notes: The source-to-user chain is required; group permissions alone do not establish control of a user.
-
 - id: azure-entraid-group-owners-update
   provider: azure
   service: entraid
@@ -252,3 +215,39 @@
   references:
     - https://learn.microsoft.com/en-us/graph/api/group-update?view=graph-rest-1.0
   notes: Dynamic groups admit users or devices, not service principals. The source must be an enabled user outside the group or have a separately evidenced path to control one; that user can be selected with a user.objectId membership rule. Role-assignable groups cannot be dynamic, so directory roles are never reached directly; the gain is the group's Azure RBAC or app access. Graph application group-write permissions may update membershipRule outside restricted management AUs; membership processing and licensing remain conditional.
+- id: azure-entraid-graph-group-readwrite-all-controlled-user
+  provider: azure
+  service: entraid
+  title: Graph group permissions add a controlled user to groups
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#sensitive-graph-permissions
+  source_revision: 171e422
+  summary: A service principal with Graph group-write permission can add a user it controls to a cloud-managed security or Microsoft 365 group outside a restricted administrative unit.
+  source_selector:
+    source_reaches_kind: azure_user
+    source_reaches_user_outside_target_group: true
+  requires:
+    any_of:
+      - - graph_app_permission: Group.ReadWrite.All
+      - - graph_app_permission: GroupMember.ReadWrite.All
+      - - graph_app_permission: Directory.ReadWrite.All
+  target:
+    kind: entra_group
+    selector:
+      entra_group_role_assignable: false
+      entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_graph_group_user_membership: true
+      entra_target_not_in_restricted_au: true
+    scope: tenant
+    aggregate_as: "Groups that could receive a user controlled by {source}"
+  conditions:
+    - id: controlled_user_not_already_member
+      description: The controlled user must not already have the group's access.
+  blockers:
+    - restricted_management_au
+  confidence: conditional
+  severity: high
+  mitigation: Limit Graph group-write grants and protect privileged groups with role-assignable or restricted administrative unit controls.
+  references:
+    - https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0
+  notes: The source-to-user chain is required; group permissions alone do not establish control of a user.

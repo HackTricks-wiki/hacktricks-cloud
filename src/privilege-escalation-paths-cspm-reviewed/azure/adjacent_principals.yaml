@@ -33,39 +33,6 @@
     - https://learn.microsoft.com/en-us/rest/api/apimanagement/user/generate-sso-url
   notes: The portal user is an adjacent-plane identity; generating a URL without observed authentication and new authority emits no path. The separate users/token/action returns a shared-access token for portal SSO.
 
-- id: azure-apim-developer-portal-shared-token-external-principal
-  provider: azure
-  service: api_management
-  title: Sign in as one named developer-portal user with a shared token
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceuserstokenaction
-  source_revision: db5b136660
-  summary: A user shared-access token can reach the exact requested portal user only when reviewed evidence shows a usable sign-in and a newly allowed action.
-  requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/users/token/action
-        scope: '{target.scope}'
-  target:
-    kind: azure_external_principal
-    selector:
-      azure_external_principal_evidence: true
-      azure_external_plane: apim_developer_portal
-    scope: inherited_scope
-    outcome: credentials
-    aggregate_as: Exact API Management developer-portal user reached by shared token
-  conditions:
-    - id: exact_portal_user_shared_token
-      description: Reviewed evidence must bind the requested user, developer portal, returned usable token, authenticated portal user, prior denial, and newly allowed portal or API-subscription action.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict users/token/action and audit developer-portal user-token generation.
-  references:
-    - https://learn.microsoft.com/en-us/rest/api/apimanagement/user/get-shared-access-token
-    - https://learn.microsoft.com/en-us/azure/api-management/developer-portal-faq
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-setup-delegation
-  notes: The token operation is separate from generateSsoUrl/action. Microsoft documents shared-token sign-in for self-hosted portals and delegated sign-in to managed portals. Without reviewed proof that the portal accepted it for the named user and granted a new action, no path is emitted.
-
 - id: azure-datafactory-github-oauth-external-principal
   provider: azure
   service: data_factory
@@ -129,3 +96,35 @@
     - https://learn.microsoft.com/en-us/rest/api/eventgrid/controlplane/permission-bindings/create-or-update?view=rest-eventgrid-controlplane-2025-02-15
     - https://learn.microsoft.com/en-us/azure/event-grid/mqtt-client-groups
   notes: The typed proof requires a successful new MQTT authorization with the exact owned client, matching client group, binding, topic space and Publisher or Subscriber action. Existing clients and groups are valid; creating new ones also requires their respective write permissions, but successful reviewed evidence proves that step when used.
+- id: azure-apim-developer-portal-shared-token-external-principal
+  provider: azure
+  service: api_management
+  title: Sign in as one named developer-portal user with a shared token
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceuserstokenaction
+  source_revision: db5b136660
+  summary: A user shared-access token can reach the exact requested portal user only when reviewed evidence shows a usable sign-in and a newly allowed action.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/users/token/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: apim_developer_portal
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact API Management developer-portal user reached by shared token
+  conditions:
+    - id: exact_portal_user_shared_token
+      description: Reviewed evidence must bind the requested user, developer portal, returned usable token, authenticated portal user, prior denial, and newly allowed portal or API-subscription action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict users/token/action and audit developer-portal user-token generation.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/apimanagement/user/get-shared-access-token
+    - https://learn.microsoft.com/en-us/azure/api-management/developer-portal-faq
+    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-setup-delegation
+  notes: The token operation is separate from generateSsoUrl/action. Microsoft documents shared-token sign-in for self-hosted portals and delegated sign-in to managed portals. Without reviewed proof that the portal accepted it for the named user and granted a new action, no path is emitted.

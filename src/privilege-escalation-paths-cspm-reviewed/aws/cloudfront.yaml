@@ -10,11 +10,11 @@
 - id: aws-cloudfront-lambda-edge-passrole
   provider: aws
   service: cloudfront
-  title: Associate a new Lambda@Edge function with a passed role to a distribution
+  title: Associate a new Lambda@Edge function with a passed role to a new or existing distribution
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudfront-privesc/README.md#lambdacreatefunction-lambdapublishversion-iampassrole--cloudfrontupdatedistribution
-  source_revision: 6fb9ac51fd
+  source_revision: 41b7481234
   summary: The source can obtain the privileges of passable roles trusting both lambda.amazonaws.com and edgelambda.amazonaws.com
-    by running a Lambda@Edge function it controls on a distribution it can update.
+    by running a Lambda@Edge function it controls on a distribution it can create or update.
   requires:
     all_of:
     - action: lambda:CreateFunction
@@ -31,8 +31,6 @@
       resource: '{target.arn}'
       request_context:
         iam:PassedToService: lambda.amazonaws.com
-    - action: cloudfront:UpdateDistribution
-      resource: '*'
   target:
     kind: aws_role
     selector:
@@ -51,15 +49,17 @@
   - id: us_east_1
     description: The function must be created in us-east-1.
   - id: same_version_and_distribution
-    description: The Lambda actions must cover one new function and its numbered version, and the source must be able to update a distribution that will invoke it.
+    description: The Lambda actions must cover one new function and its numbered version, and the source must be able to create or update a distribution that will invoke it.
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on Lambda@Edge roles and cloudfront:UpdateDistribution.
+  mitigation: Restrict iam:PassRole on Lambda@Edge roles and cloudfront:CreateDistribution / UpdateDistribution.
   references:
   - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/lambda-edge-permissions.html
   notes: trust_allows_service given as a list means every listed principal must be trusted. Roles trusting only
     lambda.amazonaws.com are reachable through the generic Lambda PassRole technique (lambda.yaml) instead. The
     Lambda@Edge permissions page writes replication permissions with trailing wildcards; the concrete actions in the
-    Service Authorization Reference are lambda:EnableReplication and lambda:DisableReplication.
+    Service Authorization Reference are lambda:EnableReplication and lambda:DisableReplication. The precondition
+    checks cloudfront:CreateDistribution on * or cloudfront:UpdateDistribution on one exact recorded distribution;
+    a wildcard requirement on UpdateDistribution would miss permissions scoped to that distribution.

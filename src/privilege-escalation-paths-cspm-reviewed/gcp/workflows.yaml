@@ -42,44 +42,6 @@
   references:
     - https://cloud.google.com/workflows/docs/authentication
 
-- id: gcp-workflows-create-cross-project-actas
-  provider: gcp
-  service: workflows
-  title: Deploy and execute a workflow with a cross-project service account
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowscreate--iamserviceaccountsactas--workflowsexecutionscreate--deploy-code-under-a-service-account
-  source_revision: 171e422
-  summary: The source may run workflow connector and OAuth steps as a service account from another project when its project allows cross-project attachment and the Workflows service agent can mint its tokens.
-  requires:
-    all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-      - action: workflows.workflows.create
-        resource: "*"
-      - action: workflows.executions.create
-        resource: "*"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_actas_granted_on_target: true
-      gcp_cross_project_workflows: true
-    scope: any
-    aggregate_as: "Service accounts usable by workflows in another project"
-  conditions:
-    - id: cross_project_service_agent
-      description: The workflow project's Workflows service agent needs Service Account Token Creator on the target service account.
-    - id: cross_project_org_policy
-      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
-    - id: api_level
-      description: The workflow can make selected OAuth-authenticated Google API calls as the service account; it does not return a raw account token to the source.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Keep cross-project attachment and service-agent token grants limited to intended workflow projects and service accounts.
-  references:
-    - https://cloud.google.com/workflows/docs/authentication
-
 - id: gcp-workflows-update-actas
   provider: gcp
   service: workflows
@@ -170,3 +132,40 @@
   severity: high
   mitigation: Treat workflows.workflows.update as equivalent to use of the workflow SA; restrict roles/workflows.editor/admin.
   notes: HackTricks states that if another principal starts the new revision the attacker needs only the update permission.
+- id: gcp-workflows-create-cross-project-actas
+  provider: gcp
+  service: workflows
+  title: Deploy and execute a workflow with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowscreate--iamserviceaccountsactas--workflowsexecutionscreate--deploy-code-under-a-service-account
+  source_revision: 171e422
+  summary: The source may run workflow connector and OAuth steps as a service account from another project when its project allows cross-project attachment and the Workflows service agent can mint its tokens.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: workflows.workflows.create
+        resource: "*"
+      - action: workflows.executions.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_workflows: true
+    scope: any
+    aggregate_as: "Service accounts usable by workflows in another project"
+  conditions:
+    - id: cross_project_service_agent
+      description: The workflow project's Workflows service agent needs Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+    - id: api_level
+      description: The workflow can make selected OAuth-authenticated Google API calls as the service account; it does not return a raw account token to the source.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Keep cross-project attachment and service-agent token grants limited to intended workflow projects and service accounts.
+  references:
+    - https://cloud.google.com/workflows/docs/authentication

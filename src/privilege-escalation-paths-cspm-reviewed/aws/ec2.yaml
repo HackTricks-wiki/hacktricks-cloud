@@ -10,16 +10,13 @@
 - id: aws-ec2-passrole-runinstances
   provider: aws
   service: ec2
+  source_kind: [aws_user, aws_role]
   title: Launch an EC2 instance with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#iampassrole-ec2runinstances
   source_revision: 171e422299
   summary: The source can launch an EC2 instance it controls with a passable instance profile and may run code using the attached role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: ec2:RunInstances
-        resource: "*"
+    all_of: []
   target:
     kind: aws_role
     selector:
@@ -28,6 +25,8 @@
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
+  preconditions:
+    - ec2_runinstances_instance_role_effect_reviewed
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService / iam:AssociatedResourceArn conditions may restrict this.
@@ -40,7 +39,7 @@
   mitigation: Restrict iam:PassRole on EC2 roles with iam:PassedToService and specific role ARNs; require IMDSv2 and monitor RunInstances with instance profiles.
   references:
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html
-  notes: Creating a new instance profile for a role without one additionally needs iam:CreateInstanceProfile and iam:AddRoleToInstanceProfile.
+  notes: RunInstances authorizes every resource in one launch request, including the image, generated instance, subnet, security group, network interface and storage resources when applicable. A role edge needs the exact accepted launch request, a profile carrying the target role, observed execution of controlled user data and a useful role action unavailable directly to the source. Evaluate PassRole with both iam:PassedToService and iam:AssociatedResourceArn for the launched instance. Creating a new instance profile for a role without one additionally needs iam:CreateInstanceProfile and iam:AddRoleToInstanceProfile.
 
 - id: aws-ec2-passrole-associate-instance-profile
   provider: aws
@@ -86,28 +85,26 @@
 - id: aws-ec2-requestspotinstances-passrole
   provider: aws
   service: ec2
+  source_kind: [aws_user, aws_role]
   title: Request a Spot Instance with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2requestspotinstances-iampassrole
   source_revision: 171e422299
   summary: The source can request a Spot Instance it controls with a passable instance profile and may run code using the attached role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: ec2:RequestSpotInstances
-        resource: "*"
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: ec2.amazonaws.com
       has_instance_profile: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
+  preconditions:
+    - ec2_spot_request_instance_role_effect_reviewed
   conditions:
     - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: iam:PassedToService and iam:AssociatedResourceArn may restrict which role can be passed to the launched instance.
     - id: spot_service_linked_role
       description: The first Spot request in an account also needs iam:CreateServiceLinkedRole for spot.amazonaws.com when AWSServiceRoleForEC2Spot does not exist yet; ec2:CreateFleet / RequestSpotFleet are not a bypass because the fleet authorizes ec2:RunInstances as the caller.
   blockers:
@@ -117,7 +114,7 @@
   mitigation: Restrict iam:PassRole on EC2 roles with iam:PassedToService, and restrict ec2:RequestSpotInstances.
   references:
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonec2.html
-  notes: The Service Authorization Reference lists only ec2:CreateTags and iam:PassRole as dependent actions of ec2:RequestSpotInstances; ec2:RunInstances is not evaluated for the Spot request, so this edge is distinct from aws-ec2-passrole-runinstances.
+  notes: RequestSpotInstances authorizes the selected image, generated Spot request and launch resources, with iam:PassRole on the instance role; ec2:RunInstances is a separate API. A role edge needs one accepted request, a launched member instance with the target profile, executed controlled user data and a useful role action unavailable directly to the source. PassRole is evaluated with the exact instance as iam:AssociatedResourceArn. Caller grants alone leave the route unresolved.
 
 - id: aws-ec2-modifyinstanceattribute-userdata
   provider: aws
@@ -192,35 +189,13 @@
 - id: aws-ec2-autoscaling-create-update-asg-passrole
   provider: aws
   service: ec2
-  title: Create a launch configuration or template with a passed role and launch it through Auto Scaling
+  title: Launch an Auto Scaling instance with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#autoscalingcreatelaunchconfiguration--ec2createlaunchtemplate--iampassrole-autoscalingcreateautoscalinggroup--autoscalingupdateautoscalinggroup
   source_revision: 171e422299
-  summary: The source can have Auto Scaling launch an instance from a configuration it controls with a passable instance profile.
+  summary: A caller can configure an Auto Scaling group to launch an instance using a passable instance-profile role, then run controlled code under that role when the launch and code execution are observed.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-    any_of:
-      - - action: autoscaling:CreateLaunchConfiguration
-          resource: "*"
-        - action: autoscaling:CreateAutoScalingGroup
-          resource: "*"
-      - - action: autoscaling:CreateLaunchConfiguration
-          resource: "*"
-        - action: autoscaling:UpdateAutoScalingGroup
-          resource: "*"
-      - - action: ec2:CreateLaunchTemplate
-          resource: "*"
-        - action: ec2:RunInstances
-          resource: "*"
-        - action: autoscaling:CreateAutoScalingGroup
-          resource: "*"
-      - - action: ec2:CreateLaunchTemplate
-          resource: "*"
-        - action: ec2:RunInstances
-          resource: "*"
-        - action: autoscaling:UpdateAutoScalingGroup
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
@@ -229,17 +204,21 @@
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
+  preconditions:
+    - autoscaling_created_launch_input_role_effect_reviewed
   conditions:
-    - id: launch_configurations_deprecated
-      description: New accounts cannot create launch configurations (deprecated since 2023-2024); the launch-template groups apply there.
+    - id: exact_launch_and_role_effect
+      description: Fresh reviewed evidence must join a controlled launch configuration or template, the Auto Scaling group that accepted it, the launched instance and a useful action executed under the exact instance role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on EC2 roles; Auto Scaling validates the caller's ec2:RunInstances and iam:PassRole for launch templates.
+  mitigation: Limit who can pass EC2 instance roles and choose launch inputs for Auto Scaling groups; pin launch-template versions where possible.
   references:
     - https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-launch-template-permissions.html
-  notes: The template variant with ec2:RunInstances is already enough for aws-ec2-passrole-runinstances; it is kept to record the documented combination.
+    - https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-configurations.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_autoscaling.html
+  notes: CreateLaunchConfiguration and CreateLaunchTemplate are checked on the exact created ARN, and CreateAutoScalingGroup or UpdateAutoScalingGroup on the exact group ARN. The template branch also checks every recorded RunInstances authorization resource. The role pass is checked for ec2.amazonaws.com. A witnessed instance, applied profile, executed user data and useful role action are required. AWS no longer permits new launch configurations in accounts created on or after October 1, 2024; an accepted creation witness decides that branch.
 
 - id: aws-ec2-instance-connect-sendsshpublickey
   provider: aws
@@ -275,7 +254,8 @@
   mitigation: Restrict ec2-instance-connect:SendSSHPublicKey by instance and ec2:osuser; prefer SSM Session Manager with logging.
   references:
     - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html
-  notes: The permission, running state, Linux platform and enabled applied instance metadata must belong to the same instance carrying the target role; SSH reachability, EC2 Instance Connect installation and a usable OS user remain conditional.
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ec2-instance-connect.html
+  notes: The permission, running state, Linux platform and enabled applied instance metadata must belong to the same instance carrying the target role. A concrete conditional edge additionally needs fresh reviewed evidence that the pushed key was accepted, an SSH session used it as an IAM-allowed OS user, and that session could use credentials whose role ID matches the target. Without that witness, host access and role-credential use remain unresolved.
 
 - id: aws-ec2-passrole-requestspotfleet
   provider: aws
@@ -283,33 +263,23 @@
   title: Create a Spot Fleet with a passable EC2 instance-profile role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#spot-fleet-request
   source_revision: b587e6bd26
-  summary: The source can run controlled code on Spot Fleet instances carrying a passable instance-profile role.
+  summary: A caller can request a Spot Fleet with a separate fleet role and a passable instance-profile role, then run controlled code under the instance role if a matching instance actually launches.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: ec2:RequestSpotFleet
-        resource: "arn:{source.partition}:ec2:*:{source.account}:spot-fleet-request/*"
-      - action: ec2:RunInstances
-        resource: "arn:{source.partition}:ec2:*:{source.account}:instance/*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
       trust_allows_service: ec2.amazonaws.com
       has_instance_profile: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: EC2 instance-profile roles passable to Spot Fleet in {account}
     outcome: workload_execution
   preconditions:
-    - ec2_spot_fleet_roles_ready
+    - ec2_spot_fleet_instance_role_effect_reviewed
   conditions:
-    - id: fleet_role
-      description: The Spot Fleet role must trust spotfleet.amazonaws.com and the source must be allowed to pass it. The Spot Fleet and Spot service-linked roles must exist or be creatable.
-    - id: launch_capacity
-      description: The requested AMI, subnet, security group, storage and instance must all satisfy the caller's EC2 launch permissions; the fleet must obtain capacity and run controlled code.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict use of the instance-profile role.
+    - id: exact_fleet_launch_role_effect
+      description: Fresh reviewed evidence must bind a successful fleet request, both exact passed roles, all launch authorization resources, a member instance using the profile, and a useful action executed under the instance role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -317,4 +287,4 @@
   mitigation: Restrict ec2:RequestSpotFleet and iam:PassRole to approved instance profiles and fleet service roles.
   references:
     - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-prerequisites.html
-  notes: Spot Fleet may keep relaunching instances after the initial request. Fleet-role and launch-resource authorization are separate from the target instance-profile role.
+  notes: The evaluator checks PassRole on both the fleet role and the instance role with their respective service contexts. It checks RequestSpotFleet and RunInstances on each recorded authorization resource, then requires a witnessed fleet member instance, applied instance profile and useful role action. Missing launch-resource lists, fleet-role identity, capacity or execution evidence remain unresolved.

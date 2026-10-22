@@ -45,42 +45,6 @@
     - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
   notes: New code can run during container startup; request-time code additionally needs an invoker or a public service.
 
-- id: gcp-run-services-create-cross-project-actas
-  provider: gcp
-  service: run
-  title: Deploy a Cloud Run service with a cross-project service account
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicescreate--iamserviceaccountsactas-runroutesinvoke
-  source_revision: 171e422
-  summary: The source may run a new Cloud Run service under a service account from another project when the target project allows cross-project attachment and the Cloud Run service agent can mint its tokens.
-  requires:
-    all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_actas_granted_on_target: true
-      gcp_cross_project_run_service: true
-    scope: any
-    aggregate_as: "Service accounts attachable to new Cloud Run services in another project"
-  conditions:
-    - id: host_service_create
-      description: The host project must grant service creation and have the Cloud Run API enabled.
-    - id: cross_project_service_agent
-      description: The project creating the service must grant its Cloud Run service agent Service Account Token Creator on the target service account.
-    - id: cross_project_org_policy
-      description: The effective iam.disableCrossProjectServiceAccountUsage policy on the target service account's project must be unenforced.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict cross-project service account attachment, Cloud Run service-agent token grants, and deployer actAs permissions to the intended projects.
-  references:
-    - https://cloud.google.com/run/docs/configuring/services/service-identity
-    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
-  notes: The selector joins a project-scoped create grant and enabled API in the same host project before checking target policy and service-agent token rights.
-
 - id: gcp-run-services-update-actas
   provider: gcp
   service: run
@@ -182,44 +146,6 @@
     - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
     - https://docs.cloud.google.com/run/docs/execute/jobs
   notes: Omitting the SA does not bypass actAs; it is enforced on the Compute default SA. A job created in the project inherits project-level run permission. No ingress is needed.
-
-- id: gcp-run-jobs-create-run-cross-project-actas
-  provider: gcp
-  service: run
-  title: Create and execute a Cloud Run job with a cross-project service account
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobscreate-runjobsrun-iamserviceaccountsactasrunjobsget
-  source_revision: 171e422
-  summary: The source may execute a new job under a service account from another project when cross-project attachment is allowed and the Cloud Run service agent can mint its tokens.
-  requires:
-    all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_actas_granted_on_target: true
-      gcp_cross_project_run_job: true
-    scope: any
-    aggregate_as: "Service accounts usable by jobs in another project"
-  conditions:
-    - id: same_host_job_execution
-      description: The host project must grant both job creation and execution for a newly created job.
-    - id: cloud_run_api
-      description: The Cloud Run API must be enabled in the host project.
-    - id: cross_project_service_agent
-      description: The job project's Cloud Run service agent must have Service Account Token Creator on the target service account.
-    - id: cross_project_org_policy
-      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Limit cross-project attachment, service-agent token grants, and deployer actAs to intended projects and service accounts.
-  references:
-    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
-    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
-  notes: The selector joins create and run in one collected host project with an enabled Cloud Run API, then checks the target project's policy and the host service agent's token access.
 
 - id: gcp-run-jobs-update-run-actas
   provider: gcp
@@ -355,42 +281,6 @@
   severity: critical
   mitigation: Grant actAs only on specific SAs and restrict run.instances create/update (roles/run.editor, roles/run.admin).
   notes: The create path checks project permission. The update path checks permission on an exact, undeleted instance and its readiness or start permission. This same-project path is conditional because instance availability and code execution still depend on Cloud Run.
-- id: gcp-run-instances-create-update-cross-project-actas
-  provider: gcp
-  service: run
-  title: Deploy or update a Cloud Run instance with a cross-project service account
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicesupdate--iamserviceaccountsactas
-  source_revision: 6fb9ac51fd
-  summary: The source may run an instance under a service account from another project when the host action, cross-project attachment policy, and Cloud Run service-agent token grant all allow it.
-  requires:
-    all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_actas_granted_on_target: true
-      gcp_cross_project_run_instance: true
-    scope: any
-    aggregate_as: "Service accounts usable by Cloud Run instances in another project"
-  conditions:
-    - id: preview_feature
-      description: Cloud Run instances are a preview resource and must be available in the host project and region.
-    - id: cross_project_service_agent
-      description: The host project's Cloud Run service agent must have Service Account Token Creator on the target service account.
-    - id: cross_project_org_policy
-      description: The service-account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
-    - id: update_requires_existing
-      description: The update path needs an exact undeleted instance that is ready or can be started by the source.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Limit instance create or update rights, service-account actAs, cross-project attachment, and service-agent token grants to intended resources.
-  references:
-    - https://docs.cloud.google.com/run/docs/configuring/instances/service-identity
-  notes: The create path checks project permission. The update path checks the exact existing instance and its state. The target service account belongs to another project.
 - id: gcp-run-jobs-setiampolicy
   provider: gcp
   service: run
@@ -538,3 +428,113 @@
     - https://docs.cloud.google.com/run/docs/configuring/workerpools/service-identity
     - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.workerPools
   notes: Policy write alone is insufficient; the selector checks the new update permission on the same pool.
+- id: gcp-run-services-create-cross-project-actas
+  provider: gcp
+  service: run
+  title: Deploy a Cloud Run service with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicescreate--iamserviceaccountsactas-runroutesinvoke
+  source_revision: 171e422
+  summary: The source may run a new Cloud Run service under a service account from another project when the target project allows cross-project attachment and the Cloud Run service agent can mint its tokens.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_service: true
+    scope: any
+    aggregate_as: "Service accounts attachable to new Cloud Run services in another project"
+  conditions:
+    - id: host_service_create
+      description: The host project must grant service creation and have the Cloud Run API enabled.
+    - id: cross_project_service_agent
+      description: The project creating the service must grant its Cloud Run service agent Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The effective iam.disableCrossProjectServiceAccountUsage policy on the target service account's project must be unenforced.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict cross-project service account attachment, Cloud Run service-agent token grants, and deployer actAs permissions to the intended projects.
+  references:
+    - https://cloud.google.com/run/docs/configuring/services/service-identity
+    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
+  notes: The selector joins a project-scoped create grant and enabled API in the same host project before checking target policy and service-agent token rights.
+
+- id: gcp-run-jobs-create-run-cross-project-actas
+  provider: gcp
+  service: run
+  title: Create and execute a Cloud Run job with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobscreate-runjobsrun-iamserviceaccountsactasrunjobsget
+  source_revision: 171e422
+  summary: The source may execute a new job under a service account from another project when cross-project attachment is allowed and the Cloud Run service agent can mint its tokens.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_job: true
+    scope: any
+    aggregate_as: "Service accounts usable by jobs in another project"
+  conditions:
+    - id: same_host_job_execution
+      description: The host project must grant both job creation and execution for a newly created job.
+    - id: cloud_run_api
+      description: The Cloud Run API must be enabled in the host project.
+    - id: cross_project_service_agent
+      description: The job project's Cloud Run service agent must have Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit cross-project attachment, service-agent token grants, and deployer actAs to intended projects and service accounts.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
+    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
+  notes: The selector joins create and run in one collected host project with an enabled Cloud Run API, then checks the target project's policy and the host service agent's token access.
+
+- id: gcp-run-instances-create-update-cross-project-actas
+  provider: gcp
+  service: run
+  title: Deploy or update a Cloud Run instance with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicesupdate--iamserviceaccountsactas
+  source_revision: 6fb9ac51fd
+  summary: The source may run an instance under a service account from another project when the host action, cross-project attachment policy, and Cloud Run service-agent token grant all allow it.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_instance: true
+    scope: any
+    aggregate_as: "Service accounts usable by Cloud Run instances in another project"
+  conditions:
+    - id: preview_feature
+      description: Cloud Run instances are a preview resource and must be available in the host project and region.
+    - id: cross_project_service_agent
+      description: The host project's Cloud Run service agent must have Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The service-account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+    - id: update_requires_existing
+      description: The update path needs an exact undeleted instance that is ready or can be started by the source.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit instance create or update rights, service-account actAs, cross-project attachment, and service-agent token grants to intended resources.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/instances/service-identity
+  notes: The create path checks project permission. The update path checks the exact existing instance and its state. The target service account belongs to another project.

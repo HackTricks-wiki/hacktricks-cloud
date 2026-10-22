@@ -1,37 +1,5 @@
-# GCP resource IAM self-grants. Every entry requires a concrete policy-write action. Artifact Registry, Secret Manager, Cloud KMS, Compute disks, and Pub/Sub also model prospective grants on inventoried resources when current access and policy blockers are checked. Other entries may require typed reviewed evidence of a new effective permission on an exact resource. A policy write alone, or a mere data read, never creates a named path.
+# GCP resource IAM self-grants. Each entry requires a concrete policy-write action and typed reviewed evidence of a new effective permission to the same source principal on an exact resource governed by the policy. A policy write alone, or a mere data read, never creates a path.
 # Canonical policy: peaso/privesc/catalog_policy.yaml
-- id: gcp-artifactregistry-repositories-setiampolicy-repository-self-grant
-  provider: gcp
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  service: artifactregistry
-  title: Self-grant upload access to an Artifact Registry repository
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriessetiampolicy--self-grant-control-of-a-repository
-  source_revision: 171e422
-  summary: The source can change an inventoried repository's IAM policy to grant itself upload access on that repository when it lacks that permission.
-  requires:
-    all_of:
-    - action: artifactregistry.repositories.setIamPolicy
-      resource: '{target.policy_resource}'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_resource_self_grant: true
-    scope: any
-    outcome: permission_grant
-    grants:
-    - artifactregistry.repositories.uploadArtifacts
-    aggregate_as: Repository upload access the source could grant itself
-  conditions:
-  - id: exact_repository_policy
-    description: Requires an inventoried standard repository, policy-write authority on that repository, and no current upload grant; incomplete IAM, group, org policy, or deny evidence leaves the path unresolved.
-  blockers:
-  - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict artifactregistry.repositories.setIamPolicy on repositories with sensitive artifacts or trusted consumers and review self-directed IAM policy changes.
-  notes: A repository Writer role can be granted on one repository. The path is conditional until the IAM mutation succeeds; a reviewed accepted mutation can provide direct evidence.
 - id: gcp-connectors-connections-setiampolicy-connection-self-grant
   provider: gcp
   service: connectors
@@ -812,38 +780,6 @@
   mitigation: Restrict bigtable.instances.setIamPolicy on protected instance resources and review self-directed IAM policy
     changes.
   notes: The prospective grant is conditional until the IAM change succeeds and is limited to the inventoried instance. It does not grant project IAM control or other instances. Incomplete evidence stays unresolved; accepted changes can also be shown through gcp_resource_self_grant_evidence.
-- id: gcp-bigtable-instances-setiampolicy-instance-admin-self-grant
-  provider: gcp
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  service: bigtable
-  title: Self-grant Bigtable instance administration
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtableinstancessetiampolicy--self-grant-across-one-instance
-  source_revision: a1de13ac34
-  summary: The caller can change a ready instance's IAM policy to grant itself instance update access when it lacked that access.
-  requires:
-    all_of:
-    - action: bigtable.instances.setIamPolicy
-      resource: '{target.policy_resource}'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_resource_self_grant: true
-    scope: any
-    outcome: permission_grant
-    grants:
-    - bigtable.instances.update
-    aggregate_as: Instance administration the caller could grant itself
-  conditions:
-  - id: exact_instance_policy
-    description: Requires an inventoried ready instance, exact policy-write authority, no current instance update permission, and complete instance, IAM, group, org policy, and deny evidence.
-  blockers:
-  - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict bigtable.instances.setIamPolicy on instances and review self-directed IAM policy changes.
-  notes: This captures an instance-level permission gain even when the instance has no tables. The prospective grant is conditional until the IAM change succeeds and does not grant project IAM control.
 - id: gcp-bigtable-tables-setiampolicy-table-self-grant
   provider: gcp
   service: bigtable
@@ -1314,37 +1250,6 @@
   mitigation: Restrict networkconnectivity.hubs.setIamPolicy on protected hub resources and review self-directed IAM policy
     changes.
   notes: The gcp_resource_self_grant_evidence record must prove this exact hub-level permission gain. A separate hub-level groupUser grant can allow group use, but it does not imply hubs.update.
-- id: gcp-networkconnectivity-hubs-setiampolicy-group-use-self-grant
-  provider: gcp
-  service: networkconnectivity
-  title: Grant self group use through a hub IAM policy
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-connectivity-center-privesc.md#resource-iam-self-grants
-  source_revision: a1de13ac34
-  summary: A principal that can write a named hub IAM policy may grant itself roles/networkconnectivity.groupUser on that hub and gain use of its observed groups, provided it lacks that access already.
-  requires:
-    all_of:
-    - action: networkconnectivity.hubs.setIamPolicy
-      resource: '{target.policy_resource}'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_resource_self_grant: true
-    scope: any
-    outcome: permission_grant
-    grants:
-    - networkconnectivity.groups.use
-    aggregate_as: Group use through {target.policy_resource}
-  conditions:
-  - id: exact_hub_group
-    description: Needs a unique named hub and child group, readable hub and group policies, an effective hub-level policy write and read, a known groupUser role, and no prior group-use grant.
-  - id: attachment_prerequisites
-    description: Using the new group permission to attach a spoke also requires authority over the spoke and its referenced network.
-  blockers:
-  - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict hub IAM policy writes and review grants of groupUser on hubs.
-  notes: Google documents granting roles/networkconnectivity.groupUser on a hub. This grants group use on that hub, not hub update or unrestricted spoke creation.
 - id: gcp-networkconnectivity-groups-setiampolicy-group-self-grant
   provider: gcp
   service: networkconnectivity
@@ -1834,3 +1739,98 @@
   mitigation: Restrict contactcenterinsights.authorizedViews.setIamPolicy and review self-directed authorized-view policy
     changes.
   notes: View access is an IAM permission gain. Whether matching conversations exist remains conditional.
+- id: gcp-artifactregistry-repositories-setiampolicy-repository-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: artifactregistry
+  title: Self-grant upload access to an Artifact Registry repository
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriessetiampolicy--self-grant-control-of-a-repository
+  source_revision: 171e422
+  summary: The source can change an inventoried repository's IAM policy to grant itself upload access on that repository when it lacks that permission.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - artifactregistry.repositories.uploadArtifacts
+    aggregate_as: Repository upload access the source could grant itself
+  conditions:
+  - id: exact_repository_policy
+    description: Requires an inventoried standard repository, policy-write authority on that repository, and no current upload grant; incomplete IAM, group, org policy, or deny evidence leaves the path unresolved.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict artifactregistry.repositories.setIamPolicy on repositories with sensitive artifacts or trusted consumers and review self-directed IAM policy changes.
+  notes: A repository Writer role can be granted on one repository. The path is conditional until the IAM mutation succeeds; a reviewed accepted mutation can provide direct evidence.
+- id: gcp-bigtable-instances-setiampolicy-instance-admin-self-grant
+  provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  service: bigtable
+  title: Self-grant Bigtable instance administration
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigtable-privesc.md#bigtableinstancessetiampolicy--self-grant-across-one-instance
+  source_revision: a1de13ac34
+  summary: The caller can change a ready instance's IAM policy to grant itself instance update access when it lacked that access.
+  requires:
+    all_of:
+    - action: bigtable.instances.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - bigtable.instances.update
+    aggregate_as: Instance administration the caller could grant itself
+  conditions:
+  - id: exact_instance_policy
+    description: Requires an inventoried ready instance, exact policy-write authority, no current instance update permission, and complete instance, IAM, group, org policy, and deny evidence.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict bigtable.instances.setIamPolicy on instances and review self-directed IAM policy changes.
+  notes: This captures an instance-level permission gain even when the instance has no tables. The prospective grant is conditional until the IAM change succeeds and does not grant project IAM control.
+- id: gcp-networkconnectivity-hubs-setiampolicy-group-use-self-grant
+  provider: gcp
+  service: networkconnectivity
+  title: Grant self group use through a hub IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-network-connectivity-center-privesc.md#resource-iam-self-grants
+  source_revision: a1de13ac34
+  summary: A principal that can write a named hub IAM policy may grant itself roles/networkconnectivity.groupUser on that hub and gain use of its observed groups, provided it lacks that access already.
+  requires:
+    all_of:
+    - action: networkconnectivity.hubs.setIamPolicy
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - networkconnectivity.groups.use
+    aggregate_as: Group use through {target.policy_resource}
+  conditions:
+  - id: exact_hub_group
+    description: Needs a unique named hub and child group, readable hub and group policies, an effective hub-level policy write and read, a known groupUser role, and no prior group-use grant.
+  - id: attachment_prerequisites
+    description: Using the new group permission to attach a spoke also requires authority over the spoke and its referenced network.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict hub IAM policy writes and review grants of groupUser on hubs.
+  notes: Google documents granting roles/networkconnectivity.groupUser on a hub. This grants group use on that hub, not hub update or unrestricted spoke creation.

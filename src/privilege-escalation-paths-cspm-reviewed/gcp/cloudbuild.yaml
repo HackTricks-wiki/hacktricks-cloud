@@ -41,44 +41,6 @@
     - https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts
     - https://docs.cloud.google.com/build/docs/iam-roles-permissions
   notes: HackTricks scopes the user-specified SA to SAs inside the build project. This entry also covers the trigger path (HackTricks cloudbuild.triggers.create / cloudbuild.triggers.run section). Google documents that triggers.create, patch, delete and run all require cloudbuild.builds.create; there are no cloudbuild.triggers.* IAM permissions, and the trigger's SA still needs actAs, so the trigger path has exactly this permission set.
-- id: gcp-cloudbuild-builds-create-cross-project-actas
-  provider: gcp
-  service: cloudbuild
-  title: Submit a build with a cross-project service account
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildbuildscreate--execute-build-steps-as-a-build-service-account
-  source_revision: 171e422
-  summary: The source may run build steps as a service account from another project when its project allows cross-project attachment and the Cloud Build service agent can mint its tokens.
-  requires:
-    all_of:
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
-      - action: cloudbuild.builds.create
-        resource: "*"
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_actas_granted_on_target: true
-      gcp_cross_project_cloudbuild: true
-    scope: any
-    aggregate_as: "Service accounts usable by builds in another project"
-  conditions:
-    - id: cloudbuild_api_enabled
-      description: Cloud Build API must be enabled on the exact build project; denied or incomplete service inventory leaves the attachment unresolved.
-    - id: cross_project_service_agent
-      description: The build project's Cloud Build service agent needs Service Account Token Creator on the target service account.
-    - id: cross_project_org_policy
-      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
-    - id: submission_path
-      description: Google documents gcloud build submission or trigger creation for this cross-project configuration.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Keep cross-project attachment and service-agent token grants limited to intended build projects and service accounts.
-  references:
-    - https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts
-
 - id: gcp-cloudbuild-builds-create-default-identity
   provider: gcp
   service: cloudbuild
@@ -175,3 +137,40 @@
   references:
   - https://docs.cloud.google.com/build/docs/iam-roles-permissions
   notes: Without a trigger consuming attacker-writable input the impact is SCM repository access only. A pinned or separate build config, manual approval, a CEL filter, an unconfirmed connection or repository, or a cross-project repository or build identity leaves the path unresolved.
+- id: gcp-cloudbuild-builds-create-cross-project-actas
+  provider: gcp
+  service: cloudbuild
+  title: Submit a build with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudbuild-privesc.md#cloudbuildbuildscreate--execute-build-steps-as-a-build-service-account
+  source_revision: 171e422
+  summary: The source may run build steps as a service account from another project when its project allows cross-project attachment and the Cloud Build service agent can mint its tokens.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: cloudbuild.builds.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_cloudbuild: true
+    scope: any
+    aggregate_as: "Service accounts usable by builds in another project"
+  conditions:
+    - id: cloudbuild_api_enabled
+      description: Cloud Build API must be enabled on the exact build project; denied or incomplete service inventory leaves the attachment unresolved.
+    - id: cross_project_service_agent
+      description: The build project's Cloud Build service agent needs Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+    - id: submission_path
+      description: Google documents gcloud build submission or trigger creation for this cross-project configuration.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Keep cross-project attachment and service-agent token grants limited to intended build projects and service accounts.
+  references:
+    - https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts

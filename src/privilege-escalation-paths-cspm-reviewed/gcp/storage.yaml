@@ -80,37 +80,6 @@
   references:
     - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
 
-- id: gcp-storage-managedfolders-setiampolicy-dataproc-init
-  provider: gcp
-  service: storage
-  title: Self-grant write access to a Dataproc initialization script folder
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
-  source_revision: 6fb9ac51fd
-  summary: The source may grant itself write access to a managed folder holding a Dataproc initialization script that could run again on a new cluster node.
-  requires:
-    all_of:
-      - action: storage.managedFolders.setIamPolicy
-        resource: '{target.dataproc_init_managed_folder}'
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: dataproc_cluster
-    scope: any
-    aggregate_as: SAs of Dataproc clusters with an initialization script in a writable managed folder
-  conditions:
-    - id: exact_init_script_folder
-      description: The collected initialization action must name a GCS object in the exact managed folder, and the bucket must use uniform bucket-level access.
-    - id: future_node_startup
-      description: A new cluster node must load the modified script after the folder grant and object replacement.
-    - id: followup_object_replace
-      description: The self-granted role must permit replacement of the referenced object, subject to holds and retention.
-  blockers: [gcp_deny_policy, vpc_sc_perimeter]
-  confidence: conditional
-  severity: high
-  mitigation: Restrict managed-folder IAM changes on paths holding Dataproc initialization scripts.
-  references:
-    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
-    - https://docs.cloud.google.com/managed-spark/docs/concepts/configuring-clusters/init-actions
 - id: gcp-storage-buckets-setiampolicy-composer
   provider: gcp
   service: storage
@@ -146,40 +115,6 @@
   severity: critical
   mitigation: Restrict storage.buckets.setIamPolicy (roles/storage.admin) on Composer and other code-bearing buckets.
   notes: Dataproc staging and unpinned Cloud Build StorageSource consumers are modelled by gcp-storage-buckets-setiampolicy-code-consumers; function source and App Engine staging bucket techniques are race-conditional and not duplicated here.
-- id: gcp-storage-managedfolders-setiampolicy-composer
-  provider: gcp
-  service: storage
-  title: Self-grant Composer DAG write access through a managed-folder IAM policy
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
-  source_revision: 6fb9ac51fd
-  summary: The source may grant itself write access to a Composer DAG prefix when it can change the IAM policy of a managed folder covering that prefix.
-  requires:
-    all_of:
-    - action: storage.managedFolders.setIamPolicy
-      resource: '{target.composer_dag_managed_folder}'
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: composer_environment
-      gcp_composer_storage_policy_path: managed_folder
-    scope: any
-    aggregate_as: SAs of Composer environments with a potentially writable DAG managed folder
-  conditions:
-  - id: managed_dag_folder
-    description: The bucket must use uniform bucket-level access and an existing managed folder must contain or sit inside the Composer DAG prefix; the permission must apply to that exact folder.
-  - id: followup_write
-    description: The new folder binding must grant object creation under dags/ so the scheduler loads the new DAG.
-  - id: allowed_member_domains
-    description: An external source may be prevented from adding itself to the folder policy by the allowed-member-domains organization policy.
-  blockers:
-  - gcp_deny_policy
-  - vpc_sc_perimeter
-  confidence: conditional
-  severity: critical
-  mitigation: Limit managed-folder IAM policy changes on Composer DAG prefixes to environment administrators.
-  references:
-  - https://docs.cloud.google.com/storage/docs/creating-managing-managed-folders
-  - https://docs.cloud.google.com/composer/docs/composer-3/access-control
 - id: gcp-storage-cloudbuild-unpinned-storagesource-poison
   provider: gcp
   service: storage
@@ -217,3 +152,68 @@
   - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.builds/retry
   - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
   notes: No cloudbuild.builds.create or actAs is needed when another principal retries the vulnerable build. The model derives an exact target only for a collected build with an explicit service account; future automation and default build identities remain unresolved.
+- id: gcp-storage-managedfolders-setiampolicy-dataproc-init
+  provider: gcp
+  service: storage
+  title: Self-grant write access to a Dataproc initialization script folder
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source may grant itself write access to a managed folder holding a Dataproc initialization script that could run again on a new cluster node.
+  requires:
+    all_of:
+      - action: storage.managedFolders.setIamPolicy
+        resource: '{target.dataproc_init_managed_folder}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: dataproc_cluster
+    scope: any
+    aggregate_as: SAs of Dataproc clusters with an initialization script in a writable managed folder
+  conditions:
+    - id: exact_init_script_folder
+      description: The collected initialization action must name a GCS object in the exact managed folder, and the bucket must use uniform bucket-level access.
+    - id: future_node_startup
+      description: A new cluster node must load the modified script after the folder grant and object replacement.
+    - id: followup_object_replace
+      description: The self-granted role must permit replacement of the referenced object, subject to holds and retention.
+  blockers: [gcp_deny_policy, vpc_sc_perimeter]
+  confidence: conditional
+  severity: high
+  mitigation: Restrict managed-folder IAM changes on paths holding Dataproc initialization scripts.
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+    - https://docs.cloud.google.com/managed-spark/docs/concepts/configuring-clusters/init-actions
+- id: gcp-storage-managedfolders-setiampolicy-composer
+  provider: gcp
+  service: storage
+  title: Self-grant Composer DAG write access through a managed-folder IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source may grant itself write access to a Composer DAG prefix when it can change the IAM policy of a managed folder covering that prefix.
+  requires:
+    all_of:
+    - action: storage.managedFolders.setIamPolicy
+      resource: '{target.composer_dag_managed_folder}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: composer_environment
+      gcp_composer_storage_policy_path: managed_folder
+    scope: any
+    aggregate_as: SAs of Composer environments with a potentially writable DAG managed folder
+  conditions:
+  - id: managed_dag_folder
+    description: The bucket must use uniform bucket-level access and an existing managed folder must contain or sit inside the Composer DAG prefix; the permission must apply to that exact folder.
+  - id: followup_write
+    description: The new folder binding must grant object creation under dags/ so the scheduler loads the new DAG.
+  - id: allowed_member_domains
+    description: An external source may be prevented from adding itself to the folder policy by the allowed-member-domains organization policy.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit managed-folder IAM policy changes on Composer DAG prefixes to environment administrators.
+  references:
+  - https://docs.cloud.google.com/storage/docs/creating-managing-managed-folders
+  - https://docs.cloud.google.com/composer/docs/composer-3/access-control

@@ -505,142 +505,6 @@
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
   notes: A RoleBinding grants cluster-admin rules only inside its namespace. This entry requires create; separate entries join other Roles and existing bindings to their exact permissions.
 
-- id: k8s-rbac-bind-existing-role-new-permission
-  provider: k8s
-  service: rbac
-  title: Bind an existing Role or ClusterRole that grants a new permission
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
-  source_revision: 2415fadfbd
-  summary: The source can create a RoleBinding to an existing Role or ClusterRole whose collected rules grant at least one concrete permission the source does not already hold in that namespace.
-  requires:
-    all_of:
-      - verb: create
-        resource: rolebindings
-        api_group: rbac.authorization.k8s.io
-        namespace: "{target.namespace}"
-  target:
-    kind: k8s_verified_authority
-    selector:
-      k8s_bound_role_gain: true
-    scope: cluster
-    outcome: permission_grant
-    grants: ["The exact collected Role or ClusterRole permissions in the binding namespace"]
-    aggregate_as: "New permissions from an existing RoleBinding target"
-  conditions:
-    - id: exact_role_and_new_permission
-      description: The selected Role must exist, the source must have bind on it, and a concrete rule must grant a permission not already held by the source in the binding namespace.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: derived
-  severity: high
-  mitigation: Avoid combining RoleBinding creation with bind on roles that grant sensitive actions; restrict bind to specific low-privilege roles.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
-  notes: This is a permission gain bounded to the named Role and namespace. It does not claim the source becomes another ServiceAccount. Missing RBAC inventory keeps a possible route conditional, and a complete inventory with no new permission produces no edge.
-
-- id: k8s-rbac-modify-existing-rolebinding-new-permission
-  provider: k8s
-  service: rbac
-  title: Add the source to an existing RoleBinding that grants a new permission
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
-  source_revision: 2415fadfbd
-  summary: An existing RoleBinding points to a collected Role or ClusterRole with a permission the source lacks, and the source can add itself to that exact binding.
-  requires:
-    any_of:
-      - - verb: patch
-          resource: rolebindings
-          api_group: rbac.authorization.k8s.io
-          namespace: "{target.namespace}"
-      - - verb: update
-          resource: rolebindings
-          api_group: rbac.authorization.k8s.io
-          namespace: "{target.namespace}"
-  target:
-    kind: k8s_verified_authority
-    selector:
-      k8s_existing_rolebinding_gain: true
-    scope: cluster
-    outcome: permission_grant
-    grants: ["The exact collected Role or ClusterRole permissions in the binding namespace"]
-    aggregate_as: "New permissions from an existing RoleBinding"
-  conditions:
-    - id: exact_existing_binding_and_new_permission
-      description: A collected RoleBinding must point to the selected Role, the source must be able to modify that binding and bind the exact Role, and a concrete rule must add a permission the source lacks.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: derived
-  severity: high
-  mitigation: Limit writes to RoleBindings and bind access to roles that grant sensitive permissions.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
-  notes: A RoleBinding roleRef cannot be changed. The selector joins the existing binding to its current Role and verifies patch or update on that exact binding. Missing or uncertain RBAC facts keep the path conditional.
-
-- id: k8s-rbac-bind-existing-clusterrole-new-permission
-  provider: k8s
-  service: rbac
-  title: Bind an existing ClusterRole that grants a new cluster-wide permission
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
-  source_revision: 2415fadfbd
-  summary: The source can create a ClusterRoleBinding to an existing ClusterRole whose collected rules grant a concrete cluster-wide permission the source does not already hold.
-  requires:
-    all_of:
-      - verb: create
-        resource: clusterrolebindings
-        api_group: rbac.authorization.k8s.io
-        namespace: "*"
-  target:
-    kind: k8s_verified_authority
-    selector:
-      k8s_clusterrolebinding_gain: true
-    scope: cluster
-    outcome: permission_grant
-    grants: ["The exact collected ClusterRole permissions across the cluster"]
-    aggregate_as: "New cluster-wide permissions from an existing ClusterRole"
-  conditions:
-    - id: exact_clusterrole_and_new_permission
-      description: The ClusterRole must exist, the source must have bind on it, and a concrete rule must grant a cluster-wide permission the source lacks.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: derived
-  severity: high
-  mitigation: Avoid combining ClusterRoleBinding creation with bind on roles that grant sensitive actions.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
-  notes: The gained permissions are bounded to the exact ClusterRole rules. The route does not claim another identity's access.
-
-- id: k8s-rbac-modify-existing-clusterrolebinding-new-permission
-  provider: k8s
-  service: rbac
-  title: Add the source to an existing ClusterRoleBinding that grants a new permission
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
-  source_revision: 2415fadfbd
-  summary: An existing ClusterRoleBinding points to a collected ClusterRole with a cluster-wide permission the source lacks, and the source can add itself to that exact binding.
-  requires:
-    any_of:
-      - - verb: patch
-          resource: clusterrolebindings
-          api_group: rbac.authorization.k8s.io
-          namespace: "*"
-      - - verb: update
-          resource: clusterrolebindings
-          api_group: rbac.authorization.k8s.io
-          namespace: "*"
-  target:
-    kind: k8s_verified_authority
-    selector:
-      k8s_existing_clusterrolebinding_gain: true
-    scope: cluster
-    outcome: permission_grant
-    grants: ["The exact collected ClusterRole permissions across the cluster"]
-    aggregate_as: "New cluster-wide permissions from an existing ClusterRoleBinding"
-  conditions:
-    - id: exact_existing_cluster_binding_and_new_permission
-      description: A collected ClusterRoleBinding must point to the selected ClusterRole, the source must be able to modify that binding and bind the exact role, and a concrete rule must add a cluster-wide permission the source lacks.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: derived
-  severity: high
-  mitigation: Limit ClusterRoleBinding writes and bind access to roles that grant sensitive permissions.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
-  notes: The selector joins the existing binding to its immutable roleRef and verifies patch or update on that exact binding. Uncertain RBAC facts keep the path conditional.
-
 - id: k8s-rbac-escalate-bound-clusterrole
   provider: k8s
   service: rbac
@@ -722,44 +586,6 @@
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
     - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-creation-or-update
   notes: HackTricks (171e422) documents aggregation into an already-bound ClusterRole (lab adds patch on one ConfigMap to view) and states the caller still needs the proposed rules or escalate. Without escalate the source can only aggregate rules it already holds, which is not an escalation.
-
-- id: k8s-rbac-escalate-aggregating-clusterrole-namespace
-  provider: k8s
-  service: rbac
-  title: Add rules to a ClusterRole bound to the source in a namespace
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bindings-and-aggregated-clusterroles
-  source_revision: 2415fadfbd
-  summary: The source can create a ClusterRole whose labels feed an aggregated ClusterRole bound to it through a RoleBinding, adding workload and token rights in that binding's namespace.
-  source_selector:
-    source_bound_to_aggregated_clusterrole: namespace
-  requires:
-    all_of:
-      - verb: create
-        resource: clusterroles
-        api_group: rbac.authorization.k8s.io
-        namespace: "*"
-      - verb: escalate
-        resource: clusterroles
-        api_group: rbac.authorization.k8s.io
-        namespace: "*"
-  target:
-    kind: k8s_service_account
-    selector:
-      k8s_aggregated_rolebinding_namespace: true
-      k8s_aggregation_new_role_path: true
-    scope: cluster
-    aggregate_as: "ServiceAccounts in an aggregated RoleBinding namespace"
-  conditions:
-    - id: namespace_aggregate_binding_and_controller
-      description: A collected RoleBinding must give the source an aggregated ClusterRole in the target namespace, and the aggregation controller must add the source-created rules that permit workload or token access.
-  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
-  confidence: conditional
-  severity: high
-  mitigation: Do not combine ClusterRole creation and escalate with an aggregated ClusterRole already bound to the same principal.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
-    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-creation-or-update
-  notes: A RoleBinding limits the added rules to its namespace. Without escalate or prior ownership of the proposed rules, the new ClusterRole cannot add permissions that the source did not already hold.
 
 - id: k8s-rbac-escalate-bound-role-namespace
   provider: k8s
@@ -844,46 +670,6 @@
   references:
     - https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers
   notes: HackTricks reproduced on v1.37 that this signer refused a CSR requesting system:masters, so cluster-admin through that group is NOT claimed. ServiceAccount usernames are covered by k8s-rbac-csr-kube-apiserver-client-serviceaccount. Client certificates cannot be revoked short of rotating the CA.
-
-- id: k8s-rbac-csr-kube-apiserver-client-serviceaccount
-  provider: k8s
-  service: certificates
-  title: Issue and approve a client certificate for a bound ServiceAccount username
-  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
-  source_revision: 2415fadfbd
-  summary: The source can request a client certificate whose common name matches a ServiceAccount username already named in RBAC, then approve and read the signed certificate.
-  requires:
-    all_of:
-      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-      - any_of:
-          - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-          - {verb: list, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-          - {verb: watch, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
-      - any_of:
-          - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
-          - {verb: patch, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
-      - any_of:
-          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client"}
-          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/*"}
-  target:
-    kind: k8s_service_account
-    selector:
-      k8s_csr_sa_subject: true
-      k8s_csr_same_name_path: true
-    scope: cluster
-    aggregate_as: "ServiceAccount usernames bound in RBAC in {cluster}"
-  conditions:
-    - id: kube_apiserver_client_signer_enabled
-      description: The controller-manager must sign certificates for kubernetes.io/kube-apiserver-client and accept the requested subject.
-    - id: client_cert_auth_honored
-      description: The API server must accept the issued client certificate and its ServiceAccount username.
-  blockers: []
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict CSR creation, approval and signer approval to separate trusted operators.
-  references:
-    - https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers
-  notes: A client certificate authenticates as its common-name username, so an RBAC ServiceAccount subject matches even when the ServiceAccount object is absent. ServiceAccount group bindings require the corresponding certificate organization and are covered by the group CSR technique. This path includes only ServiceAccount usernames with collected direct RBAC bindings.
 
 - id: k8s-rbac-csr-kube-apiserver-client-group
   provider: k8s
@@ -1062,3 +848,216 @@
   confidence: conditional
   severity: high
   mitigation: Do not combine escalate and edit authority on roles bound to the editor.
+- id: k8s-rbac-bind-existing-role-new-permission
+  provider: k8s
+  service: rbac
+  title: Bind an existing Role or ClusterRole that grants a new permission
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
+  source_revision: 2415fadfbd
+  summary: The source can create a RoleBinding to an existing Role or ClusterRole whose collected rules grant at least one concrete permission the source does not already hold in that namespace.
+  requires:
+    all_of:
+      - verb: create
+        resource: rolebindings
+        api_group: rbac.authorization.k8s.io
+        namespace: "{target.namespace}"
+  target:
+    kind: k8s_verified_authority
+    selector:
+      k8s_bound_role_gain: true
+    scope: cluster
+    outcome: permission_grant
+    grants: ["The exact collected Role or ClusterRole permissions in the binding namespace"]
+    aggregate_as: "New permissions from an existing RoleBinding target"
+  conditions:
+    - id: exact_role_and_new_permission
+      description: The selected Role must exist, the source must have bind on it, and a concrete rule must grant a permission not already held by the source in the binding namespace.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Avoid combining RoleBinding creation with bind on roles that grant sensitive actions; restrict bind to specific low-privilege roles.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
+  notes: This is a permission gain bounded to the named Role and namespace. It does not claim the source becomes another ServiceAccount. Missing RBAC inventory keeps a possible route conditional, and a complete inventory with no new permission produces no edge.
+
+- id: k8s-rbac-modify-existing-rolebinding-new-permission
+  provider: k8s
+  service: rbac
+  title: Add the source to an existing RoleBinding that grants a new permission
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
+  source_revision: 2415fadfbd
+  summary: An existing RoleBinding points to a collected Role or ClusterRole with a permission the source lacks, and the source can add itself to that exact binding.
+  requires:
+    any_of:
+      - - verb: patch
+          resource: rolebindings
+          api_group: rbac.authorization.k8s.io
+          namespace: "{target.namespace}"
+      - - verb: update
+          resource: rolebindings
+          api_group: rbac.authorization.k8s.io
+          namespace: "{target.namespace}"
+  target:
+    kind: k8s_verified_authority
+    selector:
+      k8s_existing_rolebinding_gain: true
+    scope: cluster
+    outcome: permission_grant
+    grants: ["The exact collected Role or ClusterRole permissions in the binding namespace"]
+    aggregate_as: "New permissions from an existing RoleBinding"
+  conditions:
+    - id: exact_existing_binding_and_new_permission
+      description: A collected RoleBinding must point to the selected Role, the source must be able to modify that binding and bind the exact Role, and a concrete rule must add a permission the source lacks.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Limit writes to RoleBindings and bind access to roles that grant sensitive permissions.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
+  notes: A RoleBinding roleRef cannot be changed. The selector joins the existing binding to its current Role and verifies patch or update on that exact binding. Missing or uncertain RBAC facts keep the path conditional.
+
+- id: k8s-rbac-bind-existing-clusterrole-new-permission
+  provider: k8s
+  service: rbac
+  title: Bind an existing ClusterRole that grants a new cluster-wide permission
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
+  source_revision: 2415fadfbd
+  summary: The source can create a ClusterRoleBinding to an existing ClusterRole whose collected rules grant a concrete cluster-wide permission the source does not already hold.
+  requires:
+    all_of:
+      - verb: create
+        resource: clusterrolebindings
+        api_group: rbac.authorization.k8s.io
+        namespace: "*"
+  target:
+    kind: k8s_verified_authority
+    selector:
+      k8s_clusterrolebinding_gain: true
+    scope: cluster
+    outcome: permission_grant
+    grants: ["The exact collected ClusterRole permissions across the cluster"]
+    aggregate_as: "New cluster-wide permissions from an existing ClusterRole"
+  conditions:
+    - id: exact_clusterrole_and_new_permission
+      description: The ClusterRole must exist, the source must have bind on it, and a concrete rule must grant a cluster-wide permission the source lacks.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Avoid combining ClusterRoleBinding creation with bind on roles that grant sensitive actions.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
+  notes: The gained permissions are bounded to the exact ClusterRole rules. The route does not claim another identity's access.
+
+- id: k8s-rbac-modify-existing-clusterrolebinding-new-permission
+  provider: k8s
+  service: rbac
+  title: Add the source to an existing ClusterRoleBinding that grants a new permission
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
+  source_revision: 2415fadfbd
+  summary: An existing ClusterRoleBinding points to a collected ClusterRole with a cluster-wide permission the source lacks, and the source can add itself to that exact binding.
+  requires:
+    any_of:
+      - - verb: patch
+          resource: clusterrolebindings
+          api_group: rbac.authorization.k8s.io
+          namespace: "*"
+      - - verb: update
+          resource: clusterrolebindings
+          api_group: rbac.authorization.k8s.io
+          namespace: "*"
+  target:
+    kind: k8s_verified_authority
+    selector:
+      k8s_existing_clusterrolebinding_gain: true
+    scope: cluster
+    outcome: permission_grant
+    grants: ["The exact collected ClusterRole permissions across the cluster"]
+    aggregate_as: "New cluster-wide permissions from an existing ClusterRoleBinding"
+  conditions:
+    - id: exact_existing_cluster_binding_and_new_permission
+      description: A collected ClusterRoleBinding must point to the selected ClusterRole, the source must be able to modify that binding and bind the exact role, and a concrete rule must add a cluster-wide permission the source lacks.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Limit ClusterRoleBinding writes and bind access to roles that grant sensitive permissions.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update
+  notes: The selector joins the existing binding to its immutable roleRef and verifies patch or update on that exact binding. Uncertain RBAC facts keep the path conditional.
+
+- id: k8s-rbac-escalate-aggregating-clusterrole-namespace
+  provider: k8s
+  service: rbac
+  title: Add rules to a ClusterRole bound to the source in a namespace
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bindings-and-aggregated-clusterroles
+  source_revision: 2415fadfbd
+  summary: The source can create a ClusterRole whose labels feed an aggregated ClusterRole bound to it through a RoleBinding, adding workload and token rights in that binding's namespace.
+  source_selector:
+    source_bound_to_aggregated_clusterrole: namespace
+  requires:
+    all_of:
+      - verb: create
+        resource: clusterroles
+        api_group: rbac.authorization.k8s.io
+        namespace: "*"
+      - verb: escalate
+        resource: clusterroles
+        api_group: rbac.authorization.k8s.io
+        namespace: "*"
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_aggregated_rolebinding_namespace: true
+      k8s_aggregation_new_role_path: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts in an aggregated RoleBinding namespace"
+  conditions:
+    - id: namespace_aggregate_binding_and_controller
+      description: A collected RoleBinding must give the source an aggregated ClusterRole in the target namespace, and the aggregation controller must add the source-created rules that permit workload or token access.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: conditional
+  severity: high
+  mitigation: Do not combine ClusterRole creation and escalate with an aggregated ClusterRole already bound to the same principal.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
+    - https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-creation-or-update
+  notes: A RoleBinding limits the added rules to its namespace. Without escalate or prior ownership of the proposed rules, the new ClusterRole cannot add permissions that the source did not already hold.
+
+- id: k8s-rbac-csr-kube-apiserver-client-serviceaccount
+  provider: k8s
+  service: certificates
+  title: Issue and approve a client certificate for a bound ServiceAccount username
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#certificate-signing-requests
+  source_revision: 2415fadfbd
+  summary: The source can request a client certificate whose common name matches a ServiceAccount username already named in RBAC, then approve and read the signed certificate.
+  requires:
+    all_of:
+      - {verb: create, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: get, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: list, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: watch, resource: certificatesigningrequests, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: update, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+          - {verb: patch, resource: certificatesigningrequests, subresource: approval, api_group: certificates.k8s.io, namespace: "*"}
+      - any_of:
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/kube-apiserver-client"}
+          - {verb: approve, resource: signers, api_group: certificates.k8s.io, namespace: "*", resource_name: "kubernetes.io/*"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_csr_sa_subject: true
+      k8s_csr_same_name_path: true
+    scope: cluster
+    aggregate_as: "ServiceAccount usernames bound in RBAC in {cluster}"
+  conditions:
+    - id: kube_apiserver_client_signer_enabled
+      description: The controller-manager must sign certificates for kubernetes.io/kube-apiserver-client and accept the requested subject.
+    - id: client_cert_auth_honored
+      description: The API server must accept the issued client certificate and its ServiceAccount username.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict CSR creation, approval and signer approval to separate trusted operators.
+  references:
+    - https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/#kubernetes-signers
+  notes: A client certificate authenticates as its common-name username, so an RBAC ServiceAccount subject matches even when the ServiceAccount object is absent. ServiceAccount group bindings require the corresponding certificate organization and are covered by the group CSR technique. This path includes only ServiceAccount usernames with collected direct RBAC bindings.

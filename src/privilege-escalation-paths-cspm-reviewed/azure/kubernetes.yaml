@@ -331,35 +331,6 @@
     - https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/authentication_and_authorization/removing-kubeadmin
   notes: The modeled path is conditional because Azure RBAC does not show whether the kubeadmin secret remains or the caller can reach the API server. The separate listAdminCredentials/action admin-kubeconfig path and hosted-control-plane preview (hcpOpenShiftClusters) are not modeled here.
 
-- id: azure-aro-list-admin-credentials
-  provider: azure
-  service: kubernetes
-  title: Retrieve the ARO administrator kubeconfig
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#azure-red-hat-openshift-aro-cluster-credentials
-  source_revision: 171e422
-  summary: The source can obtain the administrator kubeconfig for the ARO cluster without the kubeadmin password.
-  requires:
-    all_of:
-      - action: Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action
-        scope: "{target.scope}"
-  target:
-    kind: k8s_cluster_admin
-    selector:
-      any_principal_in_scope: true
-    scope: cluster
-    aggregate_as: "Cluster admin of ARO cluster {target.scope}"
-  conditions:
-    - id: api_server_reachable
-      description: The caller must reach the Kubernetes API server with the administrator kubeconfig.
-  blockers: []
-  confidence: conditional
-  severity: critical
-  mitigation: Restrict listAdminCredentials/action on ARO clusters to administrators who need emergency cluster access.
-  references:
-    - https://learn.microsoft.com/en-us/azure/openshift/howto-kubeconfig
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/containers#microsoftredhatopenshift
-  notes: This route does not require the kubeadmin user. The result remains conditional on API server reachability. The hosted-control-plane preview (hcpOpenShiftClusters) is not modeled.
-
 - id: azure-aks-flux-configuration-write
   provider: azure
   service: kubernetes
@@ -395,3 +366,31 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/conceptual-gitops-flux2
   notes: The writable configuration must belong to the exact AKS or Arc-enabled cluster. Parent-scoped write can create a cluster-scoped configuration; a child-only grant needs an inventoried existing configuration. Legacy source-control availability remains conditional.
+- id: azure-aro-list-admin-credentials
+  provider: azure
+  service: kubernetes
+  title: Retrieve the ARO administrator kubeconfig
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#azure-red-hat-openshift-aro-cluster-credentials
+  source_revision: 171e422
+  summary: The source can obtain the administrator kubeconfig for the ARO cluster without the kubeadmin password.
+  requires:
+    all_of:
+      - action: Microsoft.RedHatOpenShift/openShiftClusters/listAdminCredentials/action
+        scope: "{target.scope}"
+  target:
+    kind: k8s_cluster_admin
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "Cluster admin of ARO cluster {target.scope}"
+  conditions:
+    - id: api_server_reachable
+      description: The caller must reach the Kubernetes API server with the administrator kubeconfig.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict listAdminCredentials/action on ARO clusters to administrators who need emergency cluster access.
+  references:
+    - https://learn.microsoft.com/en-us/azure/openshift/howto-kubeconfig
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/containers#microsoftredhatopenshift
+  notes: This route does not require the kubeadmin user. The result remains conditional on API server reachability. The hosted-control-plane preview (hcpOpenShiftClusters) is not modeled.

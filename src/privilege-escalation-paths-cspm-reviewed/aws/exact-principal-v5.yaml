@@ -10,39 +10,39 @@
   title: Use existing parameterized Automation runbook with runtime PassRole
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
   source_revision: 57bd5c07df
-  summary: The source can execute caller-selected runbook steps as passable role only
-    when the exact target and prerequisites are verified. Conditional principal access
-    requires the exact inventoried identity, usable authority equivalent to its observed
-    full IAM rights, fresh evidence and matching authorization fingerprint. A scoped
-    token/session is insufficient.
+  summary: The source can run an existing Automation document with a passable role
+    supplied through its assumeRole parameter when an observed step performs an action
+    that the source cannot perform directly.
   requires:
     all_of:
-    - action: ssm:StartAutomationExecution
-      resource: '*'
     - action: iam:PassRole
-      resource: '*'
+      resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: ssm.amazonaws.com
+  preconditions:
+  - ssm_existing_automation_runtime_role_effect_reviewed
   target:
     kind: aws_role
     selector:
-      aws_challenge_fact: aws-audit-use-existing-parameterized-automation-runbook-with-runtime-passrole
+      trust_allows_service: ssm.amazonaws.com
     scope: same_account
     outcome: workload_execution
   conditions:
   - id: exact_verified_prerequisites
-    description: 'Evidence must bind source, exact target, and these prerequisites:
-      Existing runbook accepts AutomationAssumeRole parameter and uses it as role;
-      source can start it with allowed parameters; iam:PassRole covers exact role
-      trusting ssm.amazonaws.com; step must have useful privileged effect.'
+    description: 'A reviewed execution must bind the exact immutable Automation
+      document version, an assumeRole parameter supplied with the passed role,
+      StartAutomationExecution authorization for that document, and a successful
+      useful step performed under that role.'
   blockers:
   - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict the listed actions to approved operators and review the exact
     target configuration.
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  notes: A fixed-role runbook does not allow a caller to select this role. IAM grants
+    on unrelated Automation documents or a passable role alone do not establish an
+    execution path. The document version, passed role, actual execution and useful
+    role action must be joined; missing facts stay UNKNOWN.
   references:
   - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
 - id: aws-codebuild-ssm-debug-session-role
@@ -51,37 +51,36 @@
   title: Connect to a paused CodeBuild build through Session Manager
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
   source_revision: 57bd5c07df
-  summary: A live paused CodeBuild debug session gives shell access with the project
-    service role. Conditional principal access requires the exact inventoried identity,
-    usable authority equivalent to its observed full IAM rights, fresh evidence and
-    matching authorization fingerprint. A scoped token/session is insufficient.
+  summary: A live paused CodeBuild debug session may give shell access under the
+    role used by that exact build when Session Manager access and an actual role
+    action are observed.
+  source_kind: [aws_user, aws_role]
   requires:
-    all_of:
-    - action: ssm:StartSession
-      resource: '*'
+    all_of: []
+  preconditions:
+  - codebuild_ssm_debug_session_role_effect_reviewed
   target:
     kind: aws_role
     selector:
-      aws_challenge_fact: aws-codebuild-ssm-debug-session-role
+      trust_allows_service: codebuild.amazonaws.com
     scope: same_account
     outcome: workload_execution
   conditions:
   - id: live_breakpoint
-    description: A build with session connections enabled must be paused at codebuild-breakpoint.
+    description: The exact running build must have session connections enabled and be paused at codebuild-breakpoint.
   - id: verified_collector_fact
-    description: The requested collector fact must bind the source, exact resource,
-      newly reachable authority and all runtime prerequisites; without it the result
-      is UNKNOWN.
+    description: A fresh reviewed session must bind the build's sessionTarget, its actual service role, StartSession authorization and a useful action performed with that role.
   confidence: conditional
   severity: high
   mitigation: Restrict the named operation to trusted administrators and review downstream
     grants.
   references:
-  - https://docs.aws.amazon.com/codebuild/latest/APIReference/Welcome.html
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/session-manager.html
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_DebugSession.html
+  notes: A CodeBuild Sandbox or an unpaused build does not establish this path. IAM
+    permission on another Session Manager target and the project's configured role
+    do not prove access to this build, which may use a role override. Missing runtime
+    joins or shell effects remain UNKNOWN.
 - id: aws-devicefarm-schedulerun-existing-test-spec-passrole
   provider: aws
   service: devicefarm
@@ -93,11 +92,10 @@
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
   source_revision: 57bd5c07df
   requires:
-    all_of:
-    - action: devicefarm:ScheduleRun
-      resource: '*'
-    - action: iam:PassRole
-      resource: '*'
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  preconditions:
+  - devicefarm_existing_test_spec_role_effect_reviewed
   target:
     kind: aws_role
     selector:
@@ -121,11 +119,15 @@
   confidence: conditional
   severity: high
   mitigation: Restrict the required actions to reviewed resources and principals.
-  references: []
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  references:
+  - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_ScheduleRun.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_devicefarm.html
+  - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_Upload.html
+  notes: The evaluator joins an existing project, compatible pool, successful Appium
+    Web Node test spec and package uploads, exact scoped ScheduleRun grants and PassRole
+    to devicefarm.amazonaws.com. Fresh reviewed evidence must show the controlled spec
+    ran under the role and performed a useful action unavailable to the caller. Missing
+    or mismatched resources, restricted sessions and stale evidence stay unresolved.
 - id: aws-iot-byo-certificate-existing-rolealias
   provider: aws
   service: iot
@@ -165,10 +167,7 @@
     description: The requested collector fact must bind the source, exact resource,
       newly reachable authority and all runtime prerequisites; without it the result
       is UNKNOWN.
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  notes: The existing role alias must be inventoried with RoleArn equal to the exact target role. Fresh reviewed evidence binds an attacker-held ACTIVE certificate, registration without a CA, AttachPolicy on that certificate, an attached IoT policy allowing AssumeRoleWithCertificate on that alias, and successful credential-provider authentication. The full-principal attestation also needs the target's current authorization fingerprint and a usable unrestricted role session. Missing alias detail, mismatched role or certificate, or incomplete credential evidence remains UNKNOWN.
 - id: aws-iot-provisioning-claim-existing-rolealias
   provider: aws
   service: iot
@@ -210,7 +209,4 @@
     description: The requested collector fact must bind the source, exact resource,
       newly reachable authority and all runtime prerequisites; without it the result
       is UNKNOWN.
-  notes: Missing exact principal, authority equivalence, fresh evidence, condition
-    IDs, authorization fingerprint or action/resource joins remains UNKNOWN. Restricted
-    sessions, revoked keys and audience-bound tokens do not reach the full identity.
-    Standard inventories never fabricate these facts.
+  notes: The existing role alias must be inventoried with RoleArn equal to the exact target role. Fresh reviewed evidence binds CreateProvisioningTemplate and CreateProvisioningClaim to the same exact template, PassRole to a distinct provisioning role for iot.amazonaws.com, a claim used over MQTT, an ACTIVE permanent certificate with an attached policy allowing AssumeRoleWithCertificate on that alias, and successful credential-provider authentication. The full-principal attestation needs the target's current authorization fingerprint and a usable unrestricted role session. Missing alias detail, mismatched template or role, or incomplete credential evidence remains UNKNOWN.

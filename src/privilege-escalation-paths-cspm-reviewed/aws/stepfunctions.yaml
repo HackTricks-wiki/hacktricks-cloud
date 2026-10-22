@@ -19,6 +19,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: states.amazonaws.com
       - action: states:TestState
         resource: "*"
   target:
@@ -29,6 +31,8 @@
     scope: same_account
     aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
     outcome: impersonation
+  preconditions:
+    - stepfunctions_teststate_privileged_task_unverified
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
@@ -41,7 +45,7 @@
   mitigation: Restrict iam:PassRole on Step Functions roles with iam:PassedToService=states.amazonaws.com, and restrict states:TestState to developers on non-production roles.
   references:
     - https://docs.aws.amazon.com/step-functions/latest/dg/test-state-isolation.html
-  notes: The Step Functions developer guide confirms TestState assumes the provided role and that iam:PassRole is required for an unmocked task. AWS SDK integrations include IAM. Map, Parallel, Activity, .sync, and waitForTaskToken patterns require mocks in TestState, so they do not exercise the role through this path.
+  notes: TestState assumes the provided role for an unmocked task, and iam:PassRole is required. A concrete role edge requires fresh reviewed evidence of a successful unmocked TestState call, the exact role ID, action and resource, and a useful effect unavailable directly to the caller. Without that evidence the role edge stays unresolved. Map, Parallel, Activity, .sync, and waitForTaskToken patterns require mocks in TestState and do not exercise the role through this path.
 
 - id: aws-stepfunctions-createstatemachine-passrole-start
   provider: aws
@@ -54,6 +58,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: states.amazonaws.com
       - action: states:CreateStateMachine
         resource: "arn:{source.partition}:states:*:{source.account}:stateMachine:*"
         bind: new_state_machine
@@ -72,6 +78,8 @@
     scope: same_account
     aggregate_as: "Roles trusting states.amazonaws.com passable in {account}"
     outcome: impersonation
+  preconditions:
+    - sfn_role_sdk_effect_reviewed
   conditions:
     - id: passrole_condition_key
       description: iam:PassedToService conditions may restrict which roles can be passed.
@@ -86,7 +94,8 @@
   mitigation: Restrict iam:PassRole on Step Functions roles and state machine creation to the deployment pipeline.
   references:
     - https://docs.aws.amazon.com/step-functions/latest/apireference/API_CreateStateMachine.html
-  notes: ""
+    - https://docs.aws.amazon.com/step-functions/latest/dg/supported-services-awssdk.html
+  notes: CreateStateMachine and StartExecution or StartSyncExecution must cover one new name in the same Region, and PassRole must cover the exact execution role for states.amazonaws.com. A concrete role edge also needs a fresh reviewed execution on that role's current state-machine revision showing a supported SDK task succeeded on an exact resource that the source cannot access directly. Without that effect, the role gain remains unresolved.
 
 - id: aws-stepfunctions-updatestatemachine-passrole
   provider: aws
@@ -99,6 +108,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: states.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -109,6 +120,7 @@
     outcome: impersonation
   preconditions:
     - sfn_existing_state_machine_update_and_start
+    - sfn_role_sdk_effect_reviewed
   conditions:
     - id: execution_after_update
       description: The source must start the same state machine after attaching the passed role and updating its definition.
@@ -121,4 +133,5 @@
   mitigation: Restrict iam:PassRole on Step Functions roles and states:UpdateStateMachine.
   references:
     - https://docs.aws.amazon.com/step-functions/latest/apireference/API_UpdateStateMachine.html
-  notes: ""
+    - https://docs.aws.amazon.com/step-functions/latest/dg/supported-services-awssdk.html
+  notes: UpdateStateMachine and StartExecution or StartSyncExecution must cover the same active state machine, and PassRole must cover the exact execution role for states.amazonaws.com. A concrete role edge also needs a fresh reviewed execution on that role's current state-machine revision showing a supported SDK task succeeded on an exact resource that the source cannot access directly. Without that effect, the role gain remains unresolved.

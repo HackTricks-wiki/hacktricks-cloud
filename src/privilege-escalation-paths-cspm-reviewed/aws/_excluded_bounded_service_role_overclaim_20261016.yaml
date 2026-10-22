@@ -7,10 +7,14 @@
   technique: aws-arc-region-switch-passrole-createplan
   reason: ARC can run only configured plan step types through the role; the target cannot be the full passable IAM
     role.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-budgets-privesc/README.md#budgetscreatebudgetaction-iampassrole--budgetsexecutebudgetaction--self-attach-an-admin-policy--scp--run-code-as-a-passed-role
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-region-switch-privesc/README.md#ssm-run-command-step--execute-on-a-managed-node
+  technique: aws-arc-region-switch-ssm-sendcommand-host-role
+  reason: A plan can call SSM SendCommand through its execution role and may reach a selected managed node's IAM role. CSPM does not yet join the command document and parameters, plan execution path, online node, and node-to-role binding; plan write and PassRole alone cannot produce this edge.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-budgets-privesc/README.md#budgetscreatebudgetaction-iampassrole--budgetsexecutebudgetaction--attach-a-policy-through-a-budget-action
   technique: aws-budgets-passrole-createbudgetaction
-  reason: Budget actions have only three bounded operation types. A direct IAM policy attachment may grant Alice
-    permissions, but the entry currently targets the full passed role instead of that exact gain.
+  reason: Budget actions have three bounded operation types, and RUN_SSM_DOCUMENTS can only stop EC2 or RDS
+    instances. An exact IAM policy attachment may grant a controlled principal permissions, but the retired entry
+    targets the full passed role without proving an existing budget, triggered action, attach authority and recipient gain.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-chatbot-privesc/README.md#chatbotcreateslackchannelconfiguration--createmicrosoftteamschannelconfiguration--iampassrole
   technique: aws-chatbot-passrole-create-channel-configuration
   reason: Chat CLI requests are constrained by channel guardrails. The full role target overstates the authority
@@ -35,9 +39,10 @@
   technique: aws-s3-batchoperations-passrole-createjob
   reason: S3 Batch Operations executes a bounded S3/Lambda job. The source does not gain general access to the passed
     role.
-- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-files-privesc/README.md#s3filescreatefilesystem-iampassrole--mount-any-buckets-data-as-a-chosen-role
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-files-privesc/README.md#s3filescreatefilesystem-iampassrole--connect-a-bucket-through-a-service-role
+  historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-files-privesc/README.md#s3filescreatefilesystem-iampassrole--mount-any-buckets-data-as-a-chosen-role
   technique: aws-s3files-passrole-createfilesystem
-  reason: S3 Files synchronizes selected S3 data through its role; it does not yield role credentials or broad permissions.
+  reason: S3 Files synchronizes a selected bucket or prefix through its service role, subject to role, bucket and KMS authorization. A separate authorized NFS client is required for file access; the caller does not receive the role's credentials or its general IAM permissions.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transfercreateuserupdateusercreateaccessupdateaccess--iampassrole--attach-a-chosen-role-to-an-sftp-identity
   technique: aws-transfer-passrole-createuser-access
   reason: Transfer Family grants file access scoped to S3/EFS locations through its role, not the full passed role

@@ -7,6 +7,36 @@
 # Amazon MWAA (Managed Workflows for Apache Airflow) privilege escalation techniques.
 # Source: hacktricks-cloud aws-post-exploitation/aws-mwaa-post-exploitation/README.md (rev 171e422299).
 
+- id: aws-mwaa-s3-putobject-dag
+  provider: aws
+  service: airflow
+  title: Upload a Python DAG to an existing MWAA environment
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-mwaa-privesc/README.md#write-a-dag-file-into-an-mwaa-environments-dag-bucket-and-run-code-as-its-execution-role
+  source_revision: aa345c4cbe
+  summary: The source can place a Python DAG in an existing environment's configured S3 DAG folder, where MWAA may parse it under the environment's recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of MWAA environments whose DAG folders are writable in {account}
+    outcome: workload_execution
+  preconditions:
+    - mwaa_existing_dag_object_execution_role
+  conditions:
+    - id: dag_sync_and_python_parse
+      description: The uploaded Python file must be synchronized and parsed by MWAA; object encryption and runtime failures may still block code execution.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit write access to each MWAA DAG folder to trusted deployment principals and keep environment execution roles narrow.
+  references:
+    - https://docs.aws.amazon.com/mwaa/latest/userguide/configuring-dag-folder.html
+    - https://docs.aws.amazon.com/mwaa/latest/API/API_GetEnvironment.html
+  notes: The evaluator binds a collected AVAILABLE environment's exact ExecutionRoleArn, bucket and DAG path to a source-writable Python object and the role's read/list grants. It also tests exact .py keys named by the source policy, not only a fixed generated file. It never infers a role from a token or from a different environment's DAG bucket.
+
 - id: aws-mwaa-serverless-passrole-createworkflow
   provider: aws
   service: airflow-serverless
@@ -24,10 +54,6 @@
         resource: "*"
       - action: airflow-serverless:StartWorkflowRun
         resource: "*"
-      - action: iam:CreateServiceLinkedRole
-        resource: "*"
-        request_context:
-          iam:AWSServiceName: airflow-serverless.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -50,7 +76,7 @@
   mitigation: Constrain iam:PassRole for airflow-serverless.amazonaws.com to approved roles and restrict airflow-serverless:CreateWorkflow.
   references:
     - https://docs.aws.amazon.com/mwaa/latest/mwaa-serverless-userguide/what-is-mwaa-serverless.html
-  notes: The source demonstrates a DAG-factory YAML object in S3 and a subsequent StartWorkflowRun call on the ARN returned by CreateWorkflow. The evaluator accepts a new workflow only when complete inventory shows a free name, a same-Region versioned private bucket can hold source-written YAML, broad StartWorkflowRun covers every generated ID, and both caller and role have the required logging permissions. Narrower workflow grants, other bucket paths, and runtime behavior remain unresolved. The page documents iam:CreateServiceLinkedRole for airflow-serverless.amazonaws.com as required even when the service-linked role exists.
+  notes: The source demonstrates a DAG-factory YAML object in S3 and a subsequent StartWorkflowRun call on the ARN returned by CreateWorkflow. The evaluator requires complete workflow inventory, a free name, a same-Region versioned private bucket for source-written YAML, StartWorkflowRun covering generated IDs, logging grants, and the exact service-linked role or permission to create it. A concrete role edge additionally requires fresh reviewed evidence that the exact YAML was accepted, its new workflow ran, and a useful action succeeded under the exact execution role but not for the caller. Missing or conflicting execution evidence remains unresolved.
 
 - id: aws-mwaa-passrole-updateenvironment
   provider: aws
@@ -84,4 +110,4 @@
   mitigation: Constrain iam:PassRole for airflow.amazonaws.com / airflow-env.amazonaws.com and restrict airflow:UpdateEnvironment; pin aws:SourceArn of the environment in execution-role trust policies.
   references:
     - https://docs.aws.amazon.com/mwaa/latest/API/API_UpdateEnvironment.html
-  notes: The evaluator binds UpdateEnvironment to a usable collected environment and checks PassRole for that environment with iam:PassedToService and iam:AssociatedResourceArn. It also verifies a writable DAG object the passed role can list and read. Worker scheduling, encryption and runtime behavior remain conditional. Startup scripts, plugins and Airflow tokens are alternative code paths that remain unresolved. The same UpdateEnvironment call can set code paths that run as the current execution role without PassRole.
+  notes: The evaluator binds UpdateEnvironment to a usable collected environment and checks PassRole for that environment with iam:PassedToService and iam:AssociatedResourceArn. It also verifies a writable DAG object the passed role can list and read. A concrete role edge additionally requires fresh reviewed evidence that the update succeeded, the exact controlled DAG parsed, a task ran, and a useful action succeeded under the exact new execution role but not for the caller. Startup scripts, plugins and Airflow tokens are alternative code paths that remain unresolved. The same UpdateEnvironment call can set code paths that run as the current execution role without PassRole.

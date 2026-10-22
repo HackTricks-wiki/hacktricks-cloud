@@ -4,7 +4,7 @@
 # --- P0 ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#gameliftcreatefleet--iampassrole--run-code-on-fleet-ec2-as-a-passed-instance-role
   technique: gamelift:CreateGameServerGroup + iam:PassRole
-  reason: The game server group RoleArn is assumed by GameLift FleetIQ only to manage the Auto Scaling group and its instances; it is not exposed to code on the instances, which run with the launch template's instance profile (modelled by the EC2 launch-template / RunInstances entries). CreateFleet and CreateContainerFleet are modelled in aws-gamelift-passrole-createfleet.
+  reason: The game server group RoleArn is assumed by GameLift FleetIQ to manage the Auto Scaling group, not supplied as the instance profile of code running on those instances. The launch template's instance profile is a separate route with its own role and execution checks.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamsetdefaultpolicyversion
   technique: iam:SetDefaultPolicyVersion on a policy attached to a role the source can assume
   reason: An existing policy version must be proven to grant administrator access; the v2 selector only covers creating a new default version.
@@ -18,7 +18,7 @@
   reason: "Execution-table rows that run only fixed service logic (ingestion pipelines, matching workflows, scheduled queries, exports, transcoding, DynamoDB caching, telemetry reads) as the passed role; data-access confused deputy without code execution or credentials, same reasoning as #the-pattern."
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
   technique: "finspace:CreateKxUser / finspace:UpdateKxUser"
-  reason: "The kdb user's iamRole identifies which IAM principal may obtain a connection string for that user; binding a role does not vend that role's credentials to the source. Code execution as the role is modelled by aws-finspace-passrole-createkxcluster."
+  reason: "The kdb user's iamRole identifies which IAM principal may obtain a connection string for that user; binding a role does not vend that role's credentials to the source. The prior cluster-execution route is retained as an exclusion because AWS ended FinSpace access after October 7, 2026."
 
 # --- R0 ---
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-iam-persistence/README.md#restore-revoked-iam-roles-anywhere-certificates-by-weakening-the-crl
@@ -58,8 +58,7 @@
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#high-value-service-matrix
   technique: Cross-account resource sharing matrix (S3, KMS, Secrets Manager, SNS/SQS, RAM, snapshots, models, ...)
-  reason: Rows are data exposure, injection or persistence. Role-bearing rows are modelled by their service entries (aws-sts-assumerole-trusted, aws-ecr-push-consumed-tag, aws-lambda-updatefunctionconfiguration,
-    aws-ssm-updatedocument-defaultversion, CodeArtifact entries). A Service Catalog portfolio share provisions in the recipient account under that account's own launch role, and ds:ShareDirectory only lets
+  reason: Rows mix data exposure, injection and persistence. Some role-bearing paths remain conditional candidates, including ECR image consumption, Lambda execution-wrapper changes and SSM document consumers; this matrix does not establish their resource or execution joins. A Service Catalog portfolio share provisions in the recipient account under that account's own launch role, and ds:ShareDirectory only lets
     the consumer domain-join its own workloads.
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/resource-policy-and-shared-resource-attacks.md#messaging-and-event-injection
@@ -84,7 +83,7 @@
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/historical-cross-account-vulnerabilities.md#amazon-datazone-associateenvironmentrole-confused-deputy-2024
   technique: DataZone AssociateEnvironmentRole cross-account confused deputy
-  reason: Fixed vulnerability; the current same-account technique is aws-datazone-passrole-associateenvironmentrole.
+  reason: AWS fixed the cross-account confused-deputy issue. The separate same-account AssociateEnvironmentRole route remains a conditional candidate because its project membership, scoped credential and role joins are not yet established.
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-identity-center-and-sso-unauthenticated-enum/README.md#aws-device-code-phishing
   technique: Identity Center device-code phishing
@@ -92,7 +91,7 @@
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-codebuild-unauthenticated-access/README.md#buildspecyml
   technique: Write access to an external repository consumed by CodeBuild
-  reason: Needs write access to an external SCM repository (GitHub/Bitbucket/GitLab) not represented in the snapshot; AWS-side sources are modelled by aws-codecommit-gitpush-pipeline-source and aws-codebuild-s3-source-poisoning.
+  reason: External SCM write access and the exact repository-to-build consumer are not collected. CodeCommit branch and S3 source-object variants are also conditional candidates until their source, execution and role joins are verified.
   source_revision: 6fb9ac51fd
 - source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-codebuild-unauthenticated-access/README.md#self-hosted-github-actions-runners-in-aws-codebuild
   technique: GitHub workflow running on a CodeBuild-hosted runner

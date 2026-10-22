@@ -137,16 +137,14 @@
     the exact source action, resource, credential subject and effective added permissions before restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-cognito-enum/cognito-user-pools.md#directory-and-client-secret-disclosure
   technique: aws-cognito-describeidentityprovider-upstream-client-secret
-  reason: 'Recover an upstream identity provider''s OAuth client credential: no source IAM action or resource is
-    declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s
-    permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject and effective
-    added permissions before restoring.'
+  reason: 'DescribeIdentityProvider can return an upstream OAuth client secret. This credential identifies the
+    application at that provider; it does not authenticate an upstream user or issue AWS IAM credentials. A later
+    user login and Cognito token-to-role mapping would be separate routes with their own exact evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-directory-secret-disclosure-post-exploitation/README.md#iam-reads-that-expose-directory-data-and-idp-client-secrets
   technique: aws-cognito-upstream-idp-client-secret
-  reason: 'Read upstream social or OIDC provider client secret: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'This is the same upstream application-client credential read as DescribeIdentityProvider. The secret
+    alone cannot identify or authenticate a user and does not vend another AWS principal; any downstream identity
+    route needs a separately established user login and token-to-role mapping.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-connect-post-exploitation/README.md#collect-contact-metadata-attributes-references-and-files
   technique: aws-connect-contact-credential
   reason: 'Recover a credential persisted in Connect contact attributes or attached files: no source IAM action
@@ -185,10 +183,11 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-datazone-persistence/README.md#add-an-attacker-profile-as-a-project-owner
   technique: aws-datazone-createprojectmembership-owner
-  reason: 'Grant a controlled DataZone profile project ownership: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'CreateProjectMembership can grant an allowed, controlled DataZone profile project membership, but that
+    alone is application authorization. A role edge also needs project-owner or domain authorization, the domain-unit
+    membership policy, the controlled profile with GetEnvironmentCredentials, an active environment in that project,
+    its exact associated IAM role and the effective restrictions on the issued session. The current inventory does
+    not join these facts, so a bare CreateProjectMembership grant must not imply the whole role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ec2-ebs-ssm-and-vpc-post-exploitation/README.md#ec2describelaunchtemplateversions-ec2describelaunchtemplates-optional
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2describelaunchtemplateversions-ec2describelaunchtemplates-optional
   source_revision: 3ad99dc7ac
@@ -211,34 +210,43 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/eventbridgescheduler-enum.md#eventbridge-rule-targets
   technique: aws-events-listtargets-static-credential
-  reason: 'Recover another identity credential from static rule target Input: no source IAM action or resource is
-    declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s
-    permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject and effective
-    added permissions before restoring.'
+  reason: 'ListTargetsByRule can disclose static Input or InputTemplate content, but most target payloads are not
+    AWS credentials. A principal edge requires a complete usable credential tuple, a verified exact IAM subject and
+    additional effective authority. A target RoleArn or secret ARN is only a locator. The current inventory does not
+    safely extract and verify such credential material, so the read grant alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-healthomics-enum.md#cloudtrail-and-stealth
   technique: aws-healthomics-cloudtrail-workflow-zip-credential
-  reason: 'Recover another identity credential from a logged HealthOmics workflow ZIP: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'CloudTrail may contain the base64 definitionZip from CreateWorkflow, but neither
+    the HealthOmics page nor CloudTrail event metadata establishes that the ZIP contains AWS
+    credentials. The source might read the event through CloudTrail, a trail S3 object or a
+    separate log store, so the required read action and exact event resource also vary. A
+    principal edge needs the actual decoded ZIP, a complete usable credential, its verified
+    AWS principal and additional effective authority; no such content is inventoried by the
+    CSPM. Do not infer another role from the ability to read a workflow event.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#enumerate-and-read-cdc-streams
   technique: aws-keyspaces-cdc-credential-record
-  reason: 'Recover another identity credential from a Keyspaces CDC record: no source IAM action or resource is
-    declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s
-    permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject and effective
-    added permissions before restoring.'
+  reason: 'Keyspaces CDC GetRecords can return changed table values on a permitted exact
+    stream, but the stream API does not identify those values as AWS credentials. A principal
+    edge requires an actual record with a complete usable credential, verified AWS subject
+    and extra effective authority, plus the source''s GetStream/GetShardIterator/GetRecords
+    rights on that stream. The CSPM does not collect stream contents or validate credential
+    subjects, so stream-read permission alone cannot establish this route.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-keyspaces-enum.md#connect-to-cql-with-sigv4
   technique: aws-keyspaces-select-credential-row
-  reason: 'Recover another identity credential from a Keyspaces table row: no source IAM action or resource is declared
-    in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'cassandra:Select on an exact user table permits reading its rows, with system
+    table access often needed by CQL clients, but neither the permission nor table schema
+    proves any row contains an AWS credential. A principal edge needs an actual complete
+    usable credential row, verified AWS subject and extra effective authority. The CSPM
+    does not read customer table rows or validate credential subjects; table-read permission
+    alone is data access, not another IAM principal.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#lambda-durable-executions
   technique: aws-lambda-durablehistory-secret-identity
-  reason: 'Recover a distinct identity credential from Lambda durable history: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'GetDurableExecutionHistory with IncludeExecutionData can reveal retained step
+    inputs, results and callbacks for an exact durable execution; a customer-managed KMS key
+    also requires caller kms:Decrypt. The API does not identify that content as AWS credentials.
+    A role edge would need a real complete usable credential in the returned history, its
+    verified AWS principal and added authority. The CSPM does not collect execution payloads
+    or validate credential subjects, so history-read permission alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lambda-enum.md#enumeration
   technique: aws-lambda-getfunction-package-secret-identity
   reason: 'Recover a distinct identity credential from Lambda deployment package: no source IAM action or resource
@@ -259,10 +267,12 @@
     subject and effective added permissions before restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-lex-v2-enum.md#runtime-sessions-and-stored-utterances
   technique: aws-lex-getsession-other-application-session
-  reason: 'Recover another user application session from Lex GetSession: no source IAM action or resource is declared
-    in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'Lex GetSession returns a bot conversation state and its session attributes for
+    the supplied bot alias, locale and session ID. These values may expose application data,
+    but a Lex session ID is not an IAM or STS credential and GetSession does not grant the
+    caller another AWS principal. If a particular application stores an AWS secret in a
+    session attribute, that requires separate content and credential-subject evidence.
+    Keep generic application-session disclosure outside the principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-acm-persistence/README.md#register-an-attacker-controlled-acme-certificate-account
   technique: aws-pa-persist-s01-01
   reason: 'Create EAB for an existing issuance role, recover binding, register ACME account: no source IAM action
@@ -271,10 +281,12 @@
     subject and effective added permissions before restoring.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation/README.md#harvest-db-credentials-via-rds-proxy-auth-secrets-rdsdescribedbproxies--secretsmanagergetsecretvalue
   technique: aws-pa-s03-4-rds-proxy-auth-secret
-  reason: 'Read RDS Proxy backend database credentials: no source IAM action or resource is declared in requires.
-    The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'RDS Proxy auth secrets hold database usernames and passwords for backend
+    connections. DescribeDBProxies can identify a configured secret and GetSecretValue may
+    disclose its value, but that credential authenticates a database user, not an IAM role.
+    End-to-end IAM-authenticated proxies may have no backend password secret. Report the
+    database credential exposure separately; the role target in the retired YAML was an
+    unsupported principal-to-principal claim.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-managed-blockchain-persistence/README.md#establish-an-attacker-owned-consortium-member
   technique: aws-peaso-establish-an-attacker-owned-consortium-member
   reason: 'Join Fabric consortium with controlled member: no source IAM action or resource is declared in requires.
@@ -302,10 +314,11 @@
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-msk-post-exploitation/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
   technique: aws-s05-04-read-public-msk-sasl-scram-secret
-  reason: 'Read public MSK SASL/SCRAM secret: no source IAM action or resource is declared in requires. The conditional
-    aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'An MSK-associated Secrets Manager secret contains a Kafka SASL/SCRAM username
+    and password. Reading that secret may permit broker authentication when network access
+    and Kafka ACLs allow it, but the password is not an IAM or STS credential and gives no
+    other AWS principal authority. The retired role target conflated Kafka topic access with
+    AWS principal escalation; retain the credential exposure as a separate data-plane issue.'
   source_revision: 1fb542ff27
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdagetfunction--download-a-function-deployment-package
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunction--download-a-function-deployment-package
@@ -333,10 +346,12 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#studio-presigned-url-to-zeppelin-execution
   technique: aws-s05-28-studio-presigned-url-to-zeppelin-execution
-  reason: 'Studio presigned URL to Zeppelin execution: no source IAM action or resource is declared in requires.
-    The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'Implemented by the active aws-flink-studio-presigned-url route. The evaluator
+    joins a collected RUNNING INTERACTIVE application ARN to its exact ServiceExecutionRole
+    and requires effective CreateApplicationPresignedUrl on that same ARN. The short-lived
+    bearer URL must still be used and the notebook must permit code or query execution, so
+    the outcome remains conditional. Keep this retired generated duplicate excluded to avoid
+    a second unsupported edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md#abusing-workmail-to-bypass-ses-sandbox
   technique: aws-s05-abusing-workmail-to-bypass-ses-sandbox
   reason: 'Abusing WorkMail to bypass SES sandbox: no source IAM action or resource is declared in requires. The
@@ -380,16 +395,19 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-transfer-family-post-exploitation/README.md#logsfilterlogevents--logsgetlogevents--recover-custom-idp-passwords-from-logs
   technique: aws-s05-logsfilterlogevents-logsgetlogevents-recover-custom-idp-passwords-from
-  reason: '`logs:FilterLogEvents` / `logs:GetLogEvents` — recover custom-IdP passwords from logs: no source IAM
-    action or resource is declared in requires. The conditional aws_role target relies on opaque evidence, so the
-    YAML cannot prove Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource,
-    credential subject and effective added permissions before restoring.'
+  reason: 'A custom Transfer Family identity provider may log the plaintext SFTP, FTP or
+    FTPS password it receives; FilterLogEvents or GetLogEvents could disclose that password
+    when the exact log group contains it. That password authenticates a Transfer user, not
+    an IAM or STS principal. A later file-transfer session may use a configured storage role
+    only for bounded S3/EFS operations and does not hand that role to the log reader. Keep
+    password leakage and file access as separate risks outside this principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-systems-manager-for-sap-post-exploitation/README.md#recover-configured-sap-hana-administrator-credentials
   technique: aws-s05-recover-configured-sap-hana-administrator-credentials
-  reason: 'Recover configured SAP HANA administrator credentials: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'GetDatabase returns the SecretId of a registered SAP HANA administrative
+    credential; a separate GetSecretValue grant may disclose its database username and
+    password. Those values authenticate a HANA database user, not another AWS IAM principal.
+    The retired role target therefore overclaimed a principal transition. Retain the HANA
+    credential exposure as a database issue outside this graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-thin-client-post-exploitation/README.md#thinclientupdateenvironment---redirect-devices-to-another-desktop-provider-or-idp-endpoint
   technique: aws-s05-thinclientupdateenvironment-redirect-devices-to-another-desktop-provid
   reason: '`thinclient:UpdateEnvironment` - Redirect devices to another desktop provider or IdP endpoint: no source
@@ -452,16 +470,15 @@
     restoring.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#identity-source-and-cross-account-boundaries
   technique: aws-verifiedpermissions-identity-source-impersonation
-  reason: 'Redirect application token trust to an attacker-controlled identity: no source IAM action or resource
-    is declared in requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove
-    Alice''s permission-to-action-to-subject chain. Reauthor the exact source action, resource, credential subject
-    and effective added permissions before restoring.'
+  reason: 'Changing a Verified Permissions identity source may let attacker-issued tokens map to
+    application Cedar identities. The token still cannot call AWS APIs without a separately
+    authorized SigV4 caller, and the policy store does not grant IAM role permissions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
   technique: aws-waf-sampled-request-session-replay
-  reason: 'Replay a session recovered from WAF request samples: no source IAM action or resource is declared in
-    requires. The conditional aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'Candidate only if a readable WAF sample contains a complete usable AWS credential
+    for an identified other IAM principal. A cookie, bearer token or X-Amz-Security-Token
+    alone proves only an application session or incomplete AWS credential. Require actual
+    unredacted secret material, validity and principal attribution before an IAM edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-timestream-post-exploitation/README.md#timestreamcreatescheduledquery--iampassrole--run-sql-and-downstream-writes-as-a-scheduled-query-role
   source_revision: 0d0ea06005
   technique: aws-audit-create-scheduled-query-to-exfiltrate-role-readable-secrets
@@ -546,10 +563,12 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-payment-cryptography-enum.md#resource-and-authorization-model
   technique: aws-payment-cryptography-crossaccount-key-policy
-  reason: 'Grant a controlled external principal payment-key operations: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'PutResourcePolicy on an owner-account primary key can grant selected payment-key
+    operations to a named principal. An external principal also needs its own identity-policy
+    Allow, and the source caller in the key-owning account is not thereby given that external
+    principal''s credentials or authority. A self-grant on the same IAM principal changes its
+    own key access, not a path to another principal. The retired entry identifies no second
+    principal controlled by the source; keep cross-account key sharing outside this graph.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-payment-cryptography-privesc/README.md#payment-cryptographyputresourcepolicy
   technique: aws-payment-cryptography-sameaccount-key-policy
   reason: 'Grant the source new operations on a primary payment key: the modeled target is terminal aws_verified_authority/bounded_authority,
@@ -612,10 +631,13 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-q-business-enum.md#data-accessors-and-resource-policies
   technique: aws-qbusiness-crossaccount-data-accessor
-  reason: 'Grant a controlled ISV accessor Q Business retrieval authority: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'A Q Business data accessor grants a registered ISV IAM role bounded
+    SearchRelevantContent access to one customer application and its permitted index data.
+    AWS requires an accessor, application policy/assignment and identity or tenant context;
+    the customer-side caller does not receive or control the ISV role by creating the accessor.
+    The registered role is another principal, but no source-to-role control or credential
+    transfer exists in this technique. Keep the cross-account data-sharing risk outside the
+    principal escalation graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaaddpermission
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddpermission
   source_revision: 3ad99dc7ac
@@ -690,16 +712,14 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#enumerate-stores-and-aliases
   technique: aws-verifiedpermissions-alias-rebind
-  reason: 'Rebind a production alias to a permissive policy store: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'Rebinding a policy-store alias may change decisions consumed by an application.
+    The alias is a Verified Permissions resource, not an IAM role, and the changed Cedar
+    decision does not give the source AWS principal another principal''s AWS permissions.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-verified-permissions-enum.md#exact-iam-boundaries
   technique: aws-verifiedpermissions-policy-app-admin
-  reason: 'Grant application privileges through a Cedar policy: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'A Cedar policy can grant an application identity admin actions inside that
+    application. The policy store does not alter IAM identity policies or create AWS
+    credentials, and its decision API does not execute the application action.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#as2-partner-certificate-substitution--impersonate-a-trading-partner
   technique: aws-v3-01-substitute-an-as2-partner-signing-certificate
   reason: 'Substitute an AS2 partner signing certificate: actions transfer:ImportCertificate, transfer:UpdateProfile
@@ -707,24 +727,26 @@
     new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-acm-persistence/README.md#register-an-attacker-controlled-acme-certificate-account
   technique: aws-v3-02-register-an-acme-account-with-a-binding-to-issue-certif
-  reason: 'Register an ACME account with a binding to issue certificates through its IAM role: actions acm:GetAcmeExternalAccountBindingCredentials
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate bounded role-backed certificate issuance, also tracked as aws-pa-persist-s01-01.
+    EAB credentials can register an ACME account, after which ACM authorizes issuance through the EAB role.
+    An exact route needs the active endpoint, accepted EAB, associated role, domain validation, and effective
+    acm:RequestCertificate permission. It does not grant the caller general AWS role credentials.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-appintegrations-persistence/README.md#appintegrations
   technique: aws-v3-03-replace-a-trusted-connect-workspace-application-with-at
-  reason: 'Replace a trusted Connect workspace application with attacker-controlled content: actions app-integrations:UpdateApplication
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'UpdateApplication can replace the origin and permissions of a Connect agent workspace application.
+    This gives a browser and contact-data foothold for eligible agents, but the page identifies no AWS IAM
+    principal or credential handed to the source. An agent browsing the application does not itself form an
+    exact AWS principal-to-principal route.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-a-hostile-extension-in-every-secure-browser-session
   technique: aws-v3-04-force-install-a-hostile-extension-in-workspaces-web-ses
-  reason: 'Force-install a hostile extension in WorkSpaces Web sessions: actions workspaces-web:UpdateBrowserSettings
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'UpdateBrowserSettings can force an extension into later WorkSpaces Secure Browser sessions.
+    It can affect pages those users visit, but no exact AWS principal, IAM credential, or role transfer is
+    identified by the policy setting alone. A separately observed credential would need its own route.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-workspaces-web-persistence/README.md#persist-an-attacker-controlled-portal-identity-provider
   technique: aws-v3-05-add-or-replace-a-workspaces-web-portal-saml-oidc-identi
-  reason: 'Add or replace a WorkSpaces Web portal SAML/OIDC identity provider: actions workspaces-web:CreateIdentityProvider
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'CreateIdentityProvider or UpdateIdentityProvider can let an attacker-operated IdP authenticate a
+    user to a standard WorkSpaces Secure Browser portal. This is portal access, not an AWS IAM role session;
+    neither the provider configuration nor browser login names an exact AWS principal gained by the source.'
 - source: src/pentesting-cloud/aws-security/aws-unauthenticated-enum-access/aws-cognito-user-pool-unauthenticated-access/README.md#multi-region-replicas-split-password-lockout-counters
   technique: aws-v3-06-use-independent-cognito-replica-lockout-counters-to-gue
   reason: 'Use independent Cognito replica lockout counters to guess a user password: no source permission/action
@@ -732,9 +754,14 @@
     the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-bedrock-post-exploitation/README.md#1-runtime-ssrf---mmds-credentials
   technique: aws-v3-07-agentcore-runtime-ssrf-to-its-execution-role-credential
-  reason: 'AgentCore Runtime SSRF to its execution-role credentials: no source permission/action is declared. The
-    required foothold or credential possession cannot be inferred from an AWS IAM principal, and the challenge evidence
-    is not collected in current snapshots.'
+  reason: 'AgentCore Runtime uses an execution role whose temporary credentials are
+    available inside its microVM, but AWS now requires MMDSv2 for new Runtime invocations.
+    A GET-only SSRF cannot reach token-protected credentials; AWS notes already-running
+    legacy sessions are unaffected by the invocation gate. A current route needs an exact
+    accessible runtime/session, a demonstrated SSRF that reaches tokenless MMDS in such a
+    live legacy session or obtains and uses an MMDSv2 token, the credential response, and
+    the runtime-to-role join. The CSPM collects none of those exploit/session facts, so
+    InvokeAgentRuntime or role trust alone cannot prove this edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ecs-post-exploitation/README.md#steal-the-container-instance-role-from-an-ecs-on-ec2-task
   technique: aws-v3-08-read-ec2-instance-profile-credentials-from-imds-inside
   reason: 'Read EC2 instance-profile credentials from IMDS inside an ECS task: no source permission/action is declared.
@@ -747,49 +774,72 @@
     the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#exfiltrate-lambda-credentials
   technique: aws-v3-10-read-lambda-execution-role-credentials-from-runtime-env
-  reason: 'Read Lambda execution-role credentials from runtime environment variables: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'AWS places temporary execution-role credentials in Lambda runtime environment
+    variables, but a caller needs a demonstrated way to read the process environment or
+    make the function reveal those variables. InvokeFunction alone does not provide that
+    read. An exact edge also needs the function-to-execution-role join and a credential
+    response proving usable role access. The CSPM cannot infer a vulnerable handler or
+    local process foothold from IAM permissions, so this generic post-exploitation route
+    remains excluded; separately modeled code-control routes may reach the role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-migration-hub-strategy-recommendations-post-exploitation/README.md#harvest-credentials-from-a-compromised-collector-host
   technique: aws-v3-11-harvest-the-strategy-recommendations-collector-aws-keys
-  reason: 'Harvest the Strategy Recommendations collector AWS keys from local configuration: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'A configured Strategy Recommendations collector host may store AWS access keys
+    in its local Docker configuration, but this route starts with local root, Docker control
+    or equivalent filesystem access, not with a defined Migration Hub IAM action. An AWS
+    principal edge needs proof that the source controls that exact host, the actual complete
+    usable key tuple, its verified IAM subject and added authority. CSPM IAM inventory
+    cannot infer local host compromise or secret contents, so keep this post-exploitation
+    route excluded.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/aws-lambda-privileged-event-consumer-injection.md#preconditions-and-discovery-without-list-permissions
   technique: aws-v3-12-drive-a-privileged-lambda-consumer-through-a-writable-e
-  reason: 'Drive a privileged Lambda consumer through a writable event source: actions sns:Publish are stated, but
-    the aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A producer can write to an SNS, SQS, Kinesis, DynamoDB, Logs or metric source
+    that an existing Lambda consumes, without direct InvokeFunction or PassRole. Invocation
+    alone is not a role edge: the exact enabled source-to-function join, function role, input
+    filter and handler behavior must show that a caller-controlled field drives a specific
+    privileged AWS operation and useful result. The CSPM does not inspect or verify handler
+    input-to-action semantics, so a producer grant alone cannot prove this route.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-core-post-exploitation/README.md#cross-service-pivot-publish-into-an-existing-iot-rule-and-lambda
   technique: aws-v3-13-publish-to-an-iot-rule-whose-lambda-action-misuses-atta
-  reason: 'Publish to an IoT rule whose Lambda action misuses attacker-controlled fields: actions iot:Publish are
-    stated, but the aws_verified_authority target does not identify an exact principal or encode a verified new
-    effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'iot:Publish can reach a Lambda only through an enabled rule whose SQL matches
+    the exact writable topic, whose Lambda action names the function, and whose function
+    policy allows the rule to invoke it. To establish a role edge, the handler must also
+    use attacker-controlled message fields to perform a specific privileged action under
+    its recorded role. The CSPM lacks that rule-to-function and handler-semantic proof, so
+    a matching topic permission or role ARN alone is insufficient.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lex-v2-post-exploitation/README.md#abuse-an-existing-code-hook-through-runtime-access
   technique: aws-v3-14-trigger-privileged-business-actions-through-a-lex-fulfi
-  reason: 'Trigger privileged business actions through a Lex fulfillment hook: actions lex:RecognizeText are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Lex runtime calls can supply slots to a configured fulfillment Lambda only when
+    the exact alias and intent have that hook enabled and the dialog reaches fulfillment.
+    This gives no raw Lambda role access; a principal edge would require observed handler
+    logic that maps caller-controlled slots to a specific privileged AWS action, the hook
+    function role and a useful result. The CSPM does not collect bot dialog or handler
+    semantics, so RecognizeText permission alone cannot prove such an edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-waf-post-exploitation/README.md#aws-waf-log-credential-harvesting-and-request-replay
   technique: aws-v3-15-replay-a-victim-application-session-recovered-from-waf
-  reason: 'Replay a victim application session recovered from WAF records: actions logs:FilterLogEvents are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate duplicate of aws-waf-sampled-request-session-replay across log and
+    sampled-request reads. Replaying a cookie or bearer token reaches an application session,
+    not automatically an AWS principal. An IAM edge requires an actually recorded complete
+    valid AWS credential and attribution to a distinct IAM user or role.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-device-farm-post-exploitation/README.md#take-over-a-running-remote-access-device
   technique: aws-v3-16-redeem-a-device-farm-session-endpoint-and-control-a-log
-  reason: 'Redeem a Device Farm session endpoint and control a logged-in test account: actions devicefarm:GetRemoteAccessSession
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetRemoteAccessSession can return interactive and Appium endpoints for one
+    running physical test-device session. Those endpoints may let the caller control a
+    logged-in app or test account on the device, but the device session is not another AWS
+    IAM principal and no role credential is returned. Any AWS credential later found inside
+    the app would require separate content and subject evidence. Keep device takeover as an
+    application-session issue outside this graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-gamelift-streams-post-exploitation/README.md#reconnect-to-an-active-or-disconnected-session
   technique: aws-v3-17-reconnect-to-another-user-s-live-gamelift-streams-appli
-  reason: 'Reconnect to another user’s live GameLift Streams application session: actions gameliftstreams:CreateStreamSessionConnection
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'CreateStreamSessionConnection can reconnect to an ACTIVE or
+    PENDING_CLIENT_RECONNECTION stream and preserve that application session state. The
+    resulting WebRTC access may expose an in-app user session or reachable private network,
+    but the API does not grant the reconnecting caller the streaming execution role or
+    another AWS principal. Treat this as application-session takeover, not an IAM role edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workspaces-web-post-exploitation/README.md#add-or-replace-an-attacker-controlled-identity-provider
   technique: aws-v3-18-attach-an-attacker-idp-to-a-workspaces-secure-browser-p
-  reason: 'Attach an attacker IdP to a WorkSpaces Secure Browser portal: actions workspaces-web:CreateIdentityProvider
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Same portal IdP route as aws-v3-05. A configured attacker provider can issue valid assertions
+    for WorkSpaces Secure Browser access, but the portal login is not an IAM role session. The page does
+    not identify an exact AWS principal gained by the source.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-sitewise-privesc/README.md#grant-yourself-access-to-a-legacy-sitewise-monitor-portal
   technique: aws-v3-19-grant-a-controlled-identity-sitewise-monitor-administra
   reason: Only the exact self-admin grant on one existing portal with reviewed before/after access is active as aws-sitewise-createaccesspolicy-portal-self-grant. The legacy controlled-other-identity target lacks a typed source-control join and remains excluded.
@@ -797,24 +847,30 @@
 
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-ivs-chat-room-token-post-exploitation/README.md#mint-a-room-token-and-join-the-data-plane
   technique: aws-v3-20-mint-an-ivs-chat-token-using-another-application-user-i
-  reason: 'Mint an IVS Chat token using another application user ID: actions ivschat:CreateChatToken are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'CreateChatToken can mint a room WebSocket token with an application-provided
+    userId and selected chat capabilities. That token may let the caller impersonate an
+    application user and send, receive or moderate messages in the room, but userId is not
+    an IAM principal and the token cannot call AWS APIs as another role. Keep this bounded
+    chat impersonation risk outside the AWS principal graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-audit-manager-post-exploitation/README.md#delegate-a-control-set-to-another-role
   technique: aws-v3-21-delegate-audit-manager-control-set-authority-to-an-atta
-  reason: 'Delegate Audit Manager control-set authority to an attacker-controlled role: actions auditmanager:BatchCreateDelegationByAssessment
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact role authority change. BatchCreateDelegationByAssessment names a role and
+    grants it control-set review authority, but an edge from the source requires proof that the source
+    controls or can assume that exact role, effective permission on the assessment and control set,
+    and the resulting delegation. This does not itself grant sts:AssumeRole or general role permissions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iot-wireless-post-exploitation/README.md#recover-wireless-device-onboarding-and-session-secrets
   technique: aws-v3-22-clone-a-wireless-device-with-recovered-lorawan-or-sidew
-  reason: 'Clone a wireless device with recovered LoRaWAN or Sidewalk keys: actions iotwireless:GetWirelessDevice
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetWirelessDevice may expose LoRaWAN or Sidewalk device keys, which can enable
+    device cloning or wireless traffic manipulation when the returned key type is usable.
+    Those keys identify a wireless device, not an IAM user or role, and do not authorize
+    AWS API calls as another principal. Keep this device-identity compromise outside the
+    principal escalation graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-supply-chain-post-exploitation/README.md#redirect-an-erp-connection-to-expose-credentials-used-by-the-instance-role
   technique: aws-v3-23-redirect-a-supply-chain-erp-connector-to-capture-a-dele
-  reason: 'Redirect a Supply Chain ERP connector to capture a delegated ERP credential: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'Redirecting a Supply Chain ERP connector may send a stored ERP username and password to
+    an attacker endpoint if the service authenticates there. The credential belongs to the downstream
+    ERP or database, not to the AWS instance role that reads it. No reusable AWS principal credential
+    or exact principal-to-principal edge is identified by this route.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-invoicing-and-billing-post-exploitation/README.md#steal-or-sabotage-a-procurement-portal-connection
   technique: aws-v3-24-recover-or-redirect-procurement-portal-authentication-m
   reason: 'Recover or redirect procurement-portal authentication material: actions invoicing:GetProcurementPortalPreference
@@ -822,66 +878,79 @@
     new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-cognito-directory-secret-disclosure-post-exploitation/README.md#iam-reads-that-expose-directory-data-and-idp-client-secrets
   technique: aws-v3-25-use-a-cognito-idp-client-secret-as-the-oauth-applicatio
-  reason: 'Use a Cognito IdP client secret as the OAuth application client: actions cognito-idp:DescribeUserPoolClient
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'DescribeUserPoolClient may reveal a confidential Cognito application client secret.
+    The secret can authenticate an OAuth client for permitted flows, but it is not an IAM user or
+    role credential and does not by itself grant AWS API authority as another principal. A separate
+    identity-pool role mapping would need exact proof before modeling an IAM edge.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-managed-blockchain-post-exploitation/README.md#recover-an-accessor-bearer-token
   technique: aws-v3-26-reuse-an-amazon-managed-blockchain-accessor-billing-tok
-  reason: 'Reuse an Amazon Managed Blockchain accessor billing token: actions managedblockchain:GetAccessor are
-    stated, but the aws_verified_authority target does not identify an exact principal or encode a verified new
-    effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetAccessor can return a BILLING_TOKEN for Ethereum or Polygon JSON-RPC access
+    and charge usage to the accessor owner. The token is a Managed Blockchain service
+    credential, not an AWS IAM or STS session; it neither discloses wallet private keys nor
+    grants another AWS principal authority. Keep paid-node misuse as a separate issue.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-kinesis-video-streams-post-exploitation/README.md#recover-turn-credentials-and-impersonate-webrtc-peers
   technique: aws-v3-27-join-kinesis-video-signaling-as-a-master-or-viewer-peer
-  reason: 'Join Kinesis Video signaling as a master or viewer peer: actions kinesisvideo:ConnectAsViewer are stated,
-    but the aws_verified_authority target does not identify an exact principal or encode a verified new effective
-    permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetIceServerConfig returns temporary TURN relay credentials for one signaling
+    channel; joining signaling separately requires the source principal to have
+    ConnectAsViewer or ConnectAsMaster on that channel. TURN credentials authenticate to
+    the relay, not to IAM or STS, and the signed WebSocket call still uses the source
+    principal. Media exposure or peer impersonation is a bounded application-plane risk,
+    not a transition to another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statesstartexecution---input-injection-into-dangerous-sinks
   technique: aws-v3-28-reach-a-lambda-execution-role-through-unsafe-workflow-i
-  reason: 'Reach a Lambda execution role through unsafe workflow input deserialization: actions states:StartExecution
-    are stated, but the role edge still relies on an uncollected challenge fact and does not establish a concrete
-    usable target role from current evidence.'
+  reason: 'Candidate Lambda role route only when an exact state machine passes caller-controlled input
+    to a known Lambda handler whose reviewed code executes that input. StartExecution permission,
+    state-machine definition, Lambda target and handler behavior must be joined before naming its
+    execution role as reachable. A mere invocation never proves code execution.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-stepfunctions-post-exploitation/README.md#statesstartexecution---input-injection-into-dangerous-sinks
   technique: aws-v3-29-redirect-a-credentialed-step-functions-http-task-to-cap
-  reason: 'Redirect a credentialed Step Functions HTTP Task to capture its connection credential: actions states:StartExecution
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A dynamic HTTP Task endpoint may receive the fixed EventBridge Connection credential
+    when caller input controls the URL and the execution role permits the request. This can expose
+    an API key or remote-service credential, but the route does not name another IAM principal or
+    grant the caller the state-machine execution role. Preserve it as a separate credential risk.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambda-durable-callback-result-injection
   technique: aws-v3-30-inject-a-lambda-durable-callback-result-that-triggers-a
-  reason: 'Inject a Lambda durable callback result that triggers a privileged workflow branch: actions lambda:SendDurableExecutionCallbackSuccess
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate role-backed workflow action. A valid pending callback ID, permission on its exact
+    durable execution and reviewed function logic must show that attacker-supplied callback output
+    reaches an AWS action under the function role. A callback permission alone neither discovers an ID
+    nor proves that the result controls a privileged branch.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-iam-enum.md#local-enumeration
   technique: aws-v3-31-steal-a-different-user-s-cached-iam-identity-center-acc
-  reason: 'Steal a different user''s cached IAM Identity Center access token and exchange it for assigned role credentials:
-    no source permission/action is declared. The required foothold or credential possession cannot be inferred from
-    an AWS IAM principal, and the challenge evidence is not collected in current snapshots.'
+  reason: 'Candidate local credential route. An IAM Identity Center token can obtain assigned AWS
+    role credentials while valid, but the page gives no AWS permission that reads another user''s
+    local cache. Require an observed host/file foothold, usable token, account-role assignment and
+    exact resulting role before adding an AWS principal edge.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-iam-enum.md#local-enumeration
   technique: aws-v3-32-reuse-another-user-s-cached-sts-role-credentials-or-sta
-  reason: 'Reuse another user''s cached STS role credentials or static IAM user keys from local AWS CLI files: no
-    source permission/action is declared. The required foothold or credential possession cannot be inferred from
-    an AWS IAM principal, and the challenge evidence is not collected in current snapshots.'
+  reason: 'Candidate local credential route. A different user''s AWS CLI files may contain live
+    cached STS credentials or IAM user keys, but IAM permissions alone do not give access to that
+    user''s filesystem. Require observed file access, usable credential material, credential owner
+    and effective target permissions before an exact principal edge.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-ec2-ebs-elb-ssm-vpc-and-vpn-enum/README.md#local-enumeration
   technique: aws-v3-33-read-aws-vpn-client-temporary-credentials-from-another
-  reason: 'Read AWS VPN Client temporary credentials from another user''s local profile: no source permission/action
-    is declared. The required foothold or credential possession cannot be inferred from an AWS IAM principal, and
-    the challenge evidence is not collected in current snapshots.'
+  reason: 'Candidate local credential route. AWS VPN Client may store temporary AWS credentials
+    for its metrics role in a local file, but the page gives no AWS permission to read another
+    user''s profile. Require observed host/file access, valid credentials and a verified resulting
+    role whose authority exceeds the source before adding an edge.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-resource-groups-tagging-api-enum.md#bulk-tagging-and-tag-sync-boundaries
   technique: aws-v3-34-change-an-authorization-tag-to-satisfy-a-tag-conditione
-  reason: 'Change an authorization tag to satisfy a tag-conditioned policy and gain higher permissions: actions
-    tag:TagResources are stated, but the aws_verified_authority target does not identify an exact principal or encode
-    a verified new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact ABAC authority change. TagResources also requires the target service''s
+    native tagging action; a usable route needs both permissions on the exact resource, a policy
+    condition that grants a specific new AWS action for the chosen tag value, and no explicit deny.
+    TagResources alone is not an authorization bypass or a principal transition.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-devops-agent-enum.md#inventory-private-connectivity
   technique: aws-v3-35-use-a-compromised-devops-agent-integration-endpoint-as
-  reason: 'Use a compromised DevOps Agent integration endpoint as a credential relay or malicious tool-response
-    channel: no source permission/action is declared. The required foothold or credential possession cannot be inferred
-    from an AWS IAM principal, and the challenge evidence is not collected in current snapshots.'
+  reason: 'Candidate only with a demonstrated compromised endpoint and exact DevOps Agent tool
+    path that forwards AWS credentials or causes a privileged AWS action under a named agent role.
+    Service metadata and endpoint inventory alone do not prove that the source controls the endpoint
+    or that an agent follows a malicious response.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-chime-sdk-post-exploitation/README.md#chimecreateappinstanceuser--chimecreateappinstanceadmin
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-chime-privesc/README.md#chimecreateappinstanceuser--chimecreateappinstanceadmin
   source_revision: 3ad99dc7ac
   technique: aws-v3-36-chime-createappinstanceuser-admin
-  reason: 'Chime CreateAppInstanceUser/Admin: actions chime:CreateAppInstanceUser, chime:CreateAppInstanceAdmin
-    are stated, but the aws_verified_authority target does not identify an exact principal or encode a verified
-    new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'A Chime AppInstance user or bot can be promoted to messaging administrator, but this
+    service identity is not another IAM principal. Chime still checks the calling AWS session''s
+    IAM permissions for each messaging action, so the promotion alone creates no AWS role edge.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-organizations-prinvesc/README.md#dismantling-scp-guardrails--organizationsdetachpolicy-updatepolicy-disablepolicytype-moveaccount
   technique: aws-v3-37-scp-guardrail-removal
   reason: 'SCP guardrail removal: actions organizations:DetachPolicy are stated, but the aws_verified_authority
@@ -894,14 +963,16 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-appstream-persistence/README.md#appstreamcreateuser--batchassociateuserstack--regional-user-pool-foothold
   technique: aws-v3-39-appstream-user-pool-stack-login
-  reason: 'AppStream user-pool stack login: actions appstream:CreateUser, appstream:BatchAssociateUserStack are
-    stated, but the role edge still relies on an uncollected challenge fact and does not establish a concrete usable
-    target role from current evidence.'
+  reason: 'Candidate conditional fleet-role path. CreateUser and BatchAssociateUserStack give a
+    service-local portal login after the email/password flow; an AWS role edge additionally needs
+    an assigned usable stack, application or desktop command execution, and a fleet with an
+    IAM machine role whose credentials are accessible from that session.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-cloudwatch-omni-persistence/README.md#cloudwatchcreateaccessgrant--install-a-space-admin-principal
   technique: aws-v3-40-cloudwatch-omni-space-admin
-  reason: 'CloudWatch Omni Space Admin: actions cloudwatch:CreateAccessGrant are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact grant to a named IAM principal. CreateAccessGrant can give that user
+    or role SPACE_ADMIN in one Omni space, but the source needs proven control of that principal
+    and the target still needs valid authentication, IAM authorization and the space operator
+    role. The grant does not create credentials or make a role assumable.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-elasticache-persistence/README.md#elasticachemodifyuser--hijack-or-widen-an-existing-rbac-user
   technique: aws-v3-41-elasticache-attached-rbac-user-takeover
   reason: 'ElastiCache attached RBAC user takeover: actions elasticache:ModifyUser are stated, but the aws_verified_authority
@@ -924,68 +995,79 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-chime-sdk-persistence/README.md#add-an-attacker-controlled-messaging-identity
   technique: aws-v3-45-chime-sdk-admin-persistence
-  reason: 'Chime SDK admin persistence: actions chime:CreateAppInstanceAdmin are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'CreateAppInstanceAdmin can grant a controlled Chime user or bot persistent messaging
+    admin status. It does not grant that identity AWS IAM permissions; later calls still require
+    the caller''s own authorized AWS session. This duplicates the bounded service identity risk
+    reviewed under aws-v3-36 rather than an IAM principal transition.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-sagemaker-persistence/README.md#set-lifecycle-configuration-on-sagemaker-studio
   technique: aws-v3-46-sagemaker-domain-lifecycle
-  reason: 'SageMaker domain lifecycle: actions sagemaker:UpdateDomain are stated, but the role edge still relies
-    on an uncollected challenge fact and does not establish a concrete usable target role from current evidence.'
+  reason: 'Candidate domain-level Studio lifecycle route. The active catalog models the narrower
+    user-profile update as aws-sagemaker-attach-studio-lifecycle-config-user-profile. A domain
+    default needs an exact target profile or space, compatible controlled lifecycle config,
+    effective UpdateDomain permission and later app start before naming the execution role.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-connect-persistence/README.md#create-a-durable-connect-administrator
   technique: aws-v3-47-connect-createuser
-  reason: 'Connect CreateUser: actions connect:CreateUser are stated, but the aws_verified_authority target does
-    not identify an exact principal or encode a verified new effective permission. The entry is explicitly unresolved
-    pending reviewed challenge evidence.'
+  reason: 'CreateUser can create a Connect-managed administrator login when the exact instance,
+    Admin security profile and routing profile are authorized. The login controls the contact
+    center, but it does not create AWS IAM credentials or grant another AWS principal authority.
+    SAML mode has additional federation prerequisites rather than an automatic role session.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-redshift-persistence/README.md#redshift-serverlessupdatenamespace---reset-the-serverless-database-administrator
   technique: aws-v3-48-redshift-serverless-admin-reset
-  reason: 'Redshift Serverless ADMIN reset: actions redshift-serverless:UpdateNamespace are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'UpdateNamespace can reset a Redshift Serverless database administrator password.
+    The resulting SQL login is a database identity, not an IAM user or role, and the page
+    identifies no AWS principal credential acquired by the source.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-healthlake-persistence/README.md#take-over-smart-on-fhir-authorization
   technique: aws-v3-49-healthlake-smart-authorizer
-  reason: 'HealthLake SMART authorizer: actions healthlake:UpdateFHIRDatastore are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate bounded role-backed FHIR action. A modified SMART authorizer can return a
+    role ARN for HealthLake to assume, but exact authority needs the datastore, controlled token
+    validator, trusted role with FHIR permissions, Lambda invoke policy and accepted bearer token.
+    The caller does not receive general credentials for the returned role.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-odb-persistence/README.md#retain-oracle-admin-access-with-a-known-password
   technique: aws-v3-50-oracle-autonomous-database-admin
-  reason: 'Oracle Autonomous Database ADMIN: actions odb:UpdateAutonomousDatabase are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'UpdateAutonomousDatabase can set a known Oracle ADMIN password. That credential
+    controls the private database when reachable, but it does not grant AWS IAM or OCI tenancy
+    permissions and identifies no second AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-firewall-manager-persistence/README.md#retaining-the-fms-administrator-role
   technique: aws-v3-51-firewall-manager-delegate
-  reason: 'Firewall Manager delegate: actions fms:PutAdminAccount are stated, but the aws_verified_authority target
-    does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate cross-account service authority. FMS admin designation names an AWS
+    account, not a particular IAM principal. An exact edge needs a controlled identity in that
+    member account, effective FMS policy permissions, valid organization prerequisites and the
+    resulting admin designation; it does not confer general IAM administration.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-network-security-manager-persistence/README.md#network-security-managerputadminaccount--retain-delegated-network-security-administration
   technique: aws-v3-52-network-security-manager-delegate
-  reason: 'Network Security Manager delegate: actions network-security-manager:PutAdminAccount are stated, but the
-    aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate cross-account service authority. PutAdminAccount designates a member
+    account rather than an IAM principal. An exact source-to-principal edge needs a controlled
+    identity there with effective Network Security Manager actions, organization all-features
+    and trusted-access prerequisites, and a scope that covers the intended resources.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-timestream-persistence/README.md#timestream-for-influxdb-plant-a-native-api-token
   technique: aws-v3-53-influxdb-admin-credentials
-  reason: 'InfluxDB admin credentials: actions secretsmanager:GetSecretValue are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'GetDbInstance and GetSecretValue can expose the InfluxDB engine administrator
+    credential, from which a native database token can be planted. Neither the password nor
+    token is an IAM credential or another AWS principal; its impact is limited to the
+    reachable InfluxDB service.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-lightsail-persistence/README.md#download-instance-ssh-keys--db-passwords
   technique: aws-v3-54-lightsail-db-master-password
-  reason: 'Lightsail DB master password: actions lightsail:GetRelationalDatabaseMasterUserPassword are stated, but
-    the aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'GetRelationalDatabaseMasterUserPassword returns a database password, not IAM
+    credentials. Lightsail instance SSH keys can offer a separate host foothold, but the
+    page does not identify an instance IAM role, usable metadata credential or exact
+    principal transition from that host.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-opensearch-access-policy-persistence/README.md#esupdatedomainconfig--domain-access-policy-takeover
   technique: aws-v3-55-opensearch-domain-policy
-  reason: 'OpenSearch domain policy: actions es:UpdateDomainConfig are stated, but the aws_verified_authority target
-    does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact resource-policy authority change. UpdateDomainConfig can name an
+    attacker-controlled IAM principal for ESHttp actions, but a definite edge needs control
+    of that principal, effective update authorization, completed configuration, reachable
+    endpoint and any fine-grained-access or explicit-deny limits. It does not assume a role.'
 - source: src/pentesting-cloud/aws-security/aws-persistence/aws-marketplace-persistence/README.md#aws-marketplaceputresourcepolicy--cross-account-seller-entity-control
   technique: aws-v3-56-marketplace-seller-entity-policy
-  reason: 'Marketplace seller entity policy: actions aws-marketplace:PutResourcePolicy are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate exact cross-account entity grant. PutResourcePolicy can allow a named
+    external IAM principal to describe or change one seller entity, but the source must
+    control that principal and the external identity still needs its own applicable IAM
+    authorization. The grant does not give general access to the seller account.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-workmail-enum.md#exact-impersonation-to-mailbox-chain
   technique: aws-v3-57-workmail-impersonation-role
-  reason: 'WorkMail impersonation role: actions workmail:AssumeImpersonationRole are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'AssumeImpersonationRole returns a short-lived WorkMail EWS bearer token for
+    permitted mailboxes. The WorkMail impersonation role is not an IAM role and its token
+    cannot call AWS APIs as the mailbox user or another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-cross-account-attacks/organizations-and-central-account-pivots.md#scp-and-rcp-gaps
   technique: aws-v3-58-leaveorganization-scp-escape
   reason: 'LeaveOrganization SCP escape: actions organizations:LeaveOrganization are stated, but the aws_verified_authority
@@ -1016,9 +1098,10 @@
     cannot be inferred from an AWS IAM principal, and the challenge evidence is not collected in current snapshots.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-devops-agent-post-exploitation/README.md#disable-and-re-enable-the-operator-app-with-an-attacker-idp
   technique: aws-v3-64-devops-agent-operator-app-idp-swap
-  reason: 'DevOps Agent operator app IdP swap: actions aidevops:DisableOperatorApp, aidevops:EnableOperatorApp,
-    iam:PassRole are stated, but the aws_verified_authority target does not identify an exact principal or encode
-    a verified new effective permission. The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate bounded operator-role path. DisableOperatorApp and EnableOperatorApp can
+    install an attacker IdP and pass an exact trusted operator role. An edge requires both
+    app actions, effective PassRole, compatible role trust, accepted attacker authentication
+    and proof of the operator actions reachable through that role; no raw STS key is returned.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-iam-post-exploitation/README.md#policy-and-permission-boundary-deletion
   technique: aws-v3-65-remove-own-explicit-deny
   reason: 'Remove own explicit Deny: actions iam:DeleteUserPolicy are stated, but the aws_verified_authority target
@@ -1026,31 +1109,33 @@
     unresolved pending reviewed challenge evidence.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-evs-managed-vcf-and-esx-credentials
   technique: aws-v3-66-evs-vmware-admin-secret
-  reason: 'EVS VMware admin secret: actions evs:GetEnvironment, secretsmanager:GetSecretValue are stated, but the
-    aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'EVS environment secrets can contain VMware vCenter, NSX, SDDC Manager or ESX
+    administrator credentials. Those are VMware control-plane identities, not AWS IAM
+    credentials; reading the secret does not identify another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-evs-post-exploitation/README.md#recover-connector-credentials-for-an-existing-vcf-appliance
   technique: aws-v3-67-evs-connector-secret
-  reason: 'EVS connector secret: actions evs:GetEnvironment, secretsmanager:GetSecretValue are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'EVS connector secrets contain credentials for an existing VCF appliance.
+    The account authenticates to VMware, not AWS IAM, so the secret read does not
+    give the source an exact second AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-firewall-manager-post-exploitation/README.md#organizationsdescribeorganization--fmsassociateadminaccount-fmsdisassociateadminaccount-fmsputadminaccount
   technique: aws-v3-68-firewall-manager-admin-action
-  reason: 'Firewall Manager admin action: actions fms:AssociateAdminAccount are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate duplicate of aws-v3-51-firewall-manager-delegate. AssociateAdminAccount
+    changes the designated FMS administrator account, not a specific IAM principal. An exact
+    source-to-principal route needs a controlled identity in that account with usable FMS
+    permissions and verified organization/admin prerequisites.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-elasticache-post-exploitation/README.md#elasticachemodifyreplicationgroup--add-an-attacker-known-legacy-auth-token
   technique: aws-v3-69-elasticache-legacy-auth-rotation
-  reason: 'ElastiCache legacy AUTH rotation: actions elasticache:ModifyReplicationGroup are stated, but the aws_verified_authority
-    target does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'ModifyReplicationGroup can add a known legacy cache AUTH token where that mode
+    is enabled. The token authenticates to Valkey or Redis data, not to AWS IAM, and
+    gives no credentials for another AWS principal.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-inspector-post-exploitation/README.md#inspector2disabledelegatedadminaccount-inspector2enabledelegatedadminaccount--organizationslistdelegatedadministrators--organizationsenableawsserviceaccess--iamcreateservicelinkedrole
   technique: aws-v3-70-inspector-delegated-administrator
-  reason: 'Inspector delegated administrator: actions inspector2:EnableDelegatedAdminAccount are stated, but the
-    aws_verified_authority target does not identify an exact principal or encode a verified new effective permission.
-    The entry is explicitly unresolved pending reviewed challenge evidence.'
+  reason: 'Candidate cross-account Inspector authority. EnableDelegatedAdminAccount names
+    a member account, not an IAM principal. An exact edge needs management-account
+    authorization, organization all-features and incumbent-admin handling, plus a controlled
+    identity in the chosen account with effective Inspector management actions.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-workmail-post-exploitation/README.md#sending-paths--telemetry-gaps
   technique: aws-v3-71-workmail-resetpassword
-  reason: 'WorkMail ResetPassword: actions workmail:ResetPassword are stated, but the aws_verified_authority target
-    does not identify an exact principal or encode a verified new effective permission. The entry is explicitly
-    unresolved pending reviewed challenge evidence.'
+  reason: 'ResetPassword can give the caller a WorkMail mailbox login. The mailbox is an
+    application identity, not an IAM user or role, and the password does not authorize
+    AWS API calls as another principal.'

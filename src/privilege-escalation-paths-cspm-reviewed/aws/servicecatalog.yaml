@@ -28,6 +28,8 @@
       via_resource_type: servicecatalog_product
     scope: same_account
     aggregate_as: "Service Catalog launch-constraint roles in {account}"
+  preconditions:
+    - servicecatalog_new_artifact_effect_unverified
   conditions:
     - id: product_owned
       description: The product must be owned by (not merely shared into) the account so artifacts can be added.
@@ -47,7 +49,7 @@
   references:
     - https://docs.aws.amazon.com/servicecatalog/latest/adminguide/constraints-launch.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsservicecatalog.html
-  notes: The launch-constraint guide states the launch role's trust policy must allow the Service Catalog service to assume it, which matches the selector. The Service Authorization Reference lists no dependent actions for servicecatalog:ProvisionProduct, so the end user needs no iam:PassRole; iam:PassRole is only needed by the administrator who creates the launch constraint. The evaluator should still take the role from the launch constraint rather than from the trust policy alone.
+  notes: The launch-constraint guide states the launch role's trust policy must allow the Service Catalog service to assume it, which matches the selector. The end user needs no iam:PassRole; that permission is needed by the administrator who creates the launch constraint. A concrete edge requires one owned product in a portfolio the source can use, its launch constraint naming the exact role, a source-controlled new artifact, successful provisioning of that artifact, and a useful role-only action. Fresh reviewed evidence must bind the product, portfolio, artifact, provisioned product and exact RoleId; missing or conflicting evidence remains unresolved.
 
 - id: aws-servicecatalog-associateprincipal-createartifact-provision
   provider: aws
@@ -72,6 +74,8 @@
       portfolio_of_target_product_covered_by: servicecatalog:AssociatePrincipalWithPortfolio
     scope: same_account
     aggregate_as: "Service Catalog launch-constraint roles of portfolios the source can join in {account}"
+  preconditions:
+    - servicecatalog_new_artifact_effect_unverified
   conditions:
     - id: portfolio_covered
       description: servicecatalog:AssociatePrincipalWithPortfolio must cover the portfolio that holds the product and its launch constraint.
@@ -87,4 +91,4 @@
   references:
     - https://docs.aws.amazon.com/servicecatalog/latest/dg/API_AssociatePrincipalWithPortfolio.html
     - https://docs.aws.amazon.com/servicecatalog/latest/adminguide/constraints-launch.html
-  notes: Variant of aws-servicecatalog-createprovisioningartifact-provisionproduct that removes its portfolio_end_user condition. {target.portfolio_arn} is the portfolio whose LAUNCH constraint names the role (servicecatalog:ListPortfolios + ListConstraintsForPortfolio); without that inventory the targets are unresolved placeholders. Provisioning an unmodified product runs an administrator-approved template and is not an edge, so CreateProvisioningArtifact stays required.
+  notes: Variant of aws-servicecatalog-createprovisioningartifact-provisionproduct that lets the source associate itself with the portfolio before provisioning. The same product must belong to that portfolio and its LAUNCH constraint must name the exact role; portfolio-wide role association alone is insufficient. A concrete edge requires a successful self-association, one source-controlled new artifact accepted and provisioned for an owned product, and a useful action under the exact launch role unavailable directly to the source. Fresh reviewed evidence must bind those facts; missing or conflicting evidence remains unresolved.

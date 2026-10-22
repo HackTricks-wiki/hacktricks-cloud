@@ -43,7 +43,7 @@
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references:
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html
-  notes: The sub-page iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md describes the same edge (DescribeStacks only helps read outputs). Severity critical because CloudFormation service roles are frequently admin-equivalent.
+  notes: The sub-page iam-passrole-cloudformation-createstack-and-cloudformation-describestacks.md describes the same edge (DescribeStacks only helps read outputs). A concrete role edge requires fresh reviewed evidence that a caller-controlled template used this exact role for a successful useful operation that the caller could not perform directly. A passable role without that evidence remains unresolved.
 
 - id: aws-cloudformation-passrole-updatestack
   provider: aws
@@ -80,7 +80,7 @@
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references: []
-  notes: Needs at least one existing stack covered by cloudformation:UpdateStack.
+  notes: Needs at least one existing stack covered by cloudformation:UpdateStack. A concrete role edge also requires fresh reviewed evidence on that same stack that a caller-controlled template used this exact role for a successful useful operation unavailable directly to the caller.
 
 - id: aws-cloudformation-updatestack-attached-role
   provider: aws
@@ -189,7 +189,7 @@
   severity: critical
   mitigation: Restrict iam:PassRole on CloudFormation service roles and use the cloudformation:RoleArn condition key.
   references: []
-  notes: A CREATE-type change set can create a new stack, so no existing stack is required.
+  notes: A CREATE-type change set can create a new stack, so no existing stack is required. A concrete role edge requires fresh reviewed evidence that the caller-controlled change set was executed and this exact role performed a successful useful operation unavailable directly to the caller.
 
 - id: aws-cloudformation-passrole-stackset
   provider: aws
@@ -245,7 +245,7 @@
     can pass). The target is an execution role that pivot can assume. For creation, the evaluator checks CreateStackSet
     with that administration role and CreateStackInstances on both the same generated StackSet ARN and a target-account
     ARN. For updates it requires a recorded SELF_MANAGED StackSet instance in the target account and UpdateStackSet on
-    that exact StackSet and target. The template''s actual effects remain conditional.'
+    that exact StackSet and target. A concrete execution-role edge requires fresh reviewed evidence that a caller-controlled deployment used this exact administration and execution role pair for a successful useful operation unavailable directly to the caller; otherwise the edge stays unresolved.'
 
 
 - id: aws-cloudformation-registertype-passrole-extension
@@ -288,7 +288,7 @@
   references:
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_RegisterType.html
     - https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-develop.html
-  notes: The evaluator requires PutObject and GetObject on the same object in a recorded S3 bucket, plus a bound CreateResource or stack operation. SetTypeConfiguration alone cannot invoke a Hook. Extension roles trust resources.cloudformation.amazonaws.com, not cloudformation.amazonaws.com; ActivateType of public extensions is separate because the source does not author that handler.
+  notes: The evaluator requires PutObject and GetObject on the same object in a recorded S3 bucket, plus a bound CreateResource or stack operation. A concrete role edge requires fresh reviewed evidence that the caller's package registered a private resource type and its handler ran a useful action under this exact execution role; without that evidence the route stays unresolved. SetTypeConfiguration alone cannot invoke a Hook. Extension roles trust resources.cloudformation.amazonaws.com, not cloudformation.amazonaws.com; ActivateType of public extensions is separate because the source does not author that handler.
 
 - id: aws-cloudformation-service-managed-stackset-org-members
   provider: aws
@@ -330,4 +330,4 @@
   references:
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-activate-trusted-access.html
     - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
-  notes: Complements aws-cloudformation-passrole-stackset, which models self-managed StackSets. No iam:PassRole is involved. The evaluator requires recorded enabled Organizations access, the member account's OU, and CreateStackInstances permission on the same generated StackSet, its OU target and the IAM role resource type. Template effects and target-Region availability remain conditional.
+  notes: Complements aws-cloudformation-passrole-stackset, which models self-managed StackSets. No iam:PassRole is involved. The evaluator requires recorded enabled Organizations access, the member account's OU, and CreateStackInstances permission on the same generated StackSet, its OU target and the IAM role resource type. A concrete account-admin edge additionally requires fresh reviewed evidence of a successful deployment and usable administrator access through an exact recorded IAM principal in the member account. Otherwise the member-account route stays unresolved.

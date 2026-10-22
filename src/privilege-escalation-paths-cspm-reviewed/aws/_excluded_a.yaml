@@ -68,7 +68,7 @@
 # --- Directory Service ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc/README.md#aws-management-console
   technique: Directory console access (descriptive)
-  reason: Descriptive section; the escalation is modelled as aws-ds-resetuserpassword.
+  reason: Descriptive console-access section with no separate IAM action or resource. The directory password-reset route remains a conditional candidate until the exact directory, user and resulting authority are joined.
 
 # --- Amplify ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-amplify-privesc/README.md#amplifygetapp-amplifygetbranch-amplifylistapps-amplifylistbranches-amplifygetjob--read-deployment-variables-and-build-logs
@@ -110,12 +110,12 @@
   reason: Pure data read (plaintext env vars).
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apprunner-privesc/README.md#mutable-private-ecr-tag-with-automatic-deployments
   technique: Mutable ECR tag with App Runner automatic deployments
-  reason: Covered by aws-ecr-push-consumed-tag (refresh boundary recorded there).
+  reason: Restored as aws-apprunner-mutable-ecr-autodeploy with an exact same-account repository, watched mutable tag, automatic deployment, push permissions and instance-role join.
 
 # --- Batch ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#mutable-ecr-tag-poisoning-of-an-existing-job-definition
   technique: Mutable ECR tag poisoning of a job definition
-  reason: Covered by aws-ecr-push-consumed-tag.
+  reason: Replacing a mutable ECR tag does not prove that an existing Batch job definition will consume the new image or run it under a recorded role. The ECR-to-job-definition and execution joins remain unverified.
 
 # --- Chime ---
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-chime-sdk-post-exploitation/README.md#legacy-amazon-chime-createapikey-retired
@@ -285,7 +285,7 @@
   reason: Data read.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#global-registry-hijack-via-root-pull-through-cache-rule
   technique: ROOT pull-through cache rule
-  reason: Folded into aws-ecr-createpullthroughcacherule (condition root_prefix).
+  reason: A ROOT prefix can affect future cache misses but does not replace existing repositories. The pull-through-cache route remains conditional on an absent repository, exact workload image path, controlled upstream and execution under a recorded role.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecr-privesc/README.md#ecrputaccountsetting-registry-policy-scope
   technique: ecr:PutAccountSetting (registry policy scope downgrade)
   reason: HackTricks documents the V2-to-V1 downgrade as no longer supported.
@@ -298,7 +298,7 @@
   reason: Starts a fixed stored workload; no attacker-controlled execution under the role.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#mutable-ecr-tag-consumed-by-an-ecs-service-deployment-digest-boundary
   technique: Mutable ECR tag consumed by an ECS service
-  reason: Covered by aws-ecr-push-consumed-tag (digest boundary recorded there).
+  reason: ECS normally resolves an image tag to a digest for a deployment. Replacing the tag alone does not prove a service will start the new image under its task role; the exact repository, deployment trigger and task role must be joined.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#runtime-command-overrides-with-iampassrole-and-ecsruntask
   technique: Runtime command overrides with iam:PassRole + ecs:RunTask
   reason: Duplicate of aws-ecs-passrole-runtask-overrides.
@@ -307,10 +307,10 @@
   reason: Owned by ssm.yaml (part B).
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#iampassrole-ec2runinstances
   technique: iam:PassRole + ec2:RunInstances (cross-reference)
-  reason: Modelled as aws-ec2-runinstances-join-ecs-cluster.
+  reason: The general EC2 RunInstances and PassRole route is represented separately. Joining a launched instance to an ECS cluster and reaching another task role requires cluster registration, a compatible task and an exact execution foothold; that cross-reference remains a conditional candidate.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#backdoor-compute-in-cluster-via-ecs-anywhere-external-registration
   technique: ECS Anywhere EXTERNAL registration
-  reason: Requires iam:PassRole on task roles plus a task launch, already covered by aws-ecs-passrole-registertaskdefinition-starttask / aws-ecs-registercontainerinstance-starttask (plus ssm:CreateActivation).
+  reason: The task-definition and StartTask permissions are represented separately, but registering an ECS Anywhere host is not. A role edge also needs a connected, source-controlled EXTERNAL host, compatible task definition and exact task role; registration permission alone is insufficient.
 
 # --- General ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/README.md
@@ -320,13 +320,13 @@
 # --- Merged / duplicate sections (kept for traceability) ---
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodetachmanagedpolicyfrompermissionset
   technique: sso:DetachManagedPolicyFromPermissionSet
-  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+  reason: Removing this policy grants no new rights by itself. A principal edge needs an exact assignment, successful provisioning and a demonstrated effective permission gain for a source-controlled identity.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodetachcustomermanagedpolicyreferencefrompermissionset
   technique: sso:DetachCustomerManagedPolicyReferenceFromPermissionSet
-  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+  reason: Removing this policy reference grants no new rights by itself. A principal edge needs an exact assignment, successful provisioning and a demonstrated effective permission gain for a source-controlled identity.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sso-and-identitystore-privesc/README.md#ssodeleteinlinepolicyfrompermissionset
   technique: sso:DeleteInlinePolicyFromPermissionSet
-  reason: Merged into aws-sso-remove-permission-set-restriction (any_of group).
+  reason: Deleting this inline policy grants no new rights by itself. A principal edge needs an exact assignment, successful provisioning and a demonstrated effective permission gain for a source-controlled identity.
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cognito-privesc/README.md#automatic-tools
   technique: Automatic tools
   reason: Tooling references only.

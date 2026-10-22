@@ -13,33 +13,33 @@
   title: Run a custom test with a passed execution role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting devicefarm.amazonaws.com by scheduling a run with a test specification it controls.
+  summary: The source can create a web test package and custom test specification in an existing Device Farm project, then schedule them on a compatible pool with a passed execution role.
   requires:
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-      - action: devicefarm:ScheduleRun
-        resource: "*"
-      - action: devicefarm:CreateUpload
-        resource: "*"
+        request_context:
+          iam:PassedToService: devicefarm.amazonaws.com
   target:
     kind: aws_role
     selector:
       trust_allows_service: devicefarm.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting devicefarm.amazonaws.com passable in {account}"
+    aggregate_as: "Roles runnable through a compatible Device Farm project in {account}"
     outcome: workload_execution
+  preconditions:
+    - devicefarm_existing_project_new_web_test_role
   conditions:
-    - id: project_available
-      description: A project the source can schedule runs in (existing, or devicefarm:CreateProject) and a compatible device or device pool are required.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+    - id: exact_project_and_pool
+      description: A collected existing project has a device pool with at least one web test compatible device, and the source can create uploads in that project and schedule runs on that project and pool.
+    - id: generated_upload_scope
+      description: ScheduleRun permission covers every generated package and test-spec upload ARN in the selected project; scoped or conditional grants that cannot be proved remain unresolved.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: high
   mitigation: Restrict iam:PassRole on Device Farm execution roles with iam:PassedToService and specific role ARNs; limit run scheduling to CI.
   references:
-    - https://docs.aws.amazon.com/devicefarm/latest/developerguide/custom-test-environment-iam-roles.html
-  notes: The role can be set on the project (CreateProject / UpdateProject) or overridden per run (ScheduleRun configuration).
+    - https://docs.aws.amazon.com/devicefarm/latest/developerguide/custom-test-environments-iam-roles.html
+    - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_GetDevicePoolCompatibility.html
+  notes: This route uses an existing project and a run-level executionRoleArn. Creating a new project, editing an existing test specification, and using a project-default role are distinct paths requiring their own joins.

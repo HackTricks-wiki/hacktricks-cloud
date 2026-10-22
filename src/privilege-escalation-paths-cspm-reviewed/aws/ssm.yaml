@@ -86,6 +86,66 @@
     - https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-quickstart.html
   notes: The evaluator checks StartSession on an online instance and its same-Region SSM-SessionManagerRunShell document, plus an OpenDataChannel grant for a future session in that account and Region. The exact generated session ID and instance-level shell restrictions remain conditional.
 
+- id: aws-ssm-sendcommand-hybrid-role
+  provider: aws
+  service: ssm
+  title: Run a shell command on an online hybrid managed node
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmsendcommand
+  source_revision: 98775f1a6f
+  summary: The source can run a platform-matching shell document on an online hybrid node whose recorded IamRole names the target role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Service roles of online hybrid nodes reachable by Run Command in {account}
+    outcome: workload_execution
+  preconditions:
+    - ssm_hybrid_sendcommand_role
+  conditions:
+    - id: hybrid_node_credential_access
+      description: The managed node must process the command and its SSM agent credentials must remain accessible to the resulting root or SYSTEM process.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict SendCommand on hybrid managed-instance and shell-document ARNs to approved operators, and keep hybrid service roles narrow.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_InstanceInformation.html
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent-restrict-root-level-commands.html
+  notes: The evaluator requires the same collected online mi- node, its exact IamRole name, a platform-matching AWS shell document and effective SendCommand on both resource ARNs. It does not infer another node's or EC2 instance-profile role.
+
+- id: aws-ssm-startsession-hybrid-role
+  provider: aws
+  service: ssm
+  title: Open a shell on an online hybrid managed node
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartsession
+  source_revision: 98775f1a6f
+  summary: The source can open a default shell session on an online hybrid node whose recorded IamRole names the target role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Service roles of online hybrid nodes reachable by Session Manager in {account}
+    outcome: workload_execution
+  preconditions:
+    - ssm_hybrid_startsession_role
+  conditions:
+    - id: hybrid_shell_credential_access
+      description: The session must open a usable shell on the node with sufficient local access to its SSM agent credentials.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict StartSession to approved hybrid nodes and shell documents, limit future session data-channel grants, and keep their service roles narrow.
+  references:
+    - https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_InstanceInformation.html
+    - https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent-restrict-root-level-commands.html
+  notes: The evaluator requires the same collected online mi- node and exact IamRole, default shell document and a wildcard-capable OpenDataChannel grant for a new session. Port-forwarding-only grants cannot satisfy this route.
+
 - id: aws-ssm-createassociation
   provider: aws
   service: ssm
@@ -285,7 +345,7 @@
   mitigation: Keep JIT approval policies narrow (explicit requesters, tagged nodes, manual approval for sensitive nodes), scope ssm:StartAccessRequest by node, and set Session Manager maximum duration and idle timeouts.
   references:
     - https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-just-in-time-node-access.html
-  notes: StartAccessRequest is authorized on the EC2 instance ARN for an EC2 managed node. An approval policy or an existing approved request must be proven for the source and node before this path can become a reported edge; until then the route remains unresolved.
+  notes: StartAccessRequest is authorized on the EC2 instance ARN for an EC2 managed node, and JIT supports an assumed-role requester session rather than a plain IAM user. A concrete edge requires fresh reviewed evidence that the exact requesting role session obtained approval for that online node, received its access token, established a session, and performed a useful action using the instance role that the requester could not perform directly. Current StartAccessRequest and GetAccessToken permissions remain required. Missing, mismatched or expired approval evidence remains unresolved.
 
 - id: aws-ssm-maintenancewindow-automation-task-passrole
   provider: aws

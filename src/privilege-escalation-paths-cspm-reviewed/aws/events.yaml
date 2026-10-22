@@ -14,12 +14,9 @@
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-privesc/README.md#eventscreatesubscriber--iampassrole--execute-supported-aws-apis-through-an-enhanced-bus-universal-target
   source_revision: 6fb9ac51fd
   summary: A subscriber may invoke a supported write action through a passed EventBridge role. This does not give the source the role's identity or all its permissions.
+  source_kind: [aws_user, aws_role]
   requires:
-    all_of:
-    - action: iam:PassRole
-      resource: '{target.arn}'
-      request_context:
-        iam:PassedToService: events.amazonaws.com
+    all_of: []
   target:
     kind: aws_role
     selector:
@@ -43,4 +40,4 @@
   mitigation: Restrict events:CreateSubscriber to bus owners, scope iam:PassRole on EventBridge roles with iam:PassedToService=events.amazonaws.com, and keep delivery roles least-privileged.
   references:
   - https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-use-identity-based.html
-  notes: CreateSubscriber needs permission on the same operational custom event bus and on the new subscriber ARN. The evaluator requires both grants and PutEvents on that bus, but withholds a privilege edge until a supported target action, its exact resource, the role's effective permission, and an actual privilege gain are bound together. A customer KMS key also keeps bus access unresolved until key access is verified.
+  notes: CreateSubscriber needs permission on the operational custom bus and on the new subscriber name/* ARN used for creation, plus PassRole to events.amazonaws.com. The evaluator binds one accepted universal target and matched event to a successful target delivery under the exact role, including the target action and resource, and excludes actions already available to the caller. A customer KMS key remains unresolved without verified key access. This is delegated execution of one write action, not general access to the role.

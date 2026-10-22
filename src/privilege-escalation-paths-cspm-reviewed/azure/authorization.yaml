@@ -42,37 +42,6 @@
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
   notes: Only users with an active tenant-wide Global Administrator assignment can call elevateAccess. PIM eligibility alone needs activation and is not an active grant. Elevation yields User Access Administrator at root scope; the source can then assign itself Owner.
 
-- id: azure-authorization-elevateaccess-pim-eligible-global-admin
-  provider: azure
-  service: authorization
-  title: Activate an eligible Global Administrator role and elevate Azure access
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
-  source_revision: 171e422
-  summary: A user eligible for tenant-wide Global Administrator can activate that role, then grant itself User Access Administrator at root scope.
-  source_kind: azure_user
-  requires:
-    all_of:
-      - entra_pim_eligible_role: "dir:62e90394-69f5-4237-9190-012177145e10"
-        directory_scope: "dir:/"
-  target:
-    kind: azure_scope_owner
-    selector:
-      any_principal_in_scope: true
-      azure_root_scope_only: true
-    scope: tenant
-    aggregate_as: "Azure root scope (/) of the tenant"
-  conditions:
-    - id: pim_activation_requirements
-      description: The user must satisfy any MFA, approval, or other PIM activation requirements before calling elevateAccess.
-  blockers: []
-  confidence: conditional
-  severity: critical
-  mitigation: Require PIM approval for eligible Global Administrator assignments and monitor role activation and root-scope elevation.
-  references:
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
-    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-activate-role
-  notes: A current tenant-wide eligibility is required. Eligibility alone is a conditional path and never counts as an active Global Administrator grant.
-
 - id: azure-managedidentity-federated-credential-write
   provider: azure
   service: authorization
@@ -139,3 +108,33 @@
     - https://learn.microsoft.com/en-us/azure/governance/policy/how-to/remediate-resources#configure-the-managed-identity
     - https://azure.github.io/enterprise-azure-policy-as-code/policy-assignments/
   notes: No roleAssignments/write is needed. The user-assigned identity keeps its existing role assignments; only the portal auto-grants roleDefinitionIds, and SDK or REST assignments do not. Using a user-assigned identity on a policy assignment needs Managed Identity Operator, which is userAssignedIdentities/assign/action on the identity (EPAC documentation and the ARM linked-access check). A new system-assigned identity has no roles unless the source can also create role assignments, which azure-authorization-roleassignments-write already covers. Repointing an existing assignment that has a system-assigned identity is not modelled, because it is not verified whether policyDefinitionId can change on update.
+- id: azure-authorization-elevateaccess-pim-eligible-global-admin
+  provider: azure
+  service: authorization
+  title: Activate an eligible Global Administrator role and elevate Azure access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
+  source_revision: 171e422
+  summary: A user eligible for tenant-wide Global Administrator can activate that role, then grant itself User Access Administrator at root scope.
+  source_kind: azure_user
+  requires:
+    all_of:
+      - entra_pim_eligible_role: "dir:62e90394-69f5-4237-9190-012177145e10"
+        directory_scope: "dir:/"
+  target:
+    kind: azure_scope_owner
+    selector:
+      any_principal_in_scope: true
+      azure_root_scope_only: true
+    scope: tenant
+    aggregate_as: "Azure root scope (/) of the tenant"
+  conditions:
+    - id: pim_activation_requirements
+      description: The user must satisfy any MFA, approval, or other PIM activation requirements before calling elevateAccess.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Require PIM approval for eligible Global Administrator assignments and monitor role activation and root-scope elevation.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-activate-role
+  notes: A current tenant-wide eligibility is required. Eligibility alone is a conditional path and never counts as an active Global Administrator grant.

@@ -18,11 +18,9 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ec2.amazonaws.com
       - action: datapipeline:CreatePipeline
-        resource: "*"
-      - action: datapipeline:PutPipelineDefinition
-        resource: "*"
-      - action: datapipeline:ActivatePipeline
         resource: "*"
   target:
     kind: aws_role
@@ -32,11 +30,13 @@
     scope: same_account
     aggregate_as: "EC2 instance-profile roles in {account} (Data Pipeline resource role)"
     outcome: workload_execution
+  preconditions:
+    - datapipeline_existing_customer_role_pair_and_runnable_ec2
   conditions:
     - id: passable_pipeline_role
-      description: iam:PassRole must also cover a pipeline role trusting datapipeline.amazonaws.com (and elasticmapreduce.amazonaws.com for EMR resources) that can launch the resources.
+      description: iam:PassRole must also cover a separate pipeline role trusting datapipeline.amazonaws.com; PutPipelineDefinition and ActivatePipeline must be allowed on the generated pipeline ARN.
     - id: service_availability
-      description: AWS Data Pipeline is closed to new customers (since 2024); only accounts already using it can create pipelines.
+      description: AWS Data Pipeline is closed to new customers (since July 2025); only accounts already using it can create pipelines.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -44,4 +44,4 @@
   mitigation: Restrict iam:PassRole and Data Pipeline write actions; migrate off Data Pipeline.
   references:
     - https://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-iam-roles.html
-  notes: The pipeline role (datapipeline principal) itself can also be targeted if a pipeline activity runs with it, but code execution happens on the resource role; only the resource role is modelled.
+  notes: The pipeline role (datapipeline principal) itself can also be targeted if a pipeline activity runs with it, but code execution happens on the resource role; only the resource role is modelled. CreatePipeline uses Resource=*, while PutPipelineDefinition and ActivatePipeline use the generated pipeline ARN. A concrete EC2 resource-role edge needs existing-customer eligibility, both role passes, a controlled ShellCommandActivity on an Ec2Resource, an activated pipeline, and a fresh witnessed useful role action from the launched instance; missing joins stay UNKNOWN.

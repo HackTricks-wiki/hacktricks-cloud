@@ -14,41 +14,34 @@
   title: Create a Glue development endpoint with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#create-a-legacy-development-endpoint-with-a-privileged-role
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting glue.amazonaws.com.
+  summary: The source can create a public Glue development endpoint with an SSH key it controls, read its address and use a passable execution role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: glue:CreateDevEndpoint
-        resource: "*"
-    any_of:
-      - - action: glue:GetDevEndpoint
-          resource: "*"
-      - - action: glue:GetDevEndpoints
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
       trust_allows_service: glue.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting glue.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - glue_new_public_dev_endpoint_role
   conditions:
     - id: dev_endpoint_availability
-      description: Glue development endpoints are a legacy feature (not supported on Glue 2.0+ runtimes); creation may be unavailable in some regions/accounts.
-    - id: network_reachability
-      description: VPC endpoints only expose a private address; the source needs a network path to SSH.
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: A complete Glue endpoint read must show that the chosen Region and account still support the legacy endpoint API, and a new endpoint name is available.
+    - id: public_ssh_path
+      description: The source can create a non-VPC endpoint with its SSH public key, and GetDevEndpoint on the new endpoint or GetDevEndpoints on the account lets it read the public address after provisioning.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService=glue.amazonaws.com and deny glue:CreateDevEndpoint.
   references:
-    - https://docs.aws.amazon.com/glue/latest/dg/dev-endpoints.html
-  notes: Legacy feature; kept because the API still exists. Reach is roles trusting glue.amazonaws.com within PassRole scope.
+    - https://docs.aws.amazon.com/glue/latest/dg/development.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateDevEndpoint.html
+    - https://docs.aws.amazon.com/glue/latest/webapi/API_GetDevEndpoints.html
+  notes: The evaluator checks CreateDevEndpoint on *, one unused endpoint name, a matching endpoint read permission and exact iam:PassRole. It excludes recorded disabled or unsupported Region/account states; provisioning, quotas and SSH connectivity remain conditional.
 
 - id: aws-glue-updatedevendpoint
   provider: aws
@@ -123,8 +116,43 @@
   references:
     - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
     - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateTrigger.html
-  notes: A collected unpinned --scriptLocation plus StartJobRun on the exact job, or permission to create a new scheduled trigger in the same Region, establishes a conditional route. Pinned scripts may still have a dependency route through --extra-py-files, --extra-jars, --additional-python-modules or --python-virtual-env; those remain unresolved until their runtime prerequisites are verified. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
+  notes: The evaluator requires an unpinned --scriptLocation, StartJobRun on the exact job or a creatable scheduled trigger, and one S3 script object the source can PutObject and the target role can GetObject. A script outside recorded job definitions can also prove the route through fresh reviewed evidence of a matching job run, script read and execution, and a useful action under the exact role. Dependency override formats without such evidence remain unresolved. Creating a trigger for an existing job does not itself require iam:PassRole.
 
+
+- id: aws-glue-overwrite-existing-job-script
+  provider: aws
+  service: glue
+  title: Replace the script read by an existing Glue job
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#replace-the-script-of-an-existing-glue-job
+  source_revision: f6c5b04636
+  summary: The source may run its code under an existing Glue job role by replacing the exact S3 script object used by that job and causing the job to run.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: glue
+      via_resource_type: glue_job
+    scope: same_account
+    aggregate_as: Execution roles of Glue jobs whose exact script object is writable and runnable in {account}
+    outcome: workload_execution
+  preconditions:
+    - glue_existing_job_script_object_writable_and_runnable
+  conditions:
+    - id: object_replacement_and_run
+      description: The exact S3 script object must accept the replacement and the job must subsequently load it. A non-overridable --scriptLocation or scheduled trigger action that redirects the script leaves the route unresolved.
+    - id: scheduled_run
+      description: The scheduled-trigger variant requires the recorded active schedule to fire after the object replacement.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit write access to Glue job script objects to trusted deployment identities and restrict who can start jobs that use privileged roles.
+  references:
+    - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-api-jobs-job.html
+    - https://docs.aws.amazon.com/glue/latest/dg/edit-nodes-script.html
+  notes: The evaluator joins Command.ScriptLocation, the same job's role, exact s3:PutObject and role s3:GetObject permissions, and StartJobRun or an active scheduled trigger. A direct StartJobRun can explicitly select the recorded script URI only when --scriptLocation is not non-overridable; a scheduled run also needs collected job defaults and trigger action arguments without a script redirect. It never infers a role edge from a generic writable bucket or a different job.
 
 - id: aws-glue-passrole-createjob-or-updatejob-run
   provider: aws
@@ -161,7 +189,7 @@
   mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService, and restrict job creation/update and trigger creation to the deployment pipeline.
   references:
     - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateJob.html
-  notes: The machine precondition checks a creatable unused job or an existing updateable job and StartJobRun on that same job, or a creatable scheduled trigger in its Region. The script must still be readable by the passed role.
+  notes: The machine precondition checks a creatable unused job or an existing updateable job and StartJobRun on that same job, or a creatable trigger in its Region. It binds exact Glue PassRole and an S3 script object the source can PutObject and the passed role can GetObject. A script outside recorded job definitions can also prove the route through fresh reviewed evidence of the accepted job change, matching run, script execution and useful action under the exact role.
 
 - id: aws-glue-updatejob-existing-role
   provider: aws
@@ -200,7 +228,7 @@
     - https://docs.aws.amazon.com/glue/latest/webapi/API_UpdateJob.html
     - https://docs.aws.amazon.com/glue/latest/webapi/API_JobUpdate.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsglue.html
-  notes: HackTricks states UpdateJob alone suffices, but JobUpdate marks Role as required and states the previous job definition is completely overwritten, and the Service Authorization Reference lists iam:PassRole as a dependent action of glue:UpdateJob, so PassRole on the job's role is required. An operator-run possibility is not enough to establish a reachable execution path. Direct StartJobRun is covered by aws-glue-passrole-createjob-or-updatejob-run.
+  notes: JobUpdate requires Role and completely overwrites the prior definition, and the Service Authorization Reference lists iam:PassRole as a dependent action of glue:UpdateJob, so PassRole on the job's role is required. The evaluator joins a runnable trigger and an S3 script object the source can PutObject and the attached role can GetObject. A script outside recorded job definitions can also prove the route through fresh reviewed evidence of the accepted update, trigger firing, matching run, script execution and useful action under the exact role. Direct StartJobRun is covered by aws-glue-passrole-createjob-or-updatejob-run.
 
 - id: aws-glue-passrole-createsession
   provider: aws

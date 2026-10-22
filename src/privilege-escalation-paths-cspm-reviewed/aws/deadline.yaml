@@ -6,8 +6,103 @@
 
 # AWS Deadline Cloud privilege escalation techniques.
 # Source: hacktricks-cloud aws-deadline-cloud-privesc/README.md (rev 171e422299).
-# Queue and fleet roles trust credentials.deadline.amazonaws.com; attached_to_service names that principal directly
-# because queue/fleet inventory is not collected (attachment resolves as unknown).
+# Queue and fleet roles trust credentials.deadline.amazonaws.com. The existing-queue route
+# uses collected queue-to-role bindings; new queue/fleet PassRole routes need separate joins.
+
+- id: aws-deadline-existing-queue-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain the IAM role configured on an existing queue
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#queue-role-credential-vending
+  source_revision: 5508b27049
+  summary: The source can request credentials for the exact IAM role configured on a Deadline Cloud queue when its IAM policy allows AssumeQueueRoleForUser on that queue.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Queue roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_existing_queue_role_vend
+  conditions:
+    - id: queue_role_session
+      description: The configured role must still trust the Deadline credentials service for the exact farm, and the queue API must vend the credentials.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit deadline:AssumeQueueRoleForUser to the queues a principal needs and keep queue roles narrow.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeQueueRoleForUser.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetQueue.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/permissions-overview.html
+  notes: The evaluator binds ListFarms, ListQueues and GetQueue to one farm, queue and role, checks the caller's IAM grant on the exact queue ARN, and evaluates the role's service trust with that farm ARN. It does not infer access from Deadline monitor membership or a Resource=* grant alone.
+
+- id: aws-deadline-existing-worker-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain the IAM role configured on an existing worker's fleet
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlineassumefleetroleforworker-on-an-existing-worker
+  source_revision: b9af68e3e9
+  summary: The source can request credentials for the exact IAM role configured on an existing Deadline Cloud worker's fleet when IAM allows AssumeFleetRoleForWorker on that worker.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Fleet worker roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_existing_worker_role_vend
+  conditions:
+    - id: worker_role_session
+      description: The fleet role must trust the Deadline credentials service for the farm and the worker credential API must accept the request. Additional unrelated role policies are not proven effective.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit AssumeFleetRoleForWorker to the worker hosts that need each fleet.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetFleet.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_ListWorkers.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
+  notes: The evaluator binds ListFarms, ListFleets, GetFleet and ListWorkers to one farm, fleet, worker and role; checks AssumeFleetRoleForWorker on the exact worker ARN and the target role's farm-scoped service trust. It does not infer unrelated permissions from the role's attached policies.
+
+- id: aws-deadline-new-worker-existing-fleet-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain an existing fleet's role by registering a worker
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreateworker-and-deadlineassumefleetroleforworker-on-an-existing-fleet
+  source_revision: 7d5d4dc90f
+  summary: The source can register a worker on an existing customer-managed fleet and request its role credentials when the worker grants cover every generated worker ID and the worker-creation dependent permissions are present.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Existing fleet worker roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_new_worker_role_vend
+  conditions:
+    - id: new_worker_role_session
+      description: The active customer-managed fleet must have capacity, the role must trust the Deadline credentials service for that farm, and the new worker credential request must succeed. Unrelated attached role permissions are not proven effective.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit worker creation and credential vending to the intended worker hosts for each fleet.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetFleet.html
+    - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSDeadlineCloud-WorkerHost.html
+  notes: The evaluator joins one existing fleet to its role, checks farm-scoped service trust and capacity, requires ListTagsForResource on the fleet, and checks broad CreateWorker, AssumeFleetRoleForWorker and TagResource grants covering the whole generated worker-ID family. It does not infer access from a grant on a chosen or existing worker ID.
 
 - id: aws-deadline-passrole-createqueue-updatequeue
   provider: aws
@@ -15,31 +110,20 @@
   title: Attach a passed role to a queue and vend its credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatequeueupdatequeue--iampassrole--deadlineassumequeueroleforuser
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com.
+  summary: A caller able to change one existing queue's role, pass an eligible role to Deadline Cloud, and request that queue's credentials may receive the new queue-role credentials. Creating a queue needs separate proof of its generated queue identity.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: deadline:AssumeQueueRoleForUser
-        resource: "*"
-    any_of:
-      - - action: deadline:CreateQueue
-          resource: "*"
-      - - action: deadline:UpdateQueue
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
-    selector:
-      trust_allows_service: credentials.deadline.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
+    aggregate_as: "Queue roles reachable through Deadline Cloud in {account}"
     outcome: credentials
+  preconditions:
+    - deadline_passrole_queue_role_vend
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: farm_access
-      description: The source needs a farm it can create or update queues in and queue membership allowing credential vending.
+    - id: queue_role_session
+      description: The role update and credential request must succeed on the same queue; queue membership and live service state may still limit use.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -48,47 +132,38 @@
   references:
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateQueue.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_UpdateQueue.html
-  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.
+  notes: The evaluator joins an existing farm and queue to its exact ARN, checks UpdateQueue and AssumeQueueRoleForUser there, and PassRole to deadline.amazonaws.com on the target role. A queue already using that role belongs to the existing-queue route. CreateQueue remains unresolved because AWS generates its queue ID and the current inventory cannot bind that future queue to a later credential request.
 
 - id: aws-deadline-passrole-fleet-createworker
   provider: aws
   service: deadline
-  title: Attach a passed role to a fleet and vend it to a registered worker
+  title: Obtain fleet worker credentials through a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatefleetupdatefleet--iampassrole--deadlinecreateworker--deadlineassumefleetroleforworker
-  source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com through a customer-managed fleet worker it registers.
+  source_revision: d4ab3fa4e4
+  summary: A caller that configures a customer-managed fleet and receives its worker credentials may gain a specific Deadline worker operation it could not perform directly. Unrelated IAM permissions attached to the fleet role are not included.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: deadline:CreateWorker
-        resource: "*"
-      - action: deadline:AssumeFleetRoleForWorker
-        resource: "*"
-    any_of:
-      - - action: deadline:CreateFleet
-          resource: "*"
-      - - action: deadline:UpdateFleet
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
-    kind: aws_role
+    kind: aws_verified_authority
     selector:
-      trust_allows_service: credentials.deadline.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
+      aws_challenge_fact: aws-deadline-passrole-fleet-createworker
     scope: same_account
-    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
-    outcome: credentials
+    aggregate_as: "Verified Deadline worker permissions in {account}"
+    outcome: bounded_authority
+    grants: ["One observed Deadline worker operation on the exact worker"]
+  preconditions:
+    - deadline_fleet_worker_bounded_authority_reviewed
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: customer_managed_fleet
-      description: Worker registration and fleet-role vending apply to customer-managed fleets.
+    - id: exact_verified_worker_authority
+      description: Fresh reviewed evidence must bind the farm, fleet, worker, passed role, accepted configuration and registration, vended credentials, and a specific worker operation unavailable directly to the caller.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
-  severity: critical
-  mitigation: Restrict iam:PassRole on Deadline Cloud fleet roles and deadline:CreateWorker / AssumeFleetRoleForWorker to the worker host identities.
+  severity: high
+  mitigation: Limit fleet-role passing and worker registration or credential vending to the intended fleet administrators and worker hosts.
   references:
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateFleet.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
-  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.
+    - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
+  notes: The target is only the observed new worker operation on the exact worker. Resource-scoped CreateFleet or UpdateFleet, CreateWorker, AssumeFleetRoleForWorker, dependent permissions and PassRole are checked against the same farm, fleet, worker and role from reviewed evidence. Missing or stale evidence stays unresolved.

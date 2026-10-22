@@ -6,3 +6,48 @@
 
 # AWS AppSync privilege escalation techniques.
 # Source: hacktricks-cloud aws-appsync-privesc/README.md (rev 171e422299).
+
+- id: aws-appsync-passrole-new-api-sigv4
+  provider: aws
+  service: appsync
+  title: Use a passed role through a new AppSync HTTP resolver
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appsync-privesc/README.md#appsynccreatedatasource-iampassrole--drive-an-arbitrary-role-through-a-graphql-field
+  source_revision: 171e422299
+  summary: The source can create a GraphQL API and an IAM-signed HTTP resolver that calls AWS APIs using the passed role.
+  requires:
+    all_of:
+    - action: appsync:CreateGraphqlApi
+      resource: '*'
+    - action: appsync:StartSchemaCreation
+      resource: '*'
+    - action: appsync:CreateDataSource
+      resource: '*'
+    - action: appsync:CreateResolver
+      resource: '*'
+    - action: appsync:CreateApiKey
+      resource: '*'
+    - action: iam:PassRole
+      resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: appsync.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: appsync.amazonaws.com
+    scope: same_account
+    outcome: workload_execution
+  preconditions:
+  - appsync_new_api_global_setup
+  conditions:
+  - id: graphql_execution
+    description: The new schema, HTTP data source and resolver must be created successfully, and a field invocation must reach the signed AWS endpoint.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit iam:PassRole to exact AppSync service roles and reserve API and resolver creation for trusted operators.
+  references:
+  - https://docs.aws.amazon.com/appsync/latest/APIReference/API_CreateGraphqlApi.html
+  - https://docs.aws.amazon.com/appsync/latest/APIReference/API_CreateDataSource.html
+  - https://docs.aws.amazon.com/appsync/latest/APIReference/API_CreateResolver.html
+  notes: This self-contained route needs wildcard permission for each operation on the new API and creates its own API key. Existing API or resolver variants need separate evidence for a callable field and usable authorization method.
