@@ -180,6 +180,8 @@
           iam:PassedToService: bedrock-agentcore.amazonaws.com
       - action: bedrock-agentcore:CreateAgentRuntime
         resource: "*"
+      - action: bedrock-agentcore:CreateAgentRuntimeEndpoint
+        resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
       - action: bedrock-agentcore:InvokeAgentRuntime
         resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
       - action: bedrock-agentcore:InvokeAgentRuntime
@@ -205,7 +207,8 @@
   mitigation: Scope iam:PassRole for bedrock-agentcore.amazonaws.com roles, restrict runtime creation to the deployment pipeline and allow only approved registries.
   references:
     - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_CreateAgentRuntime.html
-  notes: Generated runtime IDs have a service-chosen ten-character suffix. CreateAgentRuntime automatically creates the DEFAULT endpoint; a separate CreateAgentRuntimeEndpoint grant is not required. The precondition checks one fresh name and generated suffix scope covered by InvokeAgentRuntime, PassRole and trust grants. A concrete role edge requires fresh reviewed evidence that a controlled, pullable artifact ran under this exact role in a READY runtime and DEFAULT endpoint, and performed a useful action unavailable directly to the caller. The aws-bedrock-privesc page describes the same technique.
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_bedrock-agentcore.html
+  notes: Generated runtime IDs have a service-chosen ten-character suffix. CreateAgentRuntime automatically creates the DEFAULT endpoint, but AWS lists CreateAgentRuntimeEndpoint as a dependent permission on the new runtime. The precondition checks one fresh name and generated suffix scope covered by endpoint creation and InvokeAgentRuntime, PassRole and trust grants. A concrete role edge requires fresh reviewed evidence that a controlled, pullable artifact ran under this exact role in a READY runtime and DEFAULT endpoint, and performed a useful action unavailable directly to the caller. The aws-bedrock-privesc page describes the same technique.
 
 - id: aws-bedrock-agentcore-updateagentruntime-passrole
   provider: aws

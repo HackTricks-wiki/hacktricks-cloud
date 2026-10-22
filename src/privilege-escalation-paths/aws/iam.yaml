@@ -509,6 +509,39 @@
     - https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
   notes: "The AttachRolePolicy branch tries AdministratorAccess and collected customer-managed policies whose default version clearly grants unrestricted actions and resources. Every action must cover the same newly creatable role ARN, and the source must be able to assume that role after creation."
 
+- id: aws-iam-createrole-satisfy-cross-account-trust
+  provider: aws
+  service: iam
+  title: Create a role accepted by a cross-account trust
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#path-name-and-arn-conditions
+  source_revision: b587e6bd26
+  summary: The source can create and assume a role whose ARN matches another account's role trust, then grant the new role permission to assume that target.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector: {}
+    scope: any
+    aggregate_as: Cross-account roles accepting a new source-account role
+    outcome: credentials
+  preconditions:
+    - iam_new_role_cross_account_trust
+  conditions:
+    - id: role_creation_and_assumption
+      description: The source must create one unused role ARN matching the target trust, give that role sts:AssumeRole on the target, and assume the new role.
+    - id: trust_uses_principal_arn
+      description: The target must delegate to the source account and match the future role through aws:PrincipalArn; a directly named role Principal is tied to an immutable role ID.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Scope cross-account trust to established role identities and tightly restrict who can create roles or write their policies in trusted paths.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic-cross-account.html
+  notes: The evaluator joins a collected target trust with one unoccupied role ARN in the source account, exact CreateRole and PutRolePolicy grants on that ARN, a source-to-new-role assumption path, and source-account SCP permission for the new role to assume the target. A direct role ARN in Principal, incomplete role inventory, uncertain trust conditions, or a required permissions boundary does not establish a conditional edge. The role must still be created and assumed.
+
 - id: aws-iam-addusertogroup
   provider: aws
   service: iam
@@ -537,6 +570,109 @@
   mitigation: Restrict iam:AddUserToGroup to administrators or to specific low-privilege groups.
   references: []
   notes: The Resource of iam:AddUserToGroup is the group ARN. Only IAM users can be group members. The evaluator confirms a new effective self-policy edit, administrator policy attachment, or assumption of a specific trusted role; other policy gains remain unresolved until their action and resource are joined to an outcome.
+
+- id: aws-iam-putuserpermissionsboundary-self-admin
+  provider: aws
+  service: iam
+  title: Widen the source user's permissions boundary
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamputuserpermissionsboundary
+  source_revision: 171e422299
+  summary: The source IAM user already has an administrator identity policy limited by its current boundary and can remove that boundary or replace it with AdministratorAccess.
+  requires:
+    any_of:
+      - - action: iam:DeleteUserPermissionsBoundary
+          resource: "{source.arn}"
+      - - action: iam:PutUserPermissionsBoundary
+          resource: "{source.arn}"
+          request_context:
+            iam:PermissionsBoundary: "arn:{source.partition}:iam::aws:policy/AdministratorAccess"
+  target:
+    kind: aws_account_admin
+    selector:
+      same_as_source: true
+      source_kind: aws_user
+    scope: same_account
+    aggregate_as: "Administrator of {account} (self-escalation)"
+  preconditions:
+    - iam_user_boundary_admin_gain
+  conditions:
+    - id: existing_identity_grant
+      description: An existing identity policy must already grant unrestricted administrator actions; changing a boundary does not create a new identity grant.
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Do not let a bounded user remove or replace its own boundary; constrain any boundary updates to approved policy ARNs.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/APIReference/API_PutUserPermissionsBoundary.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html
+  notes: The evaluator compares current and post-change effective administrator authority, checks the exact source user, and tests a Put request with the AdministratorAccess boundary ARN. Existing IAM and SCP Deny statements still apply.
+
+- id: aws-iam-putrolepermissionsboundary-self-admin
+  provider: aws
+  service: iam
+  title: Widen the source role's permissions boundary
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamputrolepermissionsboundary
+  source_revision: 171e422299
+  summary: The source role already has an administrator identity policy limited by its current boundary and can remove or widen that boundary.
+  requires:
+    any_of:
+      - - action: iam:DeleteRolePermissionsBoundary
+          resource: "{source.arn}"
+      - - action: iam:PutRolePermissionsBoundary
+          resource: "{source.arn}"
+          request_context:
+            iam:PermissionsBoundary: "arn:{source.partition}:iam::aws:policy/AdministratorAccess"
+  target:
+    kind: aws_account_admin
+    selector:
+      same_as_source: true
+      source_kind: aws_role
+    scope: same_account
+    aggregate_as: "Administrator of {account} (after a fresh role session)"
+  preconditions: [iam_role_boundary_admin_gain]
+  conditions:
+    - id: fresh_session
+      description: The changed boundary applies to a new role session, so the source must obtain another session of this role.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Keep role boundary changes separate from the role's own permissions and restrict replacement policies.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_update-role-permissions.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html
+  notes: A current role session does not gain the new boundary. The route remains conditional until another session of this role is obtained.
+
+- id: aws-iam-putrolepermissionsboundary-assumable-admin
+  provider: aws
+  service: iam
+  title: Widen the boundary of a role the source can assume
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iam-privesc/README.md#iamputrolepermissionsboundary
+  source_revision: 6fb9ac51fd
+  summary: An existing assumable role has an administrator identity policy limited by its current boundary, and the source can remove or widen that boundary before assuming it.
+  requires:
+    any_of:
+      - - action: iam:DeleteRolePermissionsBoundary
+          resource: "{source.assumable_role_arn}"
+      - - action: iam:PutRolePermissionsBoundary
+          resource: "{source.assumable_role_arn}"
+          request_context:
+            iam:PermissionsBoundary: "arn:{source.partition}:iam::aws:policy/AdministratorAccess"
+  target:
+    kind: aws_account_admin
+    selector:
+      via_assumable_role_covered_by: iam:PutRolePermissionsBoundary
+    scope: same_account
+    aggregate_as: "Administrator of {account} (via an assumable role)"
+  preconditions: [iam_role_boundary_admin_gain]
+  conditions: []
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Separate role boundary administration from role assumption and restrict replacement policies.
+  references:
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_update-role-permissions.html
+    - https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html
+  notes: The same assumable role must satisfy trust, mutation permission, existing identity grant and restrictive old boundary; the new assumption obtains a fresh session.
 
 - id: aws-iam-updateassumerolepolicy
   provider: aws

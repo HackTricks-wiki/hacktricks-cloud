@@ -7,6 +7,43 @@
 # AWS ECS privilege escalation techniques.
 # Source: hacktricks-cloud aws-ecs-privesc/README.md.
 
+- id: aws-ecs-eventbridge-scheduled-task-role
+  provider: aws
+  service: ecs
+  title: Schedule a controlled ECS task under its task role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ecs-privesc/README.md#periodic-ecs-task-through-eventbridge
+  source_revision: b587e6bd26
+  summary: The source can register a task definition with controlled code and use a scheduled EventBridge rule to start it under a stronger task role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ecs-tasks.amazonaws.com
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: ECS task roles reachable through a new scheduled EventBridge rule in {account}
+    outcome: workload_execution
+  preconditions:
+    - ecs_new_task_definition_eventbridge_schedule_ready
+  conditions:
+    - id: scheduled_task_execution
+      description: The controlled task image must be runnable and the enabled rule must trigger a task on a compatible connected instance.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict ECS task-definition registration, EventBridge rule targets and PassRole on invocation and task roles to trusted deployment principals.
+  references:
+    - https://docs.aws.amazon.com/AmazonECS/latest/developerguide/CWE_IAM_role.html
+    - https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutTargets.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+  notes: The evaluator binds one new task-definition family, one free scheduled default-bus rule, an active connected EC2 cluster and a recorded EventBridge invocation role. The source must pass the task role to ECS and the invocation role to EventBridge; that invocation role must trust events.amazonaws.com and be allowed to RunTask and pass the task role. A role-less task definition cannot satisfy this route. Task image pull and actual execution remain conditional.
+
 - id: aws-ecs-executecommand
   provider: aws
   service: ecs
