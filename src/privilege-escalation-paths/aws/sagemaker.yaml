@@ -212,10 +212,12 @@
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
   preconditions:
-    - sagemaker_job_execution_route_unverified
+    - sagemaker_hpo_script_mode_route
   conditions:
-    - id: code_location_readable_by_role
-      description: The passed role must be able to read the S3 code bundle the source supplies (own public/cross-account bucket or writable bucket).
+    - id: managed_image_and_capacity
+      description: A compatible SageMaker-managed Python training image and instance must be available in the Region.
+    - id: child_job_running
+      description: The tuning job must start a training job with network isolation off before its script can use the passed role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -223,7 +225,7 @@
   mitigation: Restrict iam:PassRole on SageMaker roles and sagemaker:CreateHyperParameterTuningJob.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateHyperParameterTuningJob.html
-  notes: A tuning job can launch training jobs under the passed role, but its training definition must provide executable code and usable S3 code, input and output paths. A public code bucket or ACL must not be assumed usable when account or organization S3 public access blocks apply. The selected job name, exact creation and PassRole permissions, service trust and executable training definition need a joined witness.
+  notes: A tuning job can launch training jobs under the passed role. Its definition accepts script-mode hyperparameters but no inline ContainerEntrypoint, so the source must write a code archive that the role can read. Input channels are optional, while OutputDataConfig requires a same-Region S3 path writable by the role. The precondition joins these S3 grants, a free tuning-job name, exact creation and PassRole permissions and service trust; image availability, capacity and child-job startup remain conditional.
 
 - id: aws-sagemaker-updateuserprofile-passrole-createapp
   provider: aws
