@@ -969,6 +969,15 @@ FACTS_NEEDED = {
 # an "Unresolved" placeholder (unknown confidence, never FAIL). mode "target" depends only on the target and the
 # inventory (shared candidate set); mode "source" also depends on the source principal.
 PRECONDITIONS = {
+    "athena_existing_session_calculation_role": (("aws",), "source",
+      "The caller can submit code to an idle PySpark 3 session with the target execution role.",
+      "AWS: complete Athena ListSessions/GetSession inventory with exact SessionConfiguration.ExecutionRole, IDLE state, PySpark engine version 3, and StartCalculationExecution on its workgroup ARN"),
+    "athena_existing_notebook_url_role": (("aws",), "source",
+      "The caller can open an active PySpark 3 notebook backed by the target execution role.",
+      "AWS: complete Athena ListSessions/GetSession inventory with exact SessionConfiguration.ExecutionRole, IDLE state, NotebookVersion, PySpark engine version 3, and CreatePresignedNotebookUrl on its workgroup ARN"),
+    "athena_existing_spark_connect_role": (("aws",), "source",
+      "The caller can get the endpoint token for an active Spark 3.5 session with the target execution role.",
+      "AWS: complete Athena ListSessions/GetSession inventory with exact SessionConfiguration.ExecutionRole, active state, Apache Spark version 3.5, and GetSessionEndpoint on its workgroup and session ARNs"),
     "flink_new_application_startable": (("aws",), "source",
       "The caller can create and start one unused application name in the same Region.",
       "AWS: complete kinesisanalytics:ListApplications inventory in a Region, CreateApplication on *, and StartApplication on one available application ARN"),

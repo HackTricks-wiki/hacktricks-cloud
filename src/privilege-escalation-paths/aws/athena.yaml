@@ -9,6 +9,99 @@
 # Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Athena Spark workgroups carry an
 # ExecutionRole (trusting athena.amazonaws.com) used by every session, calculation and notebook in the workgroup.
 
+- id: aws-athena-startcalculationexecution-existing-session
+  provider: aws
+  service: athena
+  title: Run code in an existing Athena Spark session
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenastartcalculationexecution--execute-code-in-an-existing-spark-session
+  source_revision: 171e422299
+  summary: A caller who can submit calculations to an idle PySpark 3 session may run code with that session's recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of idle Athena Spark sessions in {account}
+    outcome: workload_execution
+  preconditions:
+    - athena_existing_session_calculation_role
+  conditions:
+    - id: session_stays_active
+      description: The recorded session must still be idle when the calculation is submitted.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit StartCalculationExecution to the principals that operate the relevant Spark workgroups, and keep their execution roles least privileged.
+  references:
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_StartCalculationExecution.html
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_GetSession.html
+    - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-api-list.html
+  notes: The evaluator joins each listed session to its exact GetSession execution role and requires IDLE state, PySpark engine version 3, and StartCalculationExecution on its workgroup ARN. No PassRole or StartSession grant is required for this existing-session route.
+
+- id: aws-athena-getsessionendpoint-spark-connect
+  provider: aws
+  service: athena
+  title: Open an existing Athena Spark Connect session
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenagetsessionendpoint--take-over-an-active-spark-connect-session
+  source_revision: 171e422299
+  summary: A caller who can mint the endpoint token for an active Spark 3.5 session may control it using its recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of active Athena Spark Connect sessions in {account}
+    outcome: workload_execution
+  preconditions:
+    - athena_existing_spark_connect_role
+  conditions:
+    - id: session_stays_active
+      description: The session must remain active and the endpoint token must be used while valid.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit GetSessionEndpoint to approved session operators and keep Spark session execution roles least privileged.
+  references:
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_GetSessionEndpoint.html
+    - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-connect.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_athena.html
+  notes: The evaluator joins the exact session role and requires active Apache Spark version 3.5 plus GetSessionEndpoint on the workgroup and session ARNs. It never requests or stores the endpoint token.
+
+- id: aws-athena-createpresignednotebookurl
+  provider: aws
+  service: athena
+  title: Open an existing Athena Spark notebook
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-athena-spark-role-privesc/README.md#athenacreatepresignednotebookurl--take-over-a-running-spark-notebook
+  source_revision: 171e422299
+  summary: A caller who can mint a notebook URL for an active PySpark 3 notebook session may use its recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of active Athena Spark notebooks in {account}
+    outcome: workload_execution
+  preconditions:
+    - athena_existing_notebook_url_role
+  conditions:
+    - id: notebook_stays_active
+      description: The notebook session must remain active and the URL must be used while valid.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit CreatePresignedNotebookUrl to approved notebook operators and keep their execution roles least privileged.
+  references:
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_CreatePresignedNotebookUrl.html
+    - https://docs.aws.amazon.com/athena/latest/APIReference/API_GetSession.html
+    - https://docs.aws.amazon.com/athena/latest/ug/notebooks-spark-api-list.html
+  notes: The evaluator requires the exact session role, an active PySpark 3 session with NotebookVersion, and CreatePresignedNotebookUrl on its workgroup ARN. It never requests or stores the notebook token.
+
 - id: aws-athena-passrole-createworkgroup-spark
   provider: aws
   service: athena
