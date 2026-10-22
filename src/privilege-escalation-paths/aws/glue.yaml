@@ -131,7 +131,7 @@
   service: glue
   title: Replace the script read by an existing Glue job
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-glue-privesc/README.md#replace-the-script-of-an-existing-glue-job
-  source_revision: d5f695f4a3
+  source_revision: f6c5b04636
   summary: The source may run its code under an existing Glue job role by replacing the exact S3 script object used by that job and causing the job to run.
   requires:
     all_of: []
@@ -148,7 +148,7 @@
     - glue_existing_job_script_object_writable_and_runnable
   conditions:
     - id: object_replacement_and_run
-      description: The exact S3 script object must accept the replacement and the job must subsequently load it. Bucket policy, encryption, or a job argument may impose additional limits.
+      description: The exact S3 script object must accept the replacement and the job must subsequently load it. A non-overridable --scriptLocation or scheduled trigger action that redirects the script leaves the route unresolved.
     - id: scheduled_run
       description: The scheduled-trigger variant requires the recorded active schedule to fire after the object replacement.
   blockers:
@@ -159,7 +159,7 @@
   references:
     - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-api-jobs-job.html
     - https://docs.aws.amazon.com/glue/latest/dg/edit-nodes-script.html
-  notes: The evaluator joins Command.ScriptLocation, the same job's role, exact s3:PutObject and role s3:GetObject permissions, and StartJobRun or an active scheduled trigger. It never infers a role edge from a generic writable bucket or a different job.
+  notes: The evaluator joins Command.ScriptLocation, the same job's role, exact s3:PutObject and role s3:GetObject permissions, and StartJobRun or an active scheduled trigger. A direct StartJobRun can explicitly select the recorded script URI only when --scriptLocation is not non-overridable; a scheduled run also needs collected job defaults and trigger action arguments without a script redirect. It never infers a role edge from a generic writable bucket or a different job.
 
 - id: aws-glue-passrole-createjob-or-updatejob-run
   provider: aws
