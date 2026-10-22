@@ -196,35 +196,13 @@
 - id: aws-ec2-autoscaling-create-update-asg-passrole
   provider: aws
   service: ec2
-  title: Create a launch configuration or template with a passed role and launch it through Auto Scaling
+  title: Launch an Auto Scaling instance with a passed role
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#autoscalingcreatelaunchconfiguration--ec2createlaunchtemplate--iampassrole-autoscalingcreateautoscalinggroup--autoscalingupdateautoscalinggroup
   source_revision: 171e422299
-  summary: The source can have Auto Scaling launch an instance from a configuration it controls with a passable instance profile.
+  summary: A caller can configure an Auto Scaling group to launch an instance using a passable instance-profile role, then run controlled code under that role when the launch and code execution are observed.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-    any_of:
-      - - action: autoscaling:CreateLaunchConfiguration
-          resource: "*"
-        - action: autoscaling:CreateAutoScalingGroup
-          resource: "*"
-      - - action: autoscaling:CreateLaunchConfiguration
-          resource: "*"
-        - action: autoscaling:UpdateAutoScalingGroup
-          resource: "*"
-      - - action: ec2:CreateLaunchTemplate
-          resource: "*"
-        - action: ec2:RunInstances
-          resource: "*"
-        - action: autoscaling:CreateAutoScalingGroup
-          resource: "*"
-      - - action: ec2:CreateLaunchTemplate
-          resource: "*"
-        - action: ec2:RunInstances
-          resource: "*"
-        - action: autoscaling:UpdateAutoScalingGroup
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
     selector:
@@ -233,17 +211,21 @@
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
+  preconditions:
+    - autoscaling_created_launch_input_role_effect_reviewed
   conditions:
-    - id: launch_configurations_deprecated
-      description: New accounts cannot create launch configurations (deprecated since 2023-2024); the launch-template groups apply there.
+    - id: exact_launch_and_role_effect
+      description: Fresh reviewed evidence must join a controlled launch configuration or template, the Auto Scaling group that accepted it, the launched instance and a useful action executed under the exact instance role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
-  mitigation: Restrict iam:PassRole on EC2 roles; Auto Scaling validates the caller's ec2:RunInstances and iam:PassRole for launch templates.
+  mitigation: Limit who can pass EC2 instance roles and choose launch inputs for Auto Scaling groups; pin launch-template versions where possible.
   references:
     - https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-launch-template-permissions.html
-  notes: The template variant with ec2:RunInstances is already enough for aws-ec2-passrole-runinstances; it is kept to record the documented combination.
+    - https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-configurations.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_autoscaling.html
+  notes: CreateLaunchConfiguration and CreateLaunchTemplate are checked on the exact created ARN, and CreateAutoScalingGroup or UpdateAutoScalingGroup on the exact group ARN. The template branch also checks every recorded RunInstances authorization resource. The role pass is checked for ec2.amazonaws.com. A witnessed instance, applied profile, executed user data and useful role action are required. AWS no longer permits new launch configurations in accounts created on or after October 1, 2024; an accepted creation witness decides that branch.
 
 - id: aws-ec2-instance-connect-sendsshpublickey
   provider: aws
