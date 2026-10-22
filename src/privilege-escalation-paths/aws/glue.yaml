@@ -116,7 +116,7 @@
   references:
     - https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
     - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateTrigger.html
-  notes: A collected unpinned --scriptLocation plus StartJobRun on the exact job, or permission to create a new scheduled trigger in the same Region, establishes a conditional route. Pinned scripts may still have a dependency route through --extra-py-files, --extra-jars, --additional-python-modules or --python-virtual-env; those remain unresolved until their runtime prerequisites are verified. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
+  notes: The evaluator requires an unpinned --scriptLocation, StartJobRun on the exact job or a creatable scheduled trigger, and a recorded S3 script object the source can PutObject and the target role can GetObject. Other script objects and dependency overrides remain unresolved. The page states that creating a trigger for an existing job does not itself require iam:PassRole. The HEAD page has no dedicated heading for this variant; it is sourced at the job heading.
 
 
 - id: aws-glue-overwrite-existing-job-script
@@ -189,7 +189,7 @@
   mitigation: Restrict iam:PassRole on Glue roles with iam:PassedToService, and restrict job creation/update and trigger creation to the deployment pipeline.
   references:
     - https://docs.aws.amazon.com/glue/latest/webapi/API_CreateJob.html
-  notes: The machine precondition checks a creatable unused job or an existing updateable job and StartJobRun on that same job, or a creatable scheduled trigger in its Region. The script must still be readable by the passed role.
+  notes: The machine precondition checks a creatable unused job or an existing updateable job and StartJobRun on that same job, or a creatable scheduled trigger in its Region. It also binds exact Glue PassRole and a recorded S3 script object the source can PutObject and the passed role can GetObject. Other script objects remain unresolved.
 
 - id: aws-glue-updatejob-existing-role
   provider: aws
@@ -228,7 +228,7 @@
     - https://docs.aws.amazon.com/glue/latest/webapi/API_UpdateJob.html
     - https://docs.aws.amazon.com/glue/latest/webapi/API_JobUpdate.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsglue.html
-  notes: HackTricks states UpdateJob alone suffices, but JobUpdate marks Role as required and states the previous job definition is completely overwritten, and the Service Authorization Reference lists iam:PassRole as a dependent action of glue:UpdateJob, so PassRole on the job's role is required. An operator-run possibility is not enough to establish a reachable execution path. Direct StartJobRun is covered by aws-glue-passrole-createjob-or-updatejob-run.
+  notes: HackTricks states UpdateJob alone suffices, but JobUpdate marks Role as required and states the previous job definition is completely overwritten, and the Service Authorization Reference lists iam:PassRole as a dependent action of glue:UpdateJob, so PassRole on the job's role is required. The evaluator also joins a runnable trigger and a recorded S3 script object the source can PutObject and the attached role can GetObject; other script objects remain unresolved. Direct StartJobRun is covered by aws-glue-passrole-createjob-or-updatejob-run.
 
 - id: aws-glue-passrole-createsession
   provider: aws
