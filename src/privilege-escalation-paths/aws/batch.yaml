@@ -7,6 +7,39 @@
 # AWS Batch privilege escalation techniques.
 # Source: hacktricks-cloud aws-batch-privesc/README.md.
 
+- id: aws-batch-submitjob-existing-definition
+  provider: aws
+  service: batch
+  title: Submit a command through an existing Batch job role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-batch-privesc/README.md#batchsubmitjob
+  source_revision: 6fb9ac51fd
+  summary: A caller who can submit a command override for an active EC2 job definition may run that command with its recorded job role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ecs-tasks.amazonaws.com
+    scope: same_account
+    aggregate_as: Job roles of existing Batch definitions in {account}
+    outcome: workload_execution
+  preconditions:
+    - batch_existing_definition_submitjob_role
+  conditions:
+    - id: runnable_container
+      description: The image must start on the selected EC2 queue and provide a command that can use the job role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Limit SubmitJob to trusted callers on both approved queues and exact job definition revisions, and keep job roles least privileged.
+  references:
+    - https://docs.aws.amazon.com/batch/latest/APIReference/API_SubmitJob.html
+    - https://docs.aws.amazon.com/batch/latest/userguide/iam-example-restrict-job-submission.html
+    - https://docs.aws.amazon.com/batch/latest/userguide/job_definition_parameters.html
+  notes: The evaluator uses the recorded active definition revision, exact jobRoleArn and a valid enabled EC2 queue. It requires SubmitJob on both resource ARNs; PassRole is only checked when a definition is registered, not at submission.
+
 - id: aws-batch-registerjobdefinition-passrole-submitjob
   provider: aws
   service: batch
