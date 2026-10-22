@@ -207,6 +207,7 @@ SELECTOR_KEYS = {
     "aws_challenge_fact": (("aws",), "string",
         "Exact externally verified technique/source/target evidence from aws_privesc_challenge_evidence. "
         "Missing or incomplete evidence is unresolved; a different source or target never matches."),
+    "aws_scheduler_iam_self_grant": (("aws",), "bool_true", "Exact Scheduler schedule and passed role can add an inline policy to its creator through a role-authorized IAM target API."),
     "aws_s3_policy_self_grant": (("aws",), "bool_true", "Reviewed exact S3 bucket-policy self-grant for the caller and a bounded object prefix."),
     "aws_sqs_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself ReceiveMessage on an exact queue through SetQueueAttributes; an SSE-KMS queue also needs effective Decrypt on its collected key."),
     "aws_sns_policy_self_grant": (("aws",), "bool_true", "Same-account IAM user can grant itself Subscribe on an exact topic through SetTopicAttributes."),
@@ -794,6 +795,7 @@ FACTS_NEEDED = {
     "source_permissions_boundary_conditions": "the source permissions boundary conditions needed to decide full account administration",
     "source_boundary_policy_version_contents": "stored versions of the source permissions boundary policy",
     "source_boundary_replacement_authorization": "the replacement boundary policy and request conditions on changing the source boundary",
+    "aws_scheduler_iam_self_grant": "an exact creator, Scheduler-trusting passable role, creatable schedule, role-authorized inline-policy API on the creator and a newly effective IAM permission",
     "aws_s3_policy_self_grant": "unique collected aws_s3_policy_self_grant_evidence with exact source, bucket, prefix, policy principal/resource and observed before/after GetObject authorization",
     "aws_sqs_policy_self_grant": "the exact queue ARN, a same-account IAM user's SetQueueAttributes grant, absent prior ReceiveMessage and no surviving explicit deny; for SSE-KMS, the exact collected key policy and effective Decrypt grant",
     "aws_sns_policy_self_grant": "the exact topic ARN, a same-account IAM user's SetTopicAttributes grant, absent prior Subscribe and no surviving explicit deny",
@@ -1976,7 +1978,7 @@ def validate_entry(entry, *, expected_provider=None, hacktricks_root=None):
         if "service_plane" in selector and kind != "aws_service_plane_admin":
             errors.append(f"{where}: selector service_plane is only valid with target kind aws_service_plane_admin")
         aws_authority_selectors = (
-            "aws_challenge_fact", "aws_s3_policy_self_grant", "aws_sqs_policy_self_grant", "aws_sns_policy_self_grant", "aws_dynamodb_policy_self_grant", "aws_s3_access_grants_self_grant",
+            "aws_challenge_fact", "aws_scheduler_iam_self_grant", "aws_s3_policy_self_grant", "aws_sqs_policy_self_grant", "aws_sns_policy_self_grant", "aws_dynamodb_policy_self_grant", "aws_s3_access_grants_self_grant",
             "aws_secretsmanager_policy_self_grant", "aws_efs_policy_self_grant",
             "aws_cases_tag_self_grant", "aws_sitewise_portal_self_grant")
         selected_authority = [key for key in aws_authority_selectors if selector.get(key)]
