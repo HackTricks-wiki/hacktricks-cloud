@@ -53,6 +53,38 @@
   notes: CreateBrowser and InvokeBrowser need a separate browser-action proof; they do not establish arbitrary
     code execution through the Code Interpreter path.
 
+- id: aws-bedrock-agentcore-codeinterpreter-existing
+  provider: aws
+  service: bedrock
+  title: Run code through an existing AgentCore Code Interpreter role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-bedrock-privesc/README.md#bedrock-agentcorestartcodeinterpretersession--bedrock-agentcoreinvokecodeinterpreter---code-interpreter-execution-role-pivot
+  source_revision: eb763dbd71
+  summary: The source can run code in one ready Code Interpreter whose recorded execution role is the target role.
+  requires:
+    all_of:
+    - action: bedrock-agentcore:StartCodeInterpreterSession
+      resource: '{target.attached_resource_arn}'
+    - action: bedrock-agentcore:InvokeCodeInterpreter
+      resource: '{target.attached_resource_arn}'
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: bedrock-agentcore-code-interpreter
+      attached_resource_covered_by: bedrock-agentcore:StartCodeInterpreterSession
+    scope: same_account
+    aggregate_as: Roles attached to invokable AgentCore Code Interpreters in {account}
+    outcome: workload_execution
+  preconditions:
+  - agentcore_existing_code_interpreter_role_ready
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit Code Interpreter session and invoke grants to interpreters with appropriately scoped execution roles.
+  references:
+  - https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/API_GetCodeInterpreter.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_bedrock-agentcore.html
+
 
 - id: aws-bedrock-agent-lambda-actiongroup-hijack
   provider: aws
