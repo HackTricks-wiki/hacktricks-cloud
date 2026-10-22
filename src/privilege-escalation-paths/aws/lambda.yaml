@@ -454,7 +454,7 @@
     - id: same_image_scope
       description: RunMicrovm and CreateMicrovmShellAuthToken are authorized on the MicroVM image ARN; both grants must cover the same usable image (customer or AWS-managed) for the edge to hold.
     - id: shell_ingress_connector
-      description: The runtime must be launched with the AWS-managed SHELL_INGRESS connector; it cannot be added to a running MicroVM.
+      description: The runtime must be launched with the AWS-managed SHELL_INGRESS connector; lambda:PassNetworkConnector has no resource-level scope, so its IAM grant must apply to Resource *, and the connector cannot be added to a running MicroVM.
     - id: alternative_attacker_image
       description: A source able to build its own MicroVM image could instead run arbitrary application code with the passed role without a shell token; that variant is not modelled separately.
   blockers:
@@ -466,7 +466,7 @@
     - https://docs.aws.amazon.com/lambda/latest/dg/microvms-how-it-works.html
     - https://docs.aws.amazon.com/lambda/latest/dg/microvms-security.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_lambda.html
-  notes: RunMicrovm attaches an optional execution role whose credentials the guest receives through IMDSv2. AWS requires the execution role to trust lambda.amazonaws.com for sts:AssumeRole and sts:TagSession. The evaluator joins one recorded runnable image covered by RunMicrovm and CreateMicrovmShellAuthToken with PassNetworkConnector on the same Region's SHELL_INGRESS connector.
+  notes: RunMicrovm attaches an optional execution role whose credentials the guest receives through IMDSv2. AWS requires the execution role to trust lambda.amazonaws.com for sts:AssumeRole and sts:TagSession. The evaluator joins one recorded runnable image covered by RunMicrovm and CreateMicrovmShellAuthToken with a global PassNetworkConnector grant evaluated in the image's Region; the requested connector must be SHELL_INGRESS.
 
 - id: aws-lambda-passrole-createfunction-eventbridge-trigger
   provider: aws
