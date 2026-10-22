@@ -72,6 +72,38 @@
     - https://docs.aws.amazon.com/deadline-cloud/latest/userguide/security-iam-service-roles.html
   notes: The evaluator binds ListFarms, ListFleets, GetFleet and ListWorkers to one farm, fleet, worker and role; checks AssumeFleetRoleForWorker on the exact worker ARN and the target role's farm-scoped service trust. It does not infer unrelated permissions from the role's attached policies.
 
+- id: aws-deadline-new-worker-existing-fleet-role-vend
+  provider: aws
+  service: deadline
+  title: Obtain an existing fleet's role by registering a worker
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreateworker-and-deadlineassumefleetroleforworker-on-an-existing-fleet
+  source_revision: 59e89b66b9
+  summary: The source can register a worker on an existing customer-managed fleet and request that worker's role credentials when both IAM grants cover every generated worker ID on that fleet.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Existing fleet worker roles reachable through Deadline Cloud in {account}
+    outcome: credentials
+  preconditions:
+    - deadline_new_worker_role_vend
+  conditions:
+    - id: new_worker_role_session
+      description: The active customer-managed fleet must have capacity, the role must trust the Deadline credentials service for that farm, and the new worker credential request must succeed. Unrelated attached role permissions are not proven effective.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit worker creation and credential vending to the intended worker hosts for each fleet.
+  references:
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_AssumeFleetRoleForWorker.html
+    - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_GetFleet.html
+    - https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSDeadlineCloud-WorkerHost.html
+  notes: The evaluator joins one existing fleet to its role, checks farm-scoped service trust and capacity, and requires broad CreateWorker and AssumeFleetRoleForWorker grants covering the whole generated worker-ID family on that fleet. It does not infer access from a grant on a chosen or existing worker ID.
+
 - id: aws-deadline-passrole-createqueue-updatequeue
   provider: aws
   service: deadline
