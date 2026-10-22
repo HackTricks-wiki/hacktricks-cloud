@@ -316,10 +316,11 @@
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-msk-post-exploitation/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-msk-privesc/README.md#kafkaupdatesecurity-to-expose-private-topics-without-credentials
   technique: aws-s05-04-read-public-msk-sasl-scram-secret
-  reason: 'Read public MSK SASL/SCRAM secret: no source IAM action or resource is declared in requires. The conditional
-    aws_role target relies on opaque evidence, so the YAML cannot prove Alice''s permission-to-action-to-subject
-    chain. Reauthor the exact source action, resource, credential subject and effective added permissions before
-    restoring.'
+  reason: 'An MSK-associated Secrets Manager secret contains a Kafka SASL/SCRAM username
+    and password. Reading that secret may permit broker authentication when network access
+    and Kafka ACLs allow it, but the password is not an IAM or STS credential and gives no
+    other AWS principal authority. The retired role target conflated Kafka topic access with
+    AWS principal escalation; retain the credential exposure as a separate data-plane issue.'
   source_revision: 1fb542ff27
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-function-access-post-exploitation/README.md#lambdagetfunction--download-a-function-deployment-package
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdagetfunction--download-a-function-deployment-package
@@ -560,10 +561,12 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-payment-cryptography-enum.md#resource-and-authorization-model
   technique: aws-payment-cryptography-crossaccount-key-policy
-  reason: 'Grant a controlled external principal payment-key operations: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'PutResourcePolicy on an owner-account primary key can grant selected payment-key
+    operations to a named principal. An external principal also needs its own identity-policy
+    Allow, and the source caller in the key-owning account is not thereby given that external
+    principal''s credentials or authority. A self-grant on the same IAM principal changes its
+    own key access, not a path to another principal. The retired entry identifies no second
+    principal controlled by the source; keep cross-account key sharing outside this graph.'
 - source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-payment-cryptography-privesc/README.md#payment-cryptographyputresourcepolicy
   technique: aws-payment-cryptography-sameaccount-key-policy
   reason: 'Grant the source new operations on a primary payment key: the modeled target is terminal aws_verified_authority/bounded_authority,
@@ -626,10 +629,13 @@
     explicitly.'
 - source: src/pentesting-cloud/aws-security/aws-services/aws-q-business-enum.md#data-accessors-and-resource-policies
   technique: aws-qbusiness-crossaccount-data-accessor
-  reason: 'Grant a controlled ISV accessor Q Business retrieval authority: the modeled target is terminal aws_verified_authority/bounded_authority,
-    and its notes deny new principal permissions. This is not a path to an exact principal or an explicit new effective
-    permission of Alice. If the operation truly grants an identity a new action, reauthor that identity and action
-    explicitly.'
+  reason: 'A Q Business data accessor grants a registered ISV IAM role bounded
+    SearchRelevantContent access to one customer application and its permitted index data.
+    AWS requires an accessor, application policy/assignment and identity or tenant context;
+    the customer-side caller does not receive or control the ISV role by creating the accessor.
+    The registered role is another principal, but no source-to-role control or credential
+    transfer exists in this technique. Keep the cross-account data-sharing risk outside the
+    principal escalation graph.'
 - source: src/pentesting-cloud/aws-security/aws-post-exploitation/aws-lambda-post-exploitation/README.md#lambdaaddpermission
   historical_source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-lambda-privesc/README.md#lambdaaddpermission
   source_revision: 3ad99dc7ac
