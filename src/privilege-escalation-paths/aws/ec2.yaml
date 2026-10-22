@@ -85,30 +85,26 @@
 - id: aws-ec2-requestspotinstances-passrole
   provider: aws
   service: ec2
+  source_kind: [aws_user, aws_role]
   title: Request a Spot Instance with a passed instance profile
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ec2-privesc/README.md#ec2requestspotinstances-iampassrole
   source_revision: 171e422299
   summary: The source can request a Spot Instance it controls with a passable instance profile and may run code using the attached role.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-        request_context:
-          iam:PassedToService: ec2.amazonaws.com
+    all_of: []
   target:
     kind: aws_role
     selector:
       trust_allows_service: ec2.amazonaws.com
       has_instance_profile: true
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting ec2.amazonaws.com with an instance profile in {account}"
     outcome: workload_execution
   preconditions:
-    - spot_request_with_passed_profile_and_role_ready
+    - ec2_spot_request_instance_role_effect_reviewed
   conditions:
     - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
+      description: iam:PassedToService and iam:AssociatedResourceArn may restrict which role can be passed to the launched instance.
     - id: spot_service_linked_role
       description: The first Spot request in an account also needs iam:CreateServiceLinkedRole for spot.amazonaws.com when AWSServiceRoleForEC2Spot does not exist yet; ec2:CreateFleet / RequestSpotFleet are not a bypass because the fleet authorizes ec2:RunInstances as the caller.
   blockers:
@@ -118,7 +114,7 @@
   mitigation: Restrict iam:PassRole on EC2 roles with iam:PassedToService, and restrict ec2:RequestSpotInstances.
   references:
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonec2.html
-  notes: The Service Authorization Reference allows RequestSpotInstances on scoped image and Spot-request resources and lists iam:PassRole as a dependent action; RunInstances is a separate API. A compatible image, network, instance profile, available Spot capacity and the required Spot service-linked role are not joined from the caller grants, so a concrete role edge remains unresolved.
+  notes: RequestSpotInstances authorizes the selected image, generated Spot request and launch resources, with iam:PassRole on the instance role; ec2:RunInstances is a separate API. A role edge needs one accepted request, a launched member instance with the target profile, executed controlled user data and a useful role action unavailable directly to the source. PassRole is evaluated with the exact instance as iam:AssociatedResourceArn. Caller grants alone leave the route unresolved.
 
 - id: aws-ec2-modifyinstanceattribute-userdata
   provider: aws
