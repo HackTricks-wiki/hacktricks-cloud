@@ -7,6 +7,36 @@
 # Amazon GameLift Servers privilege escalation techniques.
 # Source: hacktricks-cloud aws-gamelift/README.md (rev 171e422299).
 
+- id: aws-gamelift-getcomputeaccess-shared-fleet-role
+  provider: aws
+  service: gamelift
+  title: Open an EC2 fleet host with a shared instance role credentials file
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-gamelift/README.md#managed-compute-shell-with-gameliftgetcomputeaccess
+  source_revision: 88f850c6d4
+  summary: The source can open a shell on an active managed EC2 fleet compute where the exact instance role is exposed through a shared credentials file.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of: []
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: "Instance roles on active GameLift EC2 fleets reachable through a shared credentials file in {account}"
+    outcome: impersonation
+  preconditions:
+    - gamelift_existing_shared_fleet_role_shell
+  conditions:
+    - id: readable_shared_credentials
+      description: The Session Manager shell must be able to read the fleet's shared role credentials file while the compute remains active.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Limit GetComputeAccess on fleets with shared instance role credentials to operators who need host access, and keep the fleet role narrowly scoped.
+  references:
+    - https://docs.aws.amazon.com/gameliftservers/latest/apireference/API_GetComputeAccess.html
+    - https://docs.aws.amazon.com/gameliftservers/latest/developerguide/gamelift-sdk-server-resources.html
+  notes: The evaluator joins the exact fleet InstanceRoleArn and SHARED_CREDENTIAL_FILE setting to an active listed compute and checks GetComputeAccess on that fleet ARN. It never requests the shell token or reads the role credentials. Default SDK credential flow and container fleets are outside this entry.
+
 - id: aws-gamelift-passrole-createfleet
   provider: aws
   service: gamelift
