@@ -110,31 +110,20 @@
   title: Attach a passed role to a queue and vend its credentials
   source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-deadline-cloud-privesc/README.md#deadlinecreatequeueupdatequeue--iampassrole--deadlineassumequeueroleforuser
   source_revision: 171e422299
-  summary: The source can obtain the privileges of any passable role trusting credentials.deadline.amazonaws.com.
+  summary: A caller able to change one existing queue's role, pass an eligible role to Deadline Cloud, and request that queue's credentials may receive the new queue-role credentials. Creating a queue needs separate proof of its generated queue identity.
   requires:
-    all_of:
-      - action: iam:PassRole
-        resource: "{target.arn}"
-      - action: deadline:AssumeQueueRoleForUser
-        resource: "*"
-    any_of:
-      - - action: deadline:CreateQueue
-          resource: "*"
-      - - action: deadline:UpdateQueue
-          resource: "*"
+    all_of: []
+  source_kind: [aws_user, aws_role]
   target:
     kind: aws_role
-    selector:
-      trust_allows_service: credentials.deadline.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
-    aggregate_as: "Roles trusting credentials.deadline.amazonaws.com passable in {account}"
+    aggregate_as: "Queue roles reachable through Deadline Cloud in {account}"
     outcome: credentials
+  preconditions:
+    - deadline_passrole_queue_role_vend
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: farm_access
-      description: The source needs a farm it can create or update queues in and queue membership allowing credential vending.
+    - id: queue_role_session
+      description: The role update and credential request must succeed on the same queue; queue membership and live service state may still limit use.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -143,7 +132,7 @@
   references:
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_CreateQueue.html
     - https://docs.aws.amazon.com/deadline-cloud/latest/APIReference/API_UpdateQueue.html
-  notes: Reach is roles trusting credentials.deadline.amazonaws.com in PassRole scope.
+  notes: The evaluator joins an existing farm and queue to its exact ARN, checks UpdateQueue and AssumeQueueRoleForUser there, and PassRole to deadline.amazonaws.com on the target role. A queue already using that role belongs to the existing-queue route. CreateQueue remains unresolved because AWS generates its queue ID and the current inventory cannot bind that future queue to a later credential request.
 
 - id: aws-deadline-passrole-fleet-createworker
   provider: aws
