@@ -134,12 +134,12 @@
     aggregate_as: "Roles trusting sagemaker.amazonaws.com passable in {account}"
     outcome: workload_execution
   preconditions:
-    - sagemaker_job_execution_route_unverified
+    - sagemaker_processing_inline_entrypoint_route
   conditions:
-    - id: egress_or_role_side_effects
-      description: Credential use from inside the job needs outbound network (no network isolation) or the payload must act with the role directly.
-    - id: sagemaker_condition_keys
-      description: sagemaker:NetworkIsolation / sagemaker:VpcSubnets / image condition keys may constrain the job.
+    - id: managed_image_and_capacity
+      description: A compatible SageMaker-managed Python image and the selected processing instance must be available in the Region.
+    - id: job_running
+      description: The created job must reach running state with network isolation off before its inline entrypoint can use the passed role.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -148,7 +148,7 @@
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_CreateProcessingJob.html
     - https://docs.aws.amazon.com/service-authorization/latest/reference/list_sagemaker.html
-  notes: CreateProcessingJob authorizes the caller-selected processing-job ARN. AppSpecification.ContainerEntrypoint can select caller-supplied commands, but an authorized, runnable image, target role image access and a viable job request remain to be proven before a role edge is reported.
+  notes: CreateProcessingJob authorizes the caller-selected processing-job ARN. AppSpecification.ContainerEntrypoint can select caller-supplied Python code in a SageMaker-managed image, which SageMaker pulls with service-owned credentials. The precondition joins one free job name, the exact creation and PassRole grants, compatible service trust, and a non-isolated instance request. Image availability, instance capacity and successful job startup remain conditional.
 
 - id: aws-sagemaker-passrole-createtrainingjob
   provider: aws
