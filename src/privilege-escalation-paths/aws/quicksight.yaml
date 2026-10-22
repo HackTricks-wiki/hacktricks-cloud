@@ -9,6 +9,35 @@
 # QuickSight user inventory is collected, but a new ADMIN registration needs
 # subscription, IAM identity, and requested user ARN evidence before sign-off.
 
+- id: aws-quicksight-updateuser-admin
+  provider: aws
+  service: quicksight
+  title: Promote an existing IAM-backed QuickSight user to administrator
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md#quicksightupdateuser--self-promote-to-admin
+  source_revision: 171e422299
+  summary: An IAM user can promote its own active QuickSight identity to ADMIN when UpdateUser is allowed on that exact QuickSight user.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: quicksight:UpdateUser
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: quicksight
+      quicksight_existing_iam_user: true
+    scope: same_account
+    aggregate_as: "QuickSight administrator for {target.resource_arn}"
+    grants: [QuickSight ADMIN]
+  preconditions:
+    - quicksight_existing_iam_user_self_admin
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict quicksight:UpdateUser on users' own QuickSight identities and monitor changes to ADMIN.
+  notes: PrincipalId must exactly match the caller's immutable IAM UserId; a role session, QuickSight-native user, inactive user, or custom permission restriction is not a definite self-promotion.
+
 - id: aws-quicksight-registeruser-admin
   provider: aws
   service: quicksight

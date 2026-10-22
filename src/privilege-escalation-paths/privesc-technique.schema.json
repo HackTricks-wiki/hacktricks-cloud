@@ -184,6 +184,7 @@
                   "apprunner_existing_customer_account",
                   "apprunner_existing_image_service_update",
                   "apprunner_existing_instance_role_update",
+                  "apprunner_mutable_ecr_autodeploy_instance_role",
                   "appstream_existing_app_block_builder_role_session",
                   "appstream_existing_app_block_builder_role_swap",
                   "appstream_existing_fleet_role_session",
@@ -219,6 +220,11 @@
                   "codepipeline_new_codecommit_project_route",
                   "codepipeline_new_ecr_project_route",
                   "codepipeline_new_s3_project_route",
+                  "datapipeline_existing_customer_role_pair_and_runnable_ec2",
+                  "deadline_existing_queue_role_vend",
+                  "deadline_existing_worker_role_vend",
+                  "deadline_fleet_worker_binding_unverified",
+                  "deadline_new_worker_role_vend",
                   "ec2_instance_connect_same_running_role_host",
                   "ec2_instance_running",
                   "ec2_spot_fleet_roles_ready",
@@ -269,10 +275,12 @@
                   "mwaa_existing_dag_object_execution_role",
                   "mwaa_existing_environment_update_with_dag_code",
                   "mwaa_serverless_new_workflow_definition_and_start",
+                  "quicksight_existing_iam_user_self_admin",
                   "quicksight_subscribed",
                   "role_trust_rewrite_assumable",
                   "rolesanywhere_anchor_profile_trust_join",
                   "rolesanywhere_new_anchor_profile_role_ready",
+                  "sagemaker_attach_new_notebook_lifecycle_config",
                   "sagemaker_attached_notebook_lifecycle_update",
                   "sagemaker_job_execution_route_unverified",
                   "sagemaker_new_notebook_creation_and_url_authorized",
@@ -314,6 +322,7 @@
                       "apprunner_existing_customer_account",
                       "apprunner_existing_image_service_update",
                       "apprunner_existing_instance_role_update",
+                      "apprunner_mutable_ecr_autodeploy_instance_role",
                       "appstream_existing_app_block_builder_role_session",
                       "appstream_existing_app_block_builder_role_swap",
                       "appstream_existing_fleet_role_session",
@@ -349,6 +358,11 @@
                       "codepipeline_new_codecommit_project_route",
                       "codepipeline_new_ecr_project_route",
                       "codepipeline_new_s3_project_route",
+                      "datapipeline_existing_customer_role_pair_and_runnable_ec2",
+                      "deadline_existing_queue_role_vend",
+                      "deadline_existing_worker_role_vend",
+                      "deadline_fleet_worker_binding_unverified",
+                      "deadline_new_worker_role_vend",
                       "ec2_instance_connect_same_running_role_host",
                       "ec2_instance_running",
                       "ec2_spot_fleet_roles_ready",
@@ -399,10 +413,12 @@
                       "mwaa_existing_dag_object_execution_role",
                       "mwaa_existing_environment_update_with_dag_code",
                       "mwaa_serverless_new_workflow_definition_and_start",
+                      "quicksight_existing_iam_user_self_admin",
                       "quicksight_subscribed",
                       "role_trust_rewrite_assumable",
                       "rolesanywhere_anchor_profile_trust_join",
                       "rolesanywhere_new_anchor_profile_role_ready",
+                      "sagemaker_attach_new_notebook_lifecycle_config",
                       "sagemaker_attached_notebook_lifecycle_update",
                       "sagemaker_job_execution_route_unverified",
                       "sagemaker_new_notebook_creation_and_url_authorized",
@@ -632,6 +648,14 @@
                   "const": true,
                   "description": "Reviewed exact S3 bucket-policy self-grant for the caller and a bounded object prefix."
                 },
+                "aws_scheduler_iam_self_grant": {
+                  "const": true,
+                  "description": "Exact Scheduler schedule and passed role can add an inline policy to its creator through a role-authorized IAM target API."
+                },
+                "aws_scheduler_iam_self_grant_update": {
+                  "const": true,
+                  "description": "An exact existing Scheduler schedule and passed role can add an inline policy to the caller through a role-authorized IAM target API."
+                },
                 "aws_secretsmanager_policy_self_grant": {
                   "const": true,
                   "description": "Reviewed GetSecretValue self-grant for the exact IAM user and secret."
@@ -646,7 +670,7 @@
                 },
                 "aws_sqs_policy_self_grant": {
                   "const": true,
-                  "description": "Same-account IAM user can grant itself ReceiveMessage on an exact unencrypted queue through SetQueueAttributes."
+                  "description": "Same-account IAM user can grant itself ReceiveMessage on an exact queue through SetQueueAttributes; an SSE-KMS queue also needs effective Decrypt on its collected key."
                 },
                 "codedeploy_group_instance_role_covered_by": {
                   "description": "Target role is the instance role of a CodeDeploy deployment group covered by the action (not collected).",
@@ -668,6 +692,10 @@
                 "cognito_developer_settable_authenticated_role": {
                   "const": true,
                   "description": "Target role can become the authenticated role of a collected developer identity pool and trusts that pool's authenticated web identity; the source must be able to mint a developer token for the same pool."
+                },
+                "cognito_guest_update_classic_role": {
+                  "const": true,
+                  "description": "Target role trusts the unauthenticated web identity of a collected identity pool without role mappings; the source can enable guest and Basic flow on that pool."
                 },
                 "cognito_user_pool_covered_by": {
                   "description": "Target role is mapped by an identity pool to a user pool covered by the action; dropped when the account's cognito_user_pool inventory is collected and empty, otherwise unknown (identity-pool roles not collected).",
@@ -768,6 +796,10 @@
                   "description": "Target role is the launch-constraint role of a Service Catalog product in a portfolio ({target.portfolio_arn}); unknown without servicecatalog_portfolio inventory.",
                   "minLength": 1,
                   "type": "string"
+                },
+                "quicksight_existing_iam_user": {
+                  "const": true,
+                  "description": "Existing active QuickSight IAM user with a non-admin role and an exact principal ID; only its matching IAM user can gain this application-plane authority."
                 },
                 "resource_permission_covers_target": {
                   "description": "The source must also hold this action on the target resource ({target.arn}/{target.email}/{target.scope}/{target.namespace}).",
@@ -901,7 +933,7 @@
                       "type": "array"
                     }
                   ],
-                  "description": "Role trust policy has an Allow for sts:AssumeRole* whose Principal.Service includes the value."
+                  "description": "Role trust policy allows sts:AssumeRole for every named Principal.Service; a list requires all services."
                 },
                 "trust_federated_provider_missing": {
                   "anyOf": [
