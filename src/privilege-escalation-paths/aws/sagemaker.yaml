@@ -381,6 +381,8 @@
       via_resource_type: sagemaker_cluster
     scope: same_account
     aggregate_as: "Execution roles of HyperPod instance groups in {account}"
+  preconditions:
+    - sagemaker_hyperpod_custom_ami_group_role_effect
   conditions:
     - id: controlled_custom_ami
       description: A custom AMI with attacker-controlled startup code must already be available to the account and meet HyperPod's encryption and volume constraints; creating it needs separate EC2 permissions.
@@ -395,7 +397,7 @@
   mitigation: Restrict sagemaker:UpdateClusterSoftware to platform administrators on specific cluster ARNs, restrict who can create or share AMIs, and keep instance-group roles least-privileged.
   references:
     - https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_UpdateClusterSoftware.html
-  notes: No role is passed, so iam:PassRole is not required. The page nests this heading under the CreatePresignedDomainUrl section, so coverage counted it as a child of that entry; it is modelled separately here.
+  notes: No role is passed, so iam:PassRole is not required. AWS does not permit UpdateClusterSoftware to switch a Slurm group from the default AMI to a custom one; a previous custom AMI is needed for that variant. A concrete edge requires the exact InService cluster and instance group to retain the target role, current authorization to update that cluster, and fresh reviewed evidence that an owned compatible unencrypted single-volume custom AMI was applied, nodes booted controlled startup code, and a useful role-only action succeeded. Missing or conflicting update evidence remains unresolved.
 
 - id: aws-sagemaker-attach-notebook-lifecycle-config
   provider: aws
