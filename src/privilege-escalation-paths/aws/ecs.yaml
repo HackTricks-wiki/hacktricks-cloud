@@ -159,13 +159,8 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
-      - action: ecs:RegisterTaskDefinition
-        resource: "*"
-    any_of:
-      - - action: ecs:CreateService
-          resource: "*"
-      - - action: ecs:UpdateService
-          resource: "*"
+        request_context:
+          iam:PassedToService: ecs-tasks.amazonaws.com
   target:
     kind: aws_role
     selector:
@@ -175,14 +170,19 @@
     outcome: workload_execution
   conditions:
     - id: update_needs_existing_service
-      description: UpdateService needs an existing service in a covered cluster.
+      description: UpdateService needs an active existing service in the same cluster; CreateService needs an unused service name.
+  preconditions:
+    - ecs_new_task_definition_service_ready
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
   severity: critical
   mitigation: Restrict iam:PassRole on ECS task roles and service deployment actions.
-  references: []
-  notes: ""
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_ecs.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_CreateService.html
+    - https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_UpdateService.html
+  notes: Registration must cover every revision of one new task-definition family. CreateService is checked on a new service ARN; UpdateService is checked on an existing active EC2 service without network, load balancer, or discovery settings in an active same-Region cluster with a connected container instance. Both requests bind ecs:cluster and ecs:task-definition to the same resources; other service configurations, image pull, and placement remain conditional or unresolved.
 
 - id: aws-ecs-registertaskdefinition-node-escape
   provider: aws
