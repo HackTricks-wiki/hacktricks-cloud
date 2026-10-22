@@ -213,23 +213,28 @@
     all_of:
       - action: iam:PassRole
         resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: bedrock-agentcore.amazonaws.com
       - action: bedrock-agentcore:UpdateAgentRuntime
-        resource: "*"
+        resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
       - action: bedrock-agentcore:InvokeAgentRuntime
-        resource: "*"
+        resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*
+      - action: bedrock-agentcore:InvokeAgentRuntime
+        resource: arn:{source.partition}:bedrock-agentcore:*:{source.account}:runtime/*/runtime-endpoint/*
   target:
     kind: aws_role
     selector:
       trust_allows_service: bedrock-agentcore.amazonaws.com
-      resource_permission_covers_target: iam:PassRole
     scope: same_account
     aggregate_as: "Roles trusting bedrock-agentcore.amazonaws.com passable in {account}"
     outcome: workload_execution
+  preconditions:
+    - agentcore_existing_runtime_update_and_invoke
   conditions:
-    - id: passrole_condition_key
-      description: iam:PassedToService conditions may restrict which roles can be passed.
-    - id: existing_runtime
-      description: An agent runtime must exist within the UpdateAgentRuntime and InvokeAgentRuntime Resource scope.
+    - id: executable_artifact
+      description: The replacement container or code package must be controlled by the caller, retrievable, and able to start before invocation.
+    - id: runtime_ready_after_update
+      description: The runtime update must succeed and its DEFAULT endpoint must serve the new version.
   blockers:
     - scp_or_boundary_deny
   confidence: conditional
@@ -237,4 +242,4 @@
   mitigation: Restrict bedrock-agentcore:UpdateAgentRuntime to the deployment pipeline, scope iam:PassRole for AgentCore roles and alert on role or image changes.
   references:
     - https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/API_UpdateAgentRuntime.html
-  notes: UpdateGateway is not modelled because a gateway's role is only used by the service to call configured targets, not to run caller code. UpdateCodeInterpreter-style variants are covered by the create entries where they exist.
+  notes: Exact UpdateAgentRuntime, InvokeAgentRuntime on the runtime and DEFAULT endpoint, and associated-resource PassRole are checked by the precondition against collected resources. UpdateGateway needs a separate configured target-action proof.
