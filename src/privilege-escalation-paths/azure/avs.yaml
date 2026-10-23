@@ -69,3 +69,34 @@
   references:
     - https://learn.microsoft.com/en-us/azure/azure-vmware/using-azure-vmware-solution-run-command
   notes: ""
+
+- id: azure-avs-run-command-vcenter-grant-external-principal
+  provider: azure
+  service: avs
+  title: Gain a named vCenter identity through a verified AVS Run Command grant
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#run-command-identity-grants-without-reading-credentials-scriptexecutionswrite
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  summary: An AVS Run Command cmdlet can grant a named vCenter account new access only when the chosen package and cmdlet succeed and a reviewed login proves the added permission.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/scriptExecutions/write
+        scope: '*'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_vcenter
+    scope: inherited_scope
+    outcome: identity
+    aggregate_as: Exact vCenter identity granted by verified AVS Run Command
+  conditions:
+    - id: exact_cmdlet_subject_and_grant
+      description: Unique complete reviewed evidence must bind the executed identity cmdlet and granted group to a source-controlled member login, prior denial, successful grant, and newly allowed vCenter action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict AVS script execution and audit vCenter SSO identity sources and administrators.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/using-azure-vmware-solution-run-command
+  notes: Package and cmdlet read permissions aid discovery but are not needed when the cmdlet ID is already known. The selector checks write permission on the exact script execution, including a grant limited to that child resource. Only a reviewed identity_grant artifact naming the execution, granted group, source-controlled member login, and successful subsequent authorization creates an edge.
