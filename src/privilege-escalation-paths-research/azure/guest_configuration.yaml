@@ -1,0 +1,65 @@
+# Azure Machine Configuration (Guest Configuration) techniques (declarative only).
+# Source: hacktricks-cloud az-guest-configuration-privesc.md (rev 171e422).
+# The Guest Configuration agent runs the assigned DSC package as LocalSystem/root, so in-guest code
+# reaches every managed identity exposed by IMDS (Azure VM) or HIMDS (Arc server) on that machine.
+
+- id: azure-guestconfiguration-assignment-write
+  provider: azure
+  service: guest_configuration
+  title: Create a guest configuration assignment on an Azure VM
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md#in-guest-rce-via-a-guest-configuration-assignment-marquee
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the managed identities attached to the VM, because the assigned package runs as LocalSystem/root in the guest.
+  requires:
+    all_of:
+      - action: Microsoft.GuestConfiguration/guestConfigurationAssignments/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+    scope: inherited_scope
+    aggregate_as: "Managed identities of VM {target.host_resource}"
+  conditions:
+    - id: guest_configuration_prerequisites
+      description: The VM must already run the Guest Configuration extension (ConfigurationforWindows/ConfigurationforLinux) and have a system-assigned identity. Otherwise the path also needs virtualMachines/write and virtualMachines/extensions/write, and extensions/write alone is already modelled by azure-vm-extensions-write.
+    - id: vm_running
+      description: The VM must be running so the agent pulls the assignment on its consistency loop.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Treat Guest Configuration Resource Contributor as a code-execution role on the covered machines, restrict guestConfigurationAssignments/write, allow-list package sources with Azure Policy and keep VM identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/governance/machine-configuration/overview
+    - https://learn.microsoft.com/en-us/azure/governance/machine-configuration/concepts/assignments
+  notes: The action is control-plane (isDataAction false) and is granted by Guest Configuration Resource Contributor. Audit-only modes also execute the package (Test-TargetResource). The extension/identity prerequisites are not collected, so the edge is conditional.
+
+- id: azure-guestconfiguration-assignment-write-arc
+  provider: azure
+  service: guest_configuration
+  title: Create a guest configuration assignment on an Arc-enabled server
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md#in-guest-rce-via-a-guest-configuration-assignment-marquee
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Arc machine's managed identity, because the built-in guest configuration agent runs the package as LocalSystem/root.
+  requires:
+    all_of:
+      - action: Microsoft.GuestConfiguration/guestConfigurationAssignments/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HybridCompute/machines
+    scope: inherited_scope
+    aggregate_as: "Managed identity of Arc machine {target.host_resource}"
+  conditions:
+    - id: arc_agent_connected
+      description: The Connected Machine agent must be connected and guest configuration must not be disabled in the agent's local configuration.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict guestConfigurationAssignments/write (Azure Connected Machine Resource Manager, Guest Configuration Resource Contributor) on Arc servers and keep Arc machine identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/governance/machine-configuration/overview
+  notes: The Arc agent ships guest configuration built in, so the assignment write alone is sufficient. The token is read from HIMDS by the SYSTEM/root payload. Agent-side disablement is not collected.

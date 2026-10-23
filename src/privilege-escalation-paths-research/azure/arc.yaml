@@ -1,0 +1,62 @@
+- id: azure-arc-machine-extensions-write
+  provider: azure
+  service: arc
+  title: Deploy a Custom Script extension on an Arc-enabled server
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-enabled-servers-privesc.md#rce--persistence-via-vm-extensions-custom-script
+  source_revision: 171e422
+  summary: An extension the source deploys runs as SYSTEM/root on the Arc server, exposing the machine's system-assigned identity.
+  requires:
+    all_of:
+      - action: Microsoft.HybridCompute/machines/extensions/write
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HybridCompute/machines
+    scope: inherited_scope
+    aggregate_as: "Managed identity of Arc machine {target.host_resource}"
+  conditions:
+    - id: arc_agent_connected
+      description: The Connected Machine agent must be connected and extensions not blocked by the local agent allow/block list.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict machines/extensions/write and configure agent-side extension allow-lists.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions
+    - https://learn.microsoft.com/en-us/azure/azure-arc/servers/managed-identity-authentication
+  notes: ""
+- id: azure-arc-hybrid-connectivity-entra-ssh
+  provider: azure
+  service: arc
+  title: SSH into an Arc-enabled server as administrator through Hybrid Connectivity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-enabled-servers-privesc.md#sshrdp-to-arc-machines-via-hybrid-connectivity
+  source_revision: 171e422
+  summary: An administrator SSH session over the Arc relay can read the machine's HIMDS identity token.
+  requires:
+    all_of:
+      - action: Microsoft.HybridConnectivity/endpoints/listCredentials/action
+        scope: "{target.host_resource}"
+      - action: Microsoft.HybridCompute/machines/loginAsAdmin/action
+        data_action: true
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HybridCompute/machines
+    scope: inherited_scope
+    aggregate_as: "Managed identity of Arc machine {target.host_resource}"
+  conditions:
+    - id: ssh_endpoint_enabled
+      description: A Hybrid Connectivity default endpoint with the SSH service enabled must exist (creating it needs endpoints/write and serviceConfigurations/write).
+    - id: entra_ssh_login_configured
+      description: The AADSSHLogin extension (or a local account the source knows) must allow the Entra login.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Virtual Machine Administrator Login on Arc machines and Hybrid Connectivity listCredentials.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-arc/servers/ssh-arc-overview
+  notes: ""

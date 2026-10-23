@@ -1,74 +1,68 @@
-# Azure VMware Solution (AVS) privilege escalation techniques (declarative only).
-# Source: hacktricks-cloud az-vmware-solution-avs-privesc.md (rev 171e422).
-# Targets are modelled as data-plane administrators of the private cloud (vCenter CloudAdmin /
-# NSX-T admin), not as Azure/Entra principals.
-
-- id: azure-avs-list-admin-credentials
+# catalog_description: An AVS ARM action reaches an adjacent-plane principal only
+# when unique reviewed evidence binds the exact private cloud, returned credential
+# or successful grant, named subject, usable access, and newly allowed action.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-avs-list-vcenter-cloudadmin-external-principal
   provider: azure
   service: avs
-  title: Read the AVS private cloud CloudAdmin and NSX-T admin credentials
+  title: Reach the named AVS vCenter CloudAdmin with a verified returned credential
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#cloudadmin--nsx-t-credential-disclosure-listadmincredentials
   source_revision: 171e422
-  summary: listAdminCredentials returns the vCenter CloudAdmin and NSX-T admin passwords, giving administrative control of the SDDC and its workload VMs.
+  summary: Reading AVS administrator credentials can reach the exact vCenter CloudAdmin only when a reviewed login proves that the returned credential grants a new vCenter action.
   requires:
     all_of:
       - action: Microsoft.AVS/privateClouds/listAdminCredentials/action
-        scope: "{target.scope}"
+        scope: '{target.scope}'
   target:
-    kind: azure_dataplane_admin
+    kind: azure_external_principal
     selector:
-      any_principal_in_scope: true
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_vcenter
     scope: inherited_scope
-    aggregate_as: "AVS vCenter CloudAdmin / NSX-T admins of {target.scope}"
+    outcome: credentials
+    aggregate_as: Exact AVS vCenter CloudAdmin reached with reviewed credential
   conditions:
-    - id: management_network_reachable
-      description: Using the credentials needs network access to the private cloud's vCenter and NSX-T endpoints (ExpressRoute, VPN or a peered network).
-    - id: workload_identities_not_modelled
-      description: Control of guest VMs only reaches Azure or Entra identities if those workloads hold credentials (for example Arc-enabled guests or stored service principal secrets); that is not derived.
+    - id: exact_vcenter_login_and_permission
+      description: Unique complete reviewed evidence must bind the returned vcenterUsername and vcenterPassword to this private cloud, successful authentication, prior source denial, and a newly allowed named vCenter action within the CloudAdmin role.
   blockers:
     - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict listAdminCredentials/action (Contributor and Owner on the private cloud), rotate the CloudAdmin and NSX-T credentials after any exposure, and use an external identity source with named accounts.
+  mitigation: Restrict listAdminCredentials/action and rotate exposed CloudAdmin credentials.
   references:
     - https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-identity
-    - https://learn.microsoft.com/en-us/azure/azure-vmware/rotate-cloudadmin-credentials
-  notes: Uses the existing azure_dataplane_admin kind, so no schema extension is needed.
+  notes: The azure_external_principal_evidence record must bind the returned vCenter username, password response, exact vCenter service, and a newly authorized vCenter privilege or UI action. A private-cloud resource proxy or plaintext password alone cannot create an edge.
 
-- id: azure-avs-run-command-script-execution
+- id: azure-avs-list-nsxt-admin-external-principal
   provider: azure
   service: avs
-  title: Run privileged AVS Run Command cmdlets against vCenter and NSX-T
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#run-command-identity-grants-without-reading-credentials-scriptexecutionswrite
+  title: Reach the named AVS NSX-T admin with a verified returned credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#cloudadmin--nsx-t-credential-disclosure-listadmincredentials
   source_revision: 171e422
-  summary: Submitting AVS Run Command executions with vendor cmdlet packages performs privileged changes in the SDDC management plane, such as adding identity sources or CloudAdmins, without reading the admin password.
+  summary: Reading AVS administrator credentials can reach the exact NSX-T admin only when a reviewed login proves that the returned credential grants a new NSX-T action.
   requires:
     all_of:
-      - action: Microsoft.AVS/privateClouds/scriptExecutions/write
-        scope: "{target.scope}"
-      - action: Microsoft.AVS/privateClouds/scriptPackages/read
-        scope: "{target.scope}"
-      - action: Microsoft.AVS/privateClouds/scriptPackages/scriptCmdlets/read
-        scope: "{target.scope}"
+      - action: Microsoft.AVS/privateClouds/listAdminCredentials/action
+        scope: '{target.scope}'
   target:
-    kind: azure_dataplane_admin
+    kind: azure_external_principal
     selector:
-      any_principal_in_scope: true
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_nsx
     scope: inherited_scope
-    aggregate_as: "AVS vCenter CloudAdmin / NSX-T admins of {target.scope}"
+    outcome: credentials
+    aggregate_as: Exact AVS NSX-T admin reached with reviewed credential
   conditions:
-    - id: package_capability
-      description: The gain depends on the cmdlets available in the installed packages; only some of them (for example identity-source or group management cmdlets) grant administrative access to the source.
-    - id: management_network_reachable
-      description: Using the resulting vCenter access needs network access to the private cloud management endpoints.
+    - id: exact_nsxt_login_and_permission
+      description: Unique complete reviewed evidence must bind the returned nsxtUsername and nsxtPassword to this private cloud, successful authentication, prior source denial, and a newly allowed named NSX action within the Cloud Admin role.
   blockers:
     - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict scriptExecutions/write, review Run Command execution history, and audit vCenter SSO identity sources and CloudAdmins group membership.
+  mitigation: Restrict listAdminCredentials/action and rotate exposed NSX-T credentials.
   references:
-    - https://learn.microsoft.com/en-us/azure/azure-vmware/using-azure-vmware-solution-run-command
-  notes: ""
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-identity
+  notes: The azure_external_principal_evidence record must name the exact NSX-T subject and resource; a private-cloud resource proxy or plaintext password alone cannot create an edge.
 
 - id: azure-avs-run-command-vcenter-grant-external-principal
   provider: azure

@@ -1,0 +1,32 @@
+# Azure Analysis Services techniques (declarative only).
+# Source: hacktricks-cloud az-analysis-services-privesc.md (rev 171e422).
+
+- id: azure-analysisservices-server-admin-write
+  provider: azure
+  service: analysis_services
+  title: Add a principal to the Analysis Services server administrators
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-analysis-services-privesc.md#server-admin-self-add--full-model-exfil-marquee
+  source_revision: 171e422
+  summary: The asAdministrators list is part of the server resource, so servers/write grants server administrator on every model hosted by the server.
+  requires:
+    all_of:
+      - action: Microsoft.AnalysisServices/servers/write
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Analysis Services server admins of {target.scope}"
+  conditions:
+    - id: network_reachable
+      description: The server firewall must allow the source (servers/write can also change it).
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict servers/write and monitor changes to asAdministrators.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/analysisservices/servers/update
+    - https://learn.microsoft.com/en-us/azure/analysis-services/analysis-services-server-admins
+  notes: ""

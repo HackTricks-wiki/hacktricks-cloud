@@ -7,3 +7,40 @@
 # Amazon CloudWatch Synthetics privilege escalation techniques.
 # Source: hacktricks-cloud aws-synthetics-privesc/README.md (rev 171e422299).
 # Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml).
+
+- id: aws-synthetics-startcanarydryrun-replacement-code
+  provider: aws
+  service: synthetics
+  title: Run replacement canary code under its existing execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-synthetics-privesc/README.md#dry-run-replacement-code--passrole
+  source_revision: 171e422299
+  summary: The source can supply inline code for an existing canary's dry run, which executes using that canary's recorded role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: synthetics.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      attached_to_service: synthetics
+      via_resource_type: synthetics_canary
+    scope: same_account
+    aggregate_as: Roles of canaries whose dry-run code the source can replace in {account}
+    outcome: workload_execution
+  preconditions:
+    - synthetics_existing_canary_dry_run_code
+  conditions:
+    - id: successful_dry_run
+      description: The replacement script must be valid and the dry run must execute successfully.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict StartCanaryDryRun on privileged canaries and PassRole on their execution roles to trusted operators.
+  references:
+    - https://docs.aws.amazon.com/AmazonSynthetics/latest/APIReference/API_StartCanaryDryRun.html
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_synthetics.html
+    - https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/performing-safe-canary-upgrades.html
+  notes: StartCanaryDryRun accepts an inline ZipFile, so this route does not require a writable external code object. The evaluator checks the same recorded canary ARN and execution role, a supported runtime and the two effective grants. The dry run itself and successful code execution remain conditional.

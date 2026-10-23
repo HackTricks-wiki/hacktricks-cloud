@@ -1,0 +1,124 @@
+# GCP Secure Source Manager privilege escalation techniques (repository write into CI/CD).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-secure-source-manager-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: sourcerepo_trigger_consumer -> run-as SA of Cloud Build triggers / Cloud Deploy pipelines that build
+# from the repository in "{target.artifact_arn}" (directly or through Developer Connect).
+
+- id: gcp-securesourcemanager-push-cicd
+  provider: gcp
+  service: securesourcemanager
+  title: Push code to a repository that feeds a CI/CD pipeline
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secure-source-manager-privesc.md#cicd-supply-chain-code-execution
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the build/deploy service accounts of pipelines that run code from Secure Source Manager repositories it can push to.
+  requires:
+    all_of:
+      - action: securesourcemanager.repositories.push
+        resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: sourcerepo_trigger_consumer
+    scope: any
+    aggregate_as: "Pipeline SAs building from writable Secure Source Manager repositories"
+  conditions:
+    - id: pipeline_link
+      description: The repository must be linked (e.g. via Developer Connect) to a Cloud Build trigger or Cloud Deploy pipeline that runs repository-controlled build config on the pushed branch.
+    - id: branch_protection
+      description: Branch rules / required reviews can block direct pushes; branchRules.* or approvePullRequests + pullRequests.merge bypass them.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Protect build branches with branch rules and required reviews, restrict repositories.push (including roles/securesourcemanager.developerConnectLinker and roles/editor).
+
+- id: gcp-securesourcemanager-setiampolicy
+  provider: gcp
+  service: securesourcemanager
+  title: Self-grant write on a Secure Source Manager instance or repository through IAM
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-secure-source-manager-privesc.md#securesourcemanagerinstancessetiampolicy--repositoriessetiampolicy--iam-self-grant-to-readpoison-source
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the build/deploy service accounts of pipelines that run code from Secure Source Manager repositories whose IAM policy it controls.
+  requires:
+    any_of:
+      - - action: securesourcemanager.repositories.setIamPolicy
+          resource: "{target.artifact_arn}"
+      - - action: securesourcemanager.instances.setIamPolicy
+          resource: "{target.artifact_arn}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: sourcerepo_trigger_consumer
+    scope: any
+    aggregate_as: "Pipeline SAs building from Secure Source Manager repositories whose IAM the source controls"
+  conditions:
+    - id: followup_push
+      description: The self-granted writer role is then used as in gcp-securesourcemanager-push-cicd.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict setIamPolicy (roles/securesourcemanager.instanceOwner, repoAdmin, roles/owner).
+- id: gcp-securesourcemanager-hook-oidc-token
+  provider: gcp
+  service: securesourcemanager
+  title: Capture repository webhook OIDC token
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-secure-source-manager-enum.md#relevant-permissions
+  summary: A service-account-authenticated hook sends an identity token for the repository SA to the selected URI.
+  requires:
+    any_of:
+    - - action: securesourcemanager.hooks.create
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+    - - action: securesourcemanager.hooks.update
+        resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-securesourcemanager-hook-oidc-token
+  conditions:
+  - Repository SA association, service-agent Token Creator, hook event, reachable endpoint and matching downstream
+    audience.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict hook writes/actAs; review authenticated hook destinations.
+  references:
+  - https://docs.cloud.google.com/secure-source-manager/docs/set-up-webhooks
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. This is an
+    audience-bound OIDC identity token, not general OAuth access.
+  source_revision: 0b36331
+- id: gcp-securesourcemanager-fetch-committed-credential
+  provider: gcp
+  service: securesourcemanager
+  title: Clone a repository containing a stronger cloud credential
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-secure-source-manager-enum.md#relevant-permissions
+  summary: Repository fetch exposes source files; when a committed file contains a usable stronger credential, the
+    caller can acquire it.
+  requires:
+    all_of:
+    - action: securesourcemanager.repositories.fetch
+      resource: '*'
+    - action: securesourcemanager.instances.access
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    outcome: credentials
+    scope: any
+    selector:
+      gcp_challenge_fact: gcp-securesourcemanager-fetch-committed-credential
+  conditions:
+  - Repository content contains a valid credential for a stronger principal.
+  - Credential-to-principal relation requires content evidence; repository IAM and instance access must permit clone.
+  confidence: conditional
+  severity: high
+  mitigation: Scan and revoke committed credentials; restrict repository fetch.
+  references:
+  - https://docs.cloud.google.com/secure-source-manager/docs/access-control
+  notes: Exact verified source/resource/target fact is mandatory. Missing evidence evaluates UNKNOWN. Only a validated
+    stronger service-account credential qualifies; arbitrary content is data.
+  source_revision: 0b36331

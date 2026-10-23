@@ -1,9 +1,10 @@
 - id: azure-audit-microsoftwebstaticsiteslistsecretsaction
   provider: azure
   service: static_web_apps
-  title: Microsoft.Web/staticSites/listSecrets/action
+  title: Read a Static Web Apps deployment token for one site
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsiteslistsecretsaction
-  summary: deployment token allowing arbitrary site content
+  source_revision: 6e9fc14c507564228fe339b8088924b8f7b939cb
+  summary: A principal able to list the secrets of an existing Static Web App may obtain its deployment token and replace content served by that site.
   requires:
     all_of:
     - action: Microsoft.Web/staticSites/listSecrets/action
@@ -11,20 +12,19 @@
   target:
     kind: azure_verified_authority
     scope: inherited_scope
-    aggregate_as: Microsoft.Web/staticSites/listSecrets/action on {target.scope}
-    outcome: permission_grant
+    aggregate_as: Deployment authority for Static Web App {target.scope}
+    outcome: bounded_authority
     selector:
-      azure_challenge_fact: azure-audit-microsoftwebstaticsiteslistsecretsaction
+      azure_static_site_deployment_token: true
   conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
+  - id: token_not_retrieved
+    description: The modeled permission can request the site's deployment token; the scanner does not retrieve the token or attempt a deployment.
   blockers:
   - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed action to principals that need this service privilege.
+  mitigation: Grant listSecrets only to trusted site deployers and rotate a token if it was exposed.
   references:
-  - https://learn.microsoft.com/en-us/azure/static-web-apps/snippets
-  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
-    evaluate UNKNOWN. Collector fact required: staticWebApps.deploymentAuth.'
+  - https://learn.microsoft.com/en-us/rest/api/appservice/static-sites/list-static-site-secrets
+  - https://learn.microsoft.com/en-us/azure/static-web-apps/static-web-apps-cli
+  notes: The selector requires one inventoried static site and effective listSecrets authorization on that exact resource. A token response or deployment is not claimed.

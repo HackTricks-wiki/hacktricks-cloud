@@ -1,100 +1,10 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure API Management techniques (declarative only).
 # Source: hacktricks-cloud az-api-management-privesc.md (rev 171e422, re-verified).
-
-- id: azure-apim-identity-provider-secret
-  provider: azure
-  service: api_management
-  title: Read the Entra application secret of an APIM identity provider
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceidentityproviderslistsecretsaction
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Entra application configured as the APIM identity provider.
-  requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/identityProviders/listSecrets/action
-        scope: '{pivot}'
-  pivot_resource_type: Microsoft.ApiManagement/service
-  target:
-    kind: azure_service_principal
-    selector:
-      credential_stored_in_scope: '{pivot}'
-    scope: any
-    aggregate_as: Service principals with credentials stored in {pivot}
-  conditions:
-    - id: aad_provider_configured
-      description: An 'aad' identity provider with a client secret must be configured (not available on Consumption tier).
-  blockers: []
-  confidence: derived
-  severity: high
-  mitigation: Restrict identityProviders/listSecrets/action and give the provider app no API permissions beyond sign-in.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-aad
-  notes: Validated by HackTricks; the app's real access is its assigned API permissions/roles.
-
-- id: azure-apim-oauth-server-secret
-  provider: azure
-  service: api_management
-  title: Read OAuth client secrets stored in APIM authorization servers / OpenID providers
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceauthorizationserverslistsecretsaction
-  source_revision: 171e422
-  summary: The source can obtain the privileges of service principals whose client secrets are stored in APIM.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.ApiManagement/service/authorizationServers/listSecrets/action
-          scope: '{pivot}'
-      - - action: Microsoft.ApiManagement/service/openidConnectProviders/listSecrets/action
-          scope: '{pivot}'
-  pivot_resource_type: Microsoft.ApiManagement/service
-  target:
-    kind: azure_service_principal
-    selector:
-      credential_stored_in_scope: '{pivot}'
-    scope: any
-    aggregate_as: Service principals with credentials stored in {pivot}
-  conditions:
-    - id: entra_client
-      description: Only when the stored client is an Entra application; usable grants depend on the app.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict listSecrets actions on APIM.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-oauth2
-  notes: ''
-
-- id: azure-apim-named-value-secret
-  provider: azure
-  service: api_management
-  title: Read APIM Named Value secrets
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicenamedvaluesread--microsoftapimanagementservicenamedvalueslistvalueaction
-  source_revision: a66f094ede
-  summary: The source can obtain the privileges of service principals whose credentials are stored as Named Values.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.ApiManagement/service/namedValues/listValue/action
-          scope: '{pivot}'
-      - - action: Microsoft.ApiManagement/service/backends/write
-          scope: '{pivot}'
-  pivot_resource_type: Microsoft.ApiManagement/service
-  target:
-    kind: azure_service_principal
-    selector:
-      credential_stored_in_scope: '{pivot}'
-    scope: any
-    aggregate_as: Service principals with credentials stored in {pivot}
-  conditions:
-    - id: value_is_sp_credential
-      description: Only when a Named Value holds a service-principal credential; content is unknown.
-    - id: backend_capture_traffic
-      description: For the backends/write path, an API using the rewritten backend must receive a request after the change so the gateway sends the Named Value header to the source-controlled URL.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict namedValues/listValue/action; prefer managed-identity backend auth.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-properties
-  notes: Key Vault-backed values are resolved through the APIM identity and also returned. The backends/write alternative is the backend header-credential capture documented in the backends/write section of the same page.
 
 - id: azure-apim-policy-write-managed-identity-token
   provider: azure
@@ -109,13 +19,13 @@
       - - action: Microsoft.ApiManagement/service/policies/write
           scope: '{target.host_resource}'
       - - action: Microsoft.ApiManagement/service/apis/policies/write
-          scope: '{target.host_resource}'
+          scope: '{target.apim_api_policy_resource}'
       - - action: Microsoft.ApiManagement/service/apis/operations/policies/write
-          scope: '{target.host_resource}'
+          scope: '{target.apim_operation_policy_resource}'
       - - action: Microsoft.ApiManagement/service/products/policies/write
-          scope: '{target.host_resource}'
+          scope: '{target.apim_product_policy_resource}'
       - - action: Microsoft.ApiManagement/service/apis/write
-          scope: '{target.host_resource}'
+          scope: '{target.apim_api_resource}'
   target:
     kind: azure_managed_identity
     selector:
@@ -129,52 +39,21 @@
       description: Exfiltrating the token needs outbound access from the gateway to a source-controlled endpoint, or a response the source can read. Internal VNet deployments can limit this.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict APIM policy write and apis/write (API Management Service Contributor and custom roles) to trusted administrators. Give APIM-attached identities only the roles the backends need, and alert on policy changes that add authentication-managed-identity.
   references:
     - https://learn.microsoft.com/en-us/azure/api-management/authentication-managed-identity-policy
     - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-use-managed-service-identity#security-considerations-for-managed-identities
-  notes: Microsoft documents that policy editors (apis/write or apis/policies/write, or API Management Service Contributor) can authenticate as the service's managed identity through the authentication-managed-identity policy. They can then capture the token in a variable, forward it or log it. The policy can request a token for any resource audience (ARM, Graph, Key Vault, Storage). It selects any attached user-assigned identity by client-id, so every identity on the instance is reachable. The policy is allowed at global, product, API and operation scope. Managed identities are not available in APIM workspaces, so workspace policy write is not included. HackTricks documents this identity path in its dedicated section (rev 171e422).
-
-- id: azure-apim-tenant-git-deploy-managed-identity-token
-  provider: azure
-  service: api_management
-  title: Deploy attacker policies through the APIM built-in Git configuration repository
-  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicetenantdeployaction--bulk-config-overwrite-via-built-in-git
-  source_revision: 171e422
-  summary: Pushing configuration to the built-in Git repository and deploying it installs policies that can use the APIM managed identities, as with a direct policy write.
-  requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/tenant/deploy/action
-        scope: "{target.host_resource}"
-      - action: Microsoft.ApiManagement/service/tenant/listSecrets/action
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.ApiManagement/service
-    scope: inherited_scope
-    aggregate_as: "Managed identities of API Management service {target.host_resource}"
-  conditions:
-    - id: git_repository_enabled
-      description: The built-in Git configuration repository must be available on the service tier and Git access enabled.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict API Management Service Contributor, disable or avoid the built-in Git configuration repository, and alert on tenant/deploy operations.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-configuration-repository-git
-  notes: Identity outcome is the same as azure-apim-policy-write-managed-identity-token; listSecrets returns the Git access credentials.
+  notes: Microsoft documents that policy editors (apis/write or apis/policies/write, or API Management Service Contributor) can authenticate as the service's managed identity through the authentication-managed-identity policy. They can then capture the token in a variable, forward it or log it. The policy can request a token for any resource audience (ARM, Graph, Key Vault, Storage). It selects any attached user-assigned identity by client-id. API, operation and product write grants are checked at their assigned child scope as well as the service; actual policy execution and token delivery remain conditional. Managed identities are not available in APIM workspaces, so workspace policy write is not included.
 
 - id: azure-apim-restore-backup-managed-identity-token
   provider: azure
   service: api_management
-  title: Restore a crafted backup over an APIM service to install identity-using policies
+  title: Restore a valid backup containing a controlled APIM policy
   source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicebackupaction--full-service-exfiltration-to-attacker-storage
-  source_revision: a66f094ede
-  summary: Restoring a tampered backup overwrites the live configuration, including policies, so the restored policies can use the instance's managed identities as with a direct policy write.
+  source_revision: db5b136660
+  summary: Restoring a valid APIM backup containing a controlled policy may let that policy use an identity attached to the target service.
   requires:
     all_of:
       - action: Microsoft.ApiManagement/service/restore/action
@@ -183,13 +62,14 @@
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.ApiManagement/service
+      azure_apim_restorable_backup: true
     scope: inherited_scope
     aggregate_as: "Managed identities of API Management service {target.host_resource}"
   conditions:
     - id: restorable_backup
-      description: The source needs a restorable backup with its policies in storage it can point the restore at, and the restored policy must run on a request.
+      description: Reviewed evidence must bind a valid APIM-created backup under 30 days old, compatible target tier, usable storage access, and a controlled identity-using policy to this target service.
     - id: identities_kept
-      description: The service's attached identities must remain usable by the restored policies after the restore.
+      description: The controlled policy must select the exact attached system or user-assigned identity, and a request must run it and deliver the token.
   blockers:
     - azure_deny_assignment
   confidence: conditional
@@ -197,84 +77,15 @@
   mitigation: Restrict service/restore/action (API Management Service Contributor) and alert on restore operations.
   references:
     - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-disaster-recovery-backup-restore
-  notes: HackTricks documents restore/action as the sibling of backup/action that re-imports a tampered backup over the live configuration. Identity outcome as azure-apim-policy-write-managed-identity-token.
+  notes: Azure restores APIM-created backups; an arbitrary edited blob is not established as restorable. Managed identity configuration is not backed up, so the target's current attached identity must match the restored policy. Missing reviewed backup evidence emits no named identity path.
 
-- id: azure-apim-gateway-trace-managed-identity-token
-  provider: azure
-  service: api_management
-  title: Capture backend managed-identity tokens from APIM gateway request traces
-  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewayslistdebugcredentialsaction--servicegatewayslisttraceaction--live-requestresponse-wiretap
-  source_revision: a66f094ede
-  summary: A gateway debug trace returns the backend request, so when an existing policy authenticates the backend call with the instance's managed identity the trace can expose that access token.
-  requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/gateways/listDebugCredentials/action
-        scope: "{target.host_resource}"
-      - action: Microsoft.ApiManagement/service/gateways/listTrace/action
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.ApiManagement/service
-    scope: inherited_scope
-    aggregate_as: "Managed identities of API Management service {target.host_resource} (backend tokens)"
-  conditions:
-    - id: existing_identity_policy
-      description: An existing policy must use authentication-managed-identity for the traced operation; the token is limited to that policy's audience and lifetime.
-    - id: traced_request
-      description: The source must be able to send a traced request to that API (subscription key or open product).
-    - id: header_not_masked
-      description: The trace must include the backend Authorization header unmasked.
-  blockers: []
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict gateways/listDebugCredentials/action and listTrace/action, and keep APIM identities least-privileged.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-api-inspector
-  notes: HackTricks lists policy-injected backend credentials and Authorization bearer tokens among the trace contents.
-
-- id: azure-apim-diagnostics-logger-managed-identity-token
-  provider: azure
-  service: api_management
-  title: Ship backend request headers to an attacker logger through APIM diagnostics
-  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementserviceloggerswrite--servicediagnosticswrite--persistent-traffic-exfil-to-attacker-event-hub
-  source_revision: a66f094ede
-  summary: A logger pointing at source-controlled storage plus a diagnostic capturing backend request headers can send the managed-identity tokens that existing policies attach to backend calls.
-  requires:
-    all_of:
-      - action: Microsoft.ApiManagement/service/loggers/write
-        scope: "{target.host_resource}"
-    any_of:
-      - - action: Microsoft.ApiManagement/service/diagnostics/write
-          scope: "{target.host_resource}"
-      - - action: Microsoft.ApiManagement/service/apis/diagnostics/write
-          scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.ApiManagement/service
-    scope: inherited_scope
-    aggregate_as: "Managed identities of API Management service {target.host_resource} (backend tokens)"
-  conditions:
-    - id: existing_identity_policy
-      description: An existing policy must use authentication-managed-identity on a logged API; tokens are limited to that policy's audience and lifetime.
-    - id: backend_headers_logged
-      description: The diagnostic must log backend request headers (including Authorization) without masking, and the API must receive traffic.
-  blockers: []
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict loggers/write and diagnostics/write, review logger destinations, and keep APIM identities least-privileged.
-  references:
-    - https://learn.microsoft.com/en-us/azure/api-management/diagnostic-logs-reference
-  notes: Captured caller tokens of end users are not modelled; only the APIM identity tokens attached by existing policies.
 - id: azure-apim-gateway-config-credential
   provider: azure
   service: api_management
   title: APIM gateway configuration embedded credentials
   source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewaysgetconfigurationaction--bulk-policysecret-pull-data-action-bypasses-the-administrative-log
-  source_revision: 0b36331
-  summary: Read a verified usable credential from self-hosted gateway configuration and gain its Entra service principal
-    permissions.
+  source_revision: db5b136660
+  summary: Read a verified usable credential from self-hosted gateway configuration and gain its Entra service principal permissions.
   requires:
     all_of:
     - action: Microsoft.ApiManagement/service/gateways/getConfiguration/action
@@ -289,15 +100,13 @@
     aggregate_as: Verified credential holders in {pivot}
   conditions:
   - id: verified_credential
-    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
-      this edge; uncollected, partial, or unverified content is UNKNOWN.
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates this edge; uncollected, partial, or unverified content creates no path.
   - id: gateway_assignment
-    description: Only assigned gateway policy XML and values returned in this gateway configuration are reachable.
+    description: Reviewed evidence must identify the exact gateway resource and confirm the usable credential was present in configuration returned for that gateway.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
   references:
   - https://learn.microsoft.com/en-us/azure/api-management/self-hosted-gateway-overview
-  notes: Draft requires azure.apim.gateway_config_credential_holders; the evaluator must join only verified holders,
-    and return UNKNOWN if that fact is missing or incomplete.
+  notes: Only an exact, usable credential mapped to a named Entra service principal and present in the returned configuration of one identified gateway by reviewed azure_privesc_challenge_evidence creates a path; missing or incomplete review creates no path.

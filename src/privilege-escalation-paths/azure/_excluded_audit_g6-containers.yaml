@@ -1,14 +1,17 @@
 # Azure privesc completeness audit (g6-containers): techniques reviewed and intentionally NOT modelled.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-apps-privesc.md#microsoftappmanagedenvironmentsdaprcomponentswrite---redirect-a-future-dapr-operation
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-apps-post-exploitation.md#microsoftappmanagedenvironmentsdaprcomponentswrite---redirect-a-future-dapr-operation
   technique: Dapr component write (blind redirect of a future Dapr operation)
-  source_revision: a66f094ede
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   reason: Redirects future state/pub-sub/binding data flows to an attacker destination; any identity effect depends on what the app later does through the component
     (application logic), not on RBAC. Component listSecrets is modelled by azure-containerapp-dapr-component-list-secrets.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
-  technique: Namespace-scoped RBAC Writer / Arc Writer / Fleet Writer secret read (service-account token theft)
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-service-configuration-disclosure.md#namespace-scoped-kubernetes-writer-secret-reads
+  technique: Namespace-scoped RBAC Writer / Arc Writer / Fleet Writer generic Secret read
   source_revision: a66f094ede
-  reason: 'NEEDS SCHEMA: G6-containers-proposals.md#azure-k8s-service-account-targets. Secret read yields the service accounts whose token secrets live in the namespace;
-    k8s_service_account targets are not allowed for the azure provider. bind/escalate and impersonation are modelled by azure-aks-azure-rbac-k8s-rbac-write and azure-aks-azure-rbac-impersonate.'
+  reason: 'A generic Secret read is data disclosure. Modern projected ServiceAccount tokens are not automatically stored in Secret objects. A principal edge would require a verified usable credential in the exact Secret, an accepted named subject, and additional effective permissions; Azure currently lacks this Secret-to-subject evidence join.'
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: Namespace-scoped AKS RBAC Writer creates a Pod as a more privileged ServiceAccount
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G6-containers-proposals.md#azure-k8s-service-account-targets. A true path exists when the Azure RBAC data action permits Pod creation, the Pod is admitted and scheduled with an exact ServiceAccount, and that account has newly reachable permissions. The Azure catalog has no Azure resource-to-Kubernetes ServiceAccount and admission join, so the generic Writer role alone cannot emit an exact target edge.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
   technique: AKS Fleet Manager member data actions (fleets/members/.../bind, escalate, impersonate, exec) across member clusters
   source_revision: a66f094ede

@@ -1,0 +1,75 @@
+# Azure Load Testing techniques (declarative only).
+# Source: hacktricks-cloud az-load-testing-privesc.md (rev 171e422).
+# Test plans (JMeter JSR223/Groovy, Locust Python) are arbitrary code on the test engine; identities
+# referenced with kind Engine are assigned to the engine instances and reachable through IMDS.
+
+- id: azure-loadtesting-test-engine-identity
+  provider: azure
+  service: load_testing
+  title: Run a test plan on a load test resource that carries managed identities
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-load-testing-privesc.md#test-engine-rce--managed-identity-token-theft-marquee
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the managed identities attached to the load test resource.
+  requires:
+    all_of:
+      - action: Microsoft.LoadTestService/loadtests/writeTest/action
+        data_action: true
+        scope: "{target.host_resource}"
+      - action: Microsoft.LoadTestService/loadtests/startTest/action
+        data_action: true
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.LoadTestService/loadtests
+    scope: inherited_scope
+    aggregate_as: "Managed identities of load test resource {target.host_resource}"
+  conditions:
+    - id: engine_identity_reference
+      description: The identity must be referenced for the engine (referenceIdentities kind Engine), which the test writer sets in the test configuration.
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Treat Load Test Contributor/Owner as code execution as the resource's identities, keep those identities least-privileged, and enable AzureLoadTestingOperation diagnostics.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-testing/load-testing/how-to-use-a-managed-identity
+    - https://learn.microsoft.com/en-us/azure/load-testing/how-to-assign-roles
+  notes: Data action names verified against the Load Test Contributor role (writeTest/action, startTest/action). Also reaches whatever the Key Vault reference identity can read, which is a subset of the same identities.
+
+- id: azure-loadtesting-assign-user-assigned-identity
+  provider: azure
+  service: load_testing
+  title: Attach a user-assigned identity to a load test resource and run code as it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-load-testing-privesc.md#test-engine-rce--managed-identity-token-theft-marquee
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities it may assign, by attaching them to a load test resource and referencing them for the engine.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.LoadTestService/loadTests/write
+        scope: "{pivot}"
+      - action: Microsoft.LoadTestService/loadtests/writeTest/action
+        data_action: true
+        scope: "{pivot}"
+      - action: Microsoft.LoadTestService/loadtests/startTest/action
+        data_action: true
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.LoadTestService/loadtests
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and loadTests/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-testing/load-testing/how-to-use-a-managed-identity
+  notes: The pivot may be a new load test resource the source creates (loadTests/write) on which it then holds the test data actions.

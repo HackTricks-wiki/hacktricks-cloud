@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Batch privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-batch-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -20,19 +21,18 @@
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_batch_agent_reporter_on_target: true
     scope: same_project
     aggregate_as: "Service accounts usable as Batch job SA in {project}"
   conditions:
     - id: default_sa_needs_actas
       description: Omitting the SA uses the Compute Engine default SA, and actAs on it is still required (enforced at submit).
     - id: custom_sa_agent_roles
-      description: The job SA must itself hold batch.states.report (roles/batch.agentReporter), otherwise the job's VMs never report and the job fails; roles/logging.logWriter is only needed when logs go to Cloud Logging.
-    - id: access_scopes
-      description: The usable token follows the job's VM access scopes.
+      description: The selector checks batch.states.report on the job SA in the job project; roles/logging.logWriter is only needed when logs go to Cloud Logging.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant iam.serviceAccounts.actAs only on dedicated low-privilege Batch SAs and remove roles/editor from the Compute Engine default SA.
   references:

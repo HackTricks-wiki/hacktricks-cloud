@@ -1,0 +1,133 @@
+- id: azure-cosmos-sql-role-assignment-write
+  provider: azure
+  service: cosmos_db
+  title: Grant a Cosmos DB native NoSQL data-plane role
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountssqlroledefinitionswrite-microsoftdocumentdbdatabaseaccountssqlroledefinitionsread--microsoftdocumentdbdatabaseaccountssqlroleassignmentswrite-microsoftdocumentdbdatabaseaccountssqlroleassignmentsread
+  source_revision: 171e422
+  summary: The source can obtain full data-plane access on the Cosmos DB account.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: Cosmos DB data-plane admins of {target.scope}
+  conditions:
+    - id: role_definition
+      description: Built-in data contributor role can be assigned directly; a custom role additionally needs sqlRoleDefinitions/write.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict sqlRoleAssignments/write and sqlRoleDefinitions/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac
+  notes: The page uses a custom role; built-in Cosmos DB Built-in Data Contributor makes definitions/write unnecessary.
+- id: azure-cosmos-mongodb-user-definition-write
+  provider: azure
+  service: cosmos_db
+  title: Create a Cosmos DB for MongoDB native RBAC user and role
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountsmongodbroledefinitionswrite--microsoftdocumentdbdatabaseaccountsmongodbroledefinitionsread-microsoftdocumentdbdatabaseaccountsmongodbuserdefinitionswrite--microsoftdocumentdbdatabaseaccountsmongodbuserdefinitionsread
+  source_revision: 171e422
+  summary: The source can obtain full data-plane access on the Cosmos DB for MongoDB account.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/databaseAccounts/mongodbUserDefinitions/write
+        scope: '{target.scope}'
+      - action: Microsoft.DocumentDB/databaseAccounts/mongodbRoleDefinitions/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: Cosmos DB data-plane admins of {target.scope}
+  conditions:
+    - id: mongo_rbac_enabled
+      description: Native MongoDB RBAC must be enabled on the account.
+    - id: network_reachable
+      description: Account firewall must allow the source.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict mongodbUserDefinitions/write and mongodbRoleDefinitions/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/how-to-setup-rbac
+  notes: ''
+- id: azure-cosmos-mongocluster-admin-password
+  provider: azure
+  service: cosmos_db
+  title: Change the MongoDB vCore cluster administrator password
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbmongoclustersread--microsoftdocumentdbmongoclusterswrite
+  source_revision: 171e422
+  summary: The source can obtain the MongoDB vCore cluster administrator account.
+  requires:
+    all_of:
+      - action: Microsoft.DocumentDB/mongoClusters/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: MongoDB cluster admins of {target.scope}
+  conditions:
+    - id: api_supports_password_update
+      description: Depends on API version and cluster state per HackTricks.
+    - id: network_reachable
+      description: Cluster firewall must allow the source (firewallRules/write can add a rule).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict mongoClusters/write and prefer Entra authentication.
+  references:
+    - https://learn.microsoft.com/en-us/azure/cosmos-db/mongodb/vcore/
+  notes: ''
+- id: azure-cosmos-other-api-role-assignment-write
+  provider: azure
+  service: cosmos_db
+  title: Grant a Cosmos DB native data-plane role on the Cassandra, Gremlin, Table or MongoDB API
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#same-native-rbac-self-grant-on-the-other-cosmos-apis-cassandra--gremlin--table--mongodb-account
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  summary: The source can obtain full data-plane access on the Cosmos DB account through the API-specific native role assignments.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/cassandraRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/gremlinRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/tableRoleAssignments/write
+          scope: '{target.scope}'
+      - - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleDefinitions/write
+          scope: '{target.scope}'
+        - action: Microsoft.DocumentDB/databaseAccounts/mongoMIRoleAssignments/write
+          scope: '{target.scope}'
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: Cosmos DB data-plane admins of {target.scope}
+  conditions:
+    - id: api_rbac_supported
+      description: The account must use the matching API with Entra/native RBAC enabled. The assignment-only Table branch grants the built-in Data Contributor role; other branches define and assign a privileged custom role.
+    - id: network_reachable
+      description: Account firewall must allow the source.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the per-API role assignment and role definition write actions.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/cosmos-db-resource-provider/
+  notes: Action names follow the ARM resource types cassandraRoleAssignments, gremlinRoleAssignments, tableRoleAssignments and mongoMIRoleAssignments in the Cosmos DB resource provider REST API; they are not yet listed on the Microsoft RBAC operations page.

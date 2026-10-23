@@ -45,9 +45,8 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md#microsoftstoragestorageaccountsblobservicescontainersblobsread
   technique: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read
   source_revision: a66f094ede
-  reason: Readable blobs, including Terraform state and .env files, can hold Entra credentials; a blob-read grant
-    alone does not establish the blob content, credential validity, or mapped principal. A complete content scan
-    and identity join are needed.
+  reason: Blob read can disclose backups or configuration files; credentials inside are content-dependent and no specific Azure/Entra
+    principal is established.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-blob-storage-post-exploitation.md#microsoftstoragestorageaccountsblobservicescontainersblobswrite
   technique: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write
   source_revision: a66f094ede
@@ -271,15 +270,13 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-logic-apps-post-exploitation.md#microsoftwebsitesconfiglistaction-microsoftwebsitesread--microsoftwebsitesconfigwrite
   technique: Microsoft.Web/sites/config/list/action, Microsoft.Web/sites/read && Microsoft.Web/sites/config/write
   source_revision: a66f094ede
-  reason: The config/write code-execution path is modelled by azure-appservice-config-write; config/list and sites/read
+  reason: The config/write code execution path is modelled by azure-appservice-config-write-code-execution; config/list and sites/read
     only reveal configuration.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-monitor-post-exploitation.md#microsoftinsightsdatacollectionruleswrite--associations--turn-azure-monitor-agent-into-a-file-exfiltrator
-  technique: Microsoft.Insights/dataCollectionRules/write (+ associations) — turn Azure Monitor Agent into a file
-    exfiltrator
+  technique: Microsoft.Insights/dataCollectionRules/write (+ associations) — turn Azure Monitor Agent into a file exfiltrator
   source_revision: a66f094ede
-  reason: DCR writes can cause AMA to ship host files into a readable workspace, but an ARM snapshot cannot show
-    that the chosen guest file exists, contains a usable credential, or maps to another principal. The host file
-    content and VM-to-file-to-credential join are required; do not emit a principal edge from DCR write alone.
+  reason: a DCR defines what Azure Monitor Agent (AMA) collects. The section does not establish control of another Azure/Entra principal
+    from this action alone.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-monitor-post-exploitation.md#microsoftinsightsactiongroupswrite--plant-attacker-receivers-alert-data-exfil--execution-wiring
   technique: Microsoft.Insights/actionGroups/write — plant attacker receivers (alert-data exfil + execution wiring)
   source_revision: a66f094ede
@@ -320,10 +317,8 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-mysql-post-exploitation.md#microsoftdbformysqlflexibleserversupdateconfigurationsaction
   technique: Microsoft.DBforMySQL/flexibleServers/updateConfigurations/action
   source_revision: a66f094ede
-  reason: Changing parameters can disable auditing or cause init_connect SQL to run on a later non-administrator
-    database login, but this section documents no privilege-granting SQL, usable result channel, or gained target
-    identity. A separate database login is not required for init_connect to run; the future client connection and
-    successful privilege-changing side effect remain unverified.
+  reason: The change opens network access or changes database parameters, but still needs an independent database login before another
+    identity can be used.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-mysql-post-exploitation.md#microsoftdbformysqlflexibleserversstopaction
   technique: Microsoft.DBforMySQL/flexibleServers/stop/action
   source_revision: a66f094ede
@@ -580,15 +575,15 @@
 - source: src/pentesting-cloud/azure-security/az-persistence/README.md#applications-and-service-principals
   technique: Applications and Service Principals
   source_revision: a66f094ede
-  reason: Documented application-credential injection is already covered by azure-entraid-app-credentials-update
-    and azure-entraid-app-owner-credentials in azure/entraid_apps.yaml (Graph Application.ReadWrite.All by azure-entraid-graph-application-readwrite-all).
-    This source is a persistence summary, not a separate permission-to-principal path.
+  reason: Adds an attacker-controlled client secret or certificate to an existing (privileged) application, allowing sign-in as that
+    app/SP indefinitely with its Graph/API permissions — which may exceed the operator's own…. The section documents data access, data
+    integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-analysis-services-persistence.md#data-model-role-tampering-for-persistence
   technique: Data-model role tampering for persistence
   source_revision: a66f094ede
-  reason: TMSL/XMLA can add a model Read or Admin member that remains after server-admin removal. This is a new
-    native model authorization, but the catalog has no source entitlement for Analysis Services server-admin data-plane
-    access or model-role membership snapshot; servers/write does not by itself prove the data-plane command occurred.
+  reason: The server admin changes tabular-model members for persistent Analysis Services data access; it does not obtain another Azure/Entra
+    principal.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-automation-accounts-persistence.md#backdoor-an-existing-runbook
   technique: Backdoor an existing runbook
   source_revision: a66f094ede
@@ -622,9 +617,8 @@
 - source: src/pentesting-cloud/azure-security/az-persistence/az-data-explorer-persistence.md#data-plane-add-databasecluster-admins--persistence-that-evades-arm-review
   technique: Data-plane .add database/cluster admins — persistence that evades ARM review
   source_revision: a66f094ede
-  reason: The .add control command can create durable Kusto-native database or cluster admin membership. ARM principalAssignments/write
-    and AddPrincipals/action entries use different permissions; neither proves existing data-plane Admin entitlement
-    or a native membership change, which require a Kusto data-plane inventory.
+  reason: Data Explorer native admin membership grants the service data plane, but does not impersonate another Azure/Entra principal;
+    ARM principal-assignment variants are modelled in data_explorer.yaml.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-defender-for-cloud-persistence.md#permanent-suppression-rule-scoped-to-your-source
   technique: Permanent suppression rule scoped to your source
   source_revision: a66f094ede
@@ -690,24 +684,21 @@
     network reachability or detection changes, without an identified Azure/Entra principal whose permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-entraid-persistence.md#federated-identity-credential-on-an-application
   technique: Federated identity credential on an application
-  source_revision: 0b36331
-  reason: 'Duplicate identity takeover path: adding an app FIC grants token exchange as the target application service
-    principal. azure-entraid-app-credentials-update covers application credential update; azure-entraid-app-owner-credentials
-    covers the owned app route, including app-only Application.ReadWrite.OwnedBy. External issuer/subject control
-    and matching token are runtime conditions.'
+  source_revision: a66f094ede
+  reason: 'Maintains long-term access as the application''s service principal: an attacker-controlled external OIDC workload (e.g. The
+    section documents data access, data integrity, availability, network reachability or detection changes, without an identified Azure/Entra
+    principal whose permissions are gained.'
 - source: src/pentesting-cloud/azure-security/az-persistence/az-guest-configuration-persistence.md#self-healing-persistence-via-applyandautocorrect
   technique: Self-healing persistence via ApplyAndAutoCorrect
-  source_revision: 0b36331
-  reason: 'Duplicate of azure-guestconfiguration-assignment-write and azure-guestconfiguration-assignment-write-arc:
-    the same assignment write runs attacker package code as SYSTEM/root; on a VM or Arc host with an attached managed
-    identity, it can read that identity token. ApplyAndAutoCorrect repeats the same edge after drift.'
+  source_revision: a66f094ede
+  reason: durable, self-repairing foothold on the machine. The section documents data access, data integrity, availability, network
+    reachability or detection changes, without an identified Azure/Entra principal whose permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-key-vault-persistence.md#retain-restorable-object-backups
   technique: Retain restorable object backups
-  source_revision: 0b36331
-  reason: A backup blob is encrypted and restorable only in the same subscription and Azure geography. An identity
-    edge needs later restore, permission to read the restored value, proof the backed-up secret or certificate contains
-    an SP credential, and proof it remains valid. Those content and future-operation facts are unavailable in a
-    read-only snapshot; backup/action alone is not secret read.
+  source_revision: a66f094ede
+  reason: A point-in-time copy of a credential that survives rotation, deletion and purge of the original. The section documents data
+    access, data integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose
+    permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-key-vault-persistence.md#plant-attacker-known-key-material-with-keysimport-or-keyscreate
   technique: Plant attacker-known key material with keys/import (or keys/create)
   source_revision: a66f094ede
@@ -778,17 +769,14 @@
     callbacks and workflow triggers.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-managed-applications-persistence.md#standing--cross-tenant-hidden-access-via-authorizations
   technique: Standing / cross-tenant hidden access via authorizations
-  source_revision: 0b36331
-  reason: The authorizations can grant a controlled principal Owner or Contributor on the managed resource group
-    without roleAssignments/write. This is a real new MRG-scoped RBAC grant; see proposed azure-managedapp-authorizations-mrg-rbac.
-    A generic edge needs a collector/evaluator join from definition authorizations and application creation to the
-    actual MRG, principal, role and tenant.
+  source_revision: a66f094ede
+  reason: Managed application authorizations confer RBAC only inside its managed resource group; the managed-applications entries cover
+    deployment identity paths. This section describes standing or JIT persistence in that bounded group.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-managed-applications-persistence.md#jit-jitrequests-eligible-role-access
   technique: JIT (jitRequests) eligible-role access
-  source_revision: 0b36331
-  reason: JIT activation can grant an eligible principal a temporary elevated role on the managed resource group.
-    It requires the configured jitAccessPolicy, source eligibility, any consumer approval and an active grant window;
-    see proposed azure-managedapp-jit-mrg-role-activation. The current inventory cannot establish these facts.
+  source_revision: a66f094ede
+  reason: Managed application authorizations confer RBAC only inside its managed resource group; the managed-applications entries cover
+    deployment identity paths. This section describes standing or JIT persistence in that bounded group.
 - source: src/pentesting-cloud/azure-security/az-persistence/az-managed-applications-persistence.md#deny-assignment-shielding-of-attacker-resources
   technique: Deny-assignment shielding of attacker resources
   source_revision: a66f094ede
@@ -993,9 +981,9 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#bulk-exfil--loot-persistence-via-snapshots-configurationstoressnapshotsread--write
   technique: Bulk exfil & loot-persistence via snapshots (configurationStores/snapshots/read / write)
   source_revision: a66f094ede
-  reason: An App Configuration snapshot can retain an Entra credential, but snapshot-read permission alone does
-    not show the key-value contents, credential validity, or target principal. A complete content scan and identity
-    join are needed.
+  reason: a snapshot is an immutable, point-in-time capture of every matching key-value in one object. The section documents data access,
+    data integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#delete-and-purge-the-store
   technique: Delete and purge the store
   source_revision: a66f094ede
@@ -1014,14 +1002,17 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#harvest-secrets-from-prior-job-output-and-streams
   technique: Harvest secrets from prior job output and streams
   source_revision: a66f094ede
-  reason: Historical Automation job streams can contain tokens or passwords, but job-read permission alone does
-    not show whether a usable Azure/Entra credential was printed or which principal owns it. A complete stream scan
-    and identity join are needed.
+  reason: Disclosure of any secret that a previous job wrote to its output/verbose/error streams — commonly tokens and credentials from
+    operational runbooks that were never designed to be read by a lower-privileged principal. The section documents data access, data
+    integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#read-runbook-source-for-hardcoded-secrets
   technique: Read runbook source for hardcoded secrets
   source_revision: a66f094ede
-  reason: Runbook source can contain hardcoded Entra credentials, but content-read permission alone does not identify
-    a usable credential or its principal. A complete source scan and identity join are needed.
+  reason: Disclosure of any secret embedded directly in runbook code, plus a full map of what the account automates (which resources,
+    which identities, which external systems) — useful for planning further lateral movement. The section documents data access, data
+    integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#enumerate-connections-and-other-assets
   technique: Enumerate connections and other assets
   source_revision: a66f094ede
@@ -1047,13 +1038,17 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#restore-vm--disks-to-attacker-rg-or-subscription
   technique: Restore VM / disks to attacker RG or subscription
   source_revision: a66f094ede
-  reason: A restored VM disk can contain cached credentials, but a restore action alone does not establish that
-    the disk is readable/decrypted or holds a still-valid Azure/Entra credential mapped to a principal.
+  reason: the attacker obtains a full copy of the VM's OS + data disks (VHDs land in their staging storage account or as managed disks
+    in their RG), then mounts/downloads offline to extract SAM/NTDS, DPAPI blobs, cached creds,…. The section documents data access,
+    data integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#instant-item-level-recovery-quietest-exfil
   technique: Instant Item-Level Recovery (quietest exfil)
   source_revision: a66f094ede
-  reason: Instant item recovery can expose files, but the recovery-point actions alone do not establish that the
-    mounted files contain a usable Azure/Entra credential mapped to a principal.
+  reason: provisions an iSCSI mount of the recovery point onto a machine the operator runs the downloaded ILR script from; the attacker
+    browses the VM file system and copies out arbitrary files without deploying any VM or disk…. The section documents data access,
+    data integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#sql--sap-hana--azure-files--blob-restore
   technique: SQL / SAP HANA / Azure Files / Blob restore
   source_revision: a66f094ede
@@ -1076,8 +1071,10 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#azure-site-recovery--clone-or-disrupt-a-protected-vm
   technique: Azure Site Recovery — clone or disrupt a protected VM
   source_revision: a66f094ede
-  reason: A Site Recovery test clone can expose VM files, but test-failover permission alone does not establish
-    access to a usable Azure/Entra credential on the clone or identify its principal.
+  reason: Test failover spins up an isolated bootable clone of the protected VM in a test network without disrupting or committing —
+    a stealthy way to get a copy, mount disks and read secrets, then clean up; it looks like a…. The section documents data access,
+    data integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
+    are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#remove--unlock-the-resource-guard-strip-mua
   technique: Remove / unlock the Resource Guard (strip MUA)
   source_revision: a66f094ede
@@ -1391,12 +1388,11 @@
     denial primitive used against Storage/Cosmos/ACR). The section documents data access, data integrity, availability, network reachability
     or detection changes, without an identified Azure/Entra principal whose permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-fabric-post-exploitation.md#onelake-data-exfiltration-and-shortcut-abuse
-  technique: OneLake direct export and shortcut use
-  source_revision: 0b36331
-  reason: Direct OneLake export uses the caller's existing lakehouse read access; creating a shortcut requires target
-    Read and alone adds no privilege. Reading an existing external shortcut with stored connection credentials,
-    or querying it as the item owner, can grant target-storage Read absent from the caller. That delegated-read
-    subcase awaits a service-scoped target and shortcut/connection/owner authorization join in the evaluator.
+  technique: OneLake data exfiltration and shortcut abuse
+  source_revision: a66f094ede
+  reason: OneLake is ADLS-Gen2-API-compatible at https://onelake.dfs.fabric.microsoft.com//.Lakehouse/Files/..., so any ADLS/Blob tool
+    or the Azure SDK can bulk-pull data with a storage-audience token (see the notebook…. The section documents data access, data integrity,
+    availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-fabric-post-exploitation.md#capacity-arm-primitives--estate-wide-dos--cost-no-data-access
   technique: Capacity ARM primitives — estate-wide DoS & cost (no data access)
   source_revision: a66f094ede
@@ -1416,11 +1412,9 @@
     are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-healthcare-apis-post-exploitation.md#smart-on-fhir-idp-backdoor-persistence
   technique: SMART-on-FHIR IdP backdoor (persistence)
-  source_revision: 0b36331
-  reason: Adding an attacker-controlled SMART authority with allowedDataActions Read grants new victim-service PHI
-    Read through attacker-issued tokens. The catalog currently lacks a FHIR data-reader target and a selector for
-    writable SMART authorization configuration, so the path cannot yet be evaluated without mislabeling it as Entra
-    impersonation or data-plane admin.
+  source_revision: a66f094ede
+  reason: The attacker-controlled OIDC issuer grants FHIR PHI read through application-specific SMART authorization; no Azure/Entra
+    principal is impersonated.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-healthcare-apis-post-exploitation.md#dicom-bulk-imaging-exfil-to-attacker-storage-marquee
   technique: DICOM bulk imaging exfil to attacker storage (marquee)
   source_revision: a66f094ede
@@ -1516,9 +1510,8 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-migrate-post-exploitation.md#overpowered-migrate-execution-roles--storage--compute-takeover-privilege-source
   technique: Overpowered Migrate execution roles → storage & compute takeover (privilege source)
   source_revision: a66f094ede
-  reason: The role bundles listKeys and compute writes. VM execution is covered by azure-vm-os-disk-swap; direct
-    Storage Shared Key authority still needs an evaluated allowSharedKeyAccess predicate and an account-only data-plane
-    target (draft azure-storage-account-listkeys-dataplane). The role name adds no extra requirement.
+  reason: The Migrate executor roles bundle listKeys and compute write permissions. Those underlying actions are modelled by Storage
+    consumer-poisoning and VM execution entries; the role name itself adds no distinct path.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-monitor-post-exploitation.md#opsec-on-the-writes-you-cant-avoid
   technique: OPSEC on the writes you can't avoid
   source_revision: a66f094ede
@@ -1600,9 +1593,9 @@
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-pim-post-exploitation.md#prefer-eligibility-over-active-standing-privilege
   technique: Prefer eligibility over active standing privilege
   source_revision: a66f094ede
-  reason: Azure-resource PIM eligibility can become active privilege through SelfActivate. This Azure RBAC path
-    is already tracked in _excluded_audit_g1-entra.yaml as needing eligibility-schedule requirement and target-role/scope
-    support; directory-role activation is covered by azure-entraid-pim-eligible-role-activation.
+  reason: Operating through JIT eligibility (activate only when needed, let expire) instead of a standing active assignment blends with
+    normal admin behaviour and evades reviews that flag only active assignments. The section documents data access, data integrity,
+    availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions are gained.
 - source: src/pentesting-cloud/azure-security/az-post-exploitation/az-pim-post-exploitation.md#reconnaissance-value
   technique: Reconnaissance value
   source_revision: a66f094ede
@@ -1870,82 +1863,17 @@
   source_revision: a66f094ede
   reason: Device code execution is modelled by azure-intune-managed-device-user-code-execution; reaching a Global Administrator additionally
     requires that privileged user to sign into the compromised device.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-speech-services-privesc.md#enumerate-jobs
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-speech-services-post-exploitation.md#enumerate-jobs
   technique: Enumerate jobs
-  source_revision: a66f094ede
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   reason: Lists visible completed transcription jobs and exposes their UUIDs and files links (but not transcript content, and job metadata
     omits the original audio contentUrls), providing the UUIDs required to target the files…. The section documents data access, data
     integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
     are gained.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-speech-services-privesc.md#recover-transcript-files
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-speech-services-post-exploitation.md#recover-transcript-files
   technique: Recover transcript files
-  source_revision: a66f094ede
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   reason: Returns file metadata and a signed contentUrl for a known job and downloads the private transcript JSON/report; cannot list
     jobs on its own, so it is chained after job enumeration or a leaked UUID Request the file…. The section documents data access, data
     integrity, availability, network reachability or detection changes, without an identified Azure/Entra principal whose permissions
     are gained.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicebackupaction--full-service-exfiltration-to-attacker-storage
-  technique: Extract credentials from APIM full-service backup
-  source_revision: 0b36331
-  reason: The backup action copies APIM data to a destination. An identity edge needs the produced backup blob,
-    a parsed still-valid Entra credential, and a mapped target principal; neither the ARM configuration snapshot
-    nor the backup permission establishes those facts. The existing azure-apim-restore-backup-managed-identity-token
-    entry uses restore/action, not backup/action, so it does not cover this proposed credential-extraction path.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicegatewayslistdebugcredentialsaction--servicegatewayslisttraceaction--live-requestresponse-wiretap
-  technique: Capture caller bearer tokens through APIM trace
-  source_revision: 0b36331
-  reason: The trace action exposes a selected transaction. Caller impersonation needs a later caller request, an
-    unredacted Authorization header, a still-valid Entra bearer token with a useful audience, and a mapped caller
-    identity; these runtime facts are absent from configuration.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementserviceloggerswrite--servicediagnosticswrite--persistent-traffic-exfil-to-attacker-event-hub
-  technique: Collect caller bearer tokens with APIM diagnostics
-  source_revision: 0b36331
-  reason: A diagnostic can send traffic to a logger, but caller impersonation needs later authenticated traffic,
-    an unmasked Authorization header at the attacker sink, token validity/audience, and a mapped caller identity;
-    configuration alone cannot establish them.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#restore-vm--disks-to-attacker-rg-or-subscription
-  technique: Recover VM credentials from restored backup disks
-  source_revision: 0b36331
-  reason: Restore grants a copy of VM disks. An identity edge needs the restored host filesystem, readable decrypted
-    credential material, current token/password validity, and a mapped Azure/Entra principal; the vault permission
-    and recovery-point metadata do not establish these facts.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#instant-item-level-recovery-quietest-exfil
-  technique: Recover credentials through Backup instant item recovery
-  source_revision: 0b36331
-  reason: Instant item recovery mounts backup files. An identity edge needs the mounted filesystem, an actual usable
-    credential or token in those files, and a mapped Azure/Entra principal; the recovery-point actions do not establish
-    these host-content facts.
-- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-backup-and-recovery-services-post-exploitation.md#azure-site-recovery--clone-or-disrupt-a-protected-vm
-  technique: Recover credentials from Site Recovery test-failover clone
-  source_revision: 0b36331
-  reason: Test failover creates a VM clone. An identity edge needs access to its disks or runtime, a usable credential
-    on the clone, and a mapped Azure/Entra principal; the failover permission and protected-item configuration do
-    not establish those facts.
-- source: src/pentesting-cloud/azure-security/az-persistence/az-dev-center-persistence.md#code-and-artifact-backdoors
-  technique: Poison ADE environment definitions to execute under deployment identity
-  source_revision: 0b36331
-  reason: The stronger ADE deployment identity is reached only if a future environment deployment consumes the poisoned
-    Git definition. ARM inventory does not reveal Git write authority, catalog commit/content, or the future deploy
-    event; azure-devcenter-ade-deployment-identity additionally requires projects/users/environments/userWrite/action.
-- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-vms-unauth.md#public-gallery-images
-  technique: Recover credentials embedded in a public community gallery image
-  source_revision: 0b36331
-  reason: Community gallery discovery needs an Azure customer account, but no permission over the publisher's resources. Gaining
-    another identity needs an accessible image that actually contains a usable credential, its current validity, and a mapped
-    target principal; publisher URI metadata and the Azure configuration snapshot establish none of these content facts. The
-    existing sensitive-information-in-images exclusion concerns private gallery or managed-image reads and VM deployment permissions.
-- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-vms-unauth.md#public-extensions
-  technique: Recover credentials embedded in a publicly listed VM extension image
-  source_revision: 0b36331
-  reason: Listing public extension publisher and type metadata does not reveal package contents. Gaining another identity
-    needs the extension package to be retrievable and to contain a usable credential mapped to a target principal; these content
-    and validity facts are absent from configuration. The existing sensitive-information-in-vm-extensions exclusion assumes
-    permissions to inspect private extensions or applications and install one in a VM.
-- source: src/pentesting-cloud/azure-security/az-unauthenticated-enum-and-initial-entry/az-vms-unauth.md#ssrf-to-imds-token-theft
-  technique: Use public VM application SSRF to obtain its managed-identity token from IMDS
-  source_revision: 0b36331
-  reason: The page describes an anonymous application exploit, with no Azure RBAC permission. Token theft needs a vulnerable
-    public VM application, SSRF access from that VM to IMDS, control or forwarding of the Metadata header, disclosure of the
-    token response, and an attached managed identity; application exploitability and response behavior are runtime facts absent
-    from the Azure configuration snapshot. VM management-action entries require authenticated ARM permissions and do not cover
-    this path.

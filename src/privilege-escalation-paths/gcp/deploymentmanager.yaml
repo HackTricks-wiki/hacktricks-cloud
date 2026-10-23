@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Cloud Deployment Manager privilege escalation techniques (legacy; end of support 2026-03-31).
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -5,163 +6,102 @@
 # (roles/editor by default). attached_to_service: cloudservices_agent -> that project's Google APIs Service Agent.
 # The agent's roles/editor includes actAs but NOT resourcemanager.projects.setIamPolicy, so onward reach (e.g. VMs with
 # any project SA) is through the agent node's own edges, not project ownership.
-
 - id: gcp-deploymentmanager-deployments-create
   provider: gcp
   service: deploymentmanager
   title: Create a Deployment Manager deployment executed by the Google APIs Service Agent
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
   source_revision: 171e422
-  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.create.
+  summary: The source can submit a deployment that uses its project's Google APIs Service Agent to create a VM with a service account the caller cannot attach directly.
   requires:
     all_of:
-      - action: deploymentmanager.deployments.create
-        resource: "*"
+    - action: deploymentmanager.deployments.create
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: cloudservices_agent
-      gcp_sa_in_scope_of_permission: true
+      gcp_deploymentmanager_create_path: true
     scope: same_project
-    aggregate_as: "Google APIs Service Agent of {project}"
+    aggregate_as: Google APIs Service Agent of {project}
   conditions:
-    - id: legacy_service
-      description: Deployment Manager support ended on 2026-04-01; the V2 API stays available to existing customers until 2027-06-30, and from 2026-06-30 new users cannot enable it or create a first deployment.
-    - id: agent_roles
-      description: The agent holds roles/editor only if the default grant was not removed; actual power equals its current bindings.
-    - id: indirect_use
-      description: The source uses the agent only by declaring resources (no token); every Editor-grantable resource, including VMs with any project SA and the cloud-platform scope, is creatable.
-    - id: gcloud_get
-      description: The gcloud helper also needs deploymentmanager.deployments.get to finish, but sends the insert before that read, so create alone triggers the deployment.
+  - id: legacy_service
+    description: The V2 API must be enabled and a prior deployment must establish an existing customer, since new users cannot create a first deployment after 2026-06-30.
+  - id: agent_roles
+    description: The exact project-number agent needs VM, startup-script, disk, subnet, image and service-account attachment rights.
+  - id: indirect_use
+    description: A ready image, usable subnet, and an attachable project service account must support a VM the caller could not create directly; the source does not receive the agent's token.
+  - id: gcloud_get
+    description: The gcloud helper also needs deploymentmanager.deployments.get to finish, but sends the insert before that read, so create alone triggers the deployment.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Disable the Deployment Manager API, remove roles/editor from the cloudservices agent where possible and restrict roles/deploymentmanager.editor.
   references:
-    - https://cloud.google.com/deployment-manager/docs/access-control
-  notes: The per-deployment credential.serviceAccount field is ignored by the live service (HackTricks), so the identity is always the cloudservices agent. The agent may not appear in the project's SA list; evaluators need a synthetic node.
-
+  - https://cloud.google.com/deployment-manager/docs/access-control
+  - https://docs.cloud.google.com/deployment-manager/docs/deprecations
+  - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/insert
+  notes: The per-deployment credential.serviceAccount field is ignored by the live service (HackTricks), so the identity is always the cloudservices agent. A complete deployment list without current entries cannot disprove historical customer eligibility; that case stays unknown. Other supported resource paths stay unresolved when the concrete VM path is unavailable.
 - id: gcp-deploymentmanager-deployments-update
   provider: gcp
   service: deploymentmanager
   title: Update an existing Deployment Manager deployment
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
   source_revision: 171e422
-  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.update on a deployment.
+  summary: The source can update an exact existing deployment and use its Google APIs Service Agent to create a VM with a service account the caller cannot attach directly.
   requires:
     all_of:
-      - action: deploymentmanager.deployments.update
-        resource: "*"
+    - action: deploymentmanager.deployments.update
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: cloudservices_agent
-      gcp_sa_in_scope_of_permission: true
+      gcp_deploymentmanager_update_path: true
     scope: same_project
-    aggregate_as: "Google APIs Service Agent of {project}"
+    aggregate_as: Google APIs Service Agent of {project}
   conditions:
-    - id: existing_deployment
-      description: Needs an existing deployment and its current fingerprint; the raw API needs no read, the gcloud helper needs deploymentmanager.deployments.get first. The replacement config must keep existing resources to avoid deleting them.
-    - id: legacy_service
-      description: Deployment Manager support ended on 2026-04-01; the V2 API stays available to existing customers until 2027-06-30.
+  - id: existing_deployment
+    description: The caller needs get and update on the same listed deployment to retrieve its current fingerprint; deletePolicy=ABANDON can avoid deleting resources omitted from the new config.
+  - id: legacy_service
+    description: The enabled V2 API must still serve this existing customer, and the exact service agent must retain a viable downstream VM path.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Disable the Deployment Manager API and restrict deploymentmanager.deployments.update.
-
+  references:
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/update
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments
+  notes: A caller with a separately known current fingerprint may use the raw API without deployments.get; that case remains unresolved when the read grant is absent.
 - id: gcp-deploymentmanager-deployments-setiampolicy
   provider: gcp
   service: deploymentmanager
   title: Self-grant update on a deployment through its IAM policy
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentssetiampolicy--self-grant-control-of-one-existing-deployment
   source_revision: 171e422
-  summary: The source can obtain the privileges of the Google APIs Service Agent (cloudservices) of every project where it holds deploymentmanager.deployments.setIamPolicy on a deployment.
+  summary: The source can add itself to an existing deployment's Admin policy, update that deployment, and use its Google APIs Service Agent for a VM path the source lacks directly.
   requires:
     all_of:
-      - action: deploymentmanager.deployments.setIamPolicy
-        resource: "*"
+    - action: deploymentmanager.deployments.setIamPolicy
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: cloudservices_agent
-      gcp_sa_in_scope_of_permission: true
+      gcp_deploymentmanager_selfgrant_path: true
     scope: same_project
-    aggregate_as: "Google APIs Service Agent of {project}"
+    aggregate_as: Google APIs Service Agent of {project}
   conditions:
-    - id: grantable_role
-      description: The source binds roles/deploymentmanager.admin on the deployment (the API accepts deployment-level Admin bindings) and then uses deployments.update on that deployment only; project-level deployments.create is not conferred.
-    - id: existing_deployment
-      description: Needs an existing deployment.
+  - id: grantable_role
+    description: The caller needs getIamPolicy and setIamPolicy on the same deployment, a complete policy with etag, a grantable Admin role that includes update, and no deny on the gained update permission.
+  - id: existing_deployment
+    description: The exact deployment and enabled legacy API must exist; the agent also needs a viable downstream resource path.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict deploymentmanager.deployments.setIamPolicy (Owner, Deployment Manager Admin, Security Admin).
   references:
-    - https://docs.cloud.google.com/deployment-manager/docs/access-control
-
-- id: gcp-pa-s03-1-deploymentmanager
-  provider: gcp
-  service: deploymentmanager
-  title: Recover a second identity credential from a Deployment Manager manifest
-  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-deployment-manager-post-exploitation.md#deploymentmanagermanifestsget--discovery-permissions--recover-configuration-and-unredacted-credentials
-  source_revision: 0b36331
-  summary: A manifest read may disclose a usable credential for a separately identified principal.
-  requires:
-    all_of:
-    - action: deploymentmanager.manifests.get
-      resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-pa-s03-1-deploymentmanager
-    scope: any
-    aggregate_as: Exact externally verified target for Recover a second identity credential from a Deployment Manager
-      manifest
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Only a safely verified unredacted manifest credential with an exact, valid target identity yields a
-      conditional path.
-  blockers:
-  - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict deploymentmanager.manifests.get to trusted operators and remove or narrow the underlying delegated
-    credential or operation.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-deployment-manager-post-exploitation.md
-  notes: Schema-valid provisional draft only. Requires credential-target inventory and exact source-to-manifest-to-target
-    join. Missing joined facts must evaluate UNKNOWN; do not emit an edge from permission alone.
-- id: gcp-deploymentmanager-manifest-credential
-  provider: gcp
-  service: deploymentmanager
-  title: Recover an unredacted credential from a deployment manifest
-  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-deployment-manager-enum.md#what-to-review
-  summary: A readable manifest with a verified embedded credential can expose the credential owner.
-  requires:
-    all_of:
-    - action: deploymentmanager.manifests.get
-      resource: '{target.host_resource}'
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: deploymentmanager_manifest_credential
-    scope: any
-    outcome: credentials
-    aggregate_as: Service accounts with verified live keys in readable Deployment Manager manifests
-  conditions:
-  - id: credential_evidence
-    description: The manifest must contain a live, unredacted GCP service-account private key, with the client
-      email verified; only that service account is a target.
-  confidence: conditional
-  severity: high
-  mitigation: Remove credentials from deployment templates and restrict manifest reads.
-  source_revision: 0b36331
-  blockers:
-  - gcp_deny_policy
-  references:
-  - https://docs.cloud.google.com/deployment-manager/docs/best-practices#including_credentials_in_your_deployment
-  notes: Discovery permissions are not required when the deployment and manifest names are known. Non-GCP credentials
-    require a separate target kind.
+  - https://docs.cloud.google.com/deployment-manager/docs/access-control
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/getIamPolicy
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/setIamPolicy
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/deploymentmanager

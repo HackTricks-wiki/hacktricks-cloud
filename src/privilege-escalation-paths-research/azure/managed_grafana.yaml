@@ -1,0 +1,111 @@
+# Azure Managed Grafana techniques (declarative only).
+# Source: hacktricks-cloud az-managed-grafana-privesc.md (rev 171e422; re-reviewed at a66f094ede).
+
+- id: azure-grafana-act-as-admin
+  provider: azure
+  service: managed_grafana
+  title: Grafana Admin through the ActAsGrafanaAdmin data action
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md#microsoftdashboardgrafanaactasgrafanaadminaction
+  source_revision: 171e422
+  summary: The source can obtain Grafana Admin on the workspace, including use of its configured data sources.
+  requires:
+    all_of:
+      - action: Microsoft.Dashboard/grafana/ActAsGrafanaAdmin/action
+        data_action: true
+        scope: "{target.scope}"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      any_principal_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "Grafana admins of {target.scope}"
+  conditions:
+    - id: datasource_identity
+      description: Data sources configured with the workspace managed identity let Grafana Admin query whatever that identity can read; this partial identity use is configuration-dependent.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Restrict the Grafana Admin role assignment and keep the workspace identity read-scoped.
+  references:
+    - https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-manage-access-permissions-users-identities
+  notes: ""
+
+- id: azure-grafana-datasource-workspace-identity
+  provider: azure
+  service: managed_grafana
+  title: Query Azure data as the Grafana workspace identity through data sources
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md#microsoftdashboardgrafanaactasgrafanaeditoraction--datasource-proxy-ssrf-to-mi
+  source_revision: a66f094ede
+  summary: A Grafana Editor or Admin can create or edit data sources that authenticate with the workspace managed identity, so the Grafana backend reads Azure Monitor, Resource Graph or Log Analytics data the identity can reach on the source's behalf.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Dashboard/grafana/ActAsGrafanaEditor/action
+          data_action: true
+          scope: "{target.host_resource}"
+      - - action: Microsoft.Dashboard/grafana/ActAsGrafanaAdmin/action
+          data_action: true
+          scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Dashboard/grafana
+    scope: inherited_scope
+    aggregate_as: "Read access of identities attached to Grafana workspace {target.host_resource}"
+    outcome: impersonation
+  conditions:
+    - id: datasource_read_only
+      description: Only the identity's read access through Grafana data-source plugins is usable; no token and no write privileges of the identity are obtained.
+    - id: identity_type_config
+      description: The built-in managed-identity data-source setting uses the system-assigned identity; a user-assigned identity needs an explicit data-source configuration.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict the Grafana Editor and Admin roles and keep the workspace identity read-scoped to the resources its dashboards need.
+  references:
+    - https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-data-source-plugins-managed-identity
+  notes: Partial identity gain (read through data sources only); evaluator should not propagate the identity's write role assignments.
+
+- id: azure-grafana-assign-user-assigned-identity
+  provider: azure
+  service: managed_grafana
+  title: Attach a user-assigned identity to a Grafana workspace and query as it
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md#microsoftdashboardgrafanawrite--mi-attach--remove-the-service-account-persistence-boundary
+  source_revision: a66f094ede
+  summary: Attaching an assignable user-assigned identity to a workspace where the source is Grafana Editor or Admin lets it read Azure data as that identity through data sources.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.Dashboard/grafana/write
+        scope: "{pivot}"
+    any_of:
+      - - action: Microsoft.Dashboard/grafana/ActAsGrafanaEditor/action
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.Dashboard/grafana/ActAsGrafanaAdmin/action
+          data_action: true
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Dashboard/grafana
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+    outcome: impersonation
+  conditions:
+    - id: datasource_read_only
+      description: Only the identity's read access through Grafana data-source plugins is usable; no token and no write privileges of the identity are obtained.
+    - id: single_identity_type
+      description: A workspace carries one managed-identity type at a time, so attaching a user-assigned identity can break data sources that use the system-assigned one.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict userAssignedIdentities/assign/action and grafana/write, and separate workspace contributors from Grafana Editors and Admins.
+  references:
+    - https://learn.microsoft.com/en-us/azure/managed-grafana/how-to-data-source-plugins-managed-identity
+  notes: Partial identity gain (read through data sources only); evaluator should not propagate the identity's write role assignments.

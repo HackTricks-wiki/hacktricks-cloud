@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Cloud Run (services, jobs, worker pools) privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-run-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -10,25 +11,28 @@
   title: Deploy a Cloud Run service running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicescreate--iamserviceaccountsactas-runroutesinvoke
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  summary: The source may run new code under a same-project service account when it can attach that account, create a Cloud Run service in that project, and the Cloud Run API is enabled.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-      - action: run.services.create
-        resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_run_service_create_path: true
     scope: same_project
     aggregate_as: "Service accounts usable as Cloud Run service identity in {project}"
   conditions:
+    - id: service_create_project
+      description: The selector checks service creation on the target account's project and keeps undecidable future-resource conditions unresolved.
+    - id: cloud_run_api
+      description: The Cloud Run API must be enabled in that project.
     - id: invoke_path
       description: run.routes.invoke (or a public service) is needed only to trigger request-time code; container startup code runs without invocation.
     - id: cross_project_sa
-      description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced; not modelled.
+      description: Cross-project service-account attachment has separate policy and service-agent requirements, modelled by gcp-run-services-create-cross-project-actas.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
@@ -37,7 +41,9 @@
   mitigation: Grant actAs (roles/iam.serviceAccountUser) only on specific SAs; restrict roles/run.developer and roles/run.admin.
   references:
     - https://cloud.google.com/run/docs/securing/service-identity
-  notes: Some clients also need run.services.update for the deploy path (HackTricks).
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/create
+    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
+  notes: New code can run during container startup; request-time code additionally needs an invoker or a public service.
 
 - id: gcp-run-services-update-actas
   provider: gcp
@@ -45,30 +51,33 @@
   title: Redeploy an existing Cloud Run service with new code, environment or identity
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicesupdate--iamserviceaccountsactas
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by updating an existing service.
+  summary: The source may deploy new code under a same-project service account when it can update one exact ready Cloud Run service in that project and attach the account with actAs.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-      - action: run.services.update
-        resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_run_service_update_path: true
     scope: same_project
     aggregate_as: "Service accounts attachable to existing Cloud Run services in {project}"
   conditions:
     - id: existing_service
-      description: Needs an existing service on which run.services.update holds.
+      description: The selector checks run.services.update on one undeleted, ready service in the target account's project. Failed or reconciling services remain unresolved.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict run.services.update and grant actAs only on specific SAs.
-  notes: The environment-only variant keeps the image and needs a startup hook payload already readable in the container.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/services/service-identity
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services/patch
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.services
+  notes: Updating the image can introduce new code. The service must later receive traffic or maintain warm instances for that code to start.
 
 - id: gcp-run-services-setiampolicy-actas
   provider: gcp
@@ -76,11 +85,9 @@
   title: Self-grant update rights on a Cloud Run service through its IAM policy
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicessetiampolicy
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account of every Cloud Run service on which it holds run.services.setIamPolicy and actAs on that SA.
+  summary: The source may run new code as a service's pinned account when it can change that exact service's IAM policy, grant itself missing update rights, and use actAs on the account.
   requires:
     all_of:
-      - action: run.services.setIamPolicy
-        resource: "{target.host_resource}"
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
   target:
@@ -88,16 +95,21 @@
     selector:
       attached_to_service: run_service
       gcp_actas_granted_on_target: true
-    scope: same_project
+      gcp_run_service_policy_update_path: true
+    scope: any
     aggregate_as: "SAs of Cloud Run services whose IAM policy the source controls"
   conditions:
     - id: followup_update
-      description: The self-granted update still requires actAs on the service identity.
+      description: The selector requires setIamPolicy on the same ready service, a collected policy, a grantable Cloud Run Developer role that adds update, and clear known policy restrictions. actAs on the pinned identity is also required.
   blockers:
     - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict run.services.setIamPolicy (roles/run.admin, roles/owner).
+  references:
+    - https://docs.cloud.google.com/run/docs/reference/iam/roles
+    - https://docs.cloud.google.com/run/docs/configuring/services/service-identity
+  notes: The update can replace the image, while actual code startup depends on the service receiving traffic or maintaining warm instances.
 
 - id: gcp-run-jobs-create-run-actas
   provider: gcp
@@ -110,27 +122,30 @@
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-      - action: run.jobs.create
-        resource: "*"
-      - action: run.jobs.run
-        resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
-      gcp_sa_in_scope_of_permission: true
+      gcp_run_job_create_execute_path: true
     scope: same_project
     aggregate_as: "Service accounts usable as Cloud Run job identity in {project}"
   conditions:
+    - id: same_project_execution
+      description: The selector requires create and run on the same target project, so a new job can inherit both grants.
+    - id: cloud_run_api
+      description: The host project's Cloud Run API must be enabled before a new job can be created.
     - id: cross_project_sa
-      description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced; not modelled.
+      description: Cross-project service-account attachment is covered by gcp-run-jobs-create-run-cross-project-actas.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on specific SAs; roles/editor bundles both actAs and job create/run.
-  notes: Omitting the SA does not bypass actAs; it is enforced on the Compute default SA. No ingress is needed.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
+    - https://docs.cloud.google.com/run/docs/execute/jobs
+  notes: Omitting the SA does not bypass actAs; it is enforced on the Compute default SA. A job created in the project inherits project-level run permission. No ingress is needed.
 
 - id: gcp-run-jobs-update-run-actas
   provider: gcp
@@ -138,88 +153,33 @@
   title: Update and execute an existing Cloud Run job with new code or identity
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobsupdaterunjobsruniamserviceaccountsactasrunjobsget
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by updating an existing job.
+  summary: The source may run new code as a service account in the same project when it can update and execute one exact ready Cloud Run job and attach that account with actAs.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-      - action: run.jobs.update
-        resource: "*"
-      - action: run.jobs.run
-        resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_run_job_update_execute_path: true
     scope: same_project
     aggregate_as: "Service accounts attachable to existing Cloud Run jobs in {project}"
   conditions:
     - id: existing_job
-      description: Needs an existing job on which update and run hold.
+      description: The selector checks run.jobs.update and run.jobs.run on the same undeleted, ready job in the target account's project. Failed or reconciling jobs remain unresolved.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict run.jobs.update and grant actAs only on specific SAs.
-
-- id: gcp-run-jobs-setiampolicy
-  provider: gcp
-  service: run
-  title: Self-grant execute-with-overrides on an existing Cloud Run job through its IAM policy
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobssetiampolicy
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service account pinned to every Cloud Run job on which it holds run.jobs.setIamPolicy.
-  requires:
-    all_of:
-      - action: run.jobs.setIamPolicy
-        resource: "{target.host_resource}"
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: run_job
-    scope: same_project
-    aggregate_as: "SAs pinned to Cloud Run jobs whose IAM policy the source controls"
-  conditions:
-    - id: override_injectable
-      description: Without actAs, the self-granted run/runWithOverrides only lets the source change args and env of the pinned image; code execution depends on the image honoring an injectable argument or interpreter startup variable.
-    - id: actas_alternative
-      description: With actAs on the pinned SA the source can instead self-grant run.jobs.update and replace the code (unconditional).
-  blockers:
-    - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict run.jobs.setIamPolicy (roles/run.admin, roles/owner) and avoid pinning privileged SAs to jobs.
-
-- id: gcp-run-jobs-runwithoverrides
-  provider: gcp
-  service: run
-  title: Execute an existing Cloud Run job with overridden args or environment
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobsrun-runjobsrunwithoverrides-runjobsget
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service account pinned to every Cloud Run job on which it holds run.jobs.run and run.jobs.runWithOverrides.
-  requires:
-    all_of:
-      - action: run.jobs.run
-        resource: "{target.host_resource}"
-      - action: run.jobs.runWithOverrides
-        resource: "{target.host_resource}"
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: run_job
-    scope: same_project
-    aggregate_as: "SAs pinned to Cloud Run jobs the source can run with overrides"
-  conditions:
-    - id: override_injectable
-      description: Overrides can change only container args, env, task count, timeout and delay (not image, command or SA); execution of attacker code depends on the image's entrypoint or interpreter honoring them, and file-backed hooks need a payload already readable in the container.
-  blockers:
-    - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Do not grant roles/run.jobsExecutorWithOverrides on jobs pinned to privileged SAs.
-  notes: No actAs is needed because the run-as identity is fixed at create/update.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/patch
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs
+  notes: A job update can replace the image and service account. The selector requires execution permission on that same job after the update.
 
 - id: gcp-run-workerpools-create-update-actas
   provider: gcp
@@ -232,68 +192,64 @@
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-    any_of:
-      - - action: run.workerpools.create
-          resource: "*"
-      - - action: run.workerpools.update
-          resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_run_worker_pool_create_or_update_path: true
     scope: same_project
     aggregate_as: "Service accounts usable as Cloud Run worker pool identity in {project}"
   conditions:
     - id: update_requires_existing
-      description: The update path needs an existing worker pool.
+      description: The selector checks create permission with an enabled Cloud Run API or update permission on an exact, ready, undeleted worker pool; unresolved state remains unknown.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on specific SAs; restrict run.workerpools create/update.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/workerpools/service-identity
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.workerPools
 
 - id: gcp-run-ssh-into-running-instance
   provider: gcp
   service: run
-  title: SSH into a running Cloud Run container and use its service account
+  title: SSH into a Cloud Run service container and use its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#cloud-run-instance-ssh--runsshread--runsshroot-exec-inside-a-running-container-as-its-sa-no-actas
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account of every running Cloud Run service, job or worker pool on which it holds an SSH permission.
+  summary: The source may reach the service identity through root SSH on an enabled second-generation Cloud Run service when it can also act as that identity; IAP and OS Login access remain conditional.
   requires:
-    any_of:
-      - - action: run.services.sshRoot
-          resource: "{target.host_resource}"
-      - - action: run.services.sshRead
-          resource: "{target.host_resource}"
-      - - action: run.jobs.sshRoot
-          resource: "{target.host_resource}"
-      - - action: run.jobs.sshRead
-          resource: "{target.host_resource}"
-      - - action: run.workerpools.sshRoot
-          resource: "{target.host_resource}"
-      - - action: run.workerpools.sshRead
-          resource: "{target.host_resource}"
+    all_of:
+      - action: run.services.sshRoot
+        resource: "{target.host_resource}"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: [run_service, run_job, run_worker_pool]
-    scope: same_project
-    aggregate_as: "SAs of running Cloud Run workloads the source can SSH into"
+      attached_to_service: run_service
+      gcp_run_service_ssh_path: true
+    scope: any
+    aggregate_as: "SAs of Cloud Run services the source can SSH into"
   conditions:
     - id: early_access
       description: The interactive SSH step is early-access/allowlisted; the IAM permissions exist but the exec path may be unavailable to the project.
-    - id: running_instance
-      description: Requires a running instance of the workload.
-    - id: sshread_capability
-      description: Whether sshRead (non-root) allows metadata-server token access is not documented.
+    - id: service_ready
+      description: The selector checks that SSH is enabled on a ready second-generation service; Cloud Run can start an instance for the session when none is running.
+    - id: iap_and_os_login
+      description: The session also needs an allowed IAP tunnel and OS Login access; those grants are not in the Cloud Run service inventory.
+    - id: root_ssh
+      description: The documented connection path requires root SSH and actAs on the service identity; sshRead alone does not establish this path.
   blockers:
     - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict roles/run.sshRoot and roles/run.sshReader and the run.admin/developer/editor roles on workloads with privileged SAs.
-  notes: No actAs, create or update needed.
+  mitigation: Restrict root SSH and actAs grants on services with privileged identities.
+  references:
+    - https://docs.cloud.google.com/iap/docs/ssh-cloud-run
+  notes: The exact ready second-generation service and root SSH grant are joined to its service account; IAP and OS Login controls can still prevent a session.
 
 - id: gcp-run-instances-create-update-actas
   provider: gcp
@@ -306,62 +262,139 @@
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
-    any_of:
-      - - action: run.instances.create
-          resource: "*"
-      - - action: run.instances.update
-          resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
-      gcp_sa_in_scope_of_permission: true
+      gcp_run_instance_create_or_update_path: true
     scope: same_project
     aggregate_as: "Service accounts usable as Cloud Run instance identity in {project}"
   conditions:
     - id: preview_feature
       description: Cloud Run instances are a preview resource; the API must be available to the project.
     - id: update_requires_existing
-      description: The update path needs an existing instance; actAs is re-checked on its service identity even for an environment-only update.
+      description: The update path needs an existing instance that is ready, or separate start permission when its running state is unresolved.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on specific SAs and restrict run.instances create/update (roles/run.editor, roles/run.admin).
-  notes: Same run-as-SA boundary as services, jobs and worker pools; HackTricks documents it inside the run.services.update section.
-
+  notes: The create path checks project permission. The update path checks permission on an exact, undeleted instance and its readiness or start permission. This same-project path is conditional because instance availability and code execution still depend on Cloud Run.
+- id: gcp-run-jobs-setiampolicy
+  provider: gcp
+  service: run
+  title: Self-grant execute-with-overrides on an existing Cloud Run job through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobssetiampolicy
+  source_revision: 171e422
+  summary: The source may run code as the service account pinned to an existing ready Cloud Run job when its policy write can add the missing job permissions and the exact job supports an executable path.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: run_job
+      gcp_run_job_policy_override_path: true
+    scope: any
+    aggregate_as: SAs pinned to Cloud Run jobs whose IAM policy the source controls
+  conditions:
+  - id: exact_job_policy
+    description: The selector checks setIamPolicy and a collected IAM policy on the same ready, undeleted job that uses the target service account. The new grant must add a missing permission and pass known deny and member constraints.
+  - id: override_injectable
+    description: The Jobs Executor With Overrides role can add run and runWithOverrides on that job. Without actAs, the recorded command must be an interpreter that accepts code through overridden arguments.
+  - id: actas_alternative
+    description: With derived actAs on the pinned service account, the Cloud Run Developer role can add job update and run rights on that job so the source may replace its image and execute it.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict run.jobs.setIamPolicy (roles/run.admin, roles/owner) and avoid pinning privileged SAs to jobs.
+  references:
+    - https://docs.cloud.google.com/run/docs/reference/iam/roles
+    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run
+  notes: The selector keeps missing policy, role, boundary, and image-entrypoint evidence unresolved. It does not report a new path when the source already holds the needed job actions.
+- id: gcp-run-jobs-runwithoverrides
+  provider: gcp
+  service: run
+  title: Execute an existing Cloud Run job with overridden args or environment
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobsrun-runjobsrunwithoverrides-runjobsget
+  source_revision: 171e422
+  summary: The source may run attacker-supplied code as a job's pinned service account when it can execute that exact ready job with argument overrides and the recorded command is an interpreter that accepts code through arguments.
+  requires:
+    all_of: []
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: run_job
+      gcp_run_job_override_path: true
+    scope: any
+    aggregate_as: SAs pinned to Cloud Run jobs the source can run with overrides
+  conditions:
+  - id: exact_job_run
+    description: The selector checks run and runWithOverrides on the same collected job that uses the target service account.
+  - id: override_injectable
+    description: Overrides cannot change image or command. The selector reports a path only when a recorded interpreter command can execute overridden arguments; other images remain unresolved.
+  - id: ready_job
+    description: The exact job must not be deleted and must have a succeeded terminal condition with reconciliation complete.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Do not grant roles/run.jobsExecutorWithOverrides on jobs pinned to privileged SAs.
+  references:
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs
+  notes: No actAs is needed because the run-as identity is fixed at create/update. Jobs with unknown entrypoints remain unresolved instead of being reported as usable code execution.
 - id: gcp-run-instances-ssh
   provider: gcp
   service: run
   title: SSH into a running standalone Cloud Run instance and use its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#cloud-run-instance-ssh--runsshread--runsshroot-exec-inside-a-running-container-as-its-sa-no-actas
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service account of every running Cloud Run instance on which it holds run.instances.sshRoot or run.instances.sshRead.
+  summary: Root SSH access to a ready or startable Cloud Run instance may let the source use its attached service account. Read-only SSH access is kept unresolved because it does not prove command execution or token use.
   requires:
     any_of:
-      - - action: run.instances.sshRoot
-          resource: "{target.host_resource}"
-      - - action: run.instances.sshRead
-          resource: "{target.host_resource}"
+    - - action: run.instances.sshRoot
+        resource: '{target.host_resource}'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
+    - - action: run.instances.sshRead
+        resource: '{target.host_resource}'
+      - action: iam.serviceAccounts.actAs
+        resource: '{target.email}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: run_instance
-    scope: same_project
-    aggregate_as: "SAs of running Cloud Run instances the source can SSH into"
+      gcp_actas_granted_on_target: true
+      gcp_run_instance_ssh_path: true
+    scope: any
+    aggregate_as: SAs of running Cloud Run instances the source can SSH into
   conditions:
-    - id: early_access
-      description: The interactive SSH step is early-access/allowlisted; the IAM permissions exist but the exec path may be unavailable to the project.
-    - id: sshread_capability
-      description: Whether sshRead (non-root) allows metadata-server token access is not documented.
+  - id: early_access
+    description: The interactive SSH step is early-access/allowlisted; the IAM permissions exist but the exec path may be unavailable to the project.
+  - id: iap_and_os_login
+    description: The session also needs an allowed IAP tunnel and OS Login access; those grants are not in this Cloud Run instance inventory.
+  - id: service_account_user
+    description: Google documents Service Account User on the attached service account as a connection requirement; the exact actAs grant is checked.
+  - id: sshread_capability
+    description: sshRead permits reading data, but does not establish command execution or service-account token access; read-only paths stay unresolved.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict roles/run.sshRoot, roles/run.sshReader and roles/run.editor on instances with privileged SAs.
-  notes: Companion of gcp-run-ssh-into-running-instance for the run.instances resource type (roles/run.sshReader and roles/run.sshRoot cover all four resource types). No actAs, create or update needed.
-
+  references:
+    - https://docs.cloud.google.com/iap/docs/ssh-cloud-run
+    - https://docs.cloud.google.com/iam/docs/roles-permissions/run
+  notes: The selector joins an exact undeleted instance, attached service account, root SSH permission, exact actAs grant, SSH setting, readiness or start permission. IAP and OS Login access still affect whether a session can be established.
 - id: gcp-run-workerpools-setiampolicy-actas
   provider: gcp
   service: run
@@ -371,73 +404,137 @@
   summary: The source can obtain the privileges of the service account of every Cloud Run worker pool on which it holds run.workerpools.setIamPolicy and actAs on that SA.
   requires:
     all_of:
-      - action: run.workerpools.setIamPolicy
-        resource: "{target.host_resource}"
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+    - action: run.workerpools.setIamPolicy
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: run_worker_pool
       gcp_actas_granted_on_target: true
-    scope: same_project
-    aggregate_as: "SAs of Cloud Run worker pools whose IAM policy the source controls"
+      gcp_run_worker_pool_policy_update_path: true
+    scope: any
+    aggregate_as: SAs of Cloud Run worker pools whose IAM policy the source controls
   conditions:
-    - id: followup_update
-      description: The self-granted run.workerpools.update still re-validates actAs on the pinned service account.
+  - id: followup_update
+    description: The selector needs an exact ready pool, complete policy and grantable Developer role, a missing update grant, and clear member, deny and boundary restrictions before the self-grant path is considered.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict run.workerpools.setIamPolicy (roles/run.admin, roles/owner).
-  notes: Mirrors gcp-run-services-setiampolicy-actas for the worker pool resource type.
-- id: gcp-run-literal-sa-key-disclosure
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/workerpools/service-identity
+    - https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.workerPools
+  notes: Policy write alone is insufficient; the selector checks the new update permission on the same pool.
+- id: gcp-run-services-create-cross-project-actas
   provider: gcp
   service: run
-  title: Plaintext credential theft
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#plaintext-environment-disclosure-with-cloud-run-read-permissions
+  title: Deploy a Cloud Run service with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicescreate--iamserviceaccountsactas-runroutesinvoke
+  source_revision: 171e422
+  summary: The source may run a new Cloud Run service under a service account from another project when the target project allows cross-project attachment and the Cloud Run service agent can mint its tokens.
   requires:
-    any_of:
-    - - action: run.services.get
-        resource: '*'
-    - - action: run.services.list
-        resource: '*'
-    - - action: run.configurations.get
-        resource: '*'
-    - - action: run.configurations.list
-        resource: '*'
-    - - action: run.revisions.get
-        resource: '*'
-    - - action: run.revisions.list
-        resource: '*'
-    - - action: run.jobs.get
-        resource: '*'
-    - - action: run.jobs.list
-        resource: '*'
-    - - action: run.executions.get
-        resource: '*'
-    - - action: run.executions.list
-        resource: '*'
-    - - action: run.tasks.get
-        resource: '*'
-    - - action: run.tasks.list
-        resource: '*'
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
   target:
     kind: gcp_service_account
     selector:
-      gcp_challenge_fact: gcp-run-literal-sa-key-disclosure
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_service: true
     scope: any
+    aggregate_as: "Service accounts attachable to new Cloud Run services in another project"
   conditions:
-  - id: active_key_in_literal_env
-    description: An environment value must contain an active Google service-account key, not a Secret Manager reference
-      or opaque application password. The active key ID and service-account email must match collector evidence.
+    - id: host_service_create
+      description: The host project must grant service creation and have the Cloud Run API enabled.
+    - id: cross_project_service_agent
+      description: The project creating the service must grant its Cloud Run service agent Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The effective iam.disableCrossProjectServiceAccountUsage policy on the target service account's project must be unenforced.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
   confidence: conditional
-  severity: high
-  mitigation: Restrict the listed permissions and audit the target configuration.
+  severity: critical
+  mitigation: Restrict cross-project service account attachment, Cloud Run service-agent token grants, and deployer actAs permissions to the intended projects.
   references:
-  - https://docs.cloud.google.com/run/docs/instances/create-and-manage-instances
-  summary: Reading a Cloud Run template with an embedded active Google service-account key can disclose that stronger
-    credential.
-  source_revision: 0b36331
-  notes: Exact source/resource/target evidence must be emitted in gcp_privesc_challenge_evidence from the requested
-    collector. Missing evidence is UNKNOWN; do not infer any other service account.
+    - https://cloud.google.com/run/docs/configuring/services/service-identity
+    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
+  notes: The selector joins a project-scoped create grant and enabled API in the same host project before checking target policy and service-agent token rights.
+
+- id: gcp-run-jobs-create-run-cross-project-actas
+  provider: gcp
+  service: run
+  title: Create and execute a Cloud Run job with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runjobscreate-runjobsrun-iamserviceaccountsactasrunjobsget
+  source_revision: 171e422
+  summary: The source may execute a new job under a service account from another project when cross-project attachment is allowed and the Cloud Run service agent can mint its tokens.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_job: true
+    scope: any
+    aggregate_as: "Service accounts usable by jobs in another project"
+  conditions:
+    - id: same_host_job_execution
+      description: The host project must grant both job creation and execution for a newly created job.
+    - id: cloud_run_api
+      description: The Cloud Run API must be enabled in the host project.
+    - id: cross_project_service_agent
+      description: The job project's Cloud Run service agent must have Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit cross-project attachment, service-agent token grants, and deployer actAs to intended projects and service accounts.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/jobs/service-identity
+    - https://docs.cloud.google.com/service-usage/docs/reference/rest/v1/services/list
+  notes: The selector joins create and run in one collected host project with an enabled Cloud Run API, then checks the target project's policy and the host service agent's token access.
+
+- id: gcp-run-instances-create-update-cross-project-actas
+  provider: gcp
+  service: run
+  title: Deploy or update a Cloud Run instance with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-run-privesc.md#runservicesupdate--iamserviceaccountsactas
+  source_revision: 6fb9ac51fd
+  summary: The source may run an instance under a service account from another project when the host action, cross-project attachment policy, and Cloud Run service-agent token grant all allow it.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_run_instance: true
+    scope: any
+    aggregate_as: "Service accounts usable by Cloud Run instances in another project"
+  conditions:
+    - id: preview_feature
+      description: Cloud Run instances are a preview resource and must be available in the host project and region.
+    - id: cross_project_service_agent
+      description: The host project's Cloud Run service agent must have Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The service-account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+    - id: update_requires_existing
+      description: The update path needs an exact undeleted instance that is ready or can be started by the source.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Limit instance create or update rights, service-account actAs, cross-project attachment, and service-agent token grants to intended resources.
+  references:
+    - https://docs.cloud.google.com/run/docs/configuring/instances/service-identity
+  notes: The create path checks project permission. The update path checks the exact existing instance and its state. The target service account belongs to another project.

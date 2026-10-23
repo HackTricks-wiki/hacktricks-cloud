@@ -1,0 +1,127 @@
+# Scoped AWS permission gains. Each edge needs one unique reviewed record that
+# binds the source, exact resource, accepted mutation, and effective permission
+# before and after the mutation. Missing or ambiguous evidence creates no path.
+
+- id: aws-secretsmanager-putresourcepolicy-self-grant
+  provider: aws
+  service: secretsmanager
+  title: Grant the source IAM user GetSecretValue on an exact secret
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-secrets-manager-privesc/README.md#secretsmanagergetresourcepolicy-secretsmanagerputresourcepolicy-secretsmanagerlistsecrets
+  source_revision: d11f0e7012
+  summary: The source IAM user writes a same-account secret resource policy naming itself and gains previously denied GetSecretValue, including the necessary KMS decrypt authorization.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: secretsmanager:PutResourcePolicy
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_secretsmanager_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["secretsmanager:GetSecretValue on the exact reviewed secret"]
+    aggregate_as: "Reviewed Secrets Manager GetSecretValue self-grants in {account}"
+  conditions:
+    - id: reviewed_secret_permission_differential
+      description: Unique reviewed evidence must bind the exact source IAM user, same-account secret, accepted policy principal and resource, prior denial, effective new GetSecretValue access, and KMS decrypt access.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict PutResourcePolicy on sensitive secrets and review grants to the requesting user with KMS access.
+  references:
+    - https://docs.aws.amazon.com/secretsmanager/latest/userguide/auth-and-access_resource-policies.html
+  notes: The target is the source user's new read permission on one secret, never the privileges of a credential that might be stored there.
+
+- id: aws-efs-putfilesystempolicy-self-grant
+  provider: aws
+  service: efs
+  title: Grant the source ClientMount on an exact EFS file system
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc/README.md#elasticfilesystemdeletefilesystempolicyelasticfilesystemputfilesystempolicy
+  source_revision: d11f0e7012
+  summary: The source replaces a file-system policy with an accepted statement naming itself and gains previously denied ClientMount on that file system.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: elasticfilesystem:PutFileSystemPolicy
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_efs_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["elasticfilesystem:ClientMount on the exact reviewed file system"]
+    aggregate_as: "Reviewed EFS ClientMount self-grants in {account}"
+  conditions:
+    - id: reviewed_efs_permission_differential
+      description: Unique reviewed evidence must bind the source, file system, accepted policy principal and resource, prior ClientMount denial, and effective new ClientMount authorization.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict PutFileSystemPolicy and review client grants to the requesting principal.
+  references:
+    - https://docs.aws.amazon.com/efs/latest/APIReference/API_PutFileSystemPolicy.html
+  notes: This grants only ClientMount authorization; network reachability and ClientWrite or ClientRootAccess are separate conditions and permissions. Deleting the policy is not modeled by this entry.
+
+- id: aws-cases-tagresource-domain-event-self-grant
+  provider: aws
+  service: cases
+  title: Unlock PutCaseEventConfiguration by changing an exact domain authorization tag
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-connect-cases-privesc/README.md#casestagresource--casesuntagresource-plus-tag-conditioned-cases-permissions
+  source_revision: d11f0e7012
+  summary: The source tags an exact Cases domain Access=Operator and thereby satisfies its previously unmet aws:ResourceTag/Access condition for PutCaseEventConfiguration on that domain.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: cases:TagResource
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_cases_tag_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["cases:PutCaseEventConfiguration on the exact reviewed domain after Access=Operator tagging"]
+    aggregate_as: "Reviewed Connect Cases domain tag-conditioned grants in {account}"
+  conditions:
+    - id: reviewed_cases_tag_permission_differential
+      description: Unique reviewed evidence must bind the source, domain, accepted Access=Operator tag, pre-existing matching IAM condition, all evaluated resources, prior denial, and effective newly allowed PutCaseEventConfiguration action.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Cases authorization tag writes and use explicit denies for protected domains.
+  references:
+    - https://docs.aws.amazon.com/service-authorization/latest/reference/list_connectcases.html
+  notes: Other Cases actions or resource types require separate exact proof and are not inferred from this domain grant.
+
+- id: aws-sitewise-createaccesspolicy-portal-self-grant
+  provider: aws
+  service: iotsitewise
+  title: Grant the source identity SiteWise Monitor portal administrator access
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-sitewise-privesc/README.md#grant-yourself-access-to-a-legacy-sitewise-monitor-portal
+  source_revision: d11f0e7012
+  summary: The source creates an accepted access policy naming itself as ADMINISTRATOR on an existing Monitor portal where it had no equivalent access.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: iotsitewise:CreateAccessPolicy
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_sitewise_portal_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["iotsitewise:MonitorPortalAdministrator on the exact reviewed portal"]
+    aggregate_as: "Reviewed SiteWise Monitor portal administrator grants in {account}"
+  conditions:
+    - id: reviewed_sitewise_portal_permission_differential
+      description: Unique reviewed evidence must bind the exact source identity, existing portal, accepted access policy naming that identity, prior absence of equivalent access, and effective new ADMINISTRATOR permission.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateAccessPolicy on Monitor portals and reconcile administrator grants against approved identities.
+  references:
+    - https://docs.aws.amazon.com/iot-sitewise/latest/APIReference/API_CreateAccessPolicy.html
+  notes: The target is the source's new portal-scoped application permission, not account-wide IAM authority. Monitor must be available in the account.

@@ -1,3 +1,8 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Entra ID group membership escalation (membership/owner write, group ownership,
 # dynamic membership rules and attribute control).
 # Source: hacktricks-cloud az-entraid-privesc/README.md, az-entraid-privesc/dynamic-groups.md,
@@ -22,7 +27,7 @@
   title: Add yourself to non-role-assignable groups
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectorygroupsmembersupdate
   source_revision: 171e422
-  summary: A principal allowed to update group membership (e.g. Groups Administrator, User Administrator) can obtain the privileges of any assigned, non-role-assignable group in its scope.
+  summary: An enabled principal with group membership update permission can join a cloud-managed assigned group it does not already belong to, when the group's type and directory scope permit the change.
   requires:
     any_of:
       - - entra_permission: microsoft.directory/groups/members/update
@@ -38,6 +43,8 @@
     selector:
       entra_group_role_assignable: false
       entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_group_new_self_membership: true
       entra_group_type_covered_by_permission: true
       entra_role_assignment_scope_covers_target: true
       entra_target_not_in_restricted_au: true
@@ -54,15 +61,15 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
     - https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0
-  notes: groups.security/* covers security groups and groups.unified/* covers Microsoft 365 groups only (entra_group_type_covered_by_permission). Groups holding Azure RBAC at subscription/management-group scope make this edge escalate into the Azure resource plane even though role-assignable groups are protected.
+  notes: groups.security/* covers security groups and groups.unified/* covers Microsoft 365 groups only. Mail-enabled security and distribution groups are excluded. A service principal additionally needs Graph group-write and application-write permissions and cannot join a Microsoft 365 group. Existing direct or nested membership does not grant new access. Groups holding Azure RBAC at subscription/management-group scope can carry the edge into the Azure resource plane.
 
 - id: azure-entraid-graph-group-readwrite-all
   provider: azure
   service: entraid
-  title: Graph Group.ReadWrite.All / GroupMember.ReadWrite.All adds members to groups
+  title: Graph group permissions add the calling app to security groups
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#sensitive-graph-permissions
   source_revision: 171e422
-  summary: A service principal holding Group.ReadWrite.All or GroupMember.ReadWrite.All can obtain the privileges of any assigned, non-role-assignable group outside restricted management AUs.
+  summary: A service principal with Graph group-write and application-write permission can add itself to a cloud-managed security group that is not role-assignable or restricted by an administrative unit.
   requires:
     any_of:
       - - graph_app_permission: Group.ReadWrite.All
@@ -73,6 +80,8 @@
     selector:
       entra_group_role_assignable: false
       entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_graph_group_sp_membership: true
       entra_target_not_in_restricted_au: true
     scope: tenant
     aggregate_as: "Assigned, non-role-assignable groups in {scope}"
@@ -80,7 +89,7 @@
     - id: on_prem_synced_group
       description: Membership of groups synchronised from on-premises AD cannot be changed in Entra.
     - id: service_principal_member_needs_application_permission
-      description: Adding a service principal (e.g. the source itself) as a member additionally requires Application.ReadWrite.All app-only; without it the source must add a user it controls.
+      description: Adding a service principal as a member additionally requires Application.ReadWrite.All or Directory.ReadWrite.All application permission.
   blockers:
     - restricted_management_au
   confidence: derived
@@ -89,7 +98,7 @@
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/groups-concept
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/admin-units-restricted-management#programmability
-  notes: Microsoft states Group.ReadWrite.All does not work on role-assignable groups (RoleManagement.ReadWrite.Directory is required). Group.ReadWrite.All can also add owners, which leads to the same target set.
+  notes: Microsoft states Group.ReadWrite.All does not work on role-assignable groups (RoleManagement.ReadWrite.Directory is required). Microsoft 365 groups cannot contain service principals, and mail-enabled security groups are read-only in Graph. A separate controlled-user path covers an app that lacks application-write permission but can add a user it controls.
 
 - id: azure-entraid-group-owners-update
   provider: azure
@@ -97,7 +106,7 @@
   title: Make yourself owner of non-role-assignable groups
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectorygroupsownersupdate
   source_revision: 171e422
-  summary: A principal allowed to update group owners can obtain the privileges of any assigned, non-role-assignable group in its scope.
+  summary: An enabled principal allowed to add group owners can first make itself an owner, then join a supported assigned group it does not already belong to.
   requires:
     any_of:
       - - entra_permission: microsoft.directory/groups/owners/update
@@ -111,6 +120,9 @@
     selector:
       entra_group_role_assignable: false
       entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_group_new_self_membership: true
+      entra_group_source_not_owner: true
       entra_group_type_covered_by_permission: true
       entra_role_assignment_scope_covers_target: true
       entra_target_not_in_restricted_au: true
@@ -126,15 +138,15 @@
   mitigation: Restrict groups/owners/update and review owner additions on groups that hold access.
   references:
     - https://learn.microsoft.com/en-us/graph/api/group-post-owners?view=graph-rest-1.0
-  notes: Reaches the same target set as azure-entraid-group-members-update because group owners can manage assigned membership.
+  notes: Owner update is useful as a separate escalation route only when the source is not already an owner or member. Group type, source type, exact directory scope and app-only Graph permissions still govern the membership step. Existing owners are handled by azure-entraid-group-owner-membership.
 
 - id: azure-entraid-group-owner-membership
   provider: azure
   service: entraid
-  title: Group owner adds itself to the owned group (incl. role-assignable groups)
-  source: src/pentesting-cloud/azure-security/az-services/az-azuread.md#add-user-to-group
+  title: Group owner joins an owned group
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#group-owner-joins-an-owned-group
   source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
-  summary: An owner of an assigned-membership group can obtain the privileges of that group, including directory roles assigned to a role-assignable group.
+  summary: An enabled owner can join an assigned group it does not already belong to, including a role-assignable group when its protected membership requirements are met.
   requires:
     all_of:
       - entra_owner_of: "{target.id}"
@@ -142,8 +154,9 @@
   target:
     kind: entra_group
     selector:
-      entra_source_is_owner_of_group: true
       entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_group_owner_new_self_membership: true
       entra_target_not_in_restricted_au: true
     scope: tenant
     aggregate_as: "Assigned groups owned by {source}"
@@ -159,7 +172,7 @@
   mitigation: Keep owners of role-assignable and privileged groups to Tier-0 administrators only; use PIM for Groups with approval for ownership.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/groups-concept
-  notes: Microsoft documents that management of role-assignable groups can be delegated by adding group owners, so owners reach the group's directory roles; evaluator should raise severity to critical when the group holds a privileged role. Owners are blocked for groups in restricted management AUs.
+  notes: The owner requirement joins the exact group and source. Microsoft documents delegation of role-assignable group membership management to owners, but Graph requires RoleManagement.ReadWrite.Directory for protected group membership updates. App-only self-membership also needs group-write and application-write permissions. Owners already in the group do not gain new access; restricted management AUs block this path.
 
 - id: azure-entraid-group-dynamic-rule-update
   provider: azure
@@ -167,7 +180,10 @@
   title: Rewrite a dynamic group's membership rule
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectorygroupsdynamicmembershipruleupdate
   source_revision: 171e422
-  summary: A principal allowed to update dynamic membership rules can obtain the privileges of any dynamic group in its scope.
+  summary: A principal that can update a dynamic group's membership rule can bring an enabled user it controls into that group when the user does not already have its access.
+  source_selector:
+    source_reaches_kind: azure_user
+    source_reaches_user_outside_target_group: true
   requires:
     any_of:
       - - entra_permission: microsoft.directory/groups/dynamicMembershipRule/update
@@ -179,7 +195,9 @@
   target:
     kind: entra_group
     selector:
+      entra_group_role_assignable: false
       entra_group_membership_type: dynamic
+      entra_group_membership_cloud_writable: true
       entra_role_assignment_scope_covers_target: true
       entra_target_not_in_restricted_au: true
     scope: tenant
@@ -191,83 +209,45 @@
       description: Dynamic user membership requires Entra ID P1 licensing.
   blockers:
     - restricted_management_au
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict dynamicMembershipRule update and avoid granting Azure RBAC or sensitive app roles to dynamic groups.
   references:
     - https://learn.microsoft.com/en-us/graph/api/group-update?view=graph-rest-1.0
-  notes: Role-assignable groups cannot be dynamic, so directory roles are never reached directly; the gain is the group's Azure RBAC / app access. Group.ReadWrite.All / Directory.ReadWrite.All application permissions can update membershipRule (Update group API) outside restricted management AUs; built-in holders of dynamicMembershipRule/update are Groups Administrator, User Administrator and Directory Writers.
-
-- id: azure-entraid-dynamic-group-attribute-control
+  notes: Dynamic groups admit users or devices, not service principals. The source must be an enabled user outside the group or have a separately evidenced path to control one; that user can be selected with a user.objectId membership rule. Role-assignable groups cannot be dynamic, so directory roles are never reached directly; the gain is the group's Azure RBAC or app access. Graph application group-write permissions may update membershipRule outside restricted management AUs; membership processing and licensing remain conditional.
+- id: azure-entraid-graph-group-readwrite-all-controlled-user
   provider: azure
   service: entraid
-  title: Change user attributes referenced by a dynamic membership rule
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/dynamic-groups.md#privesc
-  source_revision: a66f094ede
-  summary: A principal able to write user attributes referenced by a dynamic membership rule, on a user it controls, can obtain the privileges of that dynamic group.
+  title: Graph group permissions add a controlled user to groups
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#sensitive-graph-permissions
+  source_revision: 171e422
+  summary: A service principal with Graph group-write permission can add a user it controls to a cloud-managed security or Microsoft 365 group outside a restricted administrative unit.
+  source_selector:
+    source_reaches_kind: azure_user
+    source_reaches_user_outside_target_group: true
   requires:
     any_of:
-      - - entra_permission: microsoft.directory/users/basic/update
-          scope: "{source.controlled_user}"
-      - - entra_permission: microsoft.directory/users/manager/update
-          scope: "{source.controlled_user}"
-      - - graph_app_permission: User.ReadWrite.All
-      - - graph_app_permission: User-Mail.ReadWrite.All
+      - - graph_app_permission: Group.ReadWrite.All
+      - - graph_app_permission: GroupMember.ReadWrite.All
       - - graph_app_permission: Directory.ReadWrite.All
   target:
     kind: entra_group
     selector:
-      entra_group_membership_type: dynamic
-      entra_dynamic_rule_attributes_writable_by_source: true
+      entra_group_role_assignable: false
+      entra_group_membership_type: assigned
+      entra_group_membership_cloud_writable: true
+      entra_graph_group_user_membership: true
       entra_target_not_in_restricted_au: true
     scope: tenant
-    aggregate_as: "Dynamic groups whose rule uses attributes {source} can write"
+    aggregate_as: "Groups that could receive a user controlled by {source}"
   conditions:
-    - id: controlled_user_required
-      description: The source must control a user object to modify, and the permission scope is that user ({source.controlled_user}). For a user source this is the source itself. For any other source the controlled user is not identified and the edge is conditional (controlled_user_not_identified). The controlled user then becomes the group member.
-    - id: sensitive_attribute
-      description: Sensitive attributes (otherMails, mobilePhone, businessPhones, accountEnabled, userPrincipalName) require roles per Microsoft's "who can perform sensitive actions" table, and app-only writes need a supporting directory role.
-    - id: synced_attribute
-      description: Attributes sourced from on-premises AD are overwritten by sync and must be changed at the source directory.
+    - id: controlled_user_not_already_member
+      description: The controlled user must not already have the group's access.
   blockers:
     - restricted_management_au
   confidence: conditional
   severity: high
-  mitigation: Base dynamic rules on attributes only administrators (or HR-sourced sync) can write, never on self-service or guest-controlled values, and avoid granting privileged access to dynamic groups.
+  mitigation: Limit Graph group-write grants and protect privileged groups with role-assignable or restricted administrative unit controls.
   references:
-    - https://learn.microsoft.com/en-us/entra/identity/users/groups-dynamic-membership
-    - https://www.mnemonic.io/resources/blog/abusing-dynamic-groups-in-azure-ad-for-privilege-escalation/
-  notes: The evaluator must parse membershipRule and intersect referenced attributes with what the source can write (users/basic/update covers non-sensitive basic properties such as department/jobTitle; manager/update covers user.manager rules). Device rules (device.*) are not modelled here.
-
-- id: azure-entraid-dynamic-group-guest-invite
-  provider: azure
-  service: entraid
-  title: Invite a guest that satisfies a dynamic membership rule
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/dynamic-groups.md#privesc
-  source_revision: 171e422
-  summary: A principal allowed to invite guests can obtain the privileges of dynamic groups whose rule a newly invited guest satisfies.
-  requires:
-    any_of:
-      - - entra_permission: microsoft.directory/users/inviteGuest
-      - - entra_tenant_setting: guest_invites_allowed_for_source
-  target:
-    kind: entra_group
-    selector:
-      entra_group_membership_type: dynamic
-      entra_dynamic_rule_satisfiable_by_invited_guest: true
-      entra_target_not_in_restricted_au: true
-    scope: tenant
-    aggregate_as: "Dynamic groups whose rule a newly invited guest can satisfy"
-  conditions:
-    - id: external_collaboration_settings
-      description: The tenant's allowInvitesFrom setting (default "everyone", including guests) and cross-tenant access / domain allow-deny lists decide whether the source can invite.
-    - id: guest_cannot_edit_sensitive_props
-      description: An ordinary guest cannot later edit sensitive properties such as otherMails; only values set at invitation/redemption are controllable.
-  blockers: []
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict guest invitations to specific admin roles and never use guest-controllable attributes (mail, otherMails, displayName) in dynamic rules that grant access.
-  references:
-    - https://learn.microsoft.com/en-us/entra/external-id/external-collaboration-settings-configure
-    - https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions
-  notes: Severity is medium by default; the evaluator should raise it based on the group's access. The source becomes able to act as a new guest principal it creates, not as an existing principal.
+    - https://learn.microsoft.com/en-us/graph/api/group-post-members?view=graph-rest-1.0
+  notes: The source-to-user chain is required; group permissions alone do not establish control of a user.

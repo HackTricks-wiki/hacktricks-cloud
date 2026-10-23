@@ -1,0 +1,81 @@
+
+# GCP Config Controller / Config Connector (KCC) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-config-controller-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: config_connector_identity -> the Google SA configured in the ConfigConnectorContext (or the
+# cluster-mode ConfigConnector object) of the Config Controller / KCC cluster {target.host_resource}.
+
+- id: gcp-configcontroller-kcc-resource-write
+  provider: gcp
+  service: configcontroller
+  title: Write Config Connector resources so KCC acts as its configured Google service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#kubernetes-rbac-over-a-kcc-resource--act-as-the-configured-config-connector-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the Config Connector identity of a Config Controller (or KCC-enabled
+    GKE) cluster where it can create or update *.cnrm.cloud.google.com custom resources.
+  requires:
+    any_of:
+    - - action: container.thirdPartyObjects.create
+        resource: '{target.host_resource}'
+    - - action: container.thirdPartyObjects.update
+        resource: '{target.host_resource}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: config_connector_identity
+    scope: any
+    aggregate_as: Config Connector identities of clusters where the source can write KCC resources
+  conditions:
+  - id: in_cluster_rbac
+    description: Native Kubernetes RBAC create/update/patch on the watched KCC CRD is an independently sufficient
+      authorization path. This GCP-IAM entry covers only container.thirdPartyObjects.*; the native path requires
+      a cross-plane RBAC evaluator and must remain UNKNOWN until implemented.
+  - id: watched_namespace
+    description: The resource must be written in a namespace KCC reconciles (namespaced mode uses the namespace's
+      ConfigConnectorContext identity).
+  - id: admission
+    description: Policy Controller constraints or validating webhooks can reject the manifest.
+  - id: api_server_reachable
+    description: Needs network reachability and credentials to the cluster API server.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict write access to KCC custom resources (in-cluster RBAC and container.thirdPartyObjects.*)
+    and grant the Config Connector identity only the IAM permissions it needs (never roles/owner).
+  references:
+  - https://docs.cloud.google.com/config-connector/docs/how-to/install-manually
+  - https://docs.cloud.google.com/kubernetes-engine/docs/reference/api-permissions
+  notes: The reach is bounded by the Config Connector identity's own IAM permissions; the reconciled API calls are
+    attributed to that identity. Any KCC resource (IAMPolicyMember, IAMServiceAccountKey, compute instances) is
+    a deputy for it.
+
+- id: gcp-kcc-k8s-rbac-iam-member
+  provider: gcp
+  service: configcontroller
+  title: ConfigConfusion in-cluster RBAC permits IAMPolicyMember CRD self grant
+  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#authorization-bypass-and-shadow-resources
+  source_revision: 0b36331
+  summary: ConfigConfusion in-cluster RBAC permits IAMPolicyMember CRD self grant; emit only when exact source,
+    target, and prerequisite evidence is verified.
+  requires:
+    all_of: []
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-kcc-k8s-rbac-iam-member
+    scope: any
+    outcome: scope_control
+    aggregate_as: ConfigConfusion in-cluster RBAC permits IAMPolicyMember CRD self grant
+  conditions:
+  - id: exact_verified_prerequisites
+    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
+  references:
+  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#authorization-bypass-and-shadow-resources
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  source_selector: {}

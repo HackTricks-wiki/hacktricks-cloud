@@ -1,3 +1,8 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure RBAC / authorization-plane privilege escalation techniques.
 # Source: hacktricks-cloud az-authorization-privesc.md (rev 171e422; policy entries originally authored against 6bdd8e89e6).
 # Conventions used across catalog/azure/*.yaml (see SCHEMA EXTENSIONS in the agent report):
@@ -9,126 +14,33 @@
 #                                                  every requirement using {pivot} must cover the SAME resource.
 #   data_action: true                           -> the action must be granted via DataActions (not Actions).
 
-- id: azure-authorization-roleassignments-write
-  provider: azure
-  service: authorization
-  title: Create Azure role assignments over a scope
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationroleassignmentswrite
-  source_revision: 171e422
-  summary: The source can assign any role (e.g. Owner) at the scope to itself or a controlled principal and so controls all RBAC at that scope and its descendants.
-  requires:
-    all_of:
-      - action: Microsoft.Authorization/roleAssignments/write
-        scope: "{target.scope}"
-  target:
-    kind: azure_scope_owner
-    selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "RBAC control of {scope}"
-  conditions:
-    - id: role_assignment_condition
-      description: An ABAC condition on the source's role assignment (delegated role-assignment management) may restrict which roles or principal types can be assigned; an allowlist excluding privileged roles limits or removes the edge.
-  blockers:
-    - azure_deny_assignment
-  confidence: derived
-  severity: critical
-  mitigation: Grant Microsoft.Authorization/roleAssignments/write (Owner, User Access Administrator, Role Based Access Control Administrator or custom roles) only to break-glass/admin principals, at the narrowest scope, and constrain delegated assignment with an allowlist ABAC condition.
-  references:
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-steps
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview
-  notes: RBAC NotActions are subtractions, not denies; only deny assignments block. Scope inheritance MG -> subscription -> RG -> resource applies, so a grant at an MG reaches every child subscription.
-
-- id: azure-authorization-roledefinitions-write-assigned-role
-  provider: azure
-  service: authorization
-  title: Modify a custom role definition already assigned to the source
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationroledefinitionswrite
-  source_revision: 171e422
-  summary: The source can add arbitrary Actions/DataActions to a custom role it already holds, inflating its own existing assignments at their scopes.
-  requires:
-    all_of:
-      - action: Microsoft.Authorization/roleDefinitions/write
-        scope: "{target.scope}"
-  target:
-    kind: azure_scope_owner
-    selector:
-      custom_role_assigned_to_source: true
-    scope: inherited_scope
-    aggregate_as: "Scopes of custom roles assigned to the source"
-  conditions:
-    - id: all_assignable_scopes_covered
-      description: Updating a custom role requires roleDefinitions/write over every scope listed in the role's AssignableScopes; the edge holds only if the source's grant covers all of them.
-  blockers:
-    - azure_deny_assignment
-  confidence: derived
-  severity: critical
-  mitigation: Do not grant roleDefinitions/write to principals that hold custom roles; keep custom role authoring with a separate admin principal and alert on role definition changes.
-  references:
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/custom-roles
-  notes: Target set is limited to the scopes where custom roles assigned to the source (directly or via group) apply. Creating a NEW custom role without roleAssignments/write gives nothing on its own.
-
-- id: azure-authorization-abac-denylist-bypass-custom-role
-  provider: azure
-  service: authorization
-  title: Escape a denylist-constrained role-assignment delegation via a new custom role
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#abac-constrained-delegation-bypass-via-custom-role-indirection
-  source_revision: 171e422
-  summary: A delegate whose roleAssignments/write is limited by a denylist condition can create a new custom role (not on the denylist) that itself grants unconditioned roleAssignments/write, assign it, and then assign Owner.
-  requires:
-    all_of:
-      - action: Microsoft.Authorization/roleAssignments/write
-        scope: "{target.scope}"
-      - action: Microsoft.Authorization/roleDefinitions/write
-        scope: "{target.scope}"
-  target:
-    kind: azure_scope_owner
-    selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "RBAC control of {scope}"
-  conditions:
-    - id: role_assignment_condition_is_denylist
-      description: Only relevant when the source's roleAssignments/write assignment carries a denylist ABAC condition (GuidNotEquals); with no condition the plain roleAssignments/write entry already applies.
-    - id: assignable_scopes_cover_target
-      description: The new custom role's AssignableScopes and the source's own assignment scope must both cover the target scope.
-  blockers:
-    - role_assignment_condition_is_allowlist
-    - azure_deny_assignment
-  confidence: derived
-  severity: critical
-  mitigation: Use allowlist (ForAnyOfAnyValues:GuidEquals) conditions for delegated role assignment and never combine delegated roleAssignments/write with roleDefinitions/write.
-  references:
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-examples
-  notes: Conditions on different assignments are evaluated independently and unioned, so a condition on one assignment never limits permissions granted by another.
-
 - id: azure-authorization-elevateaccess-global-admin
   provider: azure
   service: authorization
   title: Global Administrator elevates to User Access Administrator at root scope
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
-  source_revision: 171e422
+  source_revision: e8f25bff43
   summary: A Global Administrator can grant itself User Access Administrator at root scope "/", gaining RBAC control over every management group and subscription in the tenant.
   source_kind: azure_user
   requires:
     all_of:
       - entra_role: Global Administrator
+        directory_scope: "dir:/"
   target:
     kind: azure_scope_owner
     selector:
       any_principal_in_scope: true
+      azure_root_scope_only: true
     scope: tenant
     aggregate_as: "Azure root scope (/) of the tenant"
-  conditions:
-    - id: pim_eligible_only
-      description: If Global Administrator is only PIM-eligible, it must be activated first (activation requirements such as MFA/approval apply).
+  conditions: []
   blockers: []
   confidence: derived
   severity: critical
   mitigation: Minimise Global Administrators, require PIM with approval, and alert on elevateAccess events and root-scope role assignments.
   references:
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
-  notes: Only users (not service principals) holding Global Administrator can call elevateAccess.
+  notes: Only users with an active tenant-wide Global Administrator assignment can call elevateAccess. PIM eligibility alone needs activation and is not an active grant. Elevation yields User Access Administrator at root scope; the source can then assign itself Owner.
 
 - id: azure-managedidentity-federated-credential-write
   provider: azure
@@ -140,12 +52,12 @@
   requires:
     all_of:
       - action: Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write
-        scope: "{target.id}"
+        scope: '*'
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      resource_permission_covers_target: Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write
+      azure_uami_fic_write_path: true
     scope: inherited_scope
     aggregate_as: "User-assigned managed identities in {scope}"
   conditions: []
@@ -158,76 +70,33 @@
     - https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust-user-assigned-managed-identity
   notes: Only user-assigned identities support FICs; system-assigned identities are not reachable this way.
 
-- id: azure-policy-definition-write-remediation-identity
-  provider: azure
-  service: authorization
-  title: Rewrite an assigned deployIfNotExists/modify policy so its remediation runs attacker-chosen deployments
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationpolicydefinitionswrite
-  source_revision: 171e422
-  summary: The source can obtain the Azure RBAC control-plane privileges of the managed identity of every policy assignment that uses a custom policy definition or initiative the source can rewrite.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Authorization/policyDefinitions/write
-          scope: '{pivot}'
-      - - action: Microsoft.Authorization/policySetDefinitions/write
-          scope: '{pivot}'
-        - action: Microsoft.Authorization/policyDefinitions/write
-          scope: '*'
-  pivot_resource_type: Microsoft.Authorization/policyDefinitions|Microsoft.Authorization/policySetDefinitions
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Authorization/policyAssignments
-    scope: inherited_scope
-    aggregate_as: Managed identities of policy assignments using {pivot}
-  conditions:
-    - id: pivot_referenced_by_target_assignment
-      description: '{target.host_resource} must be a policy assignment with a managed identity whose policyDefinitionId is {pivot}, or an initiative that contains {pivot}. Built-in definitions and initiatives are read-only, so {pivot} must be custom.'
-    - id: new_definition_location
-      description: In the initiative group, the new custom definition must be saved at the initiative's location (management group or subscription) or an ancestor of it, so that the initiative can reference it.
-    - id: remediation_trigger
-      description: 'The rewritten template runs only when the policy service remediates: a remediation task (Microsoft.PolicyInsights/remediations/write on the assignment scope), or a create or update by anyone of an in-scope resource that matches the rule. Existing non-compliant resources are not remediated automatically.'
-    - id: arm_control_plane_only
-      description: The gain is what an ARM template deployment can do with the identity's role assignments (Actions, including listKeys-style actions). DataActions are not exercised directly.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Treat policyDefinitions/write and policySetDefinitions/write (Resource Policy Contributor, Contributor, Owner) on definitions assigned with a managed identity as equivalent to that identity's roles. Keep DINE/modify identities least-privileged, store their definitions at a scope only policy admins can write, and alert on definition changes.
-  references:
-    - https://learn.microsoft.com/en-us/azure/governance/policy/how-to/remediate-resources
-    - https://learn.microsoft.com/en-us/azure/governance/policy/concepts/effect-deploy-if-not-exists
-  notes: Microsoft documents that deployIfNotExists and modify remediation runs with the managed identity associated with the policy assignment. It also says that changing a policy definition does not update the assignment or its identity, so the identity keeps its role assignments while the definition's template or effect changes. A modify definition can be rewritten to deployIfNotExists because the effect lives in the definition. HackTricks describes this permission only as weakening policy rules; the identity path comes from the Microsoft documentation.
-
 - id: azure-policy-assignment-write-user-assigned-identity
   provider: azure
   service: authorization
   title: Create or update a deployIfNotExists/modify policy assignment running as an existing user-assigned identity
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationpolicyassignmentswrite--microsoftauthorizationpolicyassignmentsdelete
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#policy-assignment-remediation-with-an-existing-user-assigned-identity
   source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
   summary: The source can obtain the Azure RBAC control-plane privileges of user-assigned managed identities on which it holds assign/action, by making them the remediation identity of a policy assignment whose custom definition it controls.
   requires:
     all_of:
       - action: Microsoft.Authorization/policyAssignments/write
-        scope: '{pivot}'
+        scope: '*'
       - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
         scope: '{target.id}'
       - action: Microsoft.Authorization/policyDefinitions/write
         scope: '*'
-  pivot_resource_type: Microsoft.Management/managementGroups|Microsoft.Resources/subscriptions|Microsoft.Resources/resourceGroups
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
-    scope: inherited_scope
-    aggregate_as: User-assigned identities assignable to policy assignments in {scope}
+      azure_policy_assignment_identity_path: true
+    scope: any
+    aggregate_as: User-assigned identities usable by writable policy assignments
   conditions:
-    - id: definition_visible_at_pivot
-      description: The custom deployIfNotExists definition must be stored at the assignment scope {pivot} or an ancestor management group or subscription.
+    - id: definition_visible_at_assignment
+      description: The writable custom deployIfNotExists definition must be at a subscription or management-group scope visible to the writable policy assignment.
     - id: remediation_trigger
-      description: 'The deployment runs only on remediation: a remediation task (Microsoft.PolicyInsights/remediations/write) or a create or update of a matching resource in {pivot}.'
+      description: 'The deployment runs only after a remediation task or a create or update of a resource matching the policy assignment.'
     - id: arm_control_plane_only
       description: The gain is what an ARM template deployment can do with the identity's existing role assignments (Actions). DataActions are not exercised directly.
   blockers:
@@ -239,3 +108,33 @@
     - https://learn.microsoft.com/en-us/azure/governance/policy/how-to/remediate-resources#configure-the-managed-identity
     - https://azure.github.io/enterprise-azure-policy-as-code/policy-assignments/
   notes: No roleAssignments/write is needed. The user-assigned identity keeps its existing role assignments; only the portal auto-grants roleDefinitionIds, and SDK or REST assignments do not. Using a user-assigned identity on a policy assignment needs Managed Identity Operator, which is userAssignedIdentities/assign/action on the identity (EPAC documentation and the ARM linked-access check). A new system-assigned identity has no roles unless the source can also create role assignments, which azure-authorization-roleassignments-write already covers. Repointing an existing assignment that has a system-assigned identity is not modelled, because it is not verified whether policyDefinitionId can change on update.
+- id: azure-authorization-elevateaccess-pim-eligible-global-admin
+  provider: azure
+  service: authorization
+  title: Activate an eligible Global Administrator role and elevate Azure access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
+  source_revision: 171e422
+  summary: A user eligible for tenant-wide Global Administrator can activate that role, then grant itself User Access Administrator at root scope.
+  source_kind: azure_user
+  requires:
+    all_of:
+      - entra_pim_eligible_role: "dir:62e90394-69f5-4237-9190-012177145e10"
+        directory_scope: "dir:/"
+  target:
+    kind: azure_scope_owner
+    selector:
+      any_principal_in_scope: true
+      azure_root_scope_only: true
+    scope: tenant
+    aggregate_as: "Azure root scope (/) of the tenant"
+  conditions:
+    - id: pim_activation_requirements
+      description: The user must satisfy any MFA, approval, or other PIM activation requirements before calling elevateAccess.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Require PIM approval for eligible Global Administrator assignments and monitor role activation and root-scope elevation.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-activate-role
+  notes: A current tenant-wide eligibility is required. Eligibility alone is a conditional path and never counts as an active Global Administrator grant.

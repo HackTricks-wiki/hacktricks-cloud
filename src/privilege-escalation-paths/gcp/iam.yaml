@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP IAM / service-account impersonation privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-iam-privesc.md (rev 171e422).
 # Conventions used across catalog/gcp/*.yaml (see SCHEMA EXTENSIONS in the GCP agent report):
@@ -43,6 +44,7 @@
       description: An IAM Condition on the granting binding (time, resource name) may limit when or for which SA the permission applies.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
   confidence: derived
   severity: critical
   mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts, never at project/folder/org level.
@@ -72,6 +74,7 @@
       description: If iam.disableServiceAccountKeyCreation (or its managed iam.managed.* successor) is enforced, only the key-upload path remains, which iam.disableServiceAccountKeyUpload blocks.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
     - {id: org_policy_constraint, constraint: iam.disableServiceAccountKeyCreation+iam.disableServiceAccountKeyUpload}
   confidence: derived
   severity: critical
@@ -102,6 +105,7 @@
       description: Each edge records its delegate SAs as delegate:<email> conditions. The final delegate must hold iam.serviceAccounts.getAccessToken, signBlob or signJwt on the target; implicitDelegation alone does not yield a delegate's own access token.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
   confidence: derived
   severity: critical
   mitigation: Remove iam.serviceAccounts.implicitDelegation grants (roles/iam.serviceAccountTokenCreator) that are not strictly required, and remove token-minting grants held by service accounts that others can delegate through.
@@ -131,6 +135,7 @@
       description: An IAM Condition on the granting binding may limit the grant.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
   confidence: derived
   severity: critical
   mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts.
@@ -160,6 +165,7 @@
       description: An IAM Condition on the granting binding may limit the grant.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
   confidence: derived
   severity: critical
   mitigation: Grant roles/iam.serviceAccountTokenCreator only on specific service accounts.
@@ -188,6 +194,8 @@
       description: iam.allowedPolicyMemberDomains can reject the new binding when the source is an external principal.
   blockers:
     - gcp_deny_policy
+    - disabled_service_account
+    - {id: org_policy_constraint, constraint: iam.allowedPolicyMemberDomains+iam.managed.allowedPolicyMembers}
   confidence: derived
   severity: critical
   mitigation: Restrict roles/iam.serviceAccountAdmin and roles/iam.securityAdmin; grant SA-level admin only to owners of that SA.
@@ -205,12 +213,12 @@
   requires:
     all_of:
       - action: iam.roles.update
-        resource: "{target.scope}"
+        resource: "*"
   target:
     kind: gcp_scope_owner
     selector:
       gcp_custom_role_bound_to_source: true
-    scope: inherited_scope
+    scope: any
     aggregate_as: "Scopes where a source-bound custom role is editable"
   conditions:
     - id: add_permission_limits
@@ -222,178 +230,4 @@
   mitigation: Separate custom-role administration (roles/iam.roleAdmin) from principals bound to those roles.
   references:
     - https://cloud.google.com/iam/docs/creating-custom-roles
-  notes: EXTENSION selector gcp_custom_role_bound_to_source = target scope is one where the source (directly or via group) has a binding to a custom role defined in the scope covered by iam.roles.update. Adding e.g. resourcemanager.projects.setIamPolicy yields scope ownership.
-- id: gcp-audit-s01-00-steal-a-service-account-key
-  provider: gcp
-  service: iam
-  title: Steal a service-account key from a compromised VM to bypass narrow metadata-token scopes
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/README.md#bypassing-access-scopes
-  summary: The source can gain unscoped access token and effective IAM permissions blocked by VM scope. A key on
-    a compromised VM can mint a token with wider scopes, but GCP inventory cannot establish guest-file presence,
-    source access to it, or active key state.
-  requires:
-    all_of: []
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-audit-s01-00-steal-a-service-account-key
-    scope: any
-    aggregate_as: key-owning GCP service account and its broader OAuth authority
-  conditions:
-  - id: exact_target_evidence
-    description: The page explicitly suggests finding a service key on a compromised host to mint a new OAuth token
-      without the VM metadata token scope restriction. The exclusion treats this as no new identity edge, but it
-      is a new credential and can enable IAM permissions previously blocked by the old token scope. A key must actually
-      be present, accessible in guest storage, unrevoked, and belong to an SA whose IAM rights exceed the VM scopes.
-      Missing target evidence evaluates UNKNOWN.
-  - id: effective_scope_delta
-    description: The key must be accessible and active, belong to the target SA, and permit an OAuth scope with
-      an effective permission absent from the VM metadata token.
-  confidence: conditional
-  severity: high
-  mitigation: Remove service-account keys from VMs and rotate exposed keys.
-  source_revision: 0b36331
-  references:
-  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/README/#bypassing-access-scopes
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-- id: gcp-iam-serviceaccounts-getopenidtoken-application
-  provider: gcp
-  service: iam
-  title: iam.serviceAccounts.getOpenIdToken` — impersonate a service account to an OIDC-protected application
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-iam-privesc.md#iamserviceaccountsgetopenidtoken--impersonate-a-service-account-to-an-oidc-protected-application
-  source_revision: 0b36331
-  summary: The source can mint a Google-signed OIDC ID token representing any target service account on which it
-    has iam.serviceAccounts.getOpenIdToken; application use depends on audience and authorization.
-  requires:
-    all_of:
-    - action: iam.serviceAccounts.getOpenIdToken
-      resource: '{target.email}'
-  target:
-    kind: gcp_service_account
-    selector:
-      resource_permission_covers_target: iam.serviceAccounts.getOpenIdToken
-    scope: any
-    outcome: credentials
-    grants:
-    - OIDC identity token for target service account
-  conditions:
-  - id: c1
-    description: Service Account Credentials API must be enabled.
-  - id: c2
-    description: An application must trust the audience and authorize the service-account identity; no Google API
-      OAuth access follows.
-  blockers:
-  - gcp_deny_policy
-  confidence: derived
-  severity: medium
-  mitigation: Restrict roles/iam.serviceAccountOpenIdTokenCreator to intended service accounts and audiences; enforce
-    application authorization.
-  references:
-  - https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateIdToken
-- id: gcp-sa-getopenidtoken-protected-endpoint
-  provider: gcp
-  service: iam
-  title: Mint OIDC ID token to invoke protected endpoint as SA
-  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/iam-and-service-account-impersonation-attacks.md#service-account-impersonation--the-crown-jewel
-  source_revision: 0b36331
-  summary: Mint OIDC ID token to invoke protected endpoint as SA; emit only when exact source, target, and prerequisite
-    evidence is verified.
-  requires:
-    all_of:
-    - action: iam.serviceAccounts.getOpenIdToken
-      resource: '*'
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_challenge_fact: gcp-sa-getopenidtoken-protected-endpoint
-    scope: any
-    outcome: impersonation
-    aggregate_as: Mint OIDC ID token to invoke protected endpoint as SA
-    grants:
-    - OIDC ID token accepted only by the verified audience
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/iam-and-service-account-impersonation-attacks.md#service-account-impersonation--the-crown-jewel
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  source_selector: {}
-- id: gcp-pubsub-push-oidc-endpoint
-  provider: gcp
-  service: pubsub
-  title: Pub/Sub push OIDC token to attacker endpoint
-  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/resource-sharing-and-confused-deputy-attacks.md#notable-subtleties
-  source_revision: 0b36331
-  summary: Pub/Sub push OIDC token to attacker endpoint; emit only when exact source, target, and prerequisite evidence
-    is verified.
-  requires:
-    any_of:
-    - - action: pubsub.subscriptions.create
-        resource: '*'
-      - action: iam.serviceAccounts.actAs
-        resource: '{target.host_resource}'
-    - - action: pubsub.subscriptions.update
-        resource: '*'
-      - action: iam.serviceAccounts.actAs
-        resource: '{target.host_resource}'
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_challenge_fact: gcp-pubsub-push-oidc-endpoint
-    scope: any
-    outcome: impersonation
-    aggregate_as: Pub/Sub push OIDC token to attacker endpoint
-    grants:
-    - OIDC ID token accepted only by the verified audience
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/resource-sharing-and-confused-deputy-attacks.md#notable-subtleties
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  source_selector: {}
-- id: gcp-pab-delete-unblock-allow
-  provider: gcp
-  service: iam
-  title: Delete PAB binding or policy to lift principal resource boundary
-  source: src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#remove
-  source_revision: 0b36331
-  summary: Delete PAB binding or policy to lift principal resource boundary; emit only when exact source, target,
-    and prerequisite evidence is verified.
-  requires:
-    any_of:
-    - - action: iam.policyBindings.delete
-        resource: '*'
-    - - action: iam.principalAccessBoundaryPolicies.delete
-        resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-pab-delete-unblock-allow
-    scope: any
-    outcome: permission_grant
-    aggregate_as: Delete PAB binding or policy to lift principal resource boundary
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#remove
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  source_selector: {}
+  notes: The selector uses the scope of the source's recorded role binding and checks iam.roles.update on that exact collected custom role. Adding a supported IAM policy permission may then grant control of that binding scope.

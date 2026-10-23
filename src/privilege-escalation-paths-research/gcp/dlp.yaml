@@ -1,0 +1,28 @@
+- id: gcp-dlp-job-quote-sa-credential
+  provider: gcp
+  service: dlp
+  title: Read quoted credentials from DLP job findings of a GCP service account
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-sensitive-data-protection-dlp-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable dlp job quote contains a verified reusable credential belonging to another GCP service account.
+  requires:
+    all_of:
+    - action: dlp.jobs.get
+      resource: '*'
+    - action: bigquery.tables.getData
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-dlp-job-quote-sa-credential
+    scope: any
+    outcome: credentials
+  conditions:
+  - id: verified_content
+    description: Emit only for exact source, resource, target and scope evidence after verifying credential validity;
+      absent or incomplete content is UNKNOWN, and metadata or secret names alone do not qualify.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict dlp.jobs.get on sensitive resources; rotate exposed service-account credentials.
+  references:
+  - https://docs.cloud.google.com/sensitive-data-protection/docs/reference/rest

@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 
 # GCP Privileged Access Manager privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-pam-privesc.md (rev 171e422).
@@ -5,38 +6,3 @@
 # Proposed selector gcp_pam_entitlement_requester (not yet in schema.py): the source is a requester principal (directly or
 # through group membership) of a PAM entitlement on {target.scope} whose role bindings give IAM control of that scope.
 # Requesters need no IAM/PAM permission; PAM rejects self-approval, so approval workflows are a condition.
-
-- id: gcp-pam-entitlement-request-grant
-  provider: gcp
-  service: privilegedaccessmanager
-  title: Request a temporary IAM-admin grant through a PAM entitlement the source is eligible for
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-pam-privesc.md#activate-a-stronger-role-through-an-existing-entitlement
-  source_revision: 6fb9ac51fd
-  summary: A principal listed as a requester of a Privileged Access Manager entitlement can temporarily obtain the entitlement's roles on its project, folder or organization; when those roles manage IAM, it gains IAM control of that scope.
-  source_kind: [gcp_user, gcp_service_account]
-  requires:
-    all_of: []
-  target:
-    kind: gcp_scope_owner
-    selector:
-      gcp_pam_entitlement_requester: true
-    scope: inherited_scope
-    outcome: role_activation
-    aggregate_as: "IAM control of {target.scope} through a PAM entitlement"
-  conditions:
-    - id: approval_workflow
-      description: Entitlements with "Activate access without approvals" activate at the requested time; otherwise the required number of other approvers must approve, because PAM does not allow approving your own request.
-    - id: role_offered
-      description: Only the entitlement's roles, IAM conditions and maximum duration are granted (legacy Owner/Editor/Viewer are not supported); escalation to scope owner needs an IAM-management role, otherwise the impact is that role's permissions for the grant duration.
-    - id: pam_service_agent
-      description: PAM must be onboarded at the scope and its service agent must keep authority to add and remove the temporary binding.
-  blockers:
-    - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Require approval on entitlements offering IAM-management roles, keep requester lists small and avoid broad groups as requesters.
-  references:
-    - https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup
-    - https://docs.cloud.google.com/iam/docs/pam-create-entitlements
-    - https://docs.cloud.google.com/iam/docs/pam-approve-deny-grants
-  notes: Google states requesters and approvers need no PAM-specific permissions and that you cannot approve your own request. Entitlement creation needs the scope's setIamPolicy, so it is not modelled as an escalation. Outcome role_activation (time-bound activation of an eligible role, like Entra PIM) replaces the default scope_control because full scope control holds only when the offered role manages IAM. The evaluator still returns None for gcp_pam_entitlement_requester, so the edge is not emitted until the collector reads entitlements. This rule is limited to IAM-management entitlements; non-admin offered roles need the separate role-specific model in gap-12.
