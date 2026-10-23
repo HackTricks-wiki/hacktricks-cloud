@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Workflows privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-workflows-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -9,7 +10,7 @@
   title: Deploy and execute a workflow running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowscreate--iamserviceaccountsactas--workflowsexecutionscreate--deploy-code-under-a-service-account
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  summary: The source can run workflow connector and OAuth steps against Google APIs as a service account in the project on which it holds iam.serviceAccounts.actAs.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
@@ -29,13 +30,13 @@
     - id: api_level
       description: The SA is usable only through connector and OAuth steps to Google APIs (no metadata token); that covers all of its IAM permissions.
     - id: cross_project_sa
-      description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced and the Workflows service agent holds roles/iam.serviceAccountTokenCreator on the SA; not modelled.
+      description: Cross-project service-account attachment has separate policy and service-agent requirements, modelled by gcp-workflows-create-cross-project-actas.
     - id: default_sa
       description: Omitting serviceAccount attaches the project's Compute Engine default SA, which still requires actAs on that SA (no bypass).
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant actAs only on specific SAs; roles/workflows.admin/editor do not include actAs.
   references:
@@ -47,7 +48,7 @@
   title: Update an existing workflow's definition and service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowsupdate--replace-code-while-retaining-the-attached-identity
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs, by updating an existing workflow.
+  summary: The source can update an existing workflow to run connector and OAuth steps against Google APIs as a service account on which it holds iam.serviceAccounts.actAs.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
@@ -61,6 +62,7 @@
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_workflows_update_attach_path: true
     scope: same_project
     aggregate_as: "Service accounts attachable to existing workflows in {project}"
   conditions:
@@ -69,39 +71,38 @@
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict workflows.workflows.update and actAs grants.
-
 - id: gcp-workflows-update-source-retain-sa
   provider: gcp
   service: workflows
   title: Replace a workflow's source while keeping its attached service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowsupdate--replace-code-while-retaining-the-attached-identity
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account attached to every workflow on which it holds workflows.workflows.update and workflows.executions.create.
+  summary: The source can replace an existing workflow's source and run connector and OAuth steps against Google APIs as its attached service account.
   requires:
     all_of:
-      - action: workflows.workflows.update
-        resource: "{target.host_resource}"
-      - action: workflows.executions.create
-        resource: "{target.host_resource}"
+    - action: workflows.workflows.update
+      resource: '{target.host_resource}'
+    - action: workflows.executions.create
+      resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: workflows_workflow
+      gcp_workflows_update_execute_same_workflow: true
     scope: any
-    aggregate_as: "SAs attached to workflows whose source the source can replace"
+    aggregate_as: SAs attached to workflows whose source the source can replace
   conditions:
-    - id: source_only_update
-      description: Only a source-only update keeps the identity; changing or restating the SA requires actAs.
+  - id: source_only_update
+    description: Only a source-only update keeps the identity; changing or restating the SA requires actAs.
   blockers:
-    - gcp_deny_policy
-  confidence: derived
+  - gcp_deny_policy
+  confidence: conditional
   severity: critical
   mitigation: Treat workflows.workflows.update on a workflow as equivalent to use of its SA; restrict roles/workflows.editor/admin.
   notes: The retained SA can belong to another project when the workflow was configured for cross-project execution (scope any).
-
 - id: gcp-workflows-update-source-await-execution
   provider: gcp
   service: workflows
@@ -111,172 +112,60 @@
   summary: The source can obtain the privileges of the service account attached to every workflow on which it holds workflows.workflows.update, when another principal or trigger starts the replaced revision.
   requires:
     all_of:
-      - action: workflows.workflows.update
-        resource: "{target.host_resource}"
+    - action: workflows.workflows.update
+      resource: '{target.host_resource}'
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: workflows_workflow
+      gcp_workflows_observed_external_execution: true
     scope: any
-    aggregate_as: "SAs attached to triggered workflows whose source the source can replace"
+    aggregate_as: SAs attached to triggered workflows whose source the source can replace
   conditions:
-    - id: external_execution
-      description: A Scheduler job, Eventarc trigger, application or other principal must start a new execution after the update (already-running executions keep the old revision); with workflows.executions.create the source can start it itself (gcp-workflows-update-source-retain-sa).
-    - id: source_only_update
-      description: Only a source-only update keeps the identity; changing or restating the SA requires actAs.
+  - id: external_execution
+    description: A recorded enabled Scheduler job, its OAuth service account with permission to invoke this workflow, and the Scheduler service agent role support the path. Other possible triggers remain unresolved; already-running executions keep the old revision.
+  - id: source_only_update
+    description: Only a source-only update keeps the identity; changing or restating the SA requires actAs.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Treat workflows.workflows.update as equivalent to use of the workflow SA; restrict roles/workflows.editor/admin.
   notes: HackTricks states that if another principal starts the new revision the attacker needs only the update permission.
-- id: gcp-workflow-input-effect-2
+- id: gcp-workflows-create-cross-project-actas
   provider: gcp
   service: workflows
-  title: Invoke privileged existing workflow with chosen parameters
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsexecutionscreate--invoke-an-existing-privileged-workflow
-  source_revision: 0b36331
-  summary: Invoke privileged existing workflow with chosen parameters; emit only when exact source, target, and
-    prerequisite evidence is verified.
+  title: Deploy and execute a workflow with a cross-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsworkflowscreate--iamserviceaccountsactas--workflowsexecutionscreate--deploy-code-under-a-service-account
+  source_revision: 171e422
+  summary: The source may run workflow connector and OAuth steps as a service account from another project when its project allows cross-project attachment and the Workflows service agent can mint its tokens.
   requires:
     all_of:
-    - action: workflows.executions.create
-      resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-workflow-input-effect-2
-    scope: any
-    outcome: scope_control
-    aggregate_as: Invoke privileged existing workflow with chosen parameters
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowsexecutionscreate--invoke-an-existing-privileged-workflow
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  source_selector: {}
-- id: gcp-workflow-input-effect-3
-  provider: gcp
-  service: workflows
-  title: Inject callback data into paused privileged execution
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowscallbackssend--inject-data-into-a-paused-privileged-execution
-  source_revision: 0b36331
-  summary: Inject callback data into paused privileged execution; emit only when exact source, target, and prerequisite
-    evidence is verified.
-  requires:
-    all_of:
-    - action: workflows.callbacks.send
-      resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-workflow-input-effect-3
-    scope: any
-    outcome: scope_control
-    aggregate_as: Inject callback data into paused privileged execution
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workflows-privesc.md#workflowscallbackssend--inject-data-into-a-paused-privileged-execution
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  source_selector: {}
-- id: gcp-workflows-existing-parameterized-invoke
-  provider: gcp
-  service: workflows
-  title: Invoke an existing parameterized workflow as its service account
-  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-workflows-persistence.md#backdoor-workflow-bound-to-a-privileged-service-account
-  source_revision: 0b36331
-  summary: A caller of an existing workflow can select a Google API operation that its attached service account
-    executes.
-  requires:
-    all_of:
-    - action: workflows.executions.create
-      resource: '*'
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+      - action: workflows.workflows.create
+        resource: "*"
+      - action: workflows.executions.create
+        resource: "*"
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: workflows_workflow
-      gcp_challenge_fact: gcp-workflows-existing-parameterized-invoke
+      gcp_actas_granted_on_target: true
+      gcp_cross_project_workflows: true
     scope: any
-    outcome: impersonation
-    aggregate_as: Verified attached SAs of parameterized workflows
+    aggregate_as: "Service accounts usable by workflows in another project"
   conditions:
-  - id: argument_to_oauth_request
-    description: The deployed source revision must pass caller-controlled method, URL, or body into an OAuth-authenticated
-      Google API request; fixed workflows do not qualify.
+    - id: cross_project_service_agent
+      description: The workflow project's Workflows service agent needs Service Account Token Creator on the target service account.
+    - id: cross_project_org_policy
+      description: The target service account project's effective iam.disableCrossProjectServiceAccountUsage policy must be unenforced.
+    - id: api_level
+      description: The workflow can make selected OAuth-authenticated Google API calls as the service account; it does not return a raw account token to the source.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
   confidence: conditional
-  severity: high
-  mitigation: Restrict invocation of workflows that accept caller-controlled authenticated requests.
+  severity: critical
+  mitigation: Keep cross-project attachment and service-agent token grants limited to intended workflow projects and service accounts.
   references:
-  - https://cloud.google.com/workflows/docs/authenticate-workflow
-  - https://cloud.google.com/workflows/docs/access-control
-- id: gcp-workflows-parameterized-callback
-  provider: gcp
-  service: workflows
-  title: Resume a privileged workflow through a parameterized callback
-  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-workflows-persistence.md#long-lived-callback-endpoint---a-waiting-execution-as-a-trigger
-  source_revision: 0b36331
-  summary: A callback sender can choose an authenticated Google API request executed by a waiting workflow
-    SA.
-  requires:
-    all_of:
-    - action: workflows.callbacks.send
-      resource: '*'
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: workflows_workflow
-      gcp_challenge_fact: gcp-workflows-parameterized-callback
-    scope: any
-    outcome: impersonation
-    aggregate_as: Verified SAs of waiting parameterized workflows
-  conditions:
-  - id: live_callback_and_oauth_flow
-    description: An ACTIVE execution must have an active callback waiter and the pinned workflow revision must
-      feed callback fields into an OAuth-authenticated Google API request.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict callback sending and remove workflow definitions that proxy untrusted callback data.
-  references:
-  - https://cloud.google.com/workflows/docs/authenticate-workflow
-  - https://cloud.google.com/workflows/docs/access-control
-  - https://cloud.google.com/workflows/docs/creating-callback-endpoints
-- id: gcp-workflows-execution-sa-credential
-  provider: gcp
-  service: workflows
-  title: Read credential from workflow execution arguments or results of a GCP service account
-  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-workflows-enum.md#enumeration
-  source_revision: 0b36331
-  summary: A readable workflow execution content contains a verified reusable credential belonging to another GCP
-    service account.
-  requires:
-    all_of:
-    - action: workflows.executions.get
-      resource: '*'
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_challenge_fact: gcp-workflows-execution-sa-credential
-    scope: any
-    outcome: credentials
-  conditions:
-  - id: verified_content
-    description: Emit only for exact source, resource, target and scope evidence after verifying credential validity;
-      absent or incomplete content is UNKNOWN, and metadata or secret names alone do not qualify.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict workflows.executions.get on sensitive resources; rotate exposed service-account credentials.
-  references:
-  - https://docs.cloud.google.com/workflows/docs/access-execution-results
+    - https://cloud.google.com/workflows/docs/authentication

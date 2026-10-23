@@ -1,3 +1,14 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Arc techniques (declarative only).
+# Source: hacktricks-cloud az-arc-enabled-servers-privesc.md and az-arc-resource-bridge-privesc.md (rev 171e422).
+# Arc-enabled servers support only a system-assigned identity; its token (HIMDS) is readable by
+# local administrators / the himds group, which extensions running as SYSTEM/root are.
+# Arc run commands are modelled in virtual_machines.yaml (azure-arc-machine-runcommands-write).
+
 - id: azure-arc-machine-extensions-write
   provider: azure
   service: arc
@@ -8,25 +19,26 @@
   requires:
     all_of:
       - action: Microsoft.HybridCompute/machines/extensions/write
-        scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.HybridCompute/machines
+      azure_arc_custom_script_code_path: true
     scope: inherited_scope
     aggregate_as: "Managed identity of Arc machine {target.host_resource}"
   conditions:
-    - id: arc_agent_connected
-      description: The Connected Machine agent must be connected and extensions not blocked by the local agent allow/block list.
+    - id: custom_script_execution
+      description: The Custom Script extension must be installed or updated successfully and its script must run on the machine.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict machines/extensions/write and configure agent-side extension allow-lists.
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/managed-identity-authentication
-  notes: ""
+  notes: The selector requires write permission on a creatable extension child or an existing Custom Script child of the exact identity machine, plus a connected agent in full mode with extensions enabled and Custom Script allowed by its reported local lists. Missing agent settings remain unresolved.
+
 - id: azure-arc-hybrid-connectivity-entra-ssh
   provider: azure
   service: arc
@@ -37,21 +49,18 @@
   requires:
     all_of:
       - action: Microsoft.HybridConnectivity/endpoints/listCredentials/action
-        scope: "{target.host_resource}"
       - action: Microsoft.HybridCompute/machines/loginAsAdmin/action
         data_action: true
-        scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.HybridCompute/machines
+      azure_arc_entra_admin_ssh_path: true
     scope: inherited_scope
     aggregate_as: "Managed identity of Arc machine {target.host_resource}"
   conditions:
-    - id: ssh_endpoint_enabled
-      description: A Hybrid Connectivity default endpoint with the SSH service enabled must exist (creating it needs endpoints/write and serviceConfigurations/write).
-    - id: entra_ssh_login_configured
-      description: The AADSSHLogin extension (or a local account the source knows) must allow the Entra login.
+    - id: arc_ssh_runtime_available
+      description: The agent and SSH daemon must be available, and local policy must permit the Entra administrator login.
   blockers:
     - azure_deny_assignment
   confidence: conditional
@@ -59,4 +68,36 @@
   mitigation: Restrict Virtual Machine Administrator Login on Arc machines and Hybrid Connectivity listCredentials.
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/ssh-arc-overview
-  notes: ""
+  notes: The selector requires listCredentials on the exact machine's default Hybrid Connectivity endpoint and loginAsAdmin on the machine, plus an inventoried SSH service configuration and successfully provisioned AADSSHLoginForLinux extension. A local-account credential route is not inferred from RBAC alone.
+
+- id: azure-arc-resource-bridge-credential-export
+  provider: azure
+  service: arc
+  title: Export Arc resource bridge appliance kubeconfig and keys
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md#export-customer-kubeconfig-and-ssh-credentials
+  source_revision: 171e422
+  summary: An appliance credential export may grant a specific, verified permission in the bridge's external management plane.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.ResourceConnector/appliances/listKeys/action
+      - - action: Microsoft.ResourceConnector/appliances/listClusterUserCredential/action
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: arc_bridge_appliance
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: "Verified appliance principals reached through {target.resource}"
+  conditions:
+    - id: exact_credential_authority
+      description: Reviewed evidence must identify a usable exported credential, the exact appliance and principal, and a newly allowed permission after authentication.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict appliances listKeys/listClusterUserCredential to bridge operators.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/resourceconnector/appliances
+  notes: Covers both customer and partner credential actions. The permission alone never implies cluster-admin, SSH access or Azure RBAC; only source-bound, fresh azure_external_principal_evidence showing a new specific permission creates an edge.

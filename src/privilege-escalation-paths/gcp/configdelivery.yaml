@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 
 # GCP Config Delivery (fleet packages) privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-config-delivery-privesc.md (rev 171e422).
@@ -9,7 +10,7 @@
   title: Publish a resource-bundle release to fleet clusters through a fleet package
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-delivery-privesc.md#resourcebundlescreate--releasescreate--variantscreate--releasesupdate--fleetpackagescreate--publish-manifests-to-fleet-clusters
   source_revision: 6fb9ac51fd
-  summary: The source can obtain cluster-admin on fleet member clusters selected by a fleet package it creates or updates, because Config Sync's root reconciler applies the published manifests with cluster-admin by default.
+  summary: The source may publish a manifest that grants cluster-admin on an exact fleet member when Config Sync is enabled and the package's new or existing RootSync has default cluster-admin authority.
   requires:
     all_of:
       - action: configdelivery.resourceBundles.create
@@ -28,14 +29,14 @@
   target:
     kind: k8s_cluster_admin
     selector:
-      any_principal_in_scope: true
+      gcp_configdelivery_fleet_target: true
     scope: cluster
-    aggregate_as: "Cluster admin of fleet-member clusters in {project}"
+    aggregate_as: "Cluster admin through Config Delivery on selected fleet members"
   conditions:
     - id: fleet_selection
       description: Only fleet members matched by the fleet package target selector are reached (an empty selector matches all members); Config Sync must be enabled on them.
     - id: reconciler_rbac
-      description: Google documents that RootSync root reconcilers have cluster-admin by default; customized reconciler RBAC or admission policy limits what is applied.
+      description: A new package creates its own RootSync with default cluster-admin. An existing package uses its namesake RootSync, whose customized RBAC or admission policy may limit what is applied.
   blockers:
     - gcp_deny_policy
     - admission_policy
@@ -45,4 +46,4 @@
   references:
     - https://docs.cloud.google.com/kubernetes-engine/config-sync/docs/concepts/architecture
     - https://cloud.google.com/kubernetes-engine/enterprise/config-sync/docs/how-to/fleet-packages
-  notes: HackTricks states the chain does not by itself prove cluster-admin; the edge is conditional on the default root reconciler RBAC (Google Config Sync architecture docs).
+  notes: Fleet membership and Config Sync enablement must be joined to the exact cluster. Create and update permissions are checked separately on the fleet host project. A new package uses a new default RootSync; update needs an existing package and the matching RootSync, or an excluded member for which the retargeted package will create one. Admission and successful reconciliation remain conditional.

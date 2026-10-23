@@ -1,3 +1,8 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure Function App-specific privilege escalation techniques (declarative only).
 # Generic Microsoft.Web/sites techniques are in app_services.yaml and also apply to Function Apps.
 # Source: hacktricks-cloud az-functions-app-privesc.md / az-app-services-privesc.md
@@ -5,292 +10,127 @@
 # Placeholder {target.host_resource.content_storage}: the storage account referenced by the app's
 # AzureWebJobsStorage / WEBSITE_CONTENTAZUREFILECONNECTIONSTRING / WEBSITE_RUN_FROM_PACKAGE settings.
 
-- id: azure-functions-content-storage-write
-  provider: azure
-  service: functions
-  title: Write access to a Function App's backing content storage
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#storage-backed-deployment-content
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Function App's managed identities.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Storage/storageAccounts/listkeys/action
-          scope: "{target.host_resource.content_storage}"
-      - - action: Microsoft.Storage/storageAccounts/fileServices/fileshares/files/write
-          data_action: true
-          scope: "{target.host_resource.content_storage}"
-        - action: Microsoft.Storage/storageAccounts/fileServices/writeFileBackupSemantics/action
-          data_action: true
-          scope: "{target.host_resource.content_storage}"
-      - - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write
-          data_action: true
-          scope: "{target.host_resource.content_storage}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Web/sites
-      azure_site_kind: functionapp
-    scope: any
-    aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions:
-    - id: content_location_matches
-      description: The writable share/container must be the one the app actually loads code from; blob package paths only take effect after a restart.
-    - id: shared_key_access_enabled
-      description: The listkeys path requires shared key access to be enabled on the storage account.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Use a dedicated storage account per Function App, disable shared key access, and restrict data-plane write roles on it.
-  references:
-    - https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings
-  notes: The storage account behind a Function App is often in another resource group; edge depends on resolving the app settings.
-
-- id: azure-functions-host-listkeys-master-key
-  provider: azure
-  service: functions
-  title: List Function App host keys (master key)
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsiteshostlistkeysaction-and-microsoftwebsitesslotshostlistkeysaction
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Function App's managed identities.
-  requires:
-    all_of:
-      - action: Microsoft.Web/sites/host/listkeys/action
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Web/sites
-      azure_site_kind: functionapp
-    scope: inherited_scope
-    aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions:
-    - id: admin_endpoint_reachable
-      description: The app's admin endpoint must be reachable from the source's network.
-    - id: writable_content
-      description: Code change through the admin VFS API is not possible when the app runs from a read-only package (WEBSITE_RUN_FROM_PACKAGE).
-  blockers:
-    - azure_deny_assignment
-  confidence: derived
-  severity: high
-  mitigation: Restrict host/listkeys/action and restrict network access to the Function App.
-  references:
-    - https://learn.microsoft.com/en-us/azure/azure-functions/function-keys-how-to
-  notes: The master key authorizes the Functions administration API, including file management. The slot variant is in app_services.yaml.
-
-- id: azure-functions-masterkey-read
-  provider: azure
-  service: functions
-  title: Read the Function App master key
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesfunctionsmasterkeyread
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Function App's managed identities.
-  requires:
-    all_of:
-      - action: Microsoft.Web/sites/functions/masterkey/read
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Web/sites
-      azure_site_kind: functionapp
-    scope: inherited_scope
-    aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions:
-    - id: secret_storage_files
-      description: HackTricks reports this route only works when AzureWebJobsSecretStorageType=Files.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict functions/masterkey/read and use the Blob secret repository.
-  references: []
-  notes: ""
-
-- id: azure-functions-admin-token-read
-  provider: azure
-  service: functions
-  title: Obtain a Functions runtime admin token
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesfunctionstokenread
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Function App's managed identities.
-  requires:
-    all_of:
-      - action: Microsoft.Web/sites/functions/token/read
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Web/sites
-      azure_site_kind: functionapp
-    scope: inherited_scope
-    aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions:
-    - id: admin_token_reaches_code_change
-      description: HackTricks confirms key retrieval and admin invocation with the token; whether it yields code change or identity use depends on plan/configuration.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict functions/token/read.
-  references:
-    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/get-functions-admin-token
-  notes: ""
-
 - id: azure-functions-hostruntime-vfs-write
   provider: azure
   service: functions
   title: Modify Function App files through the host runtime VFS
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsiteshostruntimevfswrite
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the Function App's managed identities.
+  source_revision: b2319b83d9
+  summary: Writing executable Function App content through the ARM runtime VFS may let it run with the app's managed identity.
   requires:
     all_of:
       - action: Microsoft.Web/sites/hostruntime/vfs/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Web/sites
       azure_site_kind: functionapp
+      azure_function_host_vfs_code_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions: []
+  conditions:
+    - id: writable_runtime_content
+      description: The running host must accept the VFS write to executable content and load the changed code.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict hostruntime/vfs/write.
-  references: []
-  notes: Not applicable when the app runs from a read-only package.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-functions/deployment-zip-push
+  notes: The ARM hostruntime VFS permission is distinct from Kudu/SCM VFS authorization. The exact Function App host and a non-Flex, non-container, writable-content route are required. A known run-from-package mount blocks this file-editing path; unknown deployment mode and later execution remain conditional.
 
 - id: azure-functions-functions-write
   provider: azure
   service: functions
   title: Create or update a function definition
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#replace-a-functions-code-with-microsoftwebsitesfunctionswrite
-  source_revision: 171e422
+  source_revision: 3d70185315
   summary: The source can obtain the privileges of the Function App's managed identities.
   requires:
     all_of:
       - action: Microsoft.Web/sites/functions/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Web/sites
       azure_site_kind: functionapp
+      azure_function_definition_code_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of Function App {target.host_resource}"
   conditions:
     - id: writable_content
-      description: Not applicable when the app runs from a read-only package.
+      description: Function content must be writable and the changed function must run before its managed identity is reached.
   blockers:
     - azure_deny_assignment
-  confidence: derived
-  severity: high
-  mitigation: Restrict Microsoft.Web/sites/functions/write.
-  references: []
-  notes: ""
-
-- id: azure-functions-config-list-storage-key
-  provider: azure
-  service: functions
-  title: Read app settings exposing the content storage connection string
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesconfiglistaction
-  source_revision: a66f094ede
-  summary: The source can obtain the privileges of the Function App's managed identities.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Web/sites/config/list/action
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Web/sites/config/snapshots/listsecrets/action
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Web/sites/slots/config/list/action
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Web/sites/slots/config/snapshots/listsecrets/action
-          scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Web/sites
-      azure_site_kind: functionapp
-    scope: inherited_scope
-    aggregate_as: "Managed identities of Function App {target.host_resource}"
-  conditions:
-    - id: key_based_storage_connection
-      description: Only when the content storage setting contains an account key (not identity-based connections).
-    - id: snapshot_key_still_valid
-      description: For the snapshots/listsecrets path, a key recovered from a historical config snapshot must not have been rotated since.
-    - id: slot_shares_content_storage
-      description: For the slot paths, the slot's storage setting must reference the same storage account as the production app (the usual case); a slot-only account yields only the slot's identities.
-  blockers: []
   confidence: conditional
   severity: high
-  mitigation: Use identity-based storage connections, rotate storage keys after setting changes, and restrict config/list/action and config/snapshots/listsecrets/action.
+  mitigation: Restrict Microsoft.Web/sites/functions/write.
   references:
-    - https://learn.microsoft.com/en-us/azure/azure-functions/functions-reference#connecting-to-host-storage-with-an-identity
-  notes: The publishing-credential path of config/list/action is modelled in app_services.yaml. Slot alternatives come from the slots/config/list/action section of the same page and the slot snapshot listing of az-app-services-privesc.md.
+    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/create-function?view=rest-appservice-2026-07-15
+    - https://learn.microsoft.com/en-us/azure/azure-functions/deployment-zip-push
+  notes: The dynamic selector binds this action to the exact Function App hosting the identity, including a role scoped to an existing function child. Flex/package-based content cannot be modified through this route. Where package mode is not recorded, runtime execution remains conditional.
 
 - id: azure-functions-sites-write-source-control
   provider: azure
   service: functions
-  title: Repoint a Function App's deployment source through a site write
+  title: Repoint a Function App's deployment source
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#change-github-repo
-  source_revision: a66f094ede
-  summary: Rewriting the app's source-control configuration to an attacker repository makes the next deployment run attacker code with the Function App's managed identities.
+  source_revision: 14edac2ecb
+  summary: Rewriting the app's source-control configuration to an attacker repository may deploy code with the Function App's managed identities.
   requires:
     all_of:
-      - action: Microsoft.Web/sites/write
-        scope: "{target.host_resource}"
+      - action: Microsoft.Web/sites/sourcecontrols/write
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Web/sites
       azure_site_kind: functionapp
+      azure_appservice_sourcecontrol_code_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of Function App {target.host_resource}"
   conditions:
     - id: deployment_runs
       description: Changing the source-control metadata does not push code; a deployment from the new source must authenticate and succeed.
-    - id: site_write_covers_source_control
-      description: HackTricks lists sites/write for this route; deployments that use the sourcecontrols child resource are authorized by sites/sourcecontrols/write (azure-appservice-sourcecontrols-write).
   blockers:
     - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict Microsoft.Web/sites/write and sourcecontrols/write, and monitor deployment source changes.
+  mitigation: Restrict sourcecontrols/write and monitor deployment source changes.
   references:
     - https://learn.microsoft.com/en-us/azure/app-service/deploy-continuous-deployment
-  notes: The sourcecontrols/write variant is azure-appservice-sourcecontrols-write.
+    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/create-or-update-source-control?view=rest-appservice-2026-07-15
+  notes: The same source-control operation is also modeled by azure-appservice-sourcecontrols-write. The selector binds the permission to this Function App's sourcecontrols/web child and leaves successful deployment and code execution conditional.
 
 - id: azure-functions-remote-debugging
   provider: azure
   service: functions
   title: Enable remote debugging and attach a debugger to the Function App worker
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#remote-debugging
-  source_revision: 171e422
-  summary: Enabling remote debugging and attaching with publishing credentials gives code execution in the worker process, exposing the Function App's managed identities.
+  source_revision: 9772b41e74
+  summary: Publishing credentials may permit remote debugger attachment to a supported running Function App after debugging is enabled, exposing its managed identity in the worker process.
   requires:
-    all_of:
-      - action: Microsoft.Web/sites/config/write
-        scope: "{target.host_resource}"
     any_of:
       - - action: Microsoft.Web/sites/publishxml/action
-          scope: "{target.host_resource}"
+          scope: "*"
       - - action: Microsoft.Web/sites/config/list/action
-          scope: "{target.host_resource}"
+          scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Web/sites
       azure_site_kind: functionapp
+      azure_function_remote_debug_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of Function App {target.host_resource}"
   conditions:
     - id: remote_debugging_supported
-      description: Remote debugging is only available on Windows plans and is automatically turned off after 48 hours.
+      description: Remote debugging requires a running Windows C# Function App on Premium or an App Service plan and is automatically turned off after 48 hours.
     - id: basic_auth_allowed
-      description: The debugger authenticates with publishing credentials, so SCM basic auth must be allowed.
+      description: The debugger needs usable publishing credentials and a reachable debug endpoint; SCM basic auth must be allowed or enableable.
   blockers:
     - scm_and_ftp_basic_auth_disabled
   confidence: conditional
@@ -298,4 +138,6 @@
   mitigation: Keep remote debugging off, disable basic auth and restrict config/write.
   references:
     - https://learn.microsoft.com/en-us/azure/app-service/configure-common#configure-general-settings
-  notes: config/write alone already yields code execution (azure-appservice-config-write); this entry records the debugger route separately.
+    - https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs
+    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list-publishing-credentials?view=rest-appservice-2026-07-15
+  notes: The exact app must grant publishing-profile read or config/list on its publishingcredentials child. If remote debugging is not already enabled, config/write on that app's config/web child is also required. If SCM basic auth is disabled, basicPublishingCredentialsPolicies/write on that app's scm child is required. The worker language and debugger reachability remain conditional when not recorded.

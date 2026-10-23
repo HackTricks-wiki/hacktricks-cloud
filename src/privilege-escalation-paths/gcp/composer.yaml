@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Cloud Composer (managed Airflow) privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-composer-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -16,25 +17,23 @@
         resource: "{target.email}"
       - action: composer.environments.create
         resource: "*"
-    any_of:
-      - - action: storage.objects.create
-          resource: "*"
-      - - action: composer.environments.update
-          resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
+      gcp_composer_create_with_dag_path: true
     scope: same_project
     aggregate_as: "Service accounts usable as Composer environment SA in {project}"
   conditions:
+    - id: supported_location
+      description: The bucket region must return a Composer image version that supports custom buckets and can be used for new environments.
     - id: code_delivery
-      description: Creating the environment alone runs no attacker code; the DAG is delivered by writing to an eligible custom bucket (same project and region, Standard class, no retention policy, not used by another environment) before creation, or to the new environment bucket, or by installing a PyPI package through an environment update.
+      description: The selector requires a new DAG object under dags/ in an eligible same-project regional custom bucket before environment creation; later writes to a new default bucket and package updates remain unresolved.
     - id: legacy_actas_exemption
       description: Until constraints/composer.enforceServiceAccountActAsCheck is enforced on a legacy organization, a creator can attach any project SA without actAs (the edge then reaches every project SA; not modelled).
     - id: environment_sa_role
-      description: The environment SA must hold Composer Worker permissions (including on the bucket) for the environment to come up.
+      description: The selector requires an unconditional project-level Composer Worker role and derived read and list access to the selected bucket for the environment service account.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
@@ -43,63 +42,34 @@
   mitigation: Grant actAs only on specific SAs; roles/composer.admin does not include actAs but roles/editor does.
   references:
     - https://cloud.google.com/composer/docs/composer-2/access-control
-
-- id: gcp-composer-environments-executeairflowcommand
-  provider: gcp
-  service: composer
-  title: Execute Airflow CLI commands in a Composer environment
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md#composerenvironmentsexecuteairflowcommand--retrieve-airflow-secrets-or-run-available-dag-code
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the service account of every Composer environment on which it holds composer.environments.executeAirflowCommand.
-  requires:
-    all_of:
-      - action: composer.environments.executeAirflowCommand
-        resource: "{target.host_resource}"
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: composer_environment
-    scope: same_project
-    aggregate_as: "SAs of Composer environments where the source can run Airflow commands"
-  conditions:
-    - id: code_control
-      description: Google warns the permission can execute Python code available to Airflow components as the environment SA; attacker-chosen code needs either a suitable Airflow subcommand or code already present in the environment.
-  blockers:
-    - gcp_deny_policy
-  confidence: conditional
-  severity: high
-  mitigation: Restrict composer.environments.executeAirflowCommand (roles/composer.admin, roles/composer.environmentAndStorageObjectAdmin).
-  references:
-    - https://cloud.google.com/composer/docs/composer-2/access-control
-  notes: No actAs needed. Airflow connections and variables can yield replayable credentials, but this entry reaches only the environment SA through available code. Credential replay requires actual connection/variable contents, a live secret and its principal; see the separate exclusion.
-
 - id: gcp-composer-environments-update
   provider: gcp
   service: composer
   title: Update a Composer environment's variables, Airflow overrides, PyPI packages or load a snapshot
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-composer-privesc.md#composerenvironmentsupdate--install-attacker-controlled-python-as-the-environment-identity
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account of every Composer environment on which it holds composer.environments.update.
+  summary: The source can introduce a Python package into a running Composer environment that uses the target service account.
   requires:
-    all_of:
-      - action: composer.environments.update
-        resource: "{target.host_resource}"
+    all_of: []
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: composer_environment
-    scope: same_project
-    aggregate_as: "SAs of Composer environments the source can update"
+      gcp_composer_pypi_update_path: true
+    scope: any
+    aggregate_as: SAs of Composer environments the source can update
   conditions:
-    - id: payload_dependency
-      description: The environment-variable path depends on the Composer image's interpreters and file-backed hooks need a readable payload; PyPI installation and snapshot load are documented by Google/HackTricks as code execution as the environment SA but are version-dependent.
+  - id: package_delivery
+    description: The selector requires a running environment, enabled Composer API, exact service-account attachment, and derived update permission. Package resolution, build success, and later Airflow import depend on repository and runtime configuration.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Restrict composer.environments.update to environment administrators and pin PyPI sources.
-  notes: HackTricks @171e422 documents PyPI package installation as the supported code path (Google states composer.environments.update can execute code as the environment SA); no actAs is re-checked on update. Also covers Airflow config overrides and snapshot load, which are gated by the same permission.
-
+  notes: Google documents PyPI installation as code execution on behalf of the environment service account; no actAs is re-checked on update. Build and later Airflow import can use different identities, so the runtime service-account edge remains conditional. Other environment-variable and snapshot paths are not asserted by this selector.
 - id: gcp-composer-bucket-write
   provider: gcp
   service: composer
@@ -108,21 +78,23 @@
   source_revision: 171e422
   summary: The source can obtain the privileges of the service account of every Composer environment whose DAG bucket it can write to.
   requires:
-    all_of:
-      - action: storage.objects.create
-        resource: "{target.host_resource.content_storage}"
+    all_of: []
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   target:
     kind: gcp_service_account
     selector:
       attached_to_service: composer_environment
+      gcp_composer_dag_upload_path: true
     scope: any
-    aggregate_as: "SAs of Composer environments whose DAG bucket the source can write"
+    aggregate_as: SAs of Composer environments whose DAG bucket the source can write
   conditions:
-    - id: dag_sync
-      description: New DAG files are synchronized and parsed by the scheduler as the environment SA; no Composer permission is needed.
+  - id: dag_sync
+    description: The selector requires a running or updating environment and derived storage.objects.create permission for a new Python file under its observed DAG prefix; the scheduler then synchronizes and parses it as the environment SA.
   blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: derived
   severity: critical
   mitigation: Restrict write access to Composer environment buckets (roles/storage.objectAdmin/objectCreator on the bucket, roles/composer.environmentAndStorageObjectAdmin).

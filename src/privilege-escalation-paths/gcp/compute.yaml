@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Compute Engine privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-compute-privesc/README.md and gcp-add-custom-ssh-metadata.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -6,54 +7,57 @@
 
 - id: gcp-compute-instances-create-actas
   provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   service: compute
   title: Create a VM running as a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancescreate--configuration-dependent-vm-permissions--iamserviceaccountsactas
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  summary: The source may run startup code with an attachable service account on a newly created VM when its compute and resource permissions allow a usable configuration.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
         resource: "{target.email}"
       - action: compute.instances.create
         resource: "*"
-      - action: compute.disks.create
-        resource: "*"
       - action: compute.instances.setMetadata
         resource: "*"
       - action: compute.instances.setServiceAccount
-        resource: "*"
-      - action: compute.subnetworks.use
         resource: "*"
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
+      gcp_vm_create_path: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
     aggregate_as: "Service accounts usable by new VMs in {project}"
   conditions:
-    - id: cross_project_sa
-      description: SAs from other projects are attachable only when iam.disableCrossProjectServiceAccountUsage is not enforced on the SA's project; not modelled (cross-project false negatives).
+    - id: usable_vm_configuration
+      description: An inventoried ready image and usable subnet with external IP permission provide one concrete startup-script VM configuration. Missing or alternative boot and network paths remain unresolved.
     - id: token_exfil_path
-      description: Reading the token out of the VM needs a network path (compute.subnetworks.useExternalIp for an external IP, or any egress the code can use).
+      description: Startup code still needs working outbound access to send or use the token; subnet permission does not itself prove actual connectivity.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Grant roles/iam.serviceAccountUser only on specific low-privilege SAs, never project-wide, and keep privileged SAs out of projects where users can create VMs.
   references:
     - https://cloud.google.com/compute/docs/access/service-accounts
-  notes: The attacker chooses the access scopes of the new VM, so the full IAM permissions of the SA are reachable.
+  notes: The source can choose cloud-platform OAuth scope, but effective access remains bounded by the SA's IAM grants and any network or organization controls. A missing local image or subnet leaves the direct-VM path unresolved because public images, Shared VPC, existing disks, and private egress can supply other configurations.
 
 - id: gcp-compute-instancetemplates-mig-actas
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
   title: Launch VMs running as a chosen service account through a managed instance group
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancetemplatescreate--computeinstancegroupmanagerscreate--run-as-sa-via-a-managed-instance-group
   source_revision: 171e422
-  summary: The source can obtain the privileges of any service account in the project on which the project's Google APIs Service Agent holds iam.serviceAccounts.actAs (every project service account by default); the caller itself needs no actAs.
+  summary: The source may launch a new managed instance group with startup code running as a chosen service account when it and the project's Google APIs Service Agent can use a viable template, image, and subnet.
   requires:
     all_of:
       - action: compute.instanceTemplates.create
@@ -63,17 +67,16 @@
   target:
     kind: gcp_service_account
     selector:
-      gcp_actas_granted_to_service_agent: cloudservices
-      gcp_sa_in_scope_of_permission: true
-    scope: same_project
+      gcp_mig_create_path: true
+    scope: any
     aggregate_as: "Service accounts usable by MIG-launched VMs in {project}"
   conditions:
     - id: cross_project_sa
-      description: Cross-project SAs only when iam.disableCrossProjectServiceAccountUsage is not enforced; not modelled.
+      description: Cross-project SAs require additional attachment policy and service-agent checks; such paths remain unresolved.
     - id: actas_at_instantiation
-      description: Compute validates that the project's Google APIs Service Agent (not the caller) holds Service Account User on the VM SA when the MIG is created or its template updated; the agent has roles/editor (which includes actAs) by default, so by default every SA of the project is reachable without caller actAs.
+      description: Compute validates that the project's Google APIs Service Agent, not the caller, can act as the target service account and use the resources in the template.
     - id: supporting_permissions
-      description: Depending on the template the MIG insert also needs instanceTemplates get/useReadOnly, compute.instances.create, compute.disks.create, compute.images.useReadOnly, compute.instances.setMetadata and compute.subnetworks.use.
+      description: A concrete new template with a startup script, ready image, new disk, and external-IP subnet needs matching caller and service-agent permissions. Alternative boot and private-egress paths remain unresolved.
   blockers:
     - gcp_deny_policy
     - vpc_sc_perimeter
@@ -82,52 +85,55 @@
   mitigation: Restrict instanceTemplates/instanceGroupManagers create; remove roles/editor from the Google APIs Service Agent where possible and grant it Service Account User only on the SAs MIGs should run as.
   references:
     - https://docs.cloud.google.com/compute/docs/access/iam
-  notes: Confused deputy through the Google APIs Service Agent ({project-number}@cloudservices.gserviceaccount.com). Official docs (Compute Engine IAM, MIGs) state all MIG operations are performed by that agent and that Compute validates the agent's Service Account User role; no caller actAs requirement is documented (HackTricks @171e422 agrees). Supporting permissions are listed as a condition.
+  notes: The Google APIs Service Agent ({project-number}@cloudservices.gserviceaccount.com) performs MIG VM creation. Its default role is roles/compute.instanceGroupManagerServiceAgent; its effective actAs and resource permissions are checked instead of assuming a default grant. The caller must be able to create the template and MIG. The modeled template includes startup metadata, a ready local image, a new disk, and a public-IP subnet so code can run and send or use the token; other configurations remain unresolved.
 
 - id: gcp-compute-instances-setserviceaccount-actas
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
   title: Swap the service account of an existing (stopped) VM
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancessetserviceaccount-iamserviceaccountsactas--swap-an-existing-vms-service-account
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  summary: The source may use a replacement service account on an exact existing VM when it can stop and start that VM as needed and run code or log in after the swap.
   requires:
     all_of:
     - action: iam.serviceAccounts.actAs
       resource: '{target.email}'
-    - action: compute.instances.setServiceAccount
-      resource: '*'
-    - action: compute.instances.start
-      resource: '*'
   target:
     kind: gcp_service_account
     selector:
       gcp_actas_granted_on_target: true
-      gcp_sa_in_scope_of_permission: true
-    scope: same_project
+      gcp_sa_swap_vm_path: true
+    scope: any
     aggregate_as: Service accounts assignable to existing VMs in {project}
   conditions:
   - id: existing_vm
-    description: Needs at least one existing VM in the project on which setServiceAccount and start hold.
+    description: An exact existing VM must grant the source setServiceAccount and start, and the source must have actAs on the replacement service account.
   - id: vm_stopped
-    description: The service account can only be changed on a stopped VM; a running target additionally needs compute.instances.stop (or an already-stopped VM).
+    description: A running VM also needs compute.instances.stop; a stopped VM can be changed directly and then started.
   - id: code_on_vm
-    description: The token is served by the VM's metadata server, so the source also needs a way to run code on or read from that VM (existing access, startup script via setMetadata, SSH).
+    description: The source needs get and setMetadata on the same VM to plant a startup script, or a supported OS Login and SSH path; other existing access remains unresolved.
+  - id: cross_project_sa
+    description: An account from another project needs cross-project attachment policy and service-agent checks, which remain unresolved.
   blockers:
   - gcp_deny_policy
   confidence: conditional
   severity: critical
   mitigation: Restrict compute.instances.setServiceAccount (roles/compute.instanceAdmin) and grant actAs only on specific SAs.
-  notes: 'HackTricks @6fb9ac51fd: the VM must be stopped; a running target adds compute.instances.stop and obtaining a running pivot adds compute.instances.start. Scopes can be raised to cloud-platform
-    during the swap. Execution on the VM is a separate requirement not expressed here.'
+  notes: The VM must be stopped for the identity change and started to use its metadata token. The swap may set cloud-platform scope even if the old VM scope was narrow. A metadata startup script can run on this required start; an OS Login path is supported when it is enabled and direct SSH is reachable. Guest-agent operation and token use remain conditional.
 
 - id: gcp-compute-instances-setmetadata-existing-vm
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
   title: Modify an existing VM's metadata (SSH keys or startup script) to run as its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancessetmetadata
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service account attached to an eligible VM on which it can set instance metadata, if a startup script later runs or metadata SSH access succeeds.
+  summary: The source may reach the service account attached to an exact VM when it can change that VM's metadata and trigger a startup script or connect with a metadata SSH key.
   requires:
     all_of:
       - action: compute.instances.setMetadata
@@ -136,32 +142,34 @@
     kind: gcp_service_account
     selector:
       attached_to_service: compute_instance
-    scope: same_project
+      gcp_metadata_vm_path: true
+    scope: any
     aggregate_as: "SAs of VMs whose metadata the source can modify"
   conditions:
     - id: ssh_or_reboot
-      description: The SSH-key path needs network reachability to the VM's SSH service and metadata-based SSH (OS Login disabled); the startup-script path needs the VM to restart (compute.instances.reset or an organic reboot).
+      description: The SSH-key path needs a running VM, a supported public SSH route and OS Login enforcement absent. The startup-script path needs reset, stop and start, or start on the exact VM; an organic reboot remains unresolved.
     - id: access_scopes
-      description: The usable token is limited by the VM's OAuth access scopes (default scopes are narrow).
+      description: A definite attached-service-account path requires cloud-platform access scope; narrower or missing scopes remain unresolved.
     - id: guest_agent
-      description: Requires the Google guest agent managing metadata accounts/keys and startup scripts on the image.
+      description: The guest environment must run its metadata SSH-key or startup-script agent. An inventoried VM does not itself prove guest-agent health.
+    - id: metadata_fingerprint
+      description: The source needs compute.instances.get to read the current metadata fingerprint for a safe metadata update; an externally known fingerprint remains an unresolved alternative.
   blockers:
     - gcp_deny_policy
-    - {id: org_policy_constraint, constraint: compute.requireOsLogin}
   confidence: conditional
   severity: high
   mitigation: Enforce OS Login, restrict instance-level metadata writes, and monitor startup-script and SSH-key metadata changes.
   references:
     - https://cloud.google.com/compute/docs/connect/add-ssh-keys
-  notes: The raw instances.setMetadata method requires only compute.instances.setMetadata; gcloud read-modify-write helpers additionally need compute.instances.get for the fingerprint. SSH, serial-console and Windows credential helpers can impose actAs separately and are not required for the raw startup-script path. compute.requireOsLogin blocks the SSH-key path only; the startup-script path remains. Startup execution additionally needs reset/stop+start or a later organic reboot. The source can also flip enable-oslogin=FALSE when OS Login is set only by metadata (not by compute.requireOsLogin). Also covers gcp-add-custom-ssh-metadata.md and the windows-keys local-Administrator reset section, subject to their helper-specific checks.
+  notes: The raw instances.setMetadata method requires only compute.instances.setMetadata, but obtaining the current metadata fingerprint normally needs compute.instances.get. compute.requireOsLogin blocks the SSH-key branch only; the startup-script branch remains. A source with metadata write can set enable-oslogin=FALSE when that constraint is not enforced. Guest-agent execution and outbound token use remain conditional. Also covers the metadata SSH-key path in gcp-add-custom-ssh-metadata.md; the Windows password helper has separate prerequisites.
 
 - id: gcp-compute-projects-setcommoninstancemetadata
   provider: gcp
   service: compute
-  title: Modify project-wide instance metadata to run on every VM of the project
+  title: Use project metadata on an attached service account VM
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeprojectssetcommoninstancemetadata
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service accounts attached to VMs of every project where it holds compute.projects.setCommonInstanceMetadata and actAs on those SAs.
+  summary: Project metadata control can place a startup script or SSH key on an eligible VM carrying a service account.
   requires:
     all_of:
       - action: compute.projects.setCommonInstanceMetadata
@@ -173,61 +181,79 @@
     selector:
       attached_to_service: compute_instance
       gcp_actas_granted_on_target: true
+      gcp_project_metadata_vm_path: true
     scope: same_project
     aggregate_as: "SAs of VMs inheriting project metadata in {project}"
   conditions:
-    - id: block_project_ssh_keys
-      description: VMs with block-project-ssh-keys set ignore project-level SSH keys; the startup-script path then still needs a reboot.
-    - id: ssh_or_reboot
-      description: SSH path needs network reachability and metadata-based SSH (no OS Login); startup-script path needs a VM restart.
+    - id: metadata_inheritance
+      description: A startup script needs an exact VM without overriding instance or zonal startup metadata; project SSH keys are ignored when the VM blocks them.
+    - id: execution_or_ssh
+      description: The source needs a controlled boot trigger or a running VM with a public SSH route that accepts project metadata keys.
     - id: access_scopes
-      description: The usable token is limited by each VM's OAuth access scopes.
+      description: A definite attached-service-account path requires cloud-platform access scope; narrower or missing scopes remain unresolved.
+    - id: guest_agent
+      description: The VM guest environment must process startup scripts or metadata SSH keys; the inventory cannot prove agent health.
+    - id: metadata_fingerprint
+      description: The source needs compute.projects.get to read the current project metadata fingerprint for a safe update.
+    - id: project_actas
+      description: A definite project-wide update needs iam.serviceAccounts.actAs at project scope; a grant only on one attached account remains unresolved.
   blockers:
     - gcp_deny_policy
-    - {id: org_policy_constraint, constraint: compute.requireOsLogin}
   confidence: conditional
   severity: high
-  mitigation: Restrict compute.projects.setCommonInstanceMetadata, enforce OS Login and set block-project-ssh-keys on sensitive VMs.
+  mitigation: Restrict project metadata writes, enforce OS Login for SSH access, and protect sensitive VM startup metadata.
   references:
     - https://cloud.google.com/compute/docs/reference/rest/v1/projects/setCommonInstanceMetadata
-  notes: Also covers the project-level SSH key variant of gcp-add-custom-ssh-metadata.md. The actAs requirement follows the HackTricks caution for all metadata-based techniques.
+  notes: Also covers the project-level SSH key variant of gcp-add-custom-ssh-metadata.md. The project-wide actAs requirement follows the HackTricks caution for metadata-based techniques; a target-account-only grant remains unresolved. compute.requireOsLogin blocks only the SSH-key route, not startup scripts. Zonal startup-script values can override project values, and instance startup scripts take precedence over project scripts. Guest-agent execution and token use remain conditional.
 
 - id: gcp-compute-instances-setiampolicy
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
-  title: Self-grant instance-level compute permissions through the VM IAM policy
+  title: Self-grant OS administrator login on an instance
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancessetiampolicy
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account attached to every VM on which it holds compute.instances.setIamPolicy and actAs on that SA.
+  summary: The source can add its own OS administrator login role to an exact VM IAM policy, gaining a permission it did not already have on that VM.
   requires:
     all_of:
       - action: compute.instances.setIamPolicy
-        resource: "{target.host_resource}"
-      - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+        resource: "{target.policy_resource}"
   target:
-    kind: gcp_service_account
+    kind: gcp_verified_authority
     selector:
-      attached_to_service: compute_instance
-      gcp_actas_granted_on_target: true
-    scope: same_project
-    aggregate_as: "SAs of VMs whose IAM policy the source controls"
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - compute.instances.osAdminLogin
+    aggregate_as: Instance OS administrator login the source can grant itself
   conditions:
+    - id: exact_instance_policy
+      description: An exact VM and its IAM policy must be collected, and the source needs getIamPolicy to preserve existing bindings and conditions while adding a grantable instance role. A caller with the current policy from another source may still succeed.
     - id: followup_technique
-      description: The self-granted role enables the metadata or OS Login techniques, which keep their own conditions (SSH reachability, OS Login, reboot, access scopes).
+      description: Logging in to the VM and using its attached service account require their own OS Login, SSH, actAs, and access-scope conditions.
   blockers:
     - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict compute.instances.setIamPolicy (roles/compute.admin, roles/compute.instanceAdmin) to administrators.
+  mitigation: Restrict compute.instances.setIamPolicy on sensitive VMs to administrators.
+  references:
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/compute
+  - https://docs.cloud.google.com/compute/docs/access/managing-access-to-resources
+  notes: roles/compute.osAdminLogin is grantable at the instance level. This edge represents the new instance permission, not the attached service account; OS Login or metadata access requires a separate path. Missing VM policy or effective policy constraints leave the self-grant unresolved.
 
 - id: gcp-compute-instances-osadminlogin
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
   title: Log in as root to an OS Login VM and use its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancesosadminlogin
   source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service account attached to every OS Login VM on which it holds compute.instances.osLogin and compute.instances.osAdminLogin and actAs on that SA.
+  summary: The source may use OS Login administrator access on an exact running VM to reach its attached service account when the VM accepts OS Login and SSH is reachable.
   requires:
     all_of:
     - action: compute.instances.osLogin
@@ -241,11 +267,12 @@
     selector:
       attached_to_service: compute_instance
       gcp_actas_granted_on_target: true
-    scope: same_project
+      gcp_osadminlogin_vm_path: true
+    scope: any
     aggregate_as: SAs of OS Login VMs the source can administer
   conditions:
   - id: oslogin_enabled
-    description: OS Login must be enabled on the VM and its SSH service reachable (directly or via IAP TCP forwarding, which needs its own permission).
+    description: An exact running VM must attach the target SA, enable OS Login after instance and project metadata precedence, and have a supported SSH path. Missing route or firewall evidence stays unresolved.
   - id: access_scopes
     description: The usable token is limited by the VM's OAuth access scopes.
   - id: twofa
@@ -257,16 +284,18 @@
   confidence: conditional
   severity: high
   mitigation: Grant roles/compute.osAdminLogin only on specific VMs and keep privileged SAs off interactive VMs.
-  notes: HackTricks @6fb9ac51fd lists both compute.instances.osLogin and compute.instances.osAdminLogin as required (roles/compute.osAdminLogin carries both); compute.instances.get and compute.projects.get
-    are only needed by the CLI convenience flow.
+  notes: Both compute.instances.osLogin and compute.instances.osAdminLogin are checked on the same VM. Direct public SSH is checked from a public IP and applicable firewall evidence; IAP and other private routes remain unresolved. An attached SA from another project remains unresolved until its cross-project usage policy is assessed. CLI helpers may also require compute.instances.get and compute.projects.get.
 
 - id: gcp-compute-instances-oslogin
   provider: gcp
+  source_kind:
+  - gcp_user
+  - gcp_service_account
   service: compute
   title: Log in as an unprivileged user to an OS Login VM and use its service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancesoslogin
   source_revision: 171e422
-  summary: The source can obtain the privileges of the service account attached to every OS Login VM on which it holds compute.instances.osLogin and actAs on that SA.
+  summary: The source may use standard OS Login on an exact running VM to reach its attached service account when the VM accepts OS Login and SSH is reachable.
   requires:
     all_of:
       - action: compute.instances.osLogin
@@ -278,71 +307,64 @@
     selector:
       attached_to_service: compute_instance
       gcp_actas_granted_on_target: true
-    scope: same_project
+      gcp_oslogin_vm_path: true
+    scope: any
     aggregate_as: "SAs of OS Login VMs the source can log in to"
   conditions:
     - id: oslogin_enabled
-      description: OS Login must be enabled on the VM and its SSH service reachable.
+      description: An exact running VM must attach the target SA, enable OS Login after instance and project metadata precedence, and have a supported SSH path. Missing route or firewall evidence stays unresolved.
     - id: metadata_server_reachable_unprivileged
       description: HackTricks only states the login is without root; reaching the SA assumes the local metadata server is not firewalled from unprivileged users on that image.
     - id: access_scopes
       description: The usable token is limited by the VM's OAuth access scopes.
+    - id: twofa
+      description: OS Login 2FA, if enforced, requires the source's second factor.
+    - id: external_user
+      description: A user outside the VM's organization also needs organization-level compute.oslogin.updateExternalUser.
   blockers:
     - gcp_deny_policy
   confidence: conditional
   severity: medium
   mitigation: Grant roles/compute.osLogin only on specific VMs and keep privileged SAs off interactive VMs.
-  notes: Non-root login; SA token access from an unprivileged shell is an inference, hence conditional.
+  notes: Non-root login; SA token access from an unprivileged shell is an inference, hence conditional. Direct public SSH is checked from a public IP and applicable firewall evidence; IAP and other private routes remain unresolved. An attached SA from another project remains unresolved until its cross-project usage policy is assessed.
 
-- id: gcp-gke-pod-node-metadata-token
+- id: gcp-compute-instancegroupmanagers-update-template
   provider: gcp
-  service: container
-  title: Compromised pod reads node SA token or legacy kube-env from metadata
-  source: src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#federation-and-metadata-server-abuse
-  source_revision: 0b36331
-  summary: Compromised pod reads node SA token or legacy kube-env from metadata; emit only when exact source, target,
-    and prerequisite evidence is verified.
-  requires:
-    all_of: []
-  target:
-    kind: gcp_service_account
-    selector:
-      gcp_challenge_fact: gcp-gke-pod-node-metadata-token
-    scope: any
-    outcome: credentials
-    aggregate_as: Compromised pod reads node SA token or legacy kube-env from metadata
-  conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-cross-project-attacks/historical-cross-project-vulnerabilities.md#federation-and-metadata-server-abuse
-  source_kind: gcp_challenge_foothold
-- id: gcp-compromised-vm-metadata-sa-token
-  provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   service: compute
-  title: Read attached VM SA token from metadata after host access
-  source: src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#service-accounts
-  source_revision: 0b36331
-  summary: Read attached VM SA token from metadata after host access; emit only when exact source, target, and prerequisite
-    evidence is verified.
+  title: Repoint an existing managed instance group to a new instance template
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-compute-privesc/README.md#computeinstancegroupmanagersupdate--templatevm-permissions--hijack-an-existing-managed-instance-group
+  source_revision: 171e422
+  summary: A source that can replace an existing managed instance group's template may run controlled startup code as a service account that the group's Google APIs Service Agent can attach.
   requires:
-    all_of: []
+    all_of:
+      - action: compute.instanceGroupManagers.update
+        resource: "*"
+      - action: compute.instanceTemplates.create
+        resource: "*"
   target:
     kind: gcp_service_account
     selector:
-      gcp_challenge_fact: gcp-compromised-vm-metadata-sa-token
-    scope: any
-    outcome: credentials
-    aggregate_as: Read attached VM SA token from metadata after host access
+      gcp_mig_existing_template_path: true
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts usable by MIG-recreated VMs in {project}"
   conditions:
-  - id: exact_verified_prerequisites
-    description: The exact source, target and exploit-enabling facts must be verified; missing facts evaluate UNKNOWN.
+    - id: existing_mig
+      description: An exact inventoried MIG must use a readable template, be covered by the source's update permission, and have proactive rollout and a positive target size.
+    - id: supporting_permissions
+      description: The source must be able to create and use a replacement template, create instances and disks, set startup metadata, and use the observed image and subnet resources.
+    - id: service_agent_actas
+      description: The exact project's Google APIs Service Agent must have effective iam.serviceAccounts.actAs on the selected service account.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
   confidence: conditional
-  severity: high
-  mitigation: Restrict the stated permission and remove the exploitable trust or configuration.
+  severity: critical
+  mitigation: Restrict compute.instanceGroupManagers.update and compute.instanceTemplates.create (roles/compute.instanceAdmin.v1) and narrow the Google APIs Service Agent's Service Account User grants.
   references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/gcp-security/gcp-basic-information/README.md#service-accounts
-  source_kind: gcp_challenge_foothold
+    - https://docs.cloud.google.com/compute/docs/access/iam
+    - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instanceGroupManagers/setInstanceTemplate
+  notes: This is a conditional prospective path through a replacement template and proactive rollout. The current template supplies a known working baseline; the new template may select another service account only when the same project's service agent has actAs on it. A completed VM rollout and usable token have not been observed.

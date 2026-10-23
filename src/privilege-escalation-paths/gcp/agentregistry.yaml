@@ -1,103 +1,40 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Agent Registry privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-agent-registry-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
 # attached_to_service: agentregistry_skill_consumer -> runtime identity of a managed agent / environment that mounts the
 #   logical Skill in "{target.artifact_arn}" (floating defaultRevision); agent mount inventory is not collected.
-
 - id: gcp-agentregistry-skill-default-revision-replace
   provider: gcp
   service: agentregistry
-  title: Replace the default revision of a Skill mounted by agents
+  title: Publish a Skill revision used by an agent
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryskillrevisionscreate--agentregistryskillsupdate--replace-an-executable-skills-default-revision
   source_revision: 171e422
-  summary: The source can obtain the privileges of the runtime identity of agents that mount a Skill whose revisions and default pointer it can change.
-  requires:
-    all_of:
-      - action: agentregistry.skillRevisions.create
-        resource: "{target.artifact_arn}"
-      - action: agentregistry.skills.update
-        resource: "{target.artifact_arn}"
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: agentregistry_skill_consumer
-    scope: any
-    aggregate_as: "Runtime identities of agents mounting Skills the source can repoint"
-  conditions:
-    - id: floating_mount
-      description: The agent must mount the logical Skill (default revision); agents pinned to an immutable revision are unaffected.
-    - id: execution_on_load
-      description: The replacement only runs when the agent loads and executes it; refresh, snapshots and caching decide timing, and the agent sandbox and egress policy bound the result.
-    - id: runtime_identity
-      description: The runtime identity can be an Agent Identity principal rather than a service account.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: high
-  mitigation: Restrict roles/agentregistry.user, editor and admin on Skills, pin agents to immutable revisions and keep security scanning enabled.
-  notes: Preview service. serviceusage.services.use on the quota project is also needed.
-- id: gcp-audit-s01-09-redirect-bound-mcp-service-a
-  provider: gcp
-  service: agent-registry
-  title: Redirect bound MCP service and capture victim Agent Identity API key or OAuth token
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryservicesupdate--redirect-a-bound-target-and-capture-its-agent-identity-credential
-  summary: The source can gain redirect bound MCP service and capture victim Agent Identity API key or OAuth token.
-    The redirected Service retains its Binding, but credential capture depends on a later victim invocation, credential
-    injection and receiver acceptance.
-  requires:
-    all_of:
-    - action: agentregistry.services.update
-      resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-audit-s01-09-redirect-bound-mcp-service-a
-    scope: any
-    aggregate_as: external API/Workspace credential
-  conditions:
-  - id: exact_target_evidence
-    description: Exclusion rejects non-GCP IAM credentials, although the page explicitly documents credential theft
-      and access in SaaS or Workspace tenant. Requires existing binding and victim invocation. Missing target evidence
-      evaluates UNKNOWN.
-  - id: runtime_delivery
-    description: A later authorized victim must invoke through the unchanged Binding, and the attacker receiver
-      must accept a useful injected credential.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
-  source_revision: 0b36331
-  references:
-  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc/#agentregistryservicesupdate--redirect-a-bound-target-and-capture-its-agent-identity-credential
-- id: gcp-audit-s01-10-replace-default-executable-s
-  provider: gcp
-  service: agent-registry
-  title: Replace default executable Skill revision
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc.md#agentregistryskillrevisionscreate--agentregistryskillsupdate--replace-an-executable-skills-default-revision
-  summary: The source can gain replace default executable Skill revision. The existing entry covers mounted GCP
-    service accounts; Agent Identity and mounted tool authority need a typed runtime identity and exact consumer
-    inventory.
+  summary: Publishing a new Agent Registry Skill revision may let the source run a bounded action in a consumer that resolves that Skill's floating default.
   requires:
     all_of:
     - action: agentregistry.skillRevisions.create
-      resource: '*'
-    - action: agentregistry.skills.update
-      resource: '*'
+      resource: '{target.artifact_arn}'
+    - action: serviceusage.services.use
+      resource: '{target.quota_project}'
   target:
     kind: gcp_verified_authority
     selector:
-      gcp_challenge_fact: gcp-audit-s01-10-replace-default-executable-s
+      gcp_agentregistry_skill_evidence: true
     scope: any
-    aggregate_as: agent runtime identity
+    outcome: bounded_authority
+    aggregate_as: Exact downstream actions observed through consumers of a changed Agent Registry Skill
   conditions:
-  - id: exact_target_evidence
-    description: Entry covers an attached GCP SA but page also allows Agent Identity principal and mounted tools.
-      Its sole target kind is gcp_service_account, missing those identities. Missing target evidence evaluates UNKNOWN.
-  - id: runtime_mount
-    description: The target agent must mount the floating Skill revision and execute it; pinned revisions are unaffected.
+  - id: exact_skill_consumer
+    description: A reviewed record must show the consumer resolves this Agent Registry Skill's logical name and changed default revision, not a pinned revision or a similarly named Skill Registry resource.
+  - id: observed_bounded_action
+    description: The consumer must load the replacement payload and perform a named action on an exact resource that the source could not access before.
+  - id: explicit_pointer_update
+    description: If the record says the pointer was changed explicitly, the source also needs agentregistry.skills.update on the exact Skill.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
-  source_revision: 0b36331
-  references:
-  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-registry-privesc/#agentregistryskillrevisionscreate--agentregistryskillsupdate--replace-an-executable-skills-default-revision
+  mitigation: Restrict roles/agentregistry.user, editor and admin on Skills, pin agents to immutable revisions and keep security scanning enabled.
+  notes: Preview service. Creating a revision automatically makes it active according to Google documentation. A verified record binds the exact Skill, quota project, consumer, runtime identity, changed revision, and newly successful bounded action; no generic service-account attachment is inferred.

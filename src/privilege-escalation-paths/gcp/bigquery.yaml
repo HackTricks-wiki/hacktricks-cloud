@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP BigQuery privilege escalation techniques (identity-yielding only; dataset/table/connection data access is excluded).
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-bigquery-privesc.md (rev 171e422).
 # attached_to_service: bigquery_spark_connection -> the service identity of an existing BigQuery Spark connection
@@ -10,11 +11,11 @@
   title: Create or update a Data Transfer Service scheduled query bound to a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerytransfersupdate--iamserviceaccountsactas--scheduled-sql-as-a-service-account
   source_revision: 171e422
-  summary: The source can obtain the BigQuery privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  summary: A scheduled query can use a named service account to read a table the caller cannot read and write its results to a dataset the caller can read, when the exact configuration, service agent, and query permissions allow it.
   requires:
     all_of:
       - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+        resource: "{target.resource}"
       - action: bigquery.datasets.get
         resource: "*"
     any_of:
@@ -25,15 +26,21 @@
         - action: bigquery.transfers.get
           resource: "*"
   target:
-    kind: gcp_service_account
+    kind: gcp_verified_authority
     selector:
+      gcp_bounded_service_execution: bigquery_scheduled_query
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
+    outcome: bounded_authority
     aggregate_as: "Service accounts usable as BigQuery scheduled-query SA in {project}"
   conditions:
+    - id: exact_table_gain
+      description: The service account must be able to read a named table the caller cannot read, create a result table in a same-location destination dataset, and run a BigQuery job in the transfer project. The caller must be able to read that destination.
+    - id: exact_configuration_path
+      description: The caller must have a documented creation permission set on the transfer project or update and get on a named existing scheduled-query config for that destination.
     - id: dts_agent_token_creator
-      description: The Data Transfer service agent (service-<number>@gcp-sa-bigquerydatatransfer) must hold iam.serviceAccounts.getAccessToken (Token Creator) on the target SA, otherwise runs fail.
+      description: The Data Transfer API must be enabled, and its service agent (service-<number>@gcp-sa-bigquerydatatransfer) must have its service-agent role or getAccessToken on the target service account.
     - id: sql_only
       description: The SA is used only to run SQL (reads, DML, EXPORT DATA, DCL on datasets the SA administers), not as a general token.
     - id: update_needs_actas
@@ -48,76 +55,27 @@
     - https://cloud.google.com/bigquery/docs/scheduling-queries
   notes: Legacy permission name bigquery.datatransfer.transferConfigs.* is not used by current IAM; roles/editor and roles/owner already contain both permissions. Power is limited to BigQuery (and storage via EXPORT DATA).
 
-- id: gcp-bigquery-spark-procedure-connection-identity
-  provider: gcp
-  service: bigquery
-  title: Create or replace a Spark stored procedure that runs code as an existing Spark connection's service identity
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryroutinescreate--bigqueryconnectionsdelegateuse--code-execution-through-a-spark-connection
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of the service identity of every BigQuery Spark connection it can delegate and use, or whose IAM policy it controls, by creating or replacing a Spark stored procedure bound to it.
-  requires:
-    all_of:
-      - action: bigquery.routines.get
-        resource: "*"
-      - action: bigquery.jobs.create
-        resource: "*"
-      - any_of:
-          - - action: bigquery.routines.create
-              resource: "*"
-          - - action: bigquery.routines.update
-              resource: "*"
-    any_of:
-      - - action: bigquery.connections.delegate
-          resource: "{target.host_resource}"
-        - action: bigquery.connections.use
-          resource: "{target.host_resource}"
-      - - action: bigquery.connections.setIamPolicy
-          resource: "{target.host_resource}"
-  target:
-    kind: gcp_service_account
-    selector:
-      attached_to_service: bigquery_spark_connection
-    scope: any
-    aggregate_as: "Service identities of BigQuery Spark connections the source can delegate"
-  conditions:
-    - id: privileged_connection_identity
-      description: Escalation only exists when the existing connection's service identity already holds permissions the source lacks; a newly created connection identity starts without useful grants.
-    - id: dataset_location
-      description: The procedure must be created (or an existing one replaced) in a dataset the source can write, in the connection's location.
-    - id: replace_existing_procedure
-      description: The routines.update branch replaces an existing Spark procedure's body; the connection delegation check still applies to the replaced definition.
-    - id: setiampolicy_followup
-      description: The setIamPolicy branch self-grants connection admin/user on the connection and then follows the delegate/use path.
-  blockers:
-    - gcp_deny_policy
-    - vpc_sc_perimeter
-  confidence: conditional
-  severity: high
-  mitigation: Restrict roles/bigquery.connectionAdmin and roles/bigquery.connectionUser on Spark connections, restrict routine create/update on datasets in the connection's location, and keep the connection identity least-privileged.
-  references:
-    - https://docs.cloud.google.com/bigquery/docs/spark-procedures
-    - https://docs.cloud.google.com/bigquery/docs/connect-to-spark
-  notes: The page documents SQL create (routines.create + connections.delegate + jobs.create), CREATE OR REPLACE / direct routines.update (routines.update), direct Routines API create (no job) and invocation (routines.get + connections.use + jobs.create); jobs.create is always needed for the call. Google does not document a caller-side actAs check for the EXTERNAL SECURITY INVOKER custom service-account variant; that variant is not modelled. Covers the bigquery.connections.setIamPolicy self-grant heading for Spark connections; other connection consumers (EXTERNAL_QUERY, remote functions, BigLake tables) are data access or audience-bound and are excluded.
-
 - id: gcp-bigquery-continuous-query-actas
   provider: gcp
   service: bigquery
   title: Run a BigQuery continuous query bound to a chosen service account
   source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-bigquery-persistence.md#continuous-query-bound-to-a-service-account--bounded-real-time-exfiltration
-  source_revision: 171e422
-  summary: The source can obtain the BigQuery privileges of service accounts in the project on which it holds iam.serviceAccounts.actAs, by submitting a continuous query that runs (for up to 150 days) as that service account.
+  source_revision: 4e9b5eaaa6
+  summary: The caller can submit a continuous query as an exact service account when an active eligible reservation and compatible source and destination tables support a new bounded BigQuery table read or write.
   requires:
     all_of:
       - action: bigquery.jobs.create
         resource: "*"
       - action: iam.serviceAccounts.actAs
-        resource: "{target.email}"
+        resource: "{target.resource}"
   target:
-    kind: gcp_service_account
+    kind: gcp_verified_authority
     selector:
+      gcp_bounded_service_execution: bigquery_continuous_query
       gcp_actas_granted_on_target: true
       gcp_sa_in_scope_of_permission: true
     scope: same_project
+    outcome: bounded_authority
     aggregate_as: "Service accounts usable as BigQuery continuous-query SA in {project}"
   conditions:
     - id: continuous_reservation
@@ -132,144 +90,47 @@
   mitigation: Grant actAs only on dedicated continuous-query SAs and restrict CONTINUOUS reservation assignments.
   references:
     - https://cloud.google.com/bigquery/docs/continuous-queries-introduction
-  notes: Sibling of gcp-bigquery-transfers-scheduled-query-actas; power is limited to the SA's BigQuery data access plus the configured sink.
-- id: gcp-audit-s01-26-delete-policies-and-deactiva
+  notes: Sibling of gcp-bigquery-transfers-scheduled-query-actas. An exact new table read or write route is conditional; incomplete reservation, permission, or table evidence is unresolved. This is not general service-account impersonation.
+- id: gcp-bigquery-spark-procedure-connection-identity
   provider: gcp
   service: bigquery
-  title: Delete policies and deactivate taxonomy enforcement
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigquerydatapoliciesdelete--datacatalogtaxonomiesupdate--disable-column-level-enforcement
-  summary: The source can gain delete policies and deactivate taxonomy enforcement. Deleting policies and deactivating
-    a taxonomy can expose columns only when every associated policy is deleted and an existing reader has base query
-    rights.
+  title: Create or replace a Spark stored procedure that runs code as an existing Spark connection's service identity
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryroutinescreate--bigqueryconnectionsdelegateuse--code-execution-through-a-spark-connection
+  source_revision: 6fb9ac51fd
+  summary: The source can run a Spark procedure as an existing connection identity when it can write and invoke the procedure in a compatible dataset and use that exact connection, and the identity holds an effective permission the source lacks.
   requires:
     all_of:
-    - action: bigquery.dataPolicies.delete
+    - action: bigquery.routines.get
       resource: '*'
-    - action: datacatalog.taxonomies.update
+    - action: bigquery.jobs.create
       resource: '*'
+    - any_of:
+      - - action: bigquery.routines.create
+          resource: '*'
+      - - action: bigquery.routines.update
+          resource: '*'
   target:
-    kind: gcp_verified_authority
+    kind: gcp_service_account
     selector:
-      gcp_challenge_fact: gcp-audit-s01-26-delete-policies-and-deactiva
+      gcp_bigquery_spark_connection_path: true
     scope: any
-    aggregate_as: protected-column read entitlement
+    aggregate_as: Service identities of BigQuery Spark connections the source can delegate
   conditions:
-  - id: exact_target_evidence
-    description: Exclusion misses newly unmasked access for existing table readers; both permissions and deletion
-      of every associated data policy are required. Missing target evidence evaluates UNKNOWN.
+  - id: privileged_connection_identity
+    description: Escalation only exists when the existing connection's service identity already holds permissions the source lacks; a newly created connection identity starts without useful grants.
+  - id: dataset_location
+    description: The procedure must be created (or an existing one replaced) in a dataset the source can write, in the connection's location.
+  - id: replace_existing_procedure
+    description: The routines.update branch replaces an existing Spark procedure's body; the connection delegation check still applies to the replaced definition.
+  - id: setiampolicy_followup
+    description: A source with setIamPolicy may grant itself connectionAdmin on the exact connection when its policy and effective organization constraints are complete; conditional restrictions remain unresolved.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
   confidence: conditional
   severity: high
-  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
-  source_revision: 0b36331
+  mitigation: Restrict roles/bigquery.connectionAdmin and roles/bigquery.connectionUser on Spark connections, restrict routine create/update on datasets in the connection's location, and keep the connection identity least-privileged.
   references:
-  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc/#bigquerydatapoliciesdelete--datacatalogtaxonomiesupdate--disable-column-level-enforcement
-- id: gcp-audit-s01-29-widen-or-delete-row-access-p
-  provider: gcp
-  service: bigquery
-  title: Widen or delete row-access policy
-  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryrowaccesspolicies--widen-or-remove-row-level-security
-  summary: The source can gain widen or delete row-access policy. Row policy mutation widens effective rows only
-    for an existing base reader and a concrete policy set.
-  requires:
-    any_of:
-    - - action: bigquery.rowAccessPolicies.create
-        resource: '*'
-      - action: bigquery.rowAccessPolicies.setIamPolicy
-        resource: '*'
-      - action: bigquery.jobs.create
-        resource: '*'
-    - - action: bigquery.rowAccessPolicies.update
-        resource: '*'
-      - action: bigquery.rowAccessPolicies.setIamPolicy
-        resource: '*'
-      - action: bigquery.jobs.create
-        resource: '*'
-    - - action: bigquery.rowAccessPolicies.delete
-        resource: '*'
-      - action: bigquery.rowAccessPolicies.setIamPolicy
-        resource: '*'
-      - action: bigquery.jobs.create
-        resource: '*'
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-audit-s01-29-widen-or-delete-row-access-p
-    scope: any
-    aggregate_as: full-row read entitlement
-  conditions:
-  - id: exact_target_evidence
-    description: Exclusion calls it data tamper, but caller with base table read gains rows formerly filtered. Create/update/delete
-      are alternative paths with additional setIamPolicy and jobs.create. Missing target evidence evaluates UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed permissions and review target trust/consumer configuration.
-  source_revision: 0b36331
-  references:
-  - https://cloud.hacktricks.wiki/en/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc/#bigqueryrowaccesspolicies--widen-or-remove-row-level-security
-- id: gcp-bigquery-job-sql-credential
-  provider: gcp
-  service: bigquery
-  title: Recover API keys or tokens in other users’ SQL and query parameters
-  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigqueryjobslistall--jobslist-jobsget--read-every-principals-sql-silently
-  source_revision: 0b36331
-  summary: Identity authenticated by valid secret in job metadata; emit only for the exact verified source, resource
-    and target.
-  requires:
-    all_of:
-    - action: bigquery.jobs.listAll
-      resource: '*'
-    - action: bigquery.jobs.list
-      resource: '*'
-    - action: bigquery.jobs.get
-      resource: '*'
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-bigquery-job-sql-credential
-    scope: any
-    outcome: scope_control
-    aggregate_as: Verified targets for Recover API keys or tokens in other users’ SQL and query parameters
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Relevant
-      retained job; secret literal or parameter present; target identity and validity verified. INFORMATION_SCHEMA
-      alternative needs jobs.listAll+jobs.create.
-  confidence: conditional
-  severity: high
-  mitigation: Limit bigquery.jobs.listAll to trusted operators and monitor the target-specific use.
-  references:
-  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigqueryjobslistall--jobslist-jobsget--read-every-principals-sql-silently
-- id: gcp-bigquery-table-row-credential
-  provider: gcp
-  service: bigquery
-  title: Read BigQuery table rows
-  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigquerytablesgetdata--paginate-an-entire-table-without-running-a-query
-  source_revision: 0b36331
-  summary: Usable token or secret in table row; emit only for the exact verified source, resource and target.
-  requires:
-    all_of:
-    - action: bigquery.tables.getData
-      resource: '*'
-  source_kind:
-  - gcp_user
-  - gcp_service_account
-  target:
-    kind: gcp_verified_authority
-    selector:
-      gcp_challenge_fact: gcp-bigquery-table-row-credential
-    scope: any
-    outcome: scope_control
-    aggregate_as: Verified targets for Read BigQuery table rows
-  conditions:
-  - id: exact_verified_prerequisites
-    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
-      eligible table; row and column policies permit access; a usable credential actually appears in returned cells
-      and maps to a target principal.
-  confidence: conditional
-  severity: high
-  mitigation: Limit bigquery.tables.getData to trusted operators and monitor the target-specific use.
-  references:
-  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-bigquery-post-exploitation.md#bigquerytablesgetdata--paginate-an-entire-table-without-running-a-query
+  - https://docs.cloud.google.com/bigquery/docs/spark-procedures
+  - https://docs.cloud.google.com/bigquery/docs/connect-to-spark
+  notes: The page documents SQL create (routines.create + connections.delegate + jobs.create), CREATE OR REPLACE / direct routines.update (routines.update), direct Routines API create (no job) and invocation (routines.get + connections.use + jobs.create); jobs.create is always needed for the call. Google does not document a caller-side actAs check for the EXTERNAL SECURITY INVOKER custom service-account variant; that variant is not modelled. The selector also checks a prospective connectionAdmin self-grant through setIamPolicy when the exact policy and effective member constraints are collected. Other connection consumers (EXTERNAL_QUERY, remote functions, BigLake tables) are data access or audience-bound and are excluded.

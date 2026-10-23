@@ -1,37 +1,50 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Virtual Machines privilege escalation techniques.
+# Source: hacktricks-cloud az-virtual-machines-and-network-privesc.md (rev 171e422).
+# Placeholder conventions: see catalog/azure/authorization.yaml header.
+# All in-guest code execution reaches the identities exposed by IMDS: the VM's system-assigned
+# identity and every user-assigned identity attached to it.
+
 - id: azure-vm-extensions-write
   provider: azure
   service: virtual_machines
   title: Deploy or update a VM extension to run code in the guest
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesextensionswrite
-  source_revision: 171e422
+  source_revision: 3b8bc91615
   summary: Custom Script, DSC, VMAccess, Hybrid Worker or third-party (Salt, Chef) extensions give root/SYSTEM code execution in the VM and thus tokens of its managed identities.
   requires:
     all_of:
       - action: Microsoft.Compute/virtualMachines/extensions/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_extension_execution_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: vm_agent_running
-      description: The VM must be running with a healthy VM agent to process the extension.
+      description: The VM must be running with a healthy VM agent to process an executable extension. A stopped VM also requires start/action.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict Microsoft.Compute/virtualMachines/extensions/write (Virtual Machine Contributor, Contributor), use Azure Policy to allow-list extension publishers/types, and keep VM identities least-privileged.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/features-windows
-  notes: Covers the VMAccess password/SSH-key reset (which additionally uses virtualMachines/read+write in the CLI flow) and the DSC extension flow. Scale-set model extensions (virtualMachineScaleSets/extensions/write) are modelled separately in azure-vmss-model-write.
+  notes: The permission must cover a child extension of the same inventoried VM that carries the target identity. Known monitoring-only handlers do not imply code execution; unclassified existing handlers remain unresolved. VMAccess password/SSH-key reset may need extra CLI permissions. Scale-set model extensions are modelled separately in azure-vmss-model-write.
+
 - id: azure-vm-runcommand-action
   provider: azure
   service: virtual_machines
   title: Invoke Run Command on a VM
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesruncommandaction
-  source_revision: 171e422
+  source_revision: bc194cb834
   summary: Run Command executes scripts as root/SYSTEM through the VM agent, exposing the VM's managed identities.
   requires:
     all_of:
@@ -41,198 +54,162 @@
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_runcommand_action_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: vm_agent_running
-      description: The VM must be running with a healthy VM agent.
+      description: The VM must be running with a healthy VM agent; a stopped VM also requires start/action on that VM.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict runCommand/action (Virtual Machine Contributor, Contributor) and alert on Run Command usage.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command
-  notes: ""
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/run-command?view=rest-compute-2026-04-01
+  notes: The action is checked on the exact inventoried VM carrying the target identity. Agent health and script execution remain conditional.
+
 - id: azure-vm-managed-runcommands-write
   provider: azure
   service: virtual_machines
   title: Create a managed Run Command child resource on a VM
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesruncommandswrite
-  source_revision: 171e422
-  summary: Creating or replacing a managed Run Command executes the script as root/SYSTEM, exposing the VM's managed identities.
+  source_revision: 90afe8b1b3
+  summary: Creating or replacing a managed Run Command can execute a supplied script as root/SYSTEM, exposing the VM's managed identities.
   requires:
     all_of:
       - action: Microsoft.Compute/virtualMachines/runCommands/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_managed_runcommand_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: vm_agent_running
-      description: The VM must be running with a healthy VM agent.
+      description: The VM must be running with a healthy VM agent; a stopped VM also requires start/action on that VM.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict runCommands/write and alert on managed Run Command creation.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command-managed
-  notes: ""
+  notes: The source must be able to write a Run Command child of the same inventoried VM that carries the target identity. The child resource persists after execution, but persistence alone does not establish automatic re-execution.
+
 - id: azure-vmss-vm-managed-runcommands-write
   provider: azure
   service: virtual_machines
   title: Create a managed Run Command on a scale-set instance
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesruncommandswrite
-  source_revision: 171e422
-  summary: Managed Run Command on a VMSS instance runs as root/SYSTEM and exposes the scale set's managed identities.
+  source_revision: 2b502ade97
+  summary: Managed Run Command on a Uniform scale-set instance can run as root/SYSTEM and expose identities assigned through that scale set.
   requires:
     all_of:
       - action: Microsoft.Compute/virtualMachineScaleSets/virtualMachines/runCommands/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachineScaleSets
+      azure_vmss_instance_runcommand_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of scale set {target.host_resource}"
   conditions:
     - id: vm_agent_running
-      description: Instance must be running with a healthy VM agent (Uniform orchestration instances).
+      description: An inventoried Uniform instance must run with a healthy VM agent. A stopped instance also requires start/action on that instance or its scale set.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict scale-set run command permissions and keep scale-set identities least-privileged.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command-managed
-  notes: Also includes AKS node pools backed by VMSS (kubelet/agentpool identities) when the source has rights in the node resource group.
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machine-scale-set-vm-run-commands/create-or-update?view=rest-compute-2026-03-02
+  notes: The write grant must authorize a runCommands child of an inventoried instance in the same Uniform scale set that carries the identity. Flexible instance identities and missing instance inventory remain unresolved. AKS node pools backed by Uniform VMSS are included when permissions survive node-resource-group deny assignments.
+
 - id: azure-arc-machine-runcommands-write
   provider: azure
   service: virtual_machines
   title: Create a Run Command on an Arc-enabled server
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesruncommandswrite
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-enabled-servers-privesc.md#rce-via-arc-run-command
   source_revision: 171e422
   summary: Run Command on an Arc-enabled server executes as root/SYSTEM and exposes the Arc machine's system-assigned identity.
   requires:
     all_of:
       - action: Microsoft.HybridCompute/machines/runCommands/write
-        scope: "{target.host_resource}"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.HybridCompute/machines
+      azure_arc_run_command_code_path: true
     scope: inherited_scope
     aggregate_as: "Managed identity of Arc machine {target.host_resource}"
   conditions:
-    - id: arc_agent_connected
-      description: The Connected Machine agent must be connected and run commands not disabled by local agent configuration.
+    - id: run_command_execution
+      description: The command must be accepted and run successfully by the connected agent.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict Arc run command permissions and use agent-side extension allow-lists.
   references:
     - https://learn.microsoft.com/en-us/azure/azure-arc/servers/run-command
-  notes: On the Arc machine the identity token requires local admin/himds group access, which root/SYSTEM run commands have.
+  notes: The selector requires an exact runCommands child write on the identity machine, connected agent v1.33 or later, running extension service, full enabled mode and local allow/block lists that permit the OS-specific Run Command handler. Root/SYSTEM can read the HIMDS challenge token.
+
 - id: azure-vm-gallery-application-install
   provider: azure
   service: virtual_machines
   title: Add a malicious VM Application version to a VM
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputegallerieswrite-microsoftcomputegalleriesapplicationswrite-microsoftcomputegalleriesapplicationsversionswrite-microsoftcomputevirtualmachineswrite
-  source_revision: 171e422
+  source_revision: 318a5e9c99
   summary: The install command of a gallery application version added to a VM runs in the guest, exposing the VM's managed identities.
   requires:
     all_of:
       - action: Microsoft.Compute/galleries/applications/versions/write
-        scope: "{pivot}"
+        scope: "*"
       - action: Microsoft.Compute/virtualMachines/write
-        scope: "{target.host_resource}"
-  pivot_resource_type: Microsoft.Compute/galleries
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_gallery_application_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: gallery_app_exists_or_creatable
-      description: Needs an existing gallery application (or galleries/write and galleries/applications/write to create one) in the same region as the VM, and a package URL the VM can download.
+      description: Needs an existing compatible gallery application or permissions to create a gallery and application. The version must be replicated to the VM region, its package source must be readable, and the VM agent must run the install command.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict gallery application version writes and virtualMachines/write; audit applicationProfile changes on VMs.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/vm-applications-how-to
-  notes: Pivot gallery can be newly created if galleries/write is held on a resource group.
-- id: azure-vm-entra-login
-  provider: azure
-  service: virtual_machines
-  title: Sign in to a VM with Entra ID (user or admin) and use its IMDS identities
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesloginaction
-  source_revision: 171e422
-  summary: An interactive Entra-authenticated SSH/RDP session on the VM can request tokens for the VM's managed identities from IMDS.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Compute/virtualMachines/login/action
-          data_action: true
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Compute/virtualMachines/loginAsAdmin/action
-          data_action: true
-          scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Compute/virtualMachines
-    scope: inherited_scope
-    aggregate_as: "Managed identities of VM {target.host_resource}"
-  conditions:
-    - id: entra_login_extension_enabled
-      description: The AADSSHLoginForLinux / AADLoginForWindows extension must be installed.
-    - id: network_reachability
-      description: The source must reach SSH/RDP (directly, via Bastion or az ssh/Arc proxy).
-    - id: imds_restricted_for_non_admin
-      description: Guest hardening (e.g. host firewall rules limiting IMDS to specific users) can block non-admin logins; loginAsAdmin is not affected.
-    - id: conditional_access
-      description: Conditional Access policies targeting the Azure Linux/Windows VM Sign-In applications (MFA, compliant device) apply to the source's login.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict Virtual Machine User/Administrator Login roles and limit network access to management ports.
-  references:
-    - https://learn.microsoft.com/en-us/entra/identity/devices/howto-vm-sign-in-azure-ad-linux
-    - https://learn.microsoft.com/en-us/azure/virtual-machines/instance-metadata-service
-  notes: IMDS is reachable by any local process by default, so even non-admin login exposes the identities.
+  notes: The evaluator joins a writable application version to an inventoried VM carrying the identity. Existing applications, application creation in an existing gallery, and gallery creation in a known resource group are separate permission routes. A stopped VM also requires start/action.
+
 - id: azure-vm-create-with-user-assigned-identity
   provider: azure
   service: virtual_machines
   title: Create a VM with an attached user-assigned identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftresourcesdeploymentswrite-microsoftnetworkvirtualnetworkswrite-microsoftnetworknetworksecuritygroupswrite-microsoftnetworknetworksecuritygroupsjoinaction-microsoftnetworkpublicipaddresseswrite-microsoftnetworkpublicipaddressesjoinaction-microsoftnetworknetworkinterfaceswrite-microsoftcomputevirtualmachineswrite-microsoftnetworkvirtualnetworkssubnetsjoinaction-microsoftnetworknetworkinterfacesjoinaction-microsoftmanagedidentityuserassignedidentitiesassignaction
-  source_revision: 171e422
+  source_revision: f96d849321
   summary: A newly created VM the source administers carries any user-assigned identity the source can assign, so its tokens become available from the guest.
   requires:
     all_of:
       - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
         scope: "{target.id}"
       - action: Microsoft.Compute/virtualMachines/write
-        scope: "{pivot}"
-      - action: Microsoft.Network/networkInterfaces/write
-        scope: "{pivot}"
-      - action: Microsoft.Network/networkInterfaces/join/action
-        scope: "{pivot}"
-      - action: Microsoft.Network/virtualNetworks/subnets/join/action
         scope: "*"
-  pivot_resource_type: Microsoft.Resources/resourceGroups
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
+      azure_vm_create_uami_path: true
     scope: inherited_scope
     aggregate_as: "User-assigned identities assignable in {scope}"
   conditions:
@@ -242,44 +219,31 @@
       description: Without an existing joinable subnet, virtualNetworks/write is also needed.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict userAssignedIdentities/assign/action to specific identities and deployment principals; use Azure Policy to restrict which identities can be attached to new compute.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
-  notes: Pivot is the resource group where the source can create the VM and NIC. Microsoft.Resources/deployments/write is only needed when creating through an ARM/CLI deployment.
+  notes: The source must be able to create a VM in a known resource group and either join an inventoried unattached NIC with a subnet-linked IP configuration or create a NIC with join permission on an inventoried subnet. Microsoft.Resources/deployments/write is only needed when creating through an ARM/CLI deployment.
+
 - id: azure-vm-assign-user-assigned-identity-existing
   provider: azure
   service: virtual_machines
   title: Attach a user-assigned identity to an existing VM the source can execute code on
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachineswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
-  source_revision: a66f094ede
+  source_revision: 73e3da7a24
   summary: Adding a user-assigned identity to a VM where the source already has code execution exposes that identity's tokens via IMDS.
   requires:
     all_of:
       - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
         scope: "{target.id}"
       - action: Microsoft.Compute/virtualMachines/write
-        scope: "{pivot}"
-    any_of:
-      - - action: Microsoft.Compute/virtualMachines/runCommand/action
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/virtualMachines/runCommands/write
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/virtualMachines/extensions/write
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/virtualMachines/login/action
-          data_action: true
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/virtualMachines/loginAsAdmin/action
-          data_action: true
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.Compute/virtualMachines
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
+      azure_vm_assign_existing_uami_path: true
     scope: inherited_scope
     aggregate_as: "User-assigned identities assignable in {scope}"
   conditions:
@@ -287,48 +251,31 @@
       description: HackTricks also covers the case where the VM is compromised by non-RBAC means (SSRF, existing shell); that case is not detectable from RBAC alone.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict userAssignedIdentities/assign/action and virtualMachines/write; alert on identity changes on VMs.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
-  notes: Conditional code-execution routes (customData re-provisioning, Serial Console, VM Applications, OS disk swap, guest configuration) are modelled by azure-vm-assign-user-assigned-identity-indirect-exec.
+  notes: The VM must be inventoried, writable and have a usable direct guest route on that same VM. Run Command, managed Run Command and extension child grants are checked at their exact scopes. Entra login needs the login extension and a system identity. A stopped VM requires start/action. Conditional indirect routes are modelled separately.
+
 - id: azure-vm-assign-user-assigned-identity-indirect-exec
   provider: azure
   service: virtual_machines
   title: Attach a user-assigned identity to an existing VM and run code through an indirect guest route
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachineswrite-microsoftmanagedidentityuserassignedidentitiesassignaction
-  source_revision: a66f094ede
+  source_revision: e577627314
   summary: Adding a user-assigned identity to a VM and reaching the guest through customData re-provisioning, Serial Console, a VM Application, an OS disk swap or a guest configuration assignment exposes that identity's tokens via IMDS.
   requires:
     all_of:
       - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
         scope: "{target.id}"
       - action: Microsoft.Compute/virtualMachines/write
-        scope: "{pivot}"
-    any_of:
-      - - action: Microsoft.Compute/virtualMachines/reimage/action
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/virtualMachines/redeploy/action
-          scope: "{pivot}"
-      - - action: Microsoft.SerialConsole/serialPorts/connect/action
-          scope: "{pivot}"
-        - action: Microsoft.Compute/virtualMachines/restart/action
-          scope: "{pivot}"
-      - - action: Microsoft.Compute/galleries/applications/versions/write
-      - - action: Microsoft.Compute/virtualMachines/deallocate/action
-          scope: "{pivot}"
-        - action: Microsoft.Compute/virtualMachines/start/action
-          scope: "{pivot}"
-        - action: Microsoft.Compute/disks/write
-      - - action: Microsoft.GuestConfiguration/guestConfigurationAssignments/write
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.Compute/virtualMachines
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
+      azure_vm_assign_indirect_uami_path: true
     scope: inherited_scope
     aggregate_as: "User-assigned identities assignable in {scope}"
   conditions:
@@ -343,112 +290,67 @@
     - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities
     - https://learn.microsoft.com/en-us/azure/virtual-machines/custom-data
     - https://learn.microsoft.com/en-us/azure/virtual-machines/vm-applications-how-to
-  notes: Split from azure-vm-assign-user-assigned-identity-existing so the conditional routes do not raise the confidence of the direct run-command / extension / login routes. The gallery application and disk requirements carry no scope because the gallery or disk can be any one the source can write (or create).
+  notes: Split from the direct code route. One inventoried VM must be writable; the indirect route must apply to that VM. Gallery routes need an inventoried application; disk routes need an inventoried disk in the VM region. Runtime execution remains conditional on route-specific prerequisites.
+
 - id: azure-vmss-vm-runcommand-action
   provider: azure
   service: virtual_machines
   title: Invoke Run Command on a scale-set instance
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinesruncommandaction
-  source_revision: 171e422
+  source_revision: 11c3fc201a
   summary: Run Command on a Uniform scale-set instance executes as root/SYSTEM through the VM agent and exposes the scale set's managed identities.
   requires:
     all_of:
       - action: Microsoft.Compute/virtualMachineScaleSets/virtualMachines/runCommand/action
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachineScaleSets
+      azure_vmss_instance_runcommand_action_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of scale set {target.host_resource}"
   conditions:
     - id: vm_agent_running
-      description: The instance must be running with a healthy VM agent (Uniform orchestration; Flexible instances are plain VMs covered by azure-vm-runcommand-action).
+      description: An inventoried Uniform instance must run with a healthy VM agent. A stopped instance also requires start/action on that instance or its scale set; Flexible instances use the ordinary VM action.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict virtualMachineScaleSets/virtualMachines/runCommand/action (Virtual Machine Contributor, Contributor) and keep scale-set identities least-privileged.
   references:
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/run-command
-  notes: The page documents the VM action; the scale-set instance equivalent is a documented Microsoft.Compute operation with the same semantics. AKS node pools backed by VMSS are reachable when the source has the right in the node resource group (AKS normally protects it with a deny assignment).
-- id: azure-vm-serial-console-connect
-  provider: azure
-  service: virtual_machines
-  title: Use Serial Console and an ARM restart for guest recovery
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftserialconsoleserialportsconnectaction
-  source_revision: 0b36331
-  summary: Interactive Serial Console access combined with an ARM VM restart can reach a guest recovery shell or
-    reset a local password, exposing the VM managed identities when recovery succeeds.
-  requires:
-    all_of:
-    - action: Microsoft.SerialConsole/serialPorts/connect/action
-      scope: '{target.host_resource}'
-    - action: Microsoft.Compute/virtualMachines/restart/action
-      scope: '{target.host_resource}'
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Compute/virtualMachines
-    scope: inherited_scope
-    aggregate_as: Managed identities of VM {target.host_resource}
-  conditions:
-  - id: boot_diagnostics_enabled
-    description: Boot diagnostics must be enabled on the VM (enabling it needs virtualMachines/write). With a custom
-      boot-diagnostics storage account, the source also needs access to that account and it must allow Shared Key
-      access.
-  - id: serial_console_not_disabled
-    description: Serial Console must not be disabled for the subscription or inside the guest.
-  - id: guest_recovery_path
-    description: The guest must allow console recovery after restart, such as an unprotected boot loader or single-user
-      mode, or an enabled SAC/CMD channel on Windows.
-  - id: interactive_session
-    description: The console is interactive (portal or CLI extension), so the source's sign-in, including Conditional
-      Access, applies.
-  blockers:
-  - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Disable Serial Console where it is not needed, protect boot loaders, restrict serialPorts/connect/action
-    and VM restart rights, and keep VM identities least-privileged.
-  references:
-  - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/linux/serial-console-linux
-  - https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/windows/serial-console-windows
-  notes: This entry covers the ARM-initiated restart and guest-recovery route. Direct login with an already known
-    local guest password does not require virtualMachines/restart/action, but the credential is not present in the
-    permission snapshot. The same feature exists for scale-set instances, which this entry does not model.
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machine-scale-set-vms/run-command?view=rest-compute-2026-04-01
+  notes: The action must authorize an inventoried instance of the same Uniform scale set that carries the identity. Flexible instances and missing instance inventory remain unresolved. AKS node pools backed by VMSS are reachable only when permissions survive the node-resource-group deny assignment.
+
 - id: azure-vm-os-disk-swap
   provider: azure
   service: virtual_machines
   title: Swap a VM's OS disk for an attacker-prepared disk
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachineswrite-os-disk-swap
-  source_revision: 171e422
-  summary: Replacing the OS disk of a deallocated VM with a disk the source prepared boots attacker-controlled code with the VM's managed identities attached.
+  source_revision: e577627314
+  summary: Replacing a VM's OS disk with one containing attacker-controlled code can expose its attached managed identities when the VM boots the replacement disk.
   requires:
     all_of:
       - action: Microsoft.Compute/virtualMachines/write
-        scope: "{target.host_resource}"
-      - action: Microsoft.Compute/virtualMachines/deallocate/action
-        scope: "{target.host_resource}"
-      - action: Microsoft.Compute/virtualMachines/start/action
-        scope: "{target.host_resource}"
+        scope: "*"
       - action: Microsoft.Compute/disks/read
-        scope: "{pivot}"
+        scope: "*"
       - action: Microsoft.Compute/disks/write
-        scope: "{pivot}"
-  pivot_resource_type: Microsoft.Compute/disks
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_os_disk_swap_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: attacker_disk_available
       description: The source needs a managed disk whose content it controls (uploaded image or a modified copy of a snapshot), in the same region with a compatible OS, generation and security type.
     - id: downtime_tolerated
-      description: The VM is deallocated during the swap, which causes visible downtime.
+      description: The VM need not be deallocated for the swap, but the workload can be disrupted; a stopped VM needs start/action to boot the replacement disk.
     - id: encryption_compatible
       description: Disk encryption sets, confidential or Trusted Launch settings can prevent attaching a foreign disk.
   blockers:
@@ -457,31 +359,34 @@
   severity: high
   mitigation: Restrict virtualMachines/write and disk writes, alert on OS disk changes, and use resource locks on critical VMs.
   references:
+    - https://learn.microsoft.com/en-us/azure/virtual-machines/linux/os-disk-swap
     - https://learn.microsoft.com/en-us/azure/virtual-machines/windows/os-disk-swap
-  notes: The pivot disk can be newly created where the source holds disks/write. Attaching an existing disk as a data disk (data access only) is excluded separately.
+  notes: The evaluator joins VM write with an existing compatible disk or a disk the source can create in a known resource group. Disk content control and boot compatibility remain conditional; an attached disk or a known incompatible disk is excluded. Attaching a data disk is a separate data-access route.
+
 - id: azure-vmss-model-write
   provider: azure
   service: virtual_machines
   title: Tamper with a scale-set model (extensions, custom data) to run code on instances
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftcomputevirtualmachinescalesetswrite-scale-set-model-tampering
-  source_revision: 171e422
+  source_revision: 24dfc65df0
   summary: Adding an extension to a scale-set model, once applied to instances, runs code as root/SYSTEM and exposes the scale set's managed identities.
   requires:
     all_of: []
     any_of:
       - - action: Microsoft.Compute/virtualMachineScaleSets/write
-          scope: "{target.host_resource}"
+          scope: "*"
       - - action: Microsoft.Compute/virtualMachineScaleSets/extensions/write
-          scope: "{target.host_resource}"
+          scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachineScaleSets
+      azure_vmss_model_rollout_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of scale set {target.host_resource}"
   conditions:
     - id: model_rollout
-      description: The changed model reaches instances only through an automatic or rolling upgrade policy, a manual instance upgrade or reimage (separate actions), or new instances created by a scale-out (which virtualMachineScaleSets/write can trigger).
+      description: A Uniform scale set model change reaches existing instances under automatic or rolling policy, or after manualUpgrade, reimage or reapply action on that scale set. Scale-set write can also change the upgrade policy or affect new instances.
     - id: aks_node_pools
       description: For AKS node pools the node resource group is normally protected by a deny assignment.
   blockers:
@@ -491,104 +396,38 @@
   mitigation: Restrict virtualMachineScaleSets/write and extensions/write, allow-list extensions with Azure Policy, and alert on scale-set model changes.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-upgrade-policy
+    - https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute
-  notes: Microsoft.Compute/virtualMachineScaleSets/virtualMachines/manualUpgrade/action is the documented per-instance upgrade action but is not in the local permission catalog, so it is described as a condition instead of a requirement.
+  notes: The documented rollout action is virtualMachineScaleSets/manualUpgrade/action on the scale set. Exact extension-child grants must join that scale set; known monitoring-only handlers are excluded and unknown handlers remain unresolved. Flexible orchestration instance identity effects remain unresolved.
+
 - id: azure-vm-customdata-reimage
   provider: azure
   service: virtual_machines
-  title: Re-execute poisoned customData by reimaging or redeploying a VM
-  source: src/pentesting-cloud/azure-security/az-persistence/az-vms-persistence.md#reimage--redeploy-to-re-execute-poisoned-customdata
-  source_revision: 171e422
-  summary: Setting customData and forcing re-provisioning makes cloud-init run attacker code in the guest, exposing the VM's managed identities.
+  title: Supply customData while reimaging a VM
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#reimage-a-vm-with-new-customdata
+  source_revision: b9040926a9
+  summary: A reimage request can supply customData to a Linux VM; if its provisioning agent runs the payload, code in the guest can obtain the VM's managed identity tokens.
   requires:
     all_of:
-      - action: Microsoft.Compute/virtualMachines/write
-        scope: "{target.host_resource}"
-    any_of:
-      - - action: Microsoft.Compute/virtualMachines/reimage/action
-          scope: "{target.host_resource}"
-      - - action: Microsoft.Compute/virtualMachines/redeploy/action
-          scope: "{target.host_resource}"
+      - action: Microsoft.Compute/virtualMachines/reimage/action
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.Compute/virtualMachines
+      azure_vm_reimage_customdata_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of VM {target.host_resource}"
   conditions:
     - id: cloud_init_reprocesses_customdata
-      description: The image must run cloud-init (or an equivalent agent) on re-provisioning and the platform must accept the customData change for that VM; redeploy does not always re-run provisioning.
+      description: The Linux image must run cloud-init (or an equivalent agent) on reimage and process the request-body customData. Normal VM updates cannot change customData and redeploy does not supply a new payload.
     - id: destructive
       description: Reimage resets the OS disk, which is disruptive to the workload.
   blockers:
     - azure_deny_assignment
   confidence: conditional
   severity: high
-  mitigation: Restrict virtualMachines/write, reimage/action and redeploy/action (Virtual Machine Contributor, Contributor) and alert on osProfile changes and reimage operations.
+  mitigation: Restrict virtualMachines/reimage/action and alert on reimage requests carrying customData.
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/custom-data
-- id: azure-vm-verified-ssrf-imds
-  provider: azure
-  service: virtual_machines
-  title: Verified VM SSRF to managed identity
-  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/historical-cross-tenant-vulnerabilities.md#trusted-ip-and-metadata-abuse
-  source_revision: 0b36331
-  summary: A verified SSRF on a VM retrieves its managed-identity token.
-  source_kind: azure_challenge_foothold
-  requires:
-    all_of: []
-  target:
-    kind: azure_managed_identity
-    selector:
-      azure_challenge_fact: azure-vm-verified-ssrf-imds
-    scope: any
-    aggregate_as: Verified VM SSRF to managed identity targets
-  conditions:
-  - id: verified_runtime_evidence
-    description: Exact source, target and successful credential or token access must be attested; absent evidence
-      remains UNKNOWN.
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Remove the vulnerable access path or exposed credential.
-  references:
-  - https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-use-vm-token
-  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
-    absent => UNKNOWN.'
-- id: azure-gallery-verified-image-secret
-  provider: azure
-  service: virtual_machines
-  title: Read shared gallery image with verified cloud credential
-  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/resource-and-service-sharing-attacks.md#resource--service-sharing-matrix
-  source_revision: 0b36331
-  summary: Read an accessible gallery image version containing a validated cloud credential.
-  source_kind:
-  - azure_user
-  - azure_service_principal
-  - azure_managed_identity
-  requires:
-    all_of:
-    - action: Microsoft.Compute/galleries/images/versions/read
-      scope: '{pivot}'
-  target:
-    kind: azure_service_principal
-    selector:
-      azure_challenge_fact: azure-gallery-verified-image-secret
-    scope: any
-    aggregate_as: Read shared gallery image with verified cloud credential targets
-  conditions:
-  - id: verified_runtime_evidence
-    description: Exact source, target and successful credential or token access must be attested; absent evidence
-      remains UNKNOWN.
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Remove the vulnerable access path or exposed credential.
-  references:
-  - https://learn.microsoft.com/en-us/azure/virtual-machines/share-gallery
-  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
-    absent => UNKNOWN.'
+    - https://learn.microsoft.com/en-us/rest/api/compute/virtual-machines/reimage?view=rest-compute-2026-04-01

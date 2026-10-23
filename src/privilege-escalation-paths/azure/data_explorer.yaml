@@ -1,3 +1,8 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure Data Explorer (Kusto) techniques (declarative only).
 # Source: hacktricks-cloud az-data-explorer-privesc.md (rev 171e422).
 
@@ -6,60 +11,66 @@
   service: data_explorer
   title: Grant a Kusto database role through ARM principal assignments
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#microsoftkustoclustersdatabasesprincipalassignmentswrite
-  source_revision: 171e422
+  source_revision: a449ec1896
   summary: The source can obtain Kusto database Admin on databases in scope.
   requires:
     all_of:
       - action: Microsoft.Kusto/clusters/databases/principalAssignments/write
-        scope: "{target.scope}"
+        scope: "*"
   target:
     kind: azure_dataplane_admin
     selector:
-      any_principal_in_scope: true
+      azure_kusto_database_principal_assignment_path: true
     scope: inherited_scope
     aggregate_as: "Kusto database admins of {target.scope}"
-  conditions: []
+  conditions:
+    - id: principal_assignment_accepted
+      description: Kusto must accept the new or updated assignment for a source-controlled Entra identity.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict principalAssignments/write to Kusto administrators.
   references:
     - https://learn.microsoft.com/en-us/azure/data-explorer/manage-database-permissions
-  notes: ""
+    - https://learn.microsoft.com/en-us/rest/api/azurerekusto/database-principal-assignments/create-or-update?view=rest-azurerekusto-2025-02-14
+  notes: The write must cover a principalAssignments child of the exact collected Kusto database. A child-scoped grant only applies to that existing collected assignment; a parent grant can create a new assignment. The source can grant Admin to a controlled Entra identity, but sign-in and endpoint access remain conditional.
 
 - id: azure-kusto-cluster-principal-assignment-write
   provider: azure
   service: data_explorer
   title: Grant a Kusto cluster-wide role through ARM principal assignments
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#cluster-wide-variant-microsoftkustoclustersprincipalassignmentswrite
-  source_revision: 171e422
+  source_revision: "1965257438"
   summary: The source can obtain AllDatabasesAdmin on the Kusto cluster.
   requires:
     all_of:
       - action: Microsoft.Kusto/clusters/principalAssignments/write
-        scope: "{target.scope}"
+        scope: "*"
   target:
     kind: azure_dataplane_admin
     selector:
-      any_principal_in_scope: true
+      azure_kusto_cluster_principal_assignment_path: true
     scope: inherited_scope
     aggregate_as: "Kusto cluster admins of {target.scope}"
-  conditions: []
+  conditions:
+    - id: principal_assignment_accepted
+      description: Kusto must accept the new or updated assignment for a source-controlled Entra identity.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict cluster principalAssignments/write.
-  references: []
-  notes: ""
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/azurerekusto/cluster-principal-assignments/create-or-update?view=rest-azurerekusto-2025-02-14
+  notes: The write must cover a principalAssignments child of the exact collected Kusto cluster. A child-scoped grant only applies to that existing collected assignment; a parent grant can create a new assignment. The source can assign its own or another controlled Entra identity AllDatabasesAdmin, but successful sign-in and data-plane reachability remain conditional.
 
 - id: azure-kusto-database-add-principals
   provider: azure
   service: data_explorer
   title: Add a Kusto database principal with the AddPrincipals action
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-explorer-privesc.md#microsoftkustoclustersdatabasesaddprincipalsaction--direct-principal-add-stealthier-than-principalassignments
-  source_revision: 171e422
+  source_revision: 5090b1a7b9
   summary: The source can obtain Kusto database Admin on databases in scope.
   requires:
     all_of:
@@ -68,15 +79,17 @@
   target:
     kind: azure_dataplane_admin
     selector:
-      any_principal_in_scope: true
+      azure_resource_type: Microsoft.Kusto/clusters/databases
     scope: inherited_scope
     aggregate_as: "Kusto database admins of {target.scope}"
-  conditions: []
+  conditions:
+    - id: database_principal_add_accepted
+      description: Kusto must accept an Admin-role addition for a source-controlled Entra identity, which must then sign in and reach the database endpoint.
   blockers:
     - azure_deny_assignment
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Restrict Databases/AddPrincipals/action alongside principalAssignments/write.
   references:
     - https://learn.microsoft.com/en-us/rest/api/azurerekusto/databases/add-principals
-  notes: Microsoft operation 'Microsoft.Kusto/Clusters/Databases/AddPrincipals/action'.
+  notes: Microsoft operation Microsoft.Kusto/Clusters/Databases/AddPrincipals/action targets an exact database. A grant on another database or the cluster alone does not establish this database Admin role unless inherited to this database.

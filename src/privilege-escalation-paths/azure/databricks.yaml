@@ -1,61 +1,42 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Databricks techniques (declarative only).
+# Source: hacktricks-cloud az-databricks-privesc.md (rev 171e422).
+
 - id: azure-databricks-assign-workspace-admin
   provider: azure
   service: databricks
   title: Self-assign Databricks workspace admin through Azure RBAC
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#become-a-workspace-admin-through-azure-rbac
   source_revision: 171e422
-  summary: The source can obtain Databricks workspace administrator privileges.
+  summary: A tenant member user may bootstrap workspace admin on an exact usable Databricks workspace.
+  source_kind: azure_user
+  source_selector:
+    azure_member_user: true
   requires:
     all_of:
       - action: Microsoft.Databricks/workspaces/assignWorkspaceAdmin/action
-        scope: "{target.scope}"
+        scope: "*"
       - action: Microsoft.Databricks/workspaces/read
-        scope: "{target.scope}"
+        scope: "*"
   target:
     kind: azure_dataplane_admin
     selector:
-      any_principal_in_scope: true
+      azure_databricks_workspace_admin: true
     scope: inherited_scope
     aggregate_as: "Workspace admins of Databricks workspace {target.scope}"
   conditions:
     - id: source_is_user
       description: HackTricks validated the path only for tenant member users, not service principals.
+    - id: bootstrap_succeeds
+      description: The member user's Databricks and ARM tokens must be accepted by the exact usable workspace.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Restrict assignWorkspaceAdmin/action (Contributor/Owner on the workspace).
   references:
     - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/analytics
-  notes: Workspace admins may further use identities configured on workspace compute; that is workspace-dependent and not modelled.
-- id: azure-databricks-uc-temporary-storage-credential
-  provider: azure
-  service: databricks
-  title: Obtain temporary Azure Storage authority through Unity Catalog
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#unity-catalog-storage-credential--external-location-abuse
-  source_revision: 0b36331
-  summary: A Unity Catalog principal with rights over a storage credential or external location can request temporary
-    Azure Storage tokens or SAS through an Access Connector managed identity.
-  requires:
-    all_of: []
-  target:
-    kind: azure_verified_authority
-    scope: inherited_scope
-    outcome: permission_grant
-    grants:
-    - Storage Blob read/write only where the Access Connector and UC privilege permit
-    selector:
-      azure_challenge_fact: azure-databricks-uc-temporary-storage-credential
-  confidence: conditional
-  severity: high
-  mitigation: Limit UC storage credential privileges and Access Connector Storage Blob roles.
-  references:
-  - https://docs.databricks.com/en/connect/unity-catalog/cloud-storage/azure-managed-identities.html
-  notes: 'UNKNOWN until UC permission and credential-to-connector facts are collected; no full MI role propagation.
-    Collector fact required: see request queue.'
-  source_kind:
-  - azure_user
-  - azure_service_principal
-  conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
+  notes: The selector binds both effective Azure RBAC actions to the same exact inventoried workspace and checks its provisioning state and URL. A disabled member user, unrelated workspace, or unsupported service principal cannot emit the edge. Network access and Databricks bootstrap remain conditional. Workspace compute identity pivots are separate techniques.

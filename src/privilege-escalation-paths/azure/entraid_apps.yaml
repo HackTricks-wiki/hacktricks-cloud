@@ -1,20 +1,43 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Entra ID application / service-principal takeover (credential injection, ownership,
+# Graph app-role self-grant, Agent ID blueprints).
+# Source: hacktricks-cloud az-entraid-privesc/README.md, az-persistence/README.md,
+# az-unauthenticated-enum-and-initial-entry/az-oauth-apps-phishing.md (rev 171e422; all entries re-verified against the page text at that revision).
+#
+# Requirement keys: see header of entraid_roles.yaml. Additionally:
+#   entra_owner_of: "{target.application_id}" | "{target.id}"   with object_type:
+#        application | servicePrincipal  (source is a registered owner of that object)
+#
+# Credential added to an APPLICATION object authenticates as that app's service
+# principal in this tenant (the home tenant). Credentials added to a SERVICE PRINCIPAL
+# object authenticate as that tenant-local service principal (works also for
+# multi-tenant apps registered elsewhere). Managed-identity service principals cannot
+# receive credentials. The resulting edge gives the target SP's directory roles, Graph /
+# API app roles and Azure RBAC.
+
 - id: azure-entraid-app-credentials-update
   provider: azure
   service: entraid
+  source_kind: azure_user
   title: Add credentials to any application registration
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryapplicationscredentialsupdate
-  source_revision: 171e422
+  source_revision: ae05918c9c
   summary: A principal allowed to update application credentials (e.g. Application Administrator, Cloud Application Administrator) can obtain the privileges of the service principal of any app registration in its scope.
   requires:
     any_of:
       - - entra_permission: microsoft.directory/applications/credentials/update
-          scope: "{target.scope}"
+          scope: "{target.application_id}"
       - - entra_permission: microsoft.directory/applications/allProperties/update
-          scope: "{target.scope}"
+          scope: "{target.application_id}"
   target:
     kind: azure_service_principal
     selector:
       entra_sp_has_tenant_application: true
+      entra_sp_type_in: [Application]
       entra_role_assignment_scope_covers_target: true
     scope: tenant
     aggregate_as: "Service principals of all app registrations in {scope}"
@@ -22,31 +45,34 @@
     - id: service_principal_conditional_access
       description: Conditional Access for workload identities (named locations / risk) can block sign-in of the target service principal.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Minimise Application/Cloud Application Administrator assignments, scope custom roles to specific app registrations, and never grant privileged directory roles or Graph app roles to apps whose registration non-Tier-0 principals can manage.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
     - https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0
     - https://dirkjanm.io/azure-ad-privilege-escalation-application-admin/
-  notes: Critical because the target set includes any app whose service principal holds Global Administrator, Privileged Role Administrator or RoleManagement.ReadWrite.Directory; Microsoft labels these permissions PRIVILEGED. The target set is exactly app registrations whose application object lives in this tenant (Microsoft first-party and other-tenant multi-tenant apps have no local application object). A role assignment scoped to a single app registration (directoryScopeId "/<appObjectId>") reaches only that app. allProperties/update includes the credential property set.
+  notes: Critical because the target set includes any app whose service principal holds Global Administrator, Privileged Role Administrator or RoleManagement.ReadWrite.Directory; Microsoft labels these permissions PRIVILEGED. The target set is app registrations whose application object lives in this tenant. The permission check resolves the app object ID, not its service-principal object ID, so a role assignment scoped to one app registration reaches only that app. allProperties/update includes the credential property set. This is the delegated-user directory-role path; app-only Graph permissions are modeled by the separate Graph application permission entry. Delegated Graph access and application-management policy restrictions remain conditional.
+
 - id: azure-entraid-app-myorg-credentials-update
   provider: azure
   service: entraid
+  source_kind: azure_user
   title: Add credentials to single-tenant application registrations
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryapplicationsmyorganizationallpropertiesupdate
-  source_revision: 171e422
+  source_revision: f6f75e1f7a
   summary: A principal holding applications.myOrganization credential/allProperties update can obtain the privileges of the service principal of any single-tenant app registration in its scope.
   requires:
     any_of:
       - - entra_permission: microsoft.directory/applications.myOrganization/credentials/update
-          scope: "{target.scope}"
+          scope: "{target.application_id}"
       - - entra_permission: microsoft.directory/applications.myOrganization/allProperties/update
-          scope: "{target.scope}"
+          scope: "{target.application_id}"
   target:
     kind: azure_service_principal
     selector:
       entra_sp_has_tenant_application: true
+      entra_sp_type_in: [Application]
       entra_app_sign_in_audience: AzureADMyOrg
       entra_role_assignment_scope_covers_target: true
     scope: tenant
@@ -55,46 +81,52 @@
     - id: service_principal_conditional_access
       description: Conditional Access for workload identities can block sign-in of the target service principal.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Audit custom roles for applications.myOrganization/* permissions and scope them to specific app registrations instead of the tenant.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
-  notes: These permissions appear mostly in custom roles; single-tenant internal apps are frequently the ones holding privileged Graph app roles.
+  notes: These permissions appear mostly in custom roles; single-tenant internal apps are frequently the ones holding privileged Graph app roles. The evaluator resolves a role assignment against the application object ID and requires signInAudience AzureADMyOrg on that same local app. This is the delegated-user directory-role path; app-only Graph grants are handled by their separate technique. Delegated Graph access and application-management policy restrictions remain conditional.
+
 - id: azure-entraid-app-owners-update
   provider: azure
   service: entraid
+  source_kind: azure_user
   title: Make yourself owner of any application registration
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryapplicationsownersupdate
-  source_revision: 171e422
+  source_revision: 517fd6b63a
   summary: A principal allowed to update application owners can obtain the privileges of the service principal of any app registration in its scope.
   requires:
     all_of:
       - entra_permission: microsoft.directory/applications/owners/update
-        scope: "{target.scope}"
+        scope: "{target.application_id}"
   target:
     kind: azure_service_principal
     selector:
       entra_sp_has_tenant_application: true
+      entra_sp_type_in: [Application]
       entra_role_assignment_scope_covers_target: true
     scope: tenant
     aggregate_as: "Service principals of all app registrations in {scope}"
   conditions:
+    - id: delegated_graph_owner_and_credential_write
+      description: The user needs the delegated Microsoft Graph scopes required to add an owner and a credential, and app credential policy must allow the new credential.
     - id: service_principal_conditional_access
       description: Conditional Access for workload identities can block sign-in of the target service principal.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict applications/owners/update, monitor "Add owner to application" audit events, and use app management policies to restrict credential types.
   references:
     - https://learn.microsoft.com/en-us/graph/api/application-post-owners?view=graph-rest-1.0
-  notes: Ownership grants credential management but not the ability to consent new API permissions; the gain is limited to what the app's service principal already holds.
+  notes: This delegated-user directory-role path resolves the permission against the application object ID and only names its enabled Application-type service principal. App-only Graph authorization is separate. Ownership grants credential management but not authority to consent new API permissions; the gain is limited to what the app's service principal already holds.
+
 - id: azure-entraid-app-owner-credentials
   provider: azure
   service: entraid
   title: Application owner adds credentials to the owned app
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryapplicationsownersupdate
-  source_revision: a66f094ede
+  source_revision: 681d8f7ccb
   summary: A registered owner of an application can obtain the privileges of that application's service principal.
   requires:
     all_of:
@@ -104,29 +136,31 @@
     kind: azure_service_principal
     selector:
       entra_sp_has_tenant_application: true
+      entra_sp_type_in: [Application]
       entra_source_is_owner_of_application: true
     scope: tenant
     aggregate_as: "Service principals of app registrations owned by {source}"
   conditions:
     - id: service_principal_owner_needs_ownedby
-      description: When the owner is a service principal acting app-only, adding the credential through Graph also needs Application.ReadWrite.OwnedBy (or Application.ReadWrite.All) on that owner; user owners need no extra permission.
+      description: An app-only owner needs an enabled Microsoft Graph Application.ReadWrite.OwnedBy, Application.ReadWrite.All or Directory.ReadWrite.All grant. A user owner needs a delegated Graph scope that permits credential writes.
     - id: app_management_policy
       description: Application management policies can block password credentials or restrict credential lifetimes for the owned app.
     - id: service_principal_conditional_access
       description: Conditional Access for workload identities can block sign-in of the target service principal.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Do not make non-Tier-0 users or service principals owners of apps whose service principals hold privileged roles or app permissions; review app owners regularly.
   references:
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/custom-available-permissions
-  notes: Owners also include service principals that own other apps (e.g. via Application.ReadWrite.OwnedBy). Severity should be raised to critical when the owned app's SP holds privileged roles / Graph app roles. Source is the owners/update section, which states that ownership gives control of the app's credentials; az-oauth-apps-phishing.md#entra-id-applications-admin (the previous source) only covers redirect-URI and requested-permission changes, which stay excluded.
+  notes: Owners also include service principals that own other apps. The selector binds a recorded owner to the exact local application and its enabled Application-type service principal. App-only owners require an enabled Microsoft Graph application role; user owners still need delegated Graph authorization. Severity should be raised to critical when the owned app's SP holds privileged roles or Graph app roles. Source is the owners/update section, which states that ownership gives control of the app's credentials.
+
 - id: azure-entraid-sp-credentials-update
   provider: azure
   service: entraid
   title: Add credentials to any service principal
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryserviceprincipalscredentialsupdate
-  source_revision: 171e422
+  source_revision: 65b88f8aae
   summary: A principal allowed to update service-principal credentials can obtain the privileges of any application-type service principal in its scope.
   requires:
     any_of:
@@ -134,10 +168,13 @@
           scope: "{target.scope}"
       - - entra_permission: microsoft.directory/servicePrincipals/allProperties/update
           scope: "{target.scope}"
+      - - graph_app_permission: Application.ReadWrite.All
+      - - graph_app_permission: Directory.ReadWrite.All
   target:
     kind: azure_service_principal
     selector:
       entra_sp_type_in: [Application]
+      entra_sp_credential_takeover_target: true
       entra_role_assignment_scope_covers_target: true
     scope: tenant
     aggregate_as: "Application-type service principals in {scope}"
@@ -148,19 +185,21 @@
       description: Microsoft first-party service principals may reject or ignore tenant-added credentials; validate per app.
   blockers:
     - sp_lock_configuration_credentials
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Minimise Application/Cloud Application Administrator, enable servicePrincipalLockConfiguration (app instance property lock) on apps, and monitor credential additions on service principals.
   references:
     - https://learn.microsoft.com/en-us/graph/api/resources/serviceprincipallockconfiguration?view=graph-rest-1.0
     - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#application-administrator
-  notes: Managed-identity service principals are excluded (their credentials are platform-managed). The app instance property lock on the home application blocks credential changes on its service principals; disabling it requires update rights on the application object, which the evaluator should model through the application entries.
+  notes: Directory-role permissions authorize the delegated-user path. The listed Graph application permissions authorize the app-only path, including foreign application service principals. Managed-identity and disabled service principals are excluded. When the home application is present, an enabled app instance property lock on verification credentials blocks this path. For external home applications the lock cannot be read from this tenant, so the result remains conditional.
+
 - id: azure-entraid-sp-owners-update
   provider: azure
   service: entraid
+  source_kind: azure_user
   title: Make yourself owner of any service principal
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryserviceprincipalsownersupdate
-  source_revision: 171e422
+  source_revision: 69a9f502d3
   summary: A principal allowed to update service-principal owners can obtain the privileges of any application-type service principal in its scope.
   requires:
     all_of:
@@ -170,6 +209,7 @@
     kind: azure_service_principal
     selector:
       entra_sp_type_in: [Application]
+      entra_sp_owner_update_target: true
       entra_role_assignment_scope_covers_target: true
     scope: tenant
     aggregate_as: "Application-type service principals in {scope}"
@@ -178,18 +218,20 @@
       description: Conditional Access for workload identities can block sign-in of the target service principal.
   blockers:
     - sp_lock_configuration_credentials
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict servicePrincipals/owners/update and alert on "Add owner to service principal" events.
   references:
     - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-owners?view=graph-rest-1.0
-  notes: Owners of a service principal can manage its credentials unless the app instance property lock (servicePrincipalLockConfiguration) blocks it.
+    - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-addpassword?view=graph-rest-1.0
+  notes: This is the delegated-user directory-role path; Graph application permissions that can add owners already give application principals a direct credential path. The target must be enabled and not already owned by the source. Adding an owner and then a credential requires delegated Graph authorization. A known home-application credential lock blocks the credential path; an uncollected owner list remains conditional.
+
 - id: azure-entraid-sp-owner-credentials
   provider: azure
   service: entraid
   title: Service principal owner adds credentials to the owned service principal
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#microsoftdirectoryserviceprincipalsownersupdate
-  source_revision: 171e422
+  source_revision: 232f075d33
   summary: A registered owner of a service principal can obtain the privileges of that service principal.
   requires:
     all_of:
@@ -207,19 +249,21 @@
       description: Conditional Access for workload identities can block sign-in of the target service principal.
   blockers:
     - sp_lock_configuration_credentials
-  confidence: derived
+  confidence: conditional
   severity: high
   mitigation: Remove non-Tier-0 owners from privileged service principals.
   references:
-    - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-delete-owners?view=graph-rest-1.0
-  notes: Severity should be raised to critical when the owned service principal holds privileged directory roles or Graph app roles.
+    - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-addpassword?view=graph-rest-1.0
+    - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list-owners?view=graph-rest-1.0
+  notes: Ownership is bound to the exact enabled service principal. An app-only owner requires an enabled Graph application permission including Application.ReadWrite.OwnedBy; a user owner requires delegated Graph authorization. A known home-application credential lock blocks this path. Severity should be raised to critical when the owned service principal holds privileged directory roles or Graph app roles.
+
 - id: azure-entraid-graph-application-readwrite-all
   provider: azure
   service: entraid
-  title: Graph Application.ReadWrite.All adds credentials to any app or service principal
+  title: Graph Application.ReadWrite.All adds credentials to tenant applications
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#applicationreadwriteall
   source_revision: 171e422
-  summary: A service principal holding the Graph Application.ReadWrite.All application permission can obtain the privileges of any application-type service principal in the tenant.
+  summary: A service principal holding the Graph Application.ReadWrite.All application permission can add a credential to a tenant-owned application and obtain its service principal's privileges.
   requires:
     all_of:
       - graph_app_permission: Application.ReadWrite.All
@@ -227,35 +271,45 @@
     kind: azure_service_principal
     selector:
       entra_sp_type_in: [Application]
+      entra_graph_application_credential_target: true
     scope: tenant
     aggregate_as: "Application-type service principals in {scope}"
   conditions:
     - id: service_principal_conditional_access
       description: Conditional Access for workload identities can block sign-in of the target service principal.
     - id: sp_lock_configuration_credentials
-      description: The app instance property lock only blocks service-principal-object credentials; this permission can still add credentials to the tenant's application object or lift the lock, so it does not remove the edge.
+      description: An app instance property lock blocks service-principal-object credentials for foreign apps; tenant-owned application credentials remain a separate route.
+    - id: app_management_policy
+      description: Application management policies may restrict credential creation or lifetime on the target application.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Replace Application.ReadWrite.All with Application.ReadWrite.OwnedBy or no write permission, and treat apps holding it as Tier 0.
   references:
     - https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0
     - https://learn.microsoft.com/en-us/graph/permissions-reference
-  notes: Application.ReadWrite.OwnedBy limits this to objects the calling service principal owns (model via azure-entraid-app-owner-credentials). The lock configuration only blocks service-principal-object credentials; app-object credentials remain possible for apps registered in this tenant.
+  notes: Application.ReadWrite.OwnedBy limits this to objects the calling service principal owns (model via azure-entraid-app-owner-credentials). A foreign application's local service principal may also accept addPassword, but this remains unresolved when the foreign app's instance lock is not observable.
+
 - id: azure-entraid-graph-approleassignment-readwrite-all
   provider: azure
   service: entraid
   title: Graph AppRoleAssignment.ReadWrite.All self-grants Graph application roles
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#approleassignmentreadwriteall
   source_revision: 171e422
-  summary: A service principal holding the Graph AppRoleAssignment.ReadWrite.All application permission can obtain the privileges of any Graph application permission and, through it, of any Entra directory role.
+  summary: A service principal with Graph app-role assignment and application-read permission can grant itself Graph application permissions and then manage Entra directory role assignments.
   requires:
     all_of:
       - graph_app_permission: AppRoleAssignment.ReadWrite.All
+    any_of:
+      - - graph_app_permission: Application.Read.All
+      - - graph_app_permission: Directory.Read.All
+      - - graph_app_permission: Application.ReadWrite.All
+      - - graph_app_permission: Directory.ReadWrite.All
   target:
     kind: entra_role
     selector:
       entra_role_assignable: any
+      entra_graph_self_grant_directory_role: true
     scope: tenant
     aggregate_as: "Every Entra directory role (via self-granted Graph app roles) in {scope}"
   conditions:
@@ -263,23 +317,27 @@
       description: Newly granted app roles appear only in tokens issued after the assignment.
   blockers:
     - service_principal_conditional_access_block
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Never grant AppRoleAssignment.ReadWrite.All outside Tier-0 automation; alert on appRoleAssignment creation by service principals.
   references:
     - https://learn.microsoft.com/en-us/graph/api/serviceprincipal-post-approleassignments?view=graph-rest-1.0
-  notes: Microsoft explicitly warns this permission lets an app grant additional privileges to itself. The directory-role reach depends on chaining through RoleManagement.ReadWrite.Directory; newly granted app roles only appear in newly issued tokens.
+  notes: Microsoft requires application or directory read permission alongside AppRoleAssignment.ReadWrite.All for service-principal app-role assignments. The directory-role reach depends on the Microsoft Graph service principal exposing an enabled RoleManagement.ReadWrite.Directory application role; newly granted app roles only appear in newly issued tokens.
+
 - id: azure-entraid-agent-blueprint-credentials
   provider: azure
   service: entraid
   title: Add credentials to an Entra Agent ID blueprint and act as its agents
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#entra-agent-id-blueprint-credential-abuse-agentidentityblueprintaddremovecredsall
-  source_revision: 171e422
-  summary: A principal holding AgentIdentityBlueprint.AddRemoveCreds.All can obtain the privileges of any agent identity blueprint principal and of its child agent identities.
+  source_revision: 2ed8c7001d
+  summary: A principal allowed to add credentials to a specific agent identity blueprint can authenticate as its blueprint principal and may act as its linked child agent identities.
   requires:
     any_of:
       - - graph_app_permission: AgentIdentityBlueprint.AddRemoveCreds.All
+      - - graph_app_permission: AgentIdentityBlueprint.ReadWrite.All
       - - entra_permission: microsoft.directory/agentIdentityBlueprints/credentials/update
+      - - entra_owner_of: "*"
+          object_type: application
   target:
     kind: azure_service_principal
     selector:
@@ -288,7 +346,7 @@
     aggregate_as: "Agent identity blueprint principals and their child agent identities in {scope}"
   conditions:
     - id: agent_token_exchange
-      description: Acting as child agent identities relies on the blueprint-to-agent token exchange (fmi_path) being available for that blueprint.
+      description: Acting as a child agent identity requires a successful blueprint-to-agent token exchange using that child's app ID as fmi_path. Delegated role holders also need an authorized Graph client with the credential-write scope.
   blockers: []
   confidence: conditional
   severity: high
@@ -296,60 +354,4 @@
   references:
     - https://learn.microsoft.com/en-us/entra/agent-id/agent-blueprint
     - https://learn.microsoft.com/en-us/entra/agent-id/autonomous-agent-authentication-authorization-flow
-  notes: The directory permission agentIdentityBlueprints/credentials/update is held by Agent ID Administrator, AI Administrator and Global Administrator (built-in role definitions, checked 2026-10). Blueprint owners who can manage the blueprint application are covered by the generic application owner entries; the extra child-agent reach applies to them as well. Entra Agent ID is a newer (preview-era) feature; validate behaviour per tenant.
-- id: azure-entraid-graph-delegatedpermissiongrant-allprincipals
-  provider: azure
-  service: entraid
-  title: Graph DelegatedPermissionGrant.ReadWrite.All creates tenant-wide delegated consent
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#delegatedpermissiongrantreadwriteall
-  source_revision: 171e422
-  summary: A service principal holding DelegatedPermissionGrant.ReadWrite.All can obtain delegated privileges of users who sign in to a client it controls, for any delegated scope.
-  requires:
-    all_of:
-      - graph_app_permission: DelegatedPermissionGrant.ReadWrite.All
-  target:
-    kind: azure_user
-    selector:
-      any_principal_in_scope: true
-    scope: tenant
-    aggregate_as: "Users of {scope} who sign in to an attacker-controlled client (delegated scopes)"
-  conditions:
-    - id: requires_victim_sign_in
-      description: A target user must still authenticate to the attacker-controlled client; the token is bounded by the delegated scopes and the user's own permissions (and Conditional Access).
-  blockers: []
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict DelegatedPermissionGrant.ReadWrite.All to Tier-0 apps and alert on AllPrincipals oauth2PermissionGrant creation.
-  references:
-    - https://learn.microsoft.com/en-us/graph/api/oauth2permissiongrant-post?view=graph-rest-1.0
-  notes: Bypasses the admin-consent boundary but not user authentication; edges are conditional on user interaction and should not be treated as silent takeover.
-- id: azure-entraid-verified-premfa-broci-keyvault
-  provider: azure
-  service: entraid_apps
-  title: Verified pre-MFA broker token to Key Vault
-  source: src/pentesting-cloud/azure-security/az-basic-information/az-tokens-and-public-applications.md#pre-mfa-tokens-and-downstream-conditional-access-gaps
-  source_revision: 0b36331
-  summary: A broker token issued before MFA succeeds in obtaining Key Vault authority.
-  source_kind: azure_user
-  requires:
-    all_of: []
-  target:
-    kind: azure_verified_authority
-    selector:
-      azure_challenge_fact: azure-entraid-verified-premfa-broci-keyvault
-    scope: any
-    aggregate_as: Verified pre-MFA broker token to Key Vault targets
-  conditions:
-  - id: verified_runtime_evidence
-    description: Exact source, target and successful credential or token access must be attested; absent evidence
-      remains UNKNOWN.
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Remove the vulnerable access path or exposed credential.
-  references:
-  - https://learn.microsoft.com/en-us/entra/identity/conditional-access/overview
-  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
-    absent => UNKNOWN.'
+  notes: Microsoft Graph v1 has a dedicated agentIdentityBlueprint addPassword API. The evaluator joins the exact home-tenant blueprint appId to its blueprint principal and the child agentIdentityBlueprintId, and rechecks directory-role scope or recorded user ownership against the exact blueprint application object. Agent ID Administrator, AI Administrator and Global Administrator may hold the directory permission, but a delegated Graph credential-write scope is still required. Ownership reaches child agents only through the same exact blueprint join. Entra Agent ID remains a newer feature; validate behaviour per tenant.

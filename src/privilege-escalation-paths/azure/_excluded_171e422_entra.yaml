@@ -1,3 +1,7 @@
+# Entra ID / Intune / hybrid-identity group refresh against hacktricks-cloud 171e422: techniques
+# reviewed and intentionally NOT modelled as principal -> principal privilege-escalation edges.
+# Reasons prefixed "NEEDS_SCHEMA" are real escalations that schema v1 cannot express precisely;
+# the proposed requirement/selector/target shapes are tracked outside the catalog.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-intune-privesc.md#intune
   technique: Intune privilege escalation (page section)
   source_revision: 171e422
@@ -63,17 +67,13 @@
   source_revision: 171e422
   reason: "Token theft from a compromised device; same principal reused, no permission-derived edge."
 - source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-cookie.md#attack
-  technique: Replay a victim Entra browser session cookie
-  source_revision: 0b36331
-  reason: Requires access to a victim browser profile, a decryptable cookie compatible with the browser protection
-    in use, and an unexpired session accepted by Entra. These host and session facts are not determined from tenant
-    permissions.
+  technique: Pass-the-cookie
+  source_revision: 171e422
+  reason: "Session theft from a compromised host; same principal reused."
 - source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-pass-the-certificate.md#pass-the-certificate-azure
-  technique: PRT-derived P2P certificate and remote host credential theft
-  source_revision: 0b36331
-  reason: Requires a usable user PRT, security context and derived key, a reachable Entra-joined remote host, sufficient
-    guest privileges and another user PRT present on that host. Those credential, network and host-session facts
-    are not determined from tenant permissions.
+  technique: Pass-the-certificate (P2P certificate)
+  source_revision: 171e422
+  reason: "Credential theft from a compromised device; same principal reused."
 - source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-arc-vulnerable-gpo-deploy-script.md#exploit
   technique: Azure Arc onboarding GPO script secret recovery
   source_revision: 171e422
@@ -95,19 +95,14 @@
   source_revision: 171e422
   reason: "Persistence across tenants; the source tenant is out of the scanned graph."
 - source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-tenant-identity-attacks.md#noauth-and-foci
-  technique: nOAuth mutable email claim account takeover
+  technique: nOAuth and FOCI token reuse
   source_revision: 171e422
-  reason: A victim account is gained only when a relying-party application maps the unverified mutable email claim
-    to that account; the application account mapping and sign-in outcome are runtime facts outside the Entra tenant
-    snapshot. FOCI is a separate token-exchange mechanism.
+  reason: "Application-side identity confusion / token reuse by the same principal; not expressible from tenant configuration."
 - source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/cross-tenant-identity-attacks.md#workload-identity-federation-cross-cloud-confused-deputy
   technique: Workload identity federation confused deputy
   source_revision: 171e422
   reason: "External-IdP trust; adding a FIC is covered by the application/SP credential-update entries."
 - source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/resource-and-service-sharing-attacks.md#resource--service-sharing-matrix
-  technique: Data-only cross-tenant resource keys, SAS and network sharing
+  technique: Cross-tenant resource and service sharing
   source_revision: 171e422
-  reason: Storage/SQL/Cosmos/Service Bus keys and SAS provide resource data access, and peering/Private Link provides
-    network reach; neither alone yields another principal. ACR Task managed-identity theft is azure-acr-task-write-existing-identity;
-    compute and Automation identity execution are covered by their service entries. Credential-bearing image or
-    connection content needs exact content and principal evidence.
+  reason: "Data-plane sharing (Key Vault, SQL, Cosmos, storage) owned by the resource groups of the catalog; no Entra identity edge."

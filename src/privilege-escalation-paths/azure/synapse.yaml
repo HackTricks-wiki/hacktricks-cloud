@@ -1,3 +1,8 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure Synapse techniques (declarative only).
 # Source: hacktricks-cloud az-synapse-privesc.md (rev 171e422).
 
@@ -6,96 +11,29 @@
   service: synapse
   title: Replace the Synapse workspace Entra administrator
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#replace-the-workspace-microsoft-entra-administrator
-  source_revision: 171e422
-  summary: The source can obtain SQL sysadmin on the Synapse workspace dedicated SQL endpoint.
+  source_revision: f9d46eadb8
+  summary: The source can become the Microsoft Entra administrator for the Synapse workspace dedicated SQL endpoint and manage its user databases.
   requires:
     all_of: []
     any_of:
       - - action: Microsoft.Synapse/workspaces/administrators/write
-          scope: "{target.scope}"
+          scope: "*"
       - - action: Microsoft.Synapse/workspaces/sqlAdministrators/write
-          scope: "{target.scope}"
+          scope: "*"
   target:
     kind: azure_dataplane_admin
     selector:
-      any_principal_in_scope: true
+      azure_resource_type: Microsoft.Synapse/workspaces
+      azure_synapse_entra_admin_path: true
     scope: inherited_scope
     aggregate_as: "Synapse SQL admins of {target.scope}"
   conditions:
     - id: sql_endpoint_reachable
       description: Workspace firewall or private networking must allow the source to reach the SQL endpoint.
   blockers: []
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict administrators/write and sqlAdministrators/write and alert on Entra admin changes.
   references:
     - https://learn.microsoft.com/en-us/azure/synapse-analytics/security/how-to-set-up-access-control
-  notes: Tested only for the dedicated SQL endpoint; does not grant Synapse RBAC administrator or serverless SQL access.
-
-- id: azure-synapse-bigdatapools-write-spark-poisoning
-  provider: azure
-  service: synapse
-  title: Poison a Synapse Spark pool configuration to run code as the workspace identity
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#spark-pool-poisoning-via-workspacesbigdatapoolswrite
-  source_revision: 171e422
-  summary: Changing a Spark pool's library requirements or Spark configuration makes later sessions on that pool run attacker-chosen code, which can obtain tokens for the workspace managed identity when jobs run under it.
-  requires:
-    all_of:
-      - action: Microsoft.Synapse/workspaces/bigDataPools/write
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Synapse/workspaces
-    scope: inherited_scope
-    aggregate_as: "Managed identity of Synapse workspace {target.host_resource}"
-  conditions:
-    - id: later_spark_run
-      description: The code runs only when a Spark session or pipeline starts on the poisoned pool after the change; the source cannot trigger it with this action alone.
-    - id: run_identity
-      description: Pipeline-triggered notebooks and Spark job definitions run as the workspace managed identity; interactive sessions run as the signed-in user, which is not derivable.
-    - id: package_source_reachable
-      description: The pool must be able to fetch the attacker package or configuration source (data exfiltration protection and managed VNet rules can block it).
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict bigDataPools/write, enable data exfiltration protection, review pool library and configuration changes, and keep the workspace identity least-privileged.
-  references:
-    - https://learn.microsoft.com/en-us/azure/synapse-analytics/spark/apache-spark-manage-pool-packages
-    - https://learn.microsoft.com/en-us/azure/synapse-analytics/synapse-service-identity
-  notes: Only the workspace system-assigned identity and user-assigned identities on the workspace are modelled; user-session credentials are not.
-
-- id: azure-synapse-rogue-shir-linked-service-credentials
-  provider: azure
-  service: synapse
-  title: Register a rogue Synapse self-hosted integration runtime node and receive linked-service credentials
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#rogue-self-hosted-integration-runtime-node-synapse
-  source_revision: a66f094ede
-  summary: A self-hosted integration runtime node registered with a Synapse runtime auth key executes pipeline activities with the stored linked-service credentials, which can include service-principal secrets.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.Synapse/workspaces/integrationRuntimes/listAuthKeys/action
-          scope: '{pivot}'
-      - - action: Microsoft.Synapse/workspaces/integrationRuntimes/regenerateAuthKey/action
-          scope: '{pivot}'
-  pivot_resource_type: Microsoft.Synapse/workspaces
-  target:
-    kind: azure_service_principal
-    selector:
-      credential_stored_in_scope: '{pivot}'
-    scope: any
-    aggregate_as: Service principals with credentials stored in linked services of {pivot}
-  conditions:
-    - id: linked_service_uses_sp_secret_on_shir
-      description: Only linked services that authenticate with a service-principal secret or certificate and connect through that self-hosted runtime are exposed; other credential types are data access only.
-    - id: activity_runs_on_rogue_node
-      description: An activity using the linked service must be dispatched to the rogue node while it is registered.
-  blockers: []
-  confidence: conditional
-  severity: high
-  mitigation: Restrict integration runtime listAuthKeys and regenerateAuthKey, alert on new runtime node registrations, and store linked-service secrets in Key Vault with managed-identity access.
-  references:
-    - https://learn.microsoft.com/en-us/azure/data-factory/create-self-hosted-integration-runtime
-  notes: Same primitive as azure-datafactory-rogue-shir-linked-service-credentials. getConnectionInfo and syncCredentials are recon and credential-sync helpers; regenerateAuthKey also evicts legitimate nodes.
+  notes: The selected principal must be controlled by the source, and the write must authorize the activeDirectory child of an inventoried Synapse workspace. Applies to the dedicated SQL endpoint; does not grant Synapse RBAC administrator or serverless SQL access.

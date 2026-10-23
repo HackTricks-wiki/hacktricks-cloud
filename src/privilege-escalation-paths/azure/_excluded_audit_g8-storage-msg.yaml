@@ -1,25 +1,20 @@
+# Azure privesc completeness audit (g8-storage-msg): techniques reviewed and intentionally NOT modelled.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#authorization-rule-key-disclosure-and-rotation
   technique: Service Bus namespace authorization-rule keys
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies serviceBus.rules[{namespaceId,ruleId,rights}],
-    namespaces[{id,disableLocalAuth}]. The existing rule must carry the claimed right and SAS auth must be enabled.
+  reason: Key disclosure is data access; its message-injection use is the namespace listKeys / regenerateKeys alternative of azure-servicebus-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesdisasterrecoveryconfigsauthorizationruleslistkeysaction
   technique: Service Bus Geo-DR alias keys
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies serviceBus.geoDrRules[{aliasId,namespaceId,rights}],
-    namespaces[{id,disableLocalAuth}]. Alias existence, rule rights and local authentication decide the resulting
-    credential.
+  reason: Key disclosure is data access; its message-injection use is the disasterRecoveryConfigs listkeys alternative of azure-servicebus-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesauthorizationruleswrite
   technique: Service Bus namespace SAS rule creation
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies serviceBus.namespaces[{id,disableLocalAuth}],
-    rules[{namespaceId,ruleId,rights}]. New Manage rule requires enabled SAS auth and both write and key read-back
-    on the same namespace.
+  reason: Self-minted SAS credential is persistence/data access; using it to inject needs the key read back, which is the listKeys alternative of azure-servicebus-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesqueuestopicsauthorizationruleslistkeysaction-or-microsoftservicebusnamespacesqueuestopicsauthorizationrulesregeneratekeysaction
   technique: Service Bus entity authorization-rule keys
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies serviceBus.entityRules[{entityId,ruleId,rights}],
-    namespaces[{id,disableLocalAuth}]. Entity-scoped rules cannot be promoted to namespace-wide Manage.
+  reason: Key disclosure is data access; its message-injection use is the queues/topics listKeys / regenerateKeys alternative of azure-servicebus-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-servicebus-privesc.md#microsoftservicebusnamespacesqueuestopicsauthorizationruleswrite
   technique: Service Bus entity SAS rule creation
   source_revision: a66f094ede
@@ -44,35 +39,28 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslistkeysaction
   technique: Storage account keys
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,allowSharedKeyAccess,publicNetworkAccess,networkAcls}].
-    Shared Key disabled blocks use of listed keys.
+  reason: Data access; consumer-poisoning use is the listKeys alternative of azure-storage-blob-poisoning-consumer and azure-queue-message-injection-consumer. Function
+    App content storage is modelled in functions.yaml.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsregeneratekeyaction
   technique: Storage account key rotation
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,allowSharedKeyAccess,publicNetworkAccess,networkAcls}].
-    Rotated keys grant no usable data-plane access when Shared Key is disabled.
+  reason: Data access/DoS; consumer-poisoning use is the regenerateKey alternative of azure-storage-blob-poisoning-consumer and azure-queue-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslistaccountsasaction
   technique: Storage account SAS
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,allowSharedKeyAccess,sasPolicy,enabledServices}].
-    The requested SAS service, resource and permission flags must be valid and Shared Key enabled.
+  reason: Data access; consumer-poisoning use is the listAccountSas alternative of azure-storage-blob-poisoning-consumer and azure-queue-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslistservicesasaction
   technique: Storage service SAS
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,allowSharedKeyAccess,enabledServices}].
-    A service SAS is limited to the requested service/resource and Shared Key must be enabled.
+  reason: Data access; consumer-poisoning use is the listServiceSas alternative of azure-storage-blob-poisoning-consumer and azure-queue-message-injection-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslocaluserswrite-microsoftstoragestorageaccountslocalusersread
   technique: Storage SFTP local user creation
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,isHnsEnabled,isSftpEnabled}],
-    localUsers[{id,homeDirectory,permissionScopes,hasSshKey,hasPassword}]. SFTP and HNS must be enabled; created
-    user rights are limited to selected containers.
+  reason: Data access/persistence; blob-poisoning use is the localUsers/write alternative of azure-storage-blob-poisoning-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountslocalusersregeneratepasswordaction
   technique: Storage SFTP local user password reset
   source_revision: a66f094ede
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies storageAccounts[{id,isHnsEnabled,isSftpEnabled}],
-    localUsers[{id,permissionScopes,hasPassword}]. Password rotation inherits only the existing local user container
-    scopes.
+  reason: Data access; blob-poisoning use is the localUsers/regeneratePassword alternative of azure-storage-blob-poisoning-consumer.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#microsoftappconfigurationconfigurationstoreslistkeysaction
   technique: App Configuration access keys
   source_revision: a66f094ede

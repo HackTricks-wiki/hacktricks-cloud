@@ -1,18 +1,29 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Spring Apps techniques (declarative only).
+# Source: hacktricks-cloud az-spring-apps-privesc.md (rev 171e422).
+# Action names checked against Microsoft's Spring Apps custom-role permission lists (how-to-permissions).
+# App identities live on Microsoft.AppPlatform/Spring/apps; {target.host_resource} is that app.
+
 - id: azure-springapps-deployment-write-app-identity
   provider: azure
   service: spring_apps
   title: Change a Spring Apps deployment to run attacker code as the app's managed identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#app-deploy-rce--managed-identity-theft-marquee
-  source_revision: 171e422
+  source_revision: f4dab1c063
   summary: The source can run code inside a Spring app and obtain the privileges of the managed identities attached to that app.
   requires:
     all_of:
       - action: Microsoft.AppPlatform/Spring/apps/deployments/write
-        scope: "{target.host_resource}"
+        scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.AppPlatform/Spring/apps
+      azure_spring_deployment_identity_path: true
     scope: inherited_scope
     aggregate_as: "Managed identities of Spring app {target.host_resource}"
   conditions:
@@ -28,13 +39,14 @@
   references:
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-enable-system-assigned-managed-identity
-  notes: Covers system- and user-assigned app identities. Updating an existing deployment needs only deployments/write; apps/write is not required. Azure Spring Apps Basic/Standard/Enterprise are in a retirement period ending 2028.
+  notes: Covers system- and user-assigned app identities. The write must authorize a deployment child of the app carrying the identity; apps/write is not required. Azure Spring Apps Basic/Standard/Enterprise are in a retirement period ending 2028.
+
 - id: azure-springapps-app-write-user-assigned-identity
   provider: azure
   service: spring_apps
   title: Create or update a Spring app with a user-assigned identity and deploy code to it
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#app-deploy-rce--managed-identity-theft-marquee
-  source_revision: 171e422
+  source_revision: f4dab1c063
   summary: The source can attach a user-assigned identity it may assign to a Spring app and run code as that identity.
   requires:
     all_of:
@@ -44,12 +56,11 @@
         scope: "{pivot}"
       - action: Microsoft.AppPlatform/Spring/apps/deployments/write
         scope: "{pivot}"
-  pivot_resource_type: Microsoft.AppPlatform/Spring
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
+      azure_spring_app_uami_path: true
     scope: inherited_scope
     aggregate_as: "User-assigned identities assignable in {scope}"
   conditions:
@@ -63,163 +74,4 @@
   references:
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-permissions
     - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/how-to-manage-user-assigned-managed-identities
-  notes: The pivot is a Spring Apps service instance; the new or updated app is its child.
-- id: azure-audit-listtestkeys-public-test-endpoints
-  provider: azure
-  service: spring_apps
-  title: listTestKeys / public test endpoints
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#listtestkeys--public-test-endpoints
-  summary: app endpoint key and, conditionally, application secrets
-  requires:
-    all_of:
-    - action: Microsoft.AppPlatform/Spring/listTestKeys/action
-      scope: '{target.scope}'
-  target:
-    kind: azure_verified_authority
-    scope: inherited_scope
-    aggregate_as: listTestKeys / public test endpoints on {target.scope}
-    outcome: permission_grant
-    selector:
-      azure_challenge_fact: azure-audit-listtestkeys-public-test-endpoints
-  conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  blockers:
-  - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action to principals that need this service privilege.
-  references:
-  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
-  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
-    evaluate UNKNOWN. Collector fact required: springApps.testEndpoints.'
-- id: azure-audit-microsoftappplatformspringregeneratetestkeyaction
-  provider: azure
-  service: spring_apps
-  title: Microsoft.AppPlatform/Spring/regenerateTestKey/action
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringregeneratetestkeyaction
-  summary: replacement app endpoint key and conditional secrets
-  requires:
-    all_of:
-    - action: Microsoft.AppPlatform/Spring/regenerateTestKey/action
-      scope: '{target.scope}'
-  target:
-    kind: azure_verified_authority
-    scope: inherited_scope
-    aggregate_as: Microsoft.AppPlatform/Spring/regenerateTestKey/action on {target.scope}
-    outcome: permission_grant
-    selector:
-      azure_challenge_fact: azure-audit-microsoftappplatformspringregeneratetestkeyaction
-  conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  blockers:
-  - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action to principals that need this service privilege.
-  references:
-  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
-  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
-    evaluate UNKNOWN. Collector fact required: springApps.testEndpoints.'
-- id: azure-audit-custom-container-build-service-supply-chain
-  provider: azure
-  service: spring_apps
-  title: Custom container / build-service supply chain
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#custom-container--build-service-supply-chain
-  summary: attacker code executes in future app deployment as its identity
-  requires:
-    all_of: []
-    any_of:
-    - - action: Microsoft.AppPlatform/Spring/buildServices/builders/write
-        scope: '{target.scope}'
-    - - action: Microsoft.AppPlatform/Spring/buildServices/builders/buildpackBindings/write
-        scope: '{target.scope}'
-  target:
-    kind: azure_managed_identity
-    selector:
-      azure_challenge_fact: azure-audit-custom-container-build-service-supply-chain
-    scope: inherited_scope
-    aggregate_as: Custom container / build-service supply chain on {target.scope}
-    outcome: workload_execution
-  conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  blockers:
-  - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action to principals that need this service privilege.
-  references:
-  - https://learn.microsoft.com/en-us/azure/spring-apps/basic-standard/retirement-announcement
-  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
-    evaluate UNKNOWN. Collector fact required: springApps.builderBindings.'
-- id: azure-spring-apps-microsoftappplatformspringapmslistsecretkeysaction
-  provider: azure
-  service: spring_apps
-  title: Obtain Spring Apps APM integration credentials
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#microsoftappplatformspringapmslistsecretkeysaction
-  source_revision: 0b36331
-  summary: returns the secret keys of a Spring Apps APM (Application Performance Monitor) integration. An APM config holds the credentials Spring Apps uses to ship telemetry to a monitoring backend — e.g. an Application Insights connection string, or a New Relic license key / Dynatrace API token / AppDynamics / Elastic APM secret. Stealing them grants access to the org's monitoring backend (read telemetry that itself often leaks internal hostnames, SQL, headers and tokens; inject or forge telemetry) and, for third-party SaaS APMs, a credential to pivot into that external account. Distinct from the config
-  requires:
-    all_of:
-    - action: Microsoft.AppPlatform/Spring/apms/listSecretKeys/action
-      scope: '{target.scope}'
-  target:
-    kind: azure_dataplane_admin
-    selector:
-      azure_challenge_fact: azure-spring-apps-microsoftappplatformspringapmslistsecretkeysaction
-    scope: inherited_scope
-    aggregate_as: Pending service authority for spring_apps
-    outcome: application_admin
-    grants:
-    - The named APM integration key or telemetry-backend token configured on the Spring Apps service.
-  conditions:
-  - id: collector_fact_required
-    description: The azure_spring_apms inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md
-  notes: 'Collector fact required: azure_spring_apms. UNKNOWN until backend and credential type are known; telemetry ingestion-only keys are not privileged principals.'
-- id: azure-spring-apps-config-server-bindings-secret-exposure
-  provider: azure
-  service: spring_apps
-  title: Read Spring Apps environment and binding secrets
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md#config-server--bindings--secret-exposure
-  source_revision: 0b36331
-  summary: The page explicitly describes environment-variable and binding secret exposure; a secret-bearing configuration is a credential target when present.
-  requires:
-    all_of: []
-    any_of:
-    - - action: Microsoft.AppPlatform/Spring/apps/read
-        scope: '{target.scope}'
-        data_action: true
-    - - action: Microsoft.AppPlatform/Spring/apps/bindings/read
-        scope: '{target.scope}'
-        data_action: true
-    - - action: Microsoft.AppPlatform/Spring/configService/read
-        scope: '{target.scope}'
-        data_action: true
-  target:
-    kind: azure_dataplane_admin
-    selector:
-      azure_challenge_fact: azure-spring-apps-config-server-bindings-secret-exposure
-    scope: inherited_scope
-    aggregate_as: Pending service authority for spring_apps
-    outcome: application_admin
-    grants:
-    - Actual configured application environment or binding credential; no target if no secret value exists.
-  conditions:
-  - id: collector_fact_required
-    description: The azure_spring_app_secrets inventory must identify the exact target and rights; absent or incomplete facts remain UNKNOWN.
-  confidence: conditional
-  severity: medium
-  mitigation: Restrict the listed permissions to trusted operators and rotate or revoke resulting credentials or grants.
-  references:
-  - https://github.com/HackTricks-wiki/hacktricks-cloud/blob/0b36331/src/pentesting-cloud/azure-security/az-privilege-escalation/az-spring-apps-privesc.md
-  notes: 'Collector fact required: azure_spring_app_secrets. UNKNOWN until actual secret-bearing configuration and its principal are identified; poisoned config requires runtime consumption.'
+  notes: App and deployment permissions must authorize one app under an inventoried Spring Apps service; assignment must authorize the exact user-assigned identity.

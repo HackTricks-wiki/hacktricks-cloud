@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Resource Manager (organization / folder / project IAM) privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-resourcemanager-privesc.md (rev 171e422).
 # Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
@@ -5,82 +6,242 @@
 
 - id: gcp-resourcemanager-organizations-setiampolicy
   provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   service: resourcemanager
-  title: Rewrite the organization IAM policy
+  title: Self-grant Organization Policy Admin access
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
   source_revision: 171e422
-  summary: The source can obtain the privileges of the owner of every organization on which it holds resourcemanager.organizations.setIamPolicy.
+  summary: A principal that can change an active organization's IAM policy may grant itself Organization Policy Admin when it lacks the policy-setting permission.
   requires:
     all_of:
       - action: resourcemanager.organizations.setIamPolicy
-        resource: "{target.scope}"
+        resource: "{target.policy_resource}"
   target:
-    kind: gcp_scope_owner
+    kind: gcp_verified_authority
     selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "Organizations whose IAM policy the source controls"
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - orgpolicy.policy.set
+    aggregate_as: "Organization policy-setting permission the source could grant itself"
   conditions:
     - id: allowed_member_domains
       description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
   blockers:
     - gcp_deny_policy
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict roles/resourcemanager.organizationAdmin and roles/iam.securityAdmin at the organization to break-glass identities.
+  notes: The prospective path requires the active organization and full IAM policy, the grantable Organization Policy Admin role, a newly effective policy-setting permission, and no unresolved IAM, member, deny, or PAB blocker. Other grantable roles may provide different new permissions and need separate evidence.
   references:
     - https://cloud.google.com/resource-manager/docs/access-control-org
 
 - id: gcp-resourcemanager-folders-setiampolicy
   provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   service: resourcemanager
-  title: Rewrite a folder IAM policy
+  title: Self-grant Folder Admin access on a folder
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
   source_revision: 171e422
-  summary: The source can obtain the privileges of the owner of every folder (and its subtree) on which it holds resourcemanager.folders.setIamPolicy.
+  summary: A principal that can change an active folder's IAM policy may grant itself Folder Admin when it lacks at least one supported folder permission.
   requires:
     all_of:
       - action: resourcemanager.folders.setIamPolicy
-        resource: "{target.scope}"
+        resource: "{target.policy_resource}"
   target:
-    kind: gcp_scope_owner
+    kind: gcp_verified_authority
     selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "Folders whose IAM policy the source controls"
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - resourcemanager.folders.create
+      - resourcemanager.folders.delete
+      - resourcemanager.folders.move
+      - resourcemanager.folders.update
+      - resourcemanager.folders.undelete
+      - resourcemanager.projects.setIamPolicy
+    aggregate_as: "Folder Admin permissions the source could grant itself"
   conditions:
     - id: allowed_member_domains
       description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
   blockers:
     - gcp_deny_policy
-  confidence: derived
+  confidence: conditional
   severity: critical
   mitigation: Restrict roles/resourcemanager.folderAdmin and roles/resourcemanager.folderIamAdmin.
+  notes: The prospective path requires an active exact folder, its complete IAM policy, a grantable Folder Admin role, a new effective permission on that folder or a known descendant project, and no unresolved IAM or policy blockers. The policy change has not been executed.
 
 - id: gcp-resourcemanager-projects-setiampolicy
   provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
   service: resourcemanager
-  title: Rewrite a project IAM policy
+  title: Self-grant Editor access on a project
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
   source_revision: 171e422
-  summary: The source can obtain the privileges of the owner of every project on which it holds resourcemanager.projects.setIamPolicy.
+  summary: A principal that can change an active project's IAM policy may grant itself Editor when that role adds at least one permission it lacks at the project.
+  requires:
+    all_of:
+      - action: resourcemanager.projects.setIamPolicy
+        resource: "{target.policy_resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - roles/editor
+    aggregate_as: "Editor role the source could grant itself on a project"
+  conditions:
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+    - id: default_service_account_basic_role_block
+      description: iam.managed.preventPrivilegedBasicRolesForDefaultServiceAccounts can reject Editor grants to default service accounts.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict roles/resourcemanager.projectIamAdmin, roles/iam.securityAdmin and roles/owner.
+  notes: The prospective path needs an active exact project, its complete IAM policy, a complete grantable Editor role, a new effective permission, and resolved IAM conditions, member and basic-role restrictions, deny, group, and PAB evidence. Other project roles may provide different new permissions and need separate evidence.
+
+- id: gcp-resourcemanager-organizations-setiampolicy-deny-admin
+  provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
+  service: resourcemanager
+  title: Self-grant Deny Admin access on an organization
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: A principal that can change an active organization's IAM policy may grant itself Deny Admin when it lacks the permission to create deny policies.
+  requires:
+    all_of:
+      - action: resourcemanager.organizations.setIamPolicy
+        resource: "{target.policy_resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - iam.denypolicies.create
+    aggregate_as: "Deny-policy administration permission the source could grant itself"
+  conditions:
+    - id: allowed_member_domains
+      description: Effective member restrictions can reject the new role binding.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict organization IAM policy writes to administrators who need to grant roles at that scope.
+  notes: The prospective path requires the active organization and full IAM policy, the grantable Deny Admin role, a newly effective deny-policy permission, and resolved IAM, member, deny, group, and PAB evidence.
+  references:
+    - https://cloud.google.com/iam/docs/roles-permissions/iam
+
+- id: gcp-resourcemanager-organizations-setiampolicy-role-admin
+  provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
+  service: resourcemanager
+  title: Self-grant Organization Role Administrator access
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: A principal that can change an active organization's IAM policy may grant itself Organization Role Administrator when it lacks permission to create custom roles.
+  requires:
+    all_of:
+      - action: resourcemanager.organizations.setIamPolicy
+        resource: "{target.policy_resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - iam.roles.create
+    aggregate_as: "Organization custom-role administration permission the source could grant itself"
+  conditions:
+    - id: allowed_member_domains
+      description: Effective member restrictions can reject the new role binding.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict organization IAM policy writes to administrators who need to grant roles at that scope.
+  notes: The prospective path requires the active organization and full IAM policy, the grantable Organization Role Administrator role, a newly effective custom-role permission, and resolved IAM, member, deny, group, and PAB evidence.
+  references:
+    - https://cloud.google.com/iam/docs/roles-permissions/iam
+
+- id: gcp-resourcemanager-projects-setiampolicy-project-delete
+  provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
+  service: resourcemanager
+  title: Self-grant Project Deleter access
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: A principal that can change an active project's IAM policy may grant itself Project Deleter when it lacks project deletion permission.
+  requires:
+    all_of:
+      - action: resourcemanager.projects.setIamPolicy
+        resource: "{target.policy_resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+      - resourcemanager.projects.delete
+    aggregate_as: "Project deletion permission the source could grant itself"
+  conditions:
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict project IAM policy write access to administrators who need to grant roles on the project.
+  notes: The prospective path requires an active exact project, its complete IAM policy, the grantable Project Deleter role, a newly effective project deletion permission, and resolved IAM conditions, member restrictions, deny, group, and PAB evidence.
+
+- id: gcp-resourcemanager-projects-setiampolicy-sa-token
+  provider: gcp
+  source_kind:
+    - gcp_user
+    - gcp_service_account
+  service: resourcemanager
+  title: Grant access to impersonate a project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-resourcemanager-privesc.md#organizationsfoldersprojectssetiampolicy--self-grant-on-a-hierarchy-node
+  source_revision: 171e422
+  summary: A principal that can change a project's IAM policy may grant itself Service Account Token Creator on the project and mint a token for an enabled service account it could not already impersonate.
   requires:
     all_of:
       - action: resourcemanager.projects.setIamPolicy
         resource: "{target.scope}"
   target:
-    kind: gcp_scope_owner
+    kind: gcp_service_account
     selector:
-      any_principal_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "Projects whose IAM policy the source controls"
+      gcp_project_iam_sa_token_grant: true
+    scope: any
+    aggregate_as: "Service accounts reachable through a project IAM Token Creator grant"
   conditions:
-    - id: owner_invite
-      description: Granting roles/owner to a user outside the organization through the API may require an invitation flow; other admin-equivalent roles (e.g. roles/resourcemanager.projectIamAdmin plus service roles) are directly grantable.
     - id: allowed_member_domains
-      description: iam.allowedPolicyMemberDomains can reject bindings for principals outside allowed domains.
+      description: Effective organization policy can reject the new Token Creator binding for the source principal.
   blockers:
     - gcp_deny_policy
-  confidence: derived
+    - disabled_service_account
+  confidence: conditional
   severity: critical
-  mitigation: Restrict roles/resourcemanager.projectIamAdmin, roles/iam.securityAdmin and roles/owner.
+  mitigation: Limit project IAM policy writers and grant Service Account Token Creator only on the specific accounts that need impersonation.
+  notes: The prospective path joins an active exact project, full project and service-account IAM policies, an enabled named service account, a full Token Creator role, absent prior token access, and resolved IAM, member, deny, group, and PAB evidence.

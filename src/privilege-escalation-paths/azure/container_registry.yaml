@@ -1,9 +1,17 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Container Registry techniques (declarative only).
+# Source: hacktricks-cloud az-container-registry-privesc.md (rev 171e422, re-verified).
+
 - id: azure-acr-task-write-existing-identity
   provider: azure
   service: container_registry
   title: Create or update an ACR Task running with the task's managed identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#microsoftcontainerregistryregistriestaskswrite
-  source_revision: 171e422
+  source_revision: db5b136660
   summary: The source can obtain the privileges of the ACR Task's managed identities.
   requires:
     all_of:
@@ -13,6 +21,7 @@
     kind: azure_managed_identity
     selector:
       attached_to_service: Microsoft.ContainerRegistry/registries/tasks
+      azure_acr_existing_task_identity: true
     scope: inherited_scope
     aggregate_as: Identities of ACR Task {target.host_resource}
   conditions:
@@ -25,13 +34,14 @@
   mitigation: Restrict tasks/write and keep task identities least-privileged.
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
-  notes: A newly created system-assigned task identity has no roles; value comes from existing identity-bearing tasks.
+  notes: Only an existing task whose native identity matches the target qualifies; write on the exact task can change its steps or schedule without replacing its identity.
+
 - id: azure-acr-task-assign-user-assigned-identity
   provider: azure
   service: container_registry
   title: Create an ACR Task with a user-assigned identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#microsoftcontainerregistryregistriestaskswrite
-  source_revision: 171e422
+  source_revision: db5b136660
   summary: The source can obtain the privileges of user-assigned identities assignable in scope.
   requires:
     all_of:
@@ -45,6 +55,7 @@
     selector:
       managed_identity_type: user_assigned
       azure_identity_assignable_in_scope: true
+      azure_acr_assignable_uami: true
     scope: inherited_scope
     aggregate_as: User-assigned identities assignable in {scope}
   conditions:
@@ -57,157 +68,14 @@
   mitigation: Restrict userAssignedIdentities/assign/action and tasks/write.
   references:
     - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
-  notes: ''
-- id: azure-acr-push-restart-aci-consumer
-  provider: azure
-  service: container_registry
-  title: Overwrite a registry image and restart the consuming container group
-  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespushwrite-microsoftcontainerinstancecontainergroupsrestartaction
-  source_revision: a66f094ede
-  summary: Replacing the image tag a container group pulls and restarting the group runs attacker code with the group's managed identities.
-  requires:
-    all_of:
-      - action: Microsoft.ContainerInstance/containerGroups/restart/action
-        scope: "{target.host_resource}"
-    any_of:
-      - - action: Microsoft.ContainerRegistry/registries/push/write
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/repositories/content/read
-          data_action: true
-          scope: "{pivot}"
-        - action: Microsoft.ContainerRegistry/registries/repositories/content/write
-          data_action: true
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/listCredentials/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/regenerateCredential/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/generateCredentials/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/importImage/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/taskruns/write
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/scheduleRun/action
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.ContainerRegistry/registries
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.ContainerInstance/containerGroups
-    scope: inherited_scope
-    aggregate_as: "Managed identities of container group {target.host_resource}"
-  conditions:
-    - id: group_pulls_mutable_tag_from_pivot
-      description: The container group must pull a mutable tag (not a digest) from registry {pivot}; the image-to-registry link is not evaluated.
-    - id: registry_write_allowed
-      description: The tag must not be locked (writeEnabled false) and the registry network rules must allow the push.
-    - id: tag_write_path
-      description: listCredentials and regenerateCredential need the admin user enabled; generateCredentials needs an existing token whose scope map allows push to the consumed repository; importImage must force-overwrite the existing tag; taskruns/write and scheduleRun push through a build run.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Pin consumer images by digest, lock production tags, disable the registry admin user, and restrict AcrPush / repository content write, import, task-run and containerGroups/restart/action.
-  references:
-    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-lock
-  notes: The repository content pair (both read and write are required for the manifest PUT) applies to registries using ABAC repository permissions. Consumers that only re-pull on their own (scale-out, node replacement, scheduled jobs) are not modelled because the image-to-registry consumer link is not a selector yet.
-- id: azure-acr-push-restart-containerapp-consumer
-  provider: azure
-  service: container_registry
-  title: Overwrite a registry image and restart the consuming Container App revision
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#mutable-image-tag-poisoning-with-repository-content-permissions
-  source_revision: a66f094ede
-  summary: Replacing the mutable tag a Container App pulls and restarting its revision runs attacker code with the app's managed identities.
-  requires:
-    all_of:
-      - action: Microsoft.App/containerApps/revisions/restart/action
-        scope: "{target.host_resource}"
-    any_of:
-      - - action: Microsoft.ContainerRegistry/registries/push/write
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/repositories/content/read
-          data_action: true
-          scope: "{pivot}"
-        - action: Microsoft.ContainerRegistry/registries/repositories/content/write
-          data_action: true
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/listCredentials/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/regenerateCredential/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/generateCredentials/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/importImage/action
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/taskruns/write
-          scope: "{pivot}"
-      - - action: Microsoft.ContainerRegistry/registries/scheduleRun/action
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.ContainerRegistry/registries
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.App/containerApps
-    scope: inherited_scope
-    aggregate_as: "Managed identities of Container App {target.host_resource}"
-  conditions:
-    - id: app_pulls_mutable_tag_from_pivot
-      description: The active revision must reference a mutable tag (not a digest) from registry {pivot}; the image-to-registry link is not evaluated.
-    - id: registry_write_allowed
-      description: The tag must not be locked (writeEnabled false) and the registry network rules must allow the push.
-    - id: tag_write_path
-      description: listCredentials and regenerateCredential need the admin user enabled; generateCredentials needs an existing token whose scope map allows push to the consumed repository; importImage must force-overwrite the existing tag; taskruns/write and scheduleRun push through a build run.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Pin Container App images by digest, lock production tags, disable the registry admin user, and restrict repository write paths and revisions/restart/action.
-  references:
-    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-rbac-abac-repository-permissions
-    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-image-tag-version
-  notes: HackTricks observed that replacing the tag does not hot-reload the running revision, while a revision restart pulled the new digest and ran it with the app identity.
-- id: azure-acr-verified-image-secret
-  provider: azure
-  service: container_registry
-  title: Pull ACR image with verified principal credential
-  source: src/pentesting-cloud/azure-security/az-cross-tenant-and-cross-subscription-attacks/historical-cross-tenant-vulnerabilities.md#cross-subscription-not-cross-tenant-abuse-worth-noting
-  source_revision: 0b36331
-  summary: Read an image layer containing a validated credential for another cloud principal.
-  source_kind:
-  - azure_user
-  - azure_service_principal
-  - azure_managed_identity
-  requires:
-    all_of:
-    - action: Microsoft.ContainerRegistry/registries/pull/read
-      scope: '{pivot}'
-  target:
-    kind: azure_service_principal
-    selector:
-      azure_challenge_fact: azure-acr-verified-image-secret
-    scope: any
-    aggregate_as: Pull ACR image with verified principal credential targets
-  conditions:
-  - id: verified_runtime_evidence
-    description: Exact source, target and successful credential or token access must be attested; absent evidence
-      remains UNKNOWN.
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  confidence: conditional
-  severity: high
-  mitigation: Remove the vulnerable access path or exposed credential.
-  references:
-  - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-roles
-  notes: 'Collector fact required: azure_privesc_challenge_evidence; exact technique/source/target evidence required,
-    absent => UNKNOWN.'
+  notes: Task write is evaluated on an inventoried ACR registry or existing task, and the target UAMI must have a matching resource record; missing inventory is unresolved.
+
 - id: azure-acr-layer-credential
   provider: azure
   service: container_registry
   title: Extract credentials from ACR image layers
   source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespullread
-  source_revision: 0b36331
+  source_revision: bd4bcd0ea3
   summary: Read a verified usable credential from an ACR image layer and gain its Entra service principal permissions.
   requires:
     all_of:
@@ -223,13 +91,11 @@
     aggregate_as: Verified credential holders in {pivot}
   conditions:
   - id: verified_credential
-    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
-      this edge; uncollected, partial, or unverified content is UNKNOWN.
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates this edge; uncollected, partial, or unverified content creates no path.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
   references:
   - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-concepts
-  notes: Draft requires azure.acr.image_layer_credential_holders; the evaluator must join only verified holders,
-    and return UNKNOWN if that fact is missing or incomplete.
+  notes: Only an exact, usable credential mapped to a named Entra service principal by reviewed azure_privesc_challenge_evidence creates a path; missing or incomplete review creates no path.
