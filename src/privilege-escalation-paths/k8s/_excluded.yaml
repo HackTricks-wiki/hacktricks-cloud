@@ -1,63 +1,58 @@
 # Kubernetes / OpenShift HackTricks techniques reviewed and intentionally NOT modelled as
 # principal -> principal privilege-escalation edges. Source rev a53b46392c, re-verified against 171e422 (see docs/privesc-ledgers/privesc-k8s.md);
 # adversarial re-audit at a66f094ede (NEEDS SCHEMA rows reference privesc-schema-proposals-k8s.md).
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#access-any-resource-with-a-specific-verb
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#access-any-resource-with-a-specific-verb
   technique: Single verb on all resources (e.g. get * or create *)
   reason: Not a distinct permission set; the evaluator's wildcard expansion matches the specific entries (secrets read, pods create, serviceaccounts/token create...).
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#stealth
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#pod-security-mode-effects
   technique: Stealthy pod naming/placement
   reason: Evasion advice; same permissions as pods create.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#port-forward
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/attacking-kubernetes-from-inside-a-pod.md#podsportforward-network-access
   technique: pods/portforward
   reason: Network access to a pod listener; no new identity.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-interactive-subresources
   technique: pods/proxy and services/proxy
   reason: HTTP proxying to backends (network pivot); no new identity.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#hosts-writable-varlog-escape
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/node-post-exploitation.md#host-log-symlink-file-reads
   technique: Writable /var/log hostPath symlink escape via kubelet logs
   reason: Creating such a pod is subsumed by k8s-nodes-privileged-pod-create (any hostPath is PSA-baseline-blocked); for existing pods the kubelet log-symlink read is kubelet-version dependent and yields a host file read, so writable /var/log is deliberately not counted by k8s_node_hosting_host_mount_pod_in_namespace.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#bypassing-hostpath-readonly-protection
   technique: Bypassing hostPath readOnly
   reason: Refinement of hostPath pod creation (same permissions, same target, PSA blocker identical).
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#reading-a-secret--brute-forcing-token-ids
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/secrets-and-configmaps.md#legacy-token-secret-name-guessing
   technique: Brute-forcing legacy token Secret names with get
   reason: Covered by k8s-rbac-secrets-read-legacy-sa-token (get_requires_secret_name condition).
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#encryption-configuration-found-on-a-control-plane-node
   technique: EncryptionConfiguration keys on control-plane hosts
   reason: Data read from a host already compromised; no new identity.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#coredns-config-map
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#coredns-config-map
   technique: CoreDNS ConfigMap modification
   reason: DNS traffic redirection (network attack); no new identity.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#escalating-in-gke
-  technique: GKE access via GCP IAM container.* permissions
-  reason: GCP-to-Kubernetes edge driven by GCP IAM; belongs to the gcp catalog (gcp-container-privesc).
+  technique: GKE RoleBinding self-grant without exact authenticated subject and permission proof
+  reason: The narrow get-pods self-grant is active only with a unique reviewed source, accepted binding and before/after permission proof. A RoleBinding write or GCP IAM container.* grant alone cannot prove the source controls the bound subject or gained Kubernetes permission.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#validatingwebhookconfigurations-or-mutatingwebhookconfigurations
   technique: ValidatingWebhookConfiguration create
-  reason: A validating webhook cannot mutate objects, but it can receive the complete AdmissionReview for a later
-    matching Secret create/update. Observation is data disclosure unless that exact review contains a still-valid
-    credential for another identity; such an event and credential are runtime/content facts unavailable to a configuration
-    snapshot. Mutating webhook code injection is k8s-workloads-mutating-webhook-injection; weakening an existing
-    configuration is k8s-admission-webhook-configuration-weaken.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#services-status-cve-2020-8554
+  reason: A new validating webhook can only admit/deny and observe objects (data disclosure); identity gain is through mutating webhooks (k8s-workloads-mutating-webhook-injection) and weakening existing configurations is k8s-admission-webhook-configuration-weaken.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#services-status-cve-2020-8554
   technique: services/status LoadBalancer IP spoofing (CVE-2020-8554)
   reason: Traffic interception (MiTM); no new identity.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#nodes-and-pods-status
   technique: pods/status and nodes/status readiness/IP/label spoofing (traffic paths)
   reason: "Readiness/IP/label spoofing for Services, EndpointSlices and NetworkPolicy is traffic manipulation without a new identity. Identity-bearing combinations are modelled: node attraction of pending pods (nodes/status labels or capacity, pods/status nominatedNodeName) in k8s-nodes-attract-pending-pod-to-controlled-node, replacement via pods/status in k8s-nodes-replacement-pod-to-controlled-node, pods/binding and bindings create in k8s-nodes-pods-binding-pending-pod-to-controlled-node."
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#legacy-status-metadata-and-controller-deputies
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#legacy-status-metadata-and-controller-deputies
   technique: Legacy status metadata writes and controller deputies (ownerReferences GC, quota, PDB, Job/CronJob status)
   reason: Deletion, availability and policy-scope effects; namespaces/status label change is modelled in k8s-nodes-namespace-psa-relabel; the rest grant no new identity.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/node-permissions-and-status.md#policy-and-scheduling-control-objects
   technique: NetworkPolicy writes, ClusterTrustBundle writes
   reason: NetworkPolicy writes reopen traffic and ClusterTrustBundle writes change TLS trust for opted-in pods; neither yields an identity. Node label scheduling is modelled in k8s-nodes-attract-pending-pod-to-controlled-node; Kyverno/Gatekeeper object writes are modelled in k8s-admission-kyverno-policy-weaken and k8s-admission-gatekeeper-constraint-weaken.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#sensitive-non-resource-urls
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-enumeration/rbac-objects.md#diagnostic-non-resource-urls
   technique: /debug/* and /metrics non-resource URLs
   reason: Diagnostic data disclosure.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#create-or-patch-rolebindingsclusterrolebindings
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#create-or-patch-rolebindingsclusterrolebindings
   technique: RoleBinding/ClusterRoleBinding writes without bind
   reason: Escalation prevention only allows binding roles whose permissions the caller already holds (delegation/persistence, not escalation).
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#built-in-privileged-escalation-prevention
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#built-in-privileged-escalation-prevention
   technique: Role/ClusterRole creation without escalate
   reason: Kubernetes rejects roles containing permissions the creator lacks; no escalation.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#sidecar-template-changes
@@ -232,10 +227,10 @@
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/api-object-operations.md#manually-created-serviceaccount-token-secret
   technique: Manually created ServiceAccount token Secret
   reason: Covered by k8s-rbac-secrets-create-sa-token-secret.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#cross-namespace-reference-through-an-operator
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#cross-namespace-reference-through-an-operator
   technique: Operator reading cross-namespace Secrets on behalf of a CR author
   reason: Secret disclosure (data access) through an operator-specific CRD; operator behaviour is not derivable from RBAC.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#operator-custom-resource-confused-deputy
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#operator-custom-resource-confused-deputy
   technique: Operator custom-resource confused deputy
   reason: Operator-specific (which CR field becomes a pod command or binding under the operator identity is not derivable from RBAC or the inventory); Flux and Argo CD deputies are modelled in workloads.yaml.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/external-secrets-operator.md#disclaimer
@@ -247,9 +242,6 @@
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/external-secrets-operator.md#externalsecret-enumeration
   technique: ExternalSecret enumeration
   reason: Enumeration.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/helm-template-injection.md#values-to-rbac-through-a-privileged-reconciler
-  technique: Values-to-RBAC through a privileged reconciler (lab-specific applier)
-  reason: Depends on which controller consumes the values source and how the chart maps them; not derivable from RBAC. Flux/Argo CD deputies are modelled in workloads.yaml.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/helm-template-injection.md#exploitation-ideas
   technique: Helm .Values YAML injection
   reason: Chart-specific input validation flaw; the escalation is the renderer identity, modelled by the GitOps deputy entries.
@@ -277,33 +269,28 @@
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/opa-gatekeeper-bypass.md#abusing-validatingwebhookconfiguration
   technique: Gatekeeper webhook configuration bypass
   reason: Pointer to validating-admission-policies.md; webhook configuration writes are k8s-admission-webhook-configuration-weaken (gatekeeper_constraint lifted) and mutating webhook creation is k8s-workloads-mutating-webhook-injection.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#copy-a-pvc-through-volumesnapshot
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#copy-a-pvc-through-volumesnapshot
   technique: Copy a PVC through VolumeSnapshot
   reason: Data access within the same namespace, no new identity.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/storage-and-networking.md#dra-admin-device-claims
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#dra-admin-device-claims
   technique: DRA adminAccess ResourceClaims
   reason: Driver-specific device access; per HackTricks it grants neither cluster-admin nor node root by itself.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#definition
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/admission-policy-objects.md#definition
   technique: ValidatingWebhookConfiguration definition
   reason: Background.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#purpose
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/admission-policy-objects.md#purpose
   technique: Admission webhook purpose
   reason: Background.
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#native-cel-admission-policies
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/admission-policy-objects.md#native-cel-admission-policies
   technique: Native CEL admission policies
   reason: Background; policy writes are mapped at #tested-admission-control-mutations (k8s-admission-validating-policy-weaken).
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#explicit-serviceaccount-token-projection
   technique: Explicit projected ServiceAccount token despite automount false
   reason: Covered by k8s-workloads-pods-create (automountServiceAccountToken is not treated as a blocker).
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#init-container-envfrom-omission
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/admission-control-bypass.md#init-container-envfrom-omission
   technique: Init-container envFrom policy gap
-  reason: The disposable PROOF marker in this example is data, not an identity. If the referenced same-namespace
-    Secret contains a usable token or certificate for another principal, Pod creation can expose that identity;
-    the generic Argo CD Pod-mount path is proposed as k8s-workloads-pods-mount-argocd-cluster-credential, subject
-    to credential evidence and admission. The init-container field omission is only a policy-specific route to that
-    edge.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#scoped-resourcequota-gap
+  reason: Policy bypass leading to a Secret read in the same namespace (data access, no new identity).
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/admission-control-bypass.md#scoped-resourcequota-gap
   technique: Scoped ResourceQuota gap
   reason: Resource-exhaustion / DoS.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#use-case
@@ -321,10 +308,10 @@
 - source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/README.md#scc-bypass
   technique: SCC bypass (index)
   reason: Index; modelled by the openshift.yaml SCC entries.
-- source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md#custom-labels
+- source: src/pentesting-cloud/openshift-pentesting/openshift-basic-information.md#custom-labels-and-automation
   technique: Custom labels consumed by automation or admission
   reason: Environment-specific automation; not derivable.
-- source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md#list-namespaces-with-the-run-level-label
+- source: src/pentesting-cloud/openshift-pentesting/openshift-basic-information.md#list-namespaces-with-the-run-level-label
   technique: Listing run-level namespaces
   reason: Enumeration.
 - source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-tekton.md#what-is-tekton
@@ -406,11 +393,7 @@
   reason: Object taxonomy without a distinct permission set; node scheduling and admission writes are modelled in nodes.yaml and admission_control.yaml.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/kubernetes-objects.md#secret-delivery-example
   technique: Secret delivery example
-  reason: The manifest creates a synthetic Opaque username/password Secret and a Pod that reads that same Secret;
-    it does not demonstrate obtaining another principal's credentials. Creating a Pod to run as a stronger ServiceAccount
-    is covered by k8s-workloads-pods-create. Mounting a pre-existing static Google service-account key is covered
-    by k8s-cloud-pivot-secret-static-gcp-sa-key.
-
+  reason: Shows normal Secret projection into a Pod; stealing a mounted ServiceAccount token requires a workload or node access path already modelled.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/node-components.md#node-identity-and-authorization
   technique: Node identity and authorization background
   reason: Explains node credentials and NodeRestriction, which constrain the node paths rather than granting a new principal.
@@ -600,84 +583,141 @@
   technique: Generic Helm values YAML injection
   reason: A values edit escalates only through a particular vulnerable chart and a more privileged applier; those template fields and external Git/CI writers are not derivable from the Kubernetes RBAC snapshot.
 
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#kubeconfig-contexts-and-kubectl
-  technique: Malicious kubeconfig exec credential plugin
-  reason: An attacker must control a local kubeconfig or its referenced executable and induce another user to run
-    a client command. Execution and the user's local credentials are workstation runtime facts outside the Kubernetes
-    and cloud configuration snapshot; no Kubernetes API permission or identifiable catalog target follows from the
-    kubeconfig warning alone.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-persistence/workloads-and-gitops.md#helm-release-source-as-a-return-path
-  technique: Patch existing Flux HelmRelease values under a stronger applier
-  reason: HelmRelease patch/update permission alone does not show that an existing release accepts the change or
-    that its chart renders attacker-controlled values into a privileged object. The selected chart content, ownership
-    and later reconciliation, effective deployer ServiceAccount, and admission result must be verified; the current
-    snapshot does not collect these content and runtime facts.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md#pivot-through-an-allowed-application
-  technique: URL fetcher acts as allowed network intermediary
-  reason: NetworkPolicy and Service objects cannot establish that the application accepts a caller-controlled destination,
-    forwards the request, or is authorized by the backend. The application's fetch behavior and a successful live
-    second hop are required to prove use of the intermediary's access.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/internal-network-attacks.md#abusing-exposed-kubernetes-management-services
-  technique: Use exposed management app stronger Kubernetes credential
-  reason: Service exposure does not show that the caller can authenticate to or exploit NiFi, Kubeflow, Argo Workflows,
-    Weave Scope, or Dashboard. Each application's runtime authentication, reachable endpoint, credential use, and
-    effective Kubernetes grants must be verified; no common Kubernetes RBAC source permission establishes this edge.
-
-- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
-  technique: Crossplane ProviderConfig kubeconfig applies into remote cluster
-  reason: Object write permission does not identify the referenced ProviderConfig's Secret credential or the remote
-    cluster and its effective RBAC. The ProviderConfig-to-Secret reference, kubeconfig content/credential validity,
-    remote endpoint, and remote authorization must be collected and joined before this can target a remote principal.
-    The existing Crossplane entry covers only InjectedIdentity in the local cluster.
-
+# Strict principal/permission-gain audit, 2026-10-16.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#validatingwebhookconfigurations-or-mutatingwebhookconfigurations
+  technique: k8s-admission-webhook-configuration-weaken
+  reason: Weakening admission alone does not grant a principal credential or additional RBAC permission.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#mounting-gcp-sa-keys-as-secret
+  technique: k8s-cloud-pivot-secret-static-gcp-sa-key
+  reason: Secret metadata does not verify a usable Google service-account key or its exact principal.
 - source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
-  source_revision: 0b36331
-  technique: Create validating webhook to receive a later credential-bearing Secret AdmissionReview
-  reason: The webhook receives a Secret only if a later create or update request matches its rules and the API server
-    reaches its trusted TLS endpoint. An existing token Secret is never sent retroactively. The later request, delivered
-    AdmissionReview content, token validity, and ownership of a stronger identity are runtime/content facts absent
-    from a configuration snapshot; create validatingwebhookconfigurations alone cannot establish a credential edge.
-    Noncredential Secret observations remain data disclosure.
+  source_revision: 171e422
+  technique: k8s-admission-validating-policy-weaken
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: a66f094ede
+  technique: k8s-admission-webhook-configuration-weaken
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  technique: k8s-admission-policy-engine-validating-webhook-weaken
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#tested-admission-control-mutations
+  source_revision: 171e422
+  technique: k8s-admission-namespace-label-exit
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#disrupting-a-fail-open-webhook-backend
+  source_revision: 171e422
+  technique: k8s-admission-fail-open-webhook-backend
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: 171e422
+  technique: k8s-admission-policy-engine-excluded-namespace
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  technique: k8s-admission-kyverno-policy-weaken
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#abusing-kyverno-and-gatekeeper-vwc
+  source_revision: a66f094ede
+  technique: k8s-admission-gatekeeper-constraint-weaken
+  reason: Only removes or weakens an admission guardrail. It grants no principal credential or additional RBAC permission
+    by itself; model a complete follow-on identity or permission gain instead.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/controller-data-and-network-effects.md#configmap-name-squatting-and-live-update
+  source_revision: null
+  technique: k8s-v3-33-missing-configmap-name-squatting
+  reason: No source permission or API action is declared; a hypothetical future executable path is not a demonstrated
+    principal-to-principal escalation.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md#static-google-service-account-key-mounted-as-a-secret
+  source_revision: a66f094ede
+  technique: Static Google key Secret inferred from metadata or unverified Pod mount
+  reason: The active direct-read variant requires an exact Secret, active key, accepted Google subject and newly allowed action. Metadata hints and Pod-mount possibility alone do not prove those joins.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#argo-cd-managed-cluster-credentials
+  source_revision: 171e422
+  technique: Argo CD remote-cluster credential inferred from Secret label
+  reason: The active direct-read variant needs an exact Secret UID/version, accepted remote subject, usable credential and newly allowed action. A cluster label or generic Secret read alone is exposure.
 
-- source: src/pentesting-ci-cd/argocd-security.md#public-api--ui-attacks
-  technique: Use Argo CD application write through its own API/RBAC to deploy attacker manifests
-  reason: The Argo CD API uses Argo CD RBAC rather than Kubernetes applications CRD write grants. Effective Argo
-    CD policy, API authentication, project constraints, sync state and controller identity are not collected; the
-    existing Kubernetes entry covers only direct CRD writes.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-basic-information/access-and-common-concepts.md#access-any-resource-or-verb-wildcard
+  technique: Wildcard RBAC rights already held by the source
+  reason: The wildcard grant is already effective before any action; it does not obtain another principal or grant additional permissions. Concrete uses of those rights are separate active techniques.
 
-- source: src/pentesting-ci-cd/argocd-security.md#trusted-git-repository-abuse
-  technique: Push attacker manifests to an Argo CD trusted Git repository
-  reason: A Git push is useful only for a repository and path consumed by an Application that can sync into an allowed
-    destination. SCM rights, repository-to-Application mapping, project restrictions and sync state are uncollected.
-
-- source: src/pentesting-ci-cd/argocd-security.md#public-api--ui-attacks
-  technique: Steal Argo CD repository credentials or local/project tokens
-  reason: Repository SSH keys, GitHub App credentials and local/project API tokens are distinct from registered-cluster
-    Secrets. Their secret type, bytes, validity, scopes and the source’s read permission are not collected.
-
-- source: src/pentesting-ci-cd/argocd-security.md#unauthenticated-repo-server-rce-via-kustomize-options
-  technique: Reach internal repo-server gRPC and execute attacker repository payload
-  reason: The repo-server exploit requires network reachability to its internal gRPC endpoint, an affected version/request
-    behavior and attacker repository content. Kubernetes pod creation or API read alone proves none of these runtime
-    facts.
-
-- source: src/pentesting-ci-cd/argocd-security.md#redis-cache-poisoning-to-deploy-manifests
-  technique: Poison Argo CD Redis manifest and Git-ref cache to make controller apply a manifest
-  reason: Redis cache poisoning requires reachable Redis with usable authentication, writable mfst and git-refs
-    entries, a susceptible Argo CD version, sync and permissible project/controller rights. Cache contents and runtime
-    networking are absent.
-
-- source: src/pentesting-ci-cd/argocd-security.md#applicationset-attacks
-  technique: Control ApplicationSet Git or pull-request generator input to create privileged Applications
-  reason: ApplicationSet generator input can create privileged Applications only when attacker-controlled Git or
-    PR data feeds template fields that permit the desired destination and sync. Generator/template fields, SCM rights,
-    project policy and sync state are uncollected; direct CRD write also needs these joins.
-
-- source: src/pentesting-ci-cd/argocd-security.md#post-exploitation
-  technique: Steal Argo CD pod-mounted repository, cloud, Redis or cluster credentials
-  reason: A pod shell may expose mounted repository, cloud or Redis credentials, but the mounted bytes, validity
-    and target principal are not collected. The existing pods/exec entry covers the pod ServiceAccount, and the
-    cluster-Secret entry covers readable Argo CD registered-cluster Secrets.
+# Strict principal-target re-audit: documented conditions without a verified source-to-target join.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/secrets-and-configmaps.md#secret-listing-and-data-inspection
+  technique: Generic Secret listing without a verified identity
+  reason: Reading Secret data is exposure. Only the separately reviewed, usable legacy ServiceAccount token path at verified-legacy-serviceaccount-token-secret can create a principal edge.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/validating-admission-policies.md#mutatingadmissionpolicy-code-injection
+  technique: k8s-workloads-mutating-admission-policy-half-pair
+  reason: Only one policy/binding write is required by this row, but the existing
+    complementary half and its injecting contents are not collected or joined to the
+    target Pod identity. Retain as a documented conditional path until exact binding/policy/admission
+    evidence exists.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#consumed-configuration-as-code
+  technique: k8s-workloads-configmap-executed-by-workload
+  reason: A running Pod references a ConfigMap, but inventory does not prove that
+    a source-writable exact ConfigMap is executed as code, that a reload occurs, or
+    that the target ServiceAccount credentials are obtained. A data/configuration
+    write alone is not a principal path.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#flux-kustomization-without-a-tenant-serviceaccount
+  technique: k8s-workloads-flux-kustomization-controller-identity
+  reason: The controller may use --default-service-account and source contents/egress
+    are unverified. The current selector matches a same-named ServiceAccount without
+    proving that this Kustomization reconciles under it.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  technique: k8s-workloads-flux-kustomization-patch-controller-identity
+  reason: The selected Kustomization spec, source artifact and --default-service-account
+    setting are not collected; patch/update alone cannot prove execution under the
+    named controller identity.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  technique: k8s-workloads-crossplane-provider-kubernetes-identity
+  reason: ProviderConfig and Object references are not collected. The Object can use
+    a kubeconfig Secret or another cluster, so the provider-kubernetes ServiceAccount
+    name glob is not a proven target principal.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#gitops-and-platform-controller-deputies
+  technique: k8s-workloads-flux-helmrelease-controller-identity
+  reason: The HelmRelease may use a tenant ServiceAccount through --default-service-account,
+    and the chart/source contents are not joined to the writer. Controller name alone
+    does not prove the gained principal.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/controllers-and-admission.md#other-gitops-and-platform-controller-source-changes
+  technique: k8s-workloads-argocd-application-controller-identity
+  reason: AppProject, destination cluster credential and sync state are not collected.
+    An Application write cannot be bound to the local application-controller ServiceAccount
+    as the usable target principal.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md#kiam--kube2iam-iam-role-for-pods
+  technique: Kiam or Kube2IAM role inferred from namespace or Pod annotation
+  reason: The active Pod-create variant needs an admitted running Pod, matching namespace policy, running proxy, accepted role trust, delivered credentials and a newly allowed action. Annotation matching alone cannot identify a gained IAM role.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#aws-eks-aws-auth-configmaps
+  technique: k8s-cloud-eks-aws-auth-configmap
+  reason: The cluster auth mode, access-entry precedence and source-controlled IAM
+    sign-in principal are not joined to this ConfigMap mutation. Editing aws-auth
+    alone cannot prove a new Kubernetes principal or permission.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md#azure--aks
+  technique: k8s-cloud-aks-identity-binding
+  reason: The target selector has no collected ARM identity-binding association, and
+    the evaluator creates no aks_identity_binding cloud node. The use-managed-identity
+    verb alone cannot identify a reachable managed identity.
+- source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-tekton.md#the-misconfiguration
+  technique: k8s-openshift-tekton-namespace-scc-annotation
+  reason: TektonConfig maxAllowed, operator namespace management, inline task control,
+    SCC grant and resulting admitted privileged Pod are not joined to a schedulable
+    node. Namespace annotation plus TaskRun permission alone does not prove a node
+    path.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bind
+  technique: Bind an arbitrary Role or ClusterRole through an existing or new binding
+  reason: The active namespace path is limited to creating a RoleBinding for the
+    exact cluster-admin ClusterRole. Other roles need a collected role-rule to
+    newly granted permission join, and patch/update need the exact existing
+    binding joined to that role and source subject. A generic bind grant alone
+    cannot prove access to every ServiceAccount.
+- source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/rbac-and-identities.md#bindings-and-aggregated-clusterroles
+  technique: Aggregate into a ClusterRole bound only through a RoleBinding
+  reason: A RoleBinding confines the added rules to its namespace, so it cannot
+    establish the cluster-admin target of the active cluster-wide aggregation
+    technique. A separate namespace-scoped permission target needs the bound
+    RoleBinding namespace and exact added-rule join.

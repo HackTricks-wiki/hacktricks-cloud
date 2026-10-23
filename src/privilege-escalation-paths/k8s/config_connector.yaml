@@ -1,0 +1,74 @@
+# In-cluster Config Connector access can create a credential for a named Google service account.
+
+- id: k8s-configconnector-service-account-key
+  provider: k8s
+  service: configconnector
+  title: Obtain a Google service account key through Config Connector
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#kcc-iamserviceaccountkey-plus-secret-read--mint-a-long-lived-key-for-a-more-privileged-service-account
+  source_revision: 171e422
+  summary: A Kubernetes service account with key-resource create permission in a watched namespace can obtain a credential for an exact Google service account by reading a generated key or supplying its own public key.
+  source_kind: k8s_service_account
+  requires:
+    all_of:
+    - verb: create
+      api_group: iam.cnrm.cloud.google.com
+      resource: iamserviceaccountkeys
+  target:
+    kind: gcp_service_account
+    selector:
+      k8s_kcc_service_account_key_path: true
+    scope: any
+    outcome: credentials
+    aggregate_as: Google service accounts whose keys the Kubernetes service account can obtain
+  conditions:
+  - id: reconciliation
+    description: Config Connector must accept and reconcile the new key resource, and the resulting credential must remain usable.
+  - id: admission
+    description: Kubernetes admission policy or a conflicting resource name can reject the request.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Limit IAMServiceAccountKey creation in watched namespaces, restrict the Config Connector identity's key permissions, and enforce key-creation and key-upload organization policies.
+  references:
+  - https://docs.cloud.google.com/config-connector/docs/reference/resource-docs/iam/iamserviceaccountkey
+  - https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.serviceAccounts.keys/upload
+  notes: This route starts from an in-cluster Kubernetes service account. It joins the exact watched namespace, Config Connector identity, Google service account, selected key-reading or supplied-public-key path, and the matching effective policy. The scanner never reads a private key.
+
+- id: k8s-configconnector-project-iam-grant
+  provider: k8s
+  service: configconnector
+  title: Change project IAM through Config Connector
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-controller-privesc.md#kubernetes-rbac-over-a-kcc-resource--act-as-the-configured-config-connector-identity
+  source_revision: 171e422
+  summary: A Kubernetes service account can gain project IAM control when it can create an IAMPolicyMember or change an existing IAMPolicy or IAMPartialPolicy in a watched namespace and the configured controller can read and set that project's IAM policy.
+  source_kind: k8s_service_account
+  requires:
+    any_of:
+    - - {verb: create, api_group: iam.cnrm.cloud.google.com, resource: iampolicymembers, namespace: "{target.namespace}"}
+    - - {verb: patch, api_group: iam.cnrm.cloud.google.com, resource: iampolicies, namespace: "{target.namespace}", resource_name: "{target.name}"}
+    - - {verb: update, api_group: iam.cnrm.cloud.google.com, resource: iampolicies, namespace: "{target.namespace}", resource_name: "{target.name}"}
+    - - {verb: patch, api_group: iam.cnrm.cloud.google.com, resource: iampartialpolicies, namespace: "{target.namespace}", resource_name: "{target.name}"}
+    - - {verb: update, api_group: iam.cnrm.cloud.google.com, resource: iampartialpolicies, namespace: "{target.namespace}", resource_name: "{target.name}"}
+  target:
+    kind: gcp_verified_authority
+    selector:
+      k8s_kcc_project_policy_grant: true
+    scope: any
+    outcome: permission_grant
+    grants:
+    - resourcemanager.projects.setIamPolicy
+    aggregate_as: Project IAM grants available through Config Connector
+  conditions:
+  - id: reconciliation
+    description: Config Connector must accept and reconcile the IAM resource.
+  - id: admission
+    description: Kubernetes admission policy or a conflicting resource name can reject the request.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Limit IAM policy resource writes in watched namespaces and restrict the Config Connector identity's project IAM permissions.
+  references:
+  - https://docs.cloud.google.com/config-connector/docs/reference/resource-docs/iam/iampolicymember
+  - https://docs.cloud.google.com/config-connector/docs/reference/resource-docs/iam/iampolicy
+  - https://docs.cloud.google.com/config-connector/docs/reference/resource-docs/iam/iampartialpolicy
+  notes: This route starts from an in-cluster Kubernetes service account. It needs exact namespace RBAC create or patch/update on a collected existing policy, a watched and healthy Config Connector identity, and that identity's get/set IAM policy rights on the exact project. The grant is bounded to that project and remains conditional on admission and reconciliation.

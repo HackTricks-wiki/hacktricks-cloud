@@ -1,0 +1,126 @@
+# catalog_description: Each path starts from a named Kubernetes principal and
+# declared permission, performs a specific action, and reaches a verified exact
+# principal or a new effective permission. Reviewed evidence is mandatory;
+# metadata labels and annotations alone never create these edges.
+# Canonical provider policy: peaso/privesc/catalog_policy.yaml.
+- id: k8s-rbac-secrets-read-argocd-cluster-credential
+  provider: k8s
+  service: rbac
+  title: Read a verified Argo CD remote-cluster credential Secret
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#argo-cd-managed-cluster-credentials
+  source_revision: 2415fadfbd
+  summary: Read one named Argo CD Secret whose verified usable credential authenticates as an exact remote-cluster subject with a newly allowed action.
+  requires:
+    all_of: []
+    any_of:
+      - [{verb: get, resource: secrets, namespace: "{target.namespace}", resource_name: "{target.name}"}]
+      - [{verb: list, resource: secrets, namespace: "{target.namespace}"}]
+      - [{verb: watch, resource: secrets, namespace: "{target.namespace}"}]
+  target:
+    kind: k8s_remote_cluster
+    outcome: credentials
+    selector: {k8s_verified_pivot: k8s-rbac-secrets-read-argocd-cluster-credential}
+    scope: cluster
+    aggregate_as: Verified Argo CD remote-cluster subjects
+  conditions:
+    - id: exact_remote_credential_review
+      description: A unique fresh reviewed record binds the exact Secret UID/version, successful read, accepted remote subject, usable token or client certificate, and an action the source could not previously perform.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict access to Argo CD cluster Secrets and use scoped, renewable remote-cluster credentials.
+  references:
+    - https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#clusters
+  notes: The target is the exact accepted remote-cluster subject, not every principal on that cluster. No Secret value is stored.
+
+- id: k8s-cloud-pivot-secret-static-gcp-sa-key
+  provider: k8s
+  service: gke
+  title: Read a verified Google service-account key from a Secret
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md#static-google-service-account-key-mounted-as-a-secret
+  source_revision: 2415fadfbd
+  summary: Read one named Secret containing a verified active JSON key and authenticate as the exact Google service account for a newly allowed IAM action.
+  requires:
+    all_of: []
+    any_of:
+      - [{verb: get, resource: secrets, namespace: "{target.namespace}", resource_name: "{target.name}"}]
+      - [{verb: list, resource: secrets, namespace: "{target.namespace}"}]
+      - [{verb: watch, resource: secrets, namespace: "{target.namespace}"}]
+  target:
+    kind: cloud_identity
+    outcome: credentials
+    selector: {k8s_verified_pivot: k8s-cloud-pivot-secret-static-gcp-sa-key}
+    scope: cluster
+    aggregate_as: Verified Google service-account keys in Kubernetes Secrets
+  conditions:
+    - id: exact_google_key_review
+      description: A unique fresh reviewed record binds the Secret UID/version, key ID, accepted Google service-account email, successful key authentication, and named IAM action previously denied to the source.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Secret reads, revoke exposed service-account keys, and prefer workload federation.
+  references:
+    - https://cloud.google.com/iam/docs/keys-create-delete
+  notes: This row covers direct Secret reads. A Pod mount needs a separate admitted-workload proof; Secret labels and name hints are insufficient.
+
+- id: k8s-gke-authenticated-user-rolebinding-self-grant
+  provider: k8s
+  service: gke
+  title: Bind a GKE authenticated user to new Kubernetes RBAC access
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#escalating-in-gke
+  source_revision: 2415fadfbd
+  summary: Create or update an exact RoleBinding to ClusterRole view for the caller's own verified Google-authenticated Kubernetes username, gaining get pods in that namespace.
+  source_kind: k8s_user
+  requires:
+    all_of:
+      - {verb: bind, api_group: rbac.authorization.k8s.io, resource: clusterroles, resource_name: view, namespace: "*"}
+    any_of:
+      - [{verb: create, api_group: rbac.authorization.k8s.io, resource: rolebindings, namespace: "{pivot.namespace}"}]
+      - [{verb: patch, api_group: rbac.authorization.k8s.io, resource: rolebindings, namespace: "{pivot.namespace}"}]
+      - [{verb: update, api_group: rbac.authorization.k8s.io, resource: rolebindings, namespace: "{pivot.namespace}"}]
+  target:
+    kind: k8s_verified_authority
+    outcome: permission_grant
+    selector: {k8s_verified_pivot: k8s-gke-authenticated-user-rolebinding-self-grant}
+    scope: cluster
+    grants: ["get pods in the exact reviewed RoleBinding namespace to the source's authenticated user"]
+  conditions:
+    - id: exact_gke_self_grant_review
+      description: A unique fresh record proves control of the Google credential, observed Kubernetes username, exact accepted RoleBinding subject and role, prior denial, and newly allowed get pods.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict RoleBinding writes and bind privileges; verify grants against each authenticated subject's effective RBAC.
+  references:
+    - https://cloud.google.com/kubernetes-engine/docs/how-to/role-based-access-control
+  notes: This grants Kubernetes RBAC only; it neither creates a Google credential nor grants Google IAM permissions.
+
+- id: k8s-cloud-kiam-kube2iam-annotation
+  provider: k8s
+  service: eks
+  title: Obtain an IAM role through a verified Kiam or Kube2IAM Pod
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/kubernetes-pivoting-to-clouds.md#kiam--kube2iam-iam-role-for-pods
+  source_revision: 2415fadfbd
+  summary: Create an admitted running Pod with an exact role annotation in a namespace whose proxy policy allows it, then obtain verified usable credentials for that IAM role.
+  requires:
+    all_of:
+      - {verb: create, resource: pods, namespace: "{target.namespace}"}
+  target:
+    kind: cloud_identity
+    outcome: credentials
+    selector: {k8s_verified_pivot: k8s-cloud-kiam-kube2iam-annotation}
+    scope: cluster
+    aggregate_as: Verified Kiam or Kube2IAM IAM roles
+  conditions:
+    - id: exact_metadata_proxy_review
+      description: A unique fresh record proves the admitted running Pod's exact annotation, namespace allowlist, running proxy, successful role trust and delivered credentials, and a newly allowed IAM action.
+  blockers:
+    - admission_policy
+    - admission_webhook
+  confidence: conditional
+  severity: high
+  mitigation: Limit Pod creation, namespace role allowlists, and proxy role trust to intended workloads.
+  references:
+    - https://github.com/uswitch/kiam
+    - https://github.com/jtblin/kube2iam
+  notes: An annotation or namespace allowlist alone cannot establish a role edge.

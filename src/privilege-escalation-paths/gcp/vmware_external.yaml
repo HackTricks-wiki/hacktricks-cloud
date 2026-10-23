@@ -1,0 +1,59 @@
+# The Google Cloud permission only reads generated VMware credentials. A path
+# exists only when complete reviewed evidence proves the exact appliance user,
+# usable credential, and a new effective permission after authentication.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: gcp-vmwareengine-show-vcenter-credentials-external-principal
+  provider: gcp
+  service: vmwareengine
+  title: Reach the named vCenter CloudOwner principal through a usable generated credential
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vmwareengine-gcve-privesc.md#vmwareengineprivatecloudsshowvcentercredentials--shownsxcredentials--cross-into-the-vmware-management-plane
+  source_revision: f0f683242a
+  summary: Reading the generated vCenter credential may reach the exact CloudOwner principal on one private cloud if a reviewed login and newly allowed vCenter action prove the credential is current.
+  requires:
+    all_of:
+    - action: vmwareengine.privateClouds.showVcenterCredentials
+      resource: '{target.resource}'
+  target:
+    kind: gcp_external_principal
+    selector:
+      gcp_external_principal_evidence: true
+      gcp_external_plane: vmware_vcenter
+    scope: same_project
+    outcome: credentials
+    aggregate_as: Exact vCenter CloudOwner principal with reviewed new access
+  conditions:
+  - id: exact_usable_vcenter_credential
+    description: A unique complete reviewed record must bind the exact private cloud, generated CloudOwner subject, usable current credential, prior source denial, and successful new vCenter authorization.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict generated vCenter credential reads and rotate stale credentials.
+  notes: The gcp_external_principal_evidence record must name TargetPlane vmware_vcenter and bind ActionResource to the exact private cloud, TargetServiceResource to its vCenter, and ObservedPrincipalId to the named CloudOwner. A show response or password string alone is insufficient.
+
+- id: gcp-vmwareengine-show-nsx-credentials-external-principal
+  provider: gcp
+  service: vmwareengine
+  title: Reach the named NSX admin principal through a usable generated credential
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vmwareengine-gcve-privesc.md#vmwareengineprivatecloudsshowvcentercredentials--shownsxcredentials--cross-into-the-vmware-management-plane
+  source_revision: f0f683242a
+  summary: Reading the generated NSX credential may reach the exact NSX admin principal on one private cloud if a reviewed login and newly allowed NSX action prove the credential is current.
+  requires:
+    all_of:
+    - action: vmwareengine.privateClouds.showNsxCredentials
+      resource: '{target.resource}'
+  target:
+    kind: gcp_external_principal
+    selector:
+      gcp_external_principal_evidence: true
+      gcp_external_plane: vmware_nsx
+    scope: same_project
+    outcome: credentials
+    aggregate_as: Exact NSX admin principal with reviewed new access
+  conditions:
+  - id: exact_usable_nsx_credential
+    description: A unique complete reviewed record must bind the exact private cloud, generated NSX subject, usable current credential, prior source denial, and successful new NSX authorization.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict generated NSX credential reads and rotate stale credentials.
+  notes: The gcp_external_principal_evidence record must name TargetPlane vmware_nsx and bind ActionResource to the exact private cloud, TargetServiceResource to its NSX, and ObservedPrincipalId to the named admin. A show response or password string alone is insufficient.

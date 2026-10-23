@@ -1,13 +1,15 @@
-# Azure privilege escalation paths.
-
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 - id: azure-appconfig-snapshot-credential
   provider: azure
   service: app_configuration
   title: Recover credentials retained in App Configuration snapshot
   source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#bulk-exfil--loot-persistence-via-snapshots-configurationstoressnapshotsread--write
-  source_revision: 0b36331
-  summary: Read a verified usable credential from an App Configuration snapshot and gain its Entra service principal
-    permissions.
+  source_revision: 658a097d5c
+  summary: Read a verified usable Entra client secret from a named, readable App Configuration snapshot and gain that service principal's permissions.
   requires:
     all_of:
     - action: Microsoft.AppConfiguration/configurationStores/snapshots/read
@@ -22,16 +24,13 @@
     aggregate_as: Verified credential holders in {pivot}
   conditions:
   - id: verified_credential
-    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates
-      this edge; uncollected, partial, or unverified content is UNKNOWN.
+    description: Only an exact service-principal client secret verified in the returned content of a named snapshot creates this edge; the secret must still be usable.
   - id: snapshot_access
-    description: The snapshot must already exist and be readable; creating a new snapshot additionally needs keyValues/read
-      and snapshots/write.
+    description: The named snapshot must already exist and return the credential-bearing content; creating a new snapshot additionally needs keyValues/read and snapshots/write.
   blockers: []
   confidence: conditional
   severity: high
   mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
   references:
   - https://learn.microsoft.com/en-us/azure/azure-app-configuration/concept-snapshots
-  notes: Draft requires azure.app_configuration.snapshot_credential_holders; the evaluator must join only verified
-    holders, and return UNKNOWN if that fact is missing or incomplete.
+  notes: Reviewed azure_privesc_challenge_evidence must bind SnapshotName, SnapshotContentReadVerified, CredentialInSnapshotVerified, and SnapshotContentEvidenceRef to the same store and exact service principal. Missing or incomplete review creates no path.

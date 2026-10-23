@@ -1,54 +1,20 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
 # Azure VM Image Builder techniques (declarative only).
 # Source: hacktricks-cloud az-image-builder-privesc.md (rev 171e422).
 # Customizers run as root/SYSTEM on the build VM. Only the build-VM identities
 # (vmProfile.userAssignedIdentities) are exposed through IMDS; the template's top-level identity is
 # the service identity used by Image Builder and is not attached to the build VM.
 
-- id: azure-imagebuilder-template-hijack-existing
-  provider: azure
-  service: image_builder
-  title: Recreate and run an existing image template with an injected customizer
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-image-builder-privesc.md#hijack-an-existing-image-template
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the build-VM identities already configured on an existing image template.
-  requires:
-    all_of:
-      - action: Microsoft.VirtualMachineImages/imageTemplates/read
-        scope: "{target.host_resource}"
-      - action: Microsoft.VirtualMachineImages/imageTemplates/delete
-        scope: "{target.host_resource}"
-      - action: Microsoft.VirtualMachineImages/imageTemplates/write
-        scope: "{target.host_resource}"
-      - action: Microsoft.VirtualMachineImages/imageTemplates/run/action
-        scope: "{target.host_resource}"
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.VirtualMachineImages/imageTemplates
-      managed_identity_type: user_assigned
-    scope: inherited_scope
-    aggregate_as: "Build-VM identities of image template {target.host_resource}"
-  conditions:
-    - id: build_vm_identity_only
-      description: Only identities listed in the template's vmProfile.userAssignedIdentities are reachable from customizer code; the template's top-level identity is also attached to the template resource but is not exposed on the build VM.
-    - id: identity_reference_check
-      description: Recreating the template re-references its top-level UAMI, which ARM may check against userAssignedIdentities/assign/action for the caller.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict imageTemplates write/delete/run (Contributor), avoid attaching privileged build-VM identities, and grant the template UAMI Managed Identity Operator only on dedicated build identities.
-  references:
-    - https://learn.microsoft.com/en-us/azure/virtual-machines/linux/image-builder-json
-    - https://learn.microsoft.com/en-us/azure/virtual-machines/linux/image-builder-permissions-cli
-  notes: The template is immutable, so modification is delete plus recreate. The attachment inventory cannot distinguish top-level from build-VM identities, so the target set may over-include the template's service identity; hence conditional.
-
 - id: azure-imagebuilder-template-create-via-template-identity
   provider: azure
   service: image_builder
   title: Create and run a new image template whose template identity attaches a build-VM identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-image-builder-privesc.md#customizer-rce--build-identity-token-theft-marquee
-  source_revision: 171e422
+  source_revision: 906b2f81ef
   summary: A source that can create and run image templates and assign a user-assigned identity T as the template identity can obtain the privileges of the build-VM identities that T is itself allowed to assign.
   requires:
     all_of:
@@ -59,7 +25,7 @@
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_assignable_via_identity_holding: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+      azure_imagebuilder_new_template_identity_path: true
     scope: any
     aggregate_as: "UAMIs assignable by an Image Builder template identity the source can assign"
     outcome: workload_execution
@@ -76,4 +42,4 @@
   references:
     - https://learn.microsoft.com/en-us/azure/virtual-machines/linux/image-builder-json
     - https://learn.microsoft.com/en-us/azure/virtual-machines/linux/image-builder-permissions-cli
-  notes: Complements azure-imagebuilder-template-hijack-existing (existing templates). The imageTemplates write/run requirements are matched at any scope where the source can create a template; the staging resource group and region constraints are not evaluated. Running the base customizer without any build-VM identity reaches no principal and is not an edge.
+  notes: The selector requires imageTemplates write and run on the same new-template path in a collected resource group, or in a new resource group the source can create. It also requires source assign authority on the template UAMI and that UAMI's assign authority on the build-VM UAMI. Staging resource group, region, package dependencies and build success remain conditional. This entry covers new templates; the separate existing-template path remains unresolved. Running a customizer without a build-VM identity reaches no principal and is not an edge.

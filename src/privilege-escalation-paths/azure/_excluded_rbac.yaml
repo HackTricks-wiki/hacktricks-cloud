@@ -1,3 +1,11 @@
+# Azure resource-plane (ARM/RBAC) HackTricks techniques reviewed and intentionally NOT modelled as
+# principal -> principal privilege-escalation edges. Source rev a53b46392c.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: AKS namespace RoleBinding self-grant and bound ClusterRole escalation variants
+  reason: "NEEDS SCHEMA: rolebindings/write plus clusterroles/bind grants only the named namespace's effective permissions, not cluster-admin. clusterroles/write plus clusterroles/escalate reaches the source only if the exact edited ClusterRole is already bound to that source. A resource-to-subject binding and resulting permission delta must be proved before either becomes an active edge. The cluster-scoped cluster-admin ClusterRoleBinding variant remains active."
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
+  technique: AKS user or ServiceAccount impersonation without a proven admin-bound subject
+  reason: "NEEDS SCHEMA: users/impersonate or serviceaccounts/impersonate reaches cluster-admin only for an exact existing admin-bound subject that the source can impersonate. The current target selector has no subject-to-binding join. The groups/impersonate system:masters variant remains active."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#permission-first-role-discovery
   technique: Permission-first role discovery
   reason: Enumeration guidance only; no privilege gain.
@@ -7,10 +15,12 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftmanagementmanagementgroupssubscriptionswrite
   technique: Microsoft.Management/managementGroups/subscriptions/write
   reason: Subscription move requires Owner on the subscription (roleAssignments/write) plus MG write on source/target parents; the resulting gain is already covered by azure-authorization-roleassignments-write. Main effect is policy evasion.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsjobsstreamsread
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#microsoftautomationautomationaccountsjobsstreamsread
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Microsoft.Automation/automationAccounts/jobs/streams/read
   reason: Data read of historical job output; any secret exposure is content-dependent (Exposure/Least Privilege).
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsvariablesread
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-automation-accounts-post-exploitation.md#microsoftautomationautomationaccountsvariablesread
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Microsoft.Automation/automationAccounts/variables/read
   reason: Data read of unencrypted variables only (encrypted values return null); content-dependent exposure.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#hybrid-workers-group
@@ -24,7 +34,7 @@
   reason: Offline data access to disk contents; any credential found is content-dependent (Exposure). No identity is obtained by the operation itself.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#managed-disk-snapshot-and-restore-point-sas-exfiltration
   technique: disks/snapshots/diskRestorePoints beginGetAccess SAS exfiltration
-  reason: The permission grants raw VHD data access. The VHD may contain usable cloud credentials, but their presence, validity and target principal depend on disk contents that an Azure RBAC snapshot cannot determine.
+  reason: Data exfiltration of VHD contents; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftnetworkvpnserverconfigurationslistallradiusserverssecretsaction
   technique: Microsoft.Network/vpnServerConfigurations/listAllRadiusServersSecrets/action
   reason: Network trust secret (RADIUS shared secret); network pivot without a new Azure identity.
@@ -63,50 +73,40 @@
   reason: Runs existing code without attacker input; impact is behaviour-dependent, not an identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsiteshybridconnectionnamespacesrelayslistkeysaction
   technique: Hybrid connection relay listKeys
-  reason: Network pivot via Relay sender key; no Azure identity gain.
+  reason: 'NEEDS SCHEMA: a Relay sender key can authenticate a bounded Relay sender identity, but the exact rule, usable key, allowed send operation, and prior-absence proof are not verified.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#read-configured-third-party-credentials
   technique: Read third-party source-control tokens
-  reason: Yields external (GitHub/Bitbucket/etc.) tokens of the caller, not an Azure identity.
+  reason: 'NEEDS SCHEMA: returned GitHub or Bitbucket tokens can confer external repository authority, but the target account, usable token, granted repository permissions, and prior-absence proof are not collected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#update-app-code-from-the-source
   technique: Update app code via configured repository
   reason: Requires compromise of an external repository; RBAC-derived SCM credential path is modelled in app_services.yaml.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#storage-backed-external-function-packages
   technique: Storage-backed external Function packages
-  reason: Duplicate of azure-functions-content-storage-write.
+  reason: 'NEEDS SCHEMA: exact Function App to content storage binding, code overwrite, and identity execution are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-log-analytics-privesc.md#log-analytics
   technique: Page intro; workspace shared keys (listKeys/sharedKeys/regenerateSharedKey, no longer a separate heading at 171e422)
   reason: Introductory section; shared keys only allow log ingestion/poisoning and disruption, no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-quantum-privesc.md#workspace-api-key-disclosure-and-regeneration
   technique: Quantum workspace listKeys/regenerateKey
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    for a Quantum workspace key and an any_of action requirement. Either workspace action returns a key; the two
-    actions are alternatives, not a conjunction.
+  reason: "NEEDS SCHEMA: Exact workspace key identity, usable credential, and newly permitted job action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-purview-privesc.md#microsoftpurviewaccountslistkeysaction
   technique: Purview listkeys (Atlas Kafka Event Hubs)
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    for Purview Atlas Kafka rule, with exact Send/Listen rights; never infer Listen from a returned string. Generated
-    Event Hubs rule rights and receiver availability are not established by ARM permission alone.
+  reason: Event injection/read on metadata pipeline; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-redis-privesc.md#microsoftcacheredislistkeysaction
   technique: Redis listKeys / Managed Redis listKeys/regenerateKey
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    for Redis keyspace access and machine-checked access-key authentication. The key is a Redis login, not an Azure
-    IAM principal; disabled key auth defeats use.
+  reason: "NEEDS SCHEMA: bind the returned classic Redis key to the exact cache/default user, enabled key auth, successful data-plane authentication, and commands newly available to the caller."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-fluid-relay-privesc.md#server-tenant-key-disclosure-and-regeneration
   technique: Fluid Relay listKeys/regenerateKey
-  reason: The returned Fluid tenant signing key permits JWT signing as Fluid application users; this is application-user
-    impersonation scoped to the Fluid server, not Azure/Entra identity control.
-  source_revision: 0b36331
+  reason: "NEEDS SCHEMA: Exact Fluid tenant/subject, usable key-derived token, and new application permission must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-relay-privesc.md#relay-sas-key-disclosure
   technique: Relay authorization rule listkeys/regenerateKeys
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    with Relay namespace/entity scope and rule Send, Listen, Manage rights. A SAS rule can have different rights;
-    listener takeover cannot follow from Send alone.
+  reason: "NEEDS SCHEMA: Exact relay authorization rule, usable SAS key, and newly permitted send/listen action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-desktop-privesc.md#microsoftdesktopvirtualizationhostpoolsretrieveregistrationtokenaction
   technique: AVD host pool registration token
-  reason: Requires an attacker-controlled compliant, domain/Entra-joined VM; session/credential capture is outside RBAC modelling.
+  reason: "NEEDS SCHEMA: Exact compliant session host, named session principal, observed credential/session capture, and newly authorized action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-desktop-privesc.md#microsoftauthorizationroleassignmentsread-microsoftauthorizationroleassignmentswrite
   technique: Assign Desktop Virtualization User via roleAssignments/write
-  reason: Covered by azure-authorization-roleassignments-write.
+  reason: 'NEEDS SCHEMA: exact ABAC constraint, successful role assignment, and newly effective action are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arm-deployment-privesc.md#read-declared-outputs-and-execution-logs
   technique: deploymentScripts read / logs read
   reason: Data read of outputs/logs; content-dependent exposure.
@@ -115,20 +115,16 @@
   reason: Read/delete are exposure/DoS; deploymentStacks write is not a standalone escalation per the page.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#microsoftappagentslistsecretsaction
   technique: SRE Agent listSecrets
-  reason: A credential or permission gain is documented, but it is deferred until external_or_agent_credential target
-    with secret classification and downstream audience. The response may contain protected material, but listSecrets
-    alone does not identify a reusable principal.
+  reason: Credential disclosure with unestablished downstream use (page says impact unpromoted).
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sre-agent-privesc.md#microsoftappagentsdataconnectorslistsecretsaction
   technique: SRE Agent data connector listSecrets
-  reason: A credential or permission gain is documented, but it is deferred until external_service_credential target
-    keyed by connector provider and secret audience. A connector secret may authenticate to different backends and
-    scopes.
+  reason: 'NEEDS SCHEMA: returned connector secrets may authenticate a downstream identity, but exact subject, usable credential, newly permitted action, and prior-absence proof are not verified.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-notification-hubs-privesc.md#shared-access-keys
   technique: Notification Hubs authorization rule listkeys/regenerateKeys
-  reason: Push notification abuse and registration data; no identity gain.
+  reason: "NEEDS SCHEMA: Exact hub authorization rule, usable key, and newly permitted send/listen/manage action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-notification-hubs-privesc.md#platform-notification-service-credentials
   technique: Notification Hubs pnsCredentials
-  reason: Third-party push credentials; no Azure identity gain.
+  reason: "NEEDS SCHEMA: Exact third-party push service subject, usable credential, and newly permitted push action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-maps-privesc.md#microsoftmapsaccountslistkeysaction
   technique: Maps listKeys / regenerateKey
   reason: Maps data-plane shared key; no identity gain.
@@ -138,17 +134,17 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-mysql-privesc.md#microsoftdbformysqlflexibleserversread-microsoftdbformysqlflexibleserverswrite-microsoftdbformysqlflexibleserversbackupsread
   technique: MySQL restore from backup
   reason: Copies data into a new server; data access only (password reset path modelled separately).
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-attestation-privesc.md#microsoftattestationattestationprovidersattestationwrite
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-attestation-post-exploitation.md#microsoftattestationattestationprovidersattestationwrite
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Attestation policy write
   reason: Subverts trust decisions of relying workloads; no direct identity gain modelable from RBAC.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-speech-services-privesc.md#batch-transcription-content-disclosure
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-speech-services-post-exploitation.md#batch-transcription-content-disclosure
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Speech transcription read
   reason: Data read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-video-indexer-privesc.md#account-access-token--private-media-readwrite
   technique: Video Indexer generateAccessToken / generateRestrictedViewerAccessToken
-  reason: A credential or permission gain is documented, but it is deferred until azure_video_indexer_role target
-    for short-lived account Contributor token. The token grants VI account data-plane rights, not Azure subscription
-    administration.
+  reason: "NEEDS SCHEMA: Exact Video Indexer account subject, token role, and newly permitted media action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-search-privesc.md#blind-source-replacement-with-microsoftsearchsearchservicesdatasourceswrite
   technique: AI Search dataSources/write source replacement
   reason: Data exfiltration through the Search identity; no identity gain for the source.
@@ -157,16 +153,16 @@
   reason: Data exfiltration through the Search identity; no identity gain for the source.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-monitor-privesc.md#microsoftinsightsactiongroupsread
   technique: Action group receiver URIs read
-  reason: Reads stored callback secrets (Logic App SAS / function keys) that only invoke triggers; data read.
+  reason: "NEEDS SCHEMA: Exact signed callback, target automation identity, attacker-controlled invocation, and newly permitted action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-monitor-privesc.md#microsoftinsightswebtestsread
   technique: Availability web test definition read
-  reason: Data read of stored request credentials of unknown content.
+  reason: "NEEDS SCHEMA: Exact credential in the stored request, its subject, usability, and newly permitted action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-monitor-privesc.md#microsoftinsightscomponentsapikeysaction
   technique: Application Insights API key creation
-  reason: Telemetry read only.
+  reason: "NEEDS SCHEMA: Exact Application Insights key scope and newly permitted telemetry action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-monitor-privesc.md#microsoftinsightsgeneratelivetokenread
   technique: Live Metrics token
-  reason: Telemetry read only.
+  reason: "NEEDS SCHEMA: Exact Live Metrics token scope and newly permitted stream action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-queue-privesc.md#queue-storage
   technique: Page intro; queue message peek/get
   reason: Introductory section; message reads are data access.
@@ -175,17 +171,20 @@
   reason: Data access and disruption; the only escalation is through a downstream consumer, mapped as azure-queue-message-injection-consumer (#conditional-escalation-through-a-downstream-consumer).
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#microsoftcommunicationcommunicationserviceswrite
   technique: ACS identity token minting via CommunicationServices/Write
-  reason: Impersonates ACS communication identities, not Azure/Entra principals.
+  reason: "NEEDS SCHEMA: Exact ACS communication identity and newly authorized service action after the write must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#microsoftcommunicationcommunicationserviceslistkeysaction
   technique: ACS ListKeys / RegenerateKey
-  reason: Service access keys; no Azure identity gain.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-stream-analytics-privesc.md#sample-private-input-events
+  reason: "NEEDS SCHEMA: Exact ACS service/key identity, usable key authority, and additional permitted action must be verified."
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-stream-analytics-post-exploitation.md#sample-private-input-events
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Stream Analytics input sampling
   reason: Data read.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-stream-analytics-privesc.md#redirect-a-running-jobs-output-sink-with-stop--outputswrite--start
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-stream-analytics-post-exploitation.md#redirect-a-running-jobs-output-sink-with-stop--outputswrite--start
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Stream Analytics output redirection
   reason: Data exfiltration; no identity gain.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#read-plaintext-job-and-schedule-configuration
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-batch-post-exploitation.md#read-plaintext-job-and-schedule-configuration
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Batch job/schedule configuration read
   reason: Data read of configuration of unknown content.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftmachinelearningservicesworkspacesonlineendpointstokenaction
@@ -211,7 +210,7 @@
   reason: Data read bypassing document ACLs.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftsearchsearchservicesskillsetswrite
   technique: AI Search skillsets/write
-  reason: Duplicate of azure-ai-search-skillset-write-identity-token (ai_search.yaml).
+  reason: 'NEEDS SCHEMA: exact Search skill/indexer execution, audience-bound token receipt, and new permission are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-foundry-privesc.md#microsoftsearchsearchserviceslistquerykeysaction--microsoftsearchsearchservicescreatequerykeyaction
   technique: AI Search query keys
   reason: Data read.
@@ -238,7 +237,7 @@
   reason: Page states impact not demonstrated; conditional and not modelable.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceuserstokenaction
   technique: APIM developer-portal user SSO token
-  reason: Developer-portal identity, not an Azure principal.
+  reason: 'The broad historical portal-token entry had no exact user or usable-token proof. A separate typed variant now requires the exact portal subject, prior denial, and newly allowed action.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicesubscriptionsread--microsoftapimanagementservicesubscriptionslistsecretsaction
   technique: APIM subscription keys
   reason: API access keys; data access only.
@@ -250,11 +249,12 @@
   reason: External credentials of unknown content.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceportalconfigslistdelegationsecretsaction-and-microsoftapimanagementserviceportalsettingslistsecretsaction
   technique: Portal delegation keys
-  reason: Developer-portal delegation forgery; no Azure identity.
+  reason: 'NEEDS SCHEMA: delegation secrets can forge a portal user, but the exact forged subject, usable delegated credential, and newly permitted action are not verified.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceportalconfigslistmediacontentsecretsaction-and-microsoftapimanagementserviceportalsettingslistsecretsaction
   technique: Portal media SAS
   reason: Portal media data access.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicebackendsread
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementservicebackendsread
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Backend credentials read
   reason: Stored header credentials of unknown content; data read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicetenantlistsecretsaction
@@ -263,27 +263,29 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicegatewaysgeneratetokenaction
   technique: Self-hosted gateway token
   reason: Gateway configuration access only.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#policy-read-permissions
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#policy-read-permissions
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Policy read
   reason: Data read of embedded values.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#jwt-validation-misconfiguration
   technique: JWT validation misconfiguration
   reason: Application-level misconfiguration; not an RBAC edge.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceapplynetworkconfigurationupdatesaction
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-management-post-exploitation.md#microsoftapimanagementserviceapplynetworkconfigurationupdatesaction
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Network configuration updates
   reason: Network exposure change only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md#microsoftbotservicebotserviceschannelslistchannelwithkeysaction
   technique: Bot channel keys
-  reason: Bot client impersonation; no Azure identity.
+  reason: "NEEDS SCHEMA: prove the exact Direct Line channel secret authenticates a concrete bot client identity with effective access beyond the caller."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md#microsoftbotservicebotserviceschannelsregeneratekeysaction
   technique: Bot channel key regeneration
-  reason: Rotates and returns the Direct Line / Web Chat channel secret; allows impersonating the bot client, no Azure identity gained (rev 171e422; Health Bot export heading removed upstream).
+  reason: "NEEDS SCHEMA: prove the exact rotated channel secret authenticates a concrete bot client identity with new effective access; rotation alone is not escalation."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md#microsofthealthbothealthbotslistsecretsaction
   technique: Health Bot secrets
-  reason: Service management API of one bot; no Azure identity.
+  reason: "NEEDS SCHEMA: prove the returned secret authenticates a concrete Healthcare Agent management identity and grants effective access beyond the caller."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-bot-service-privesc.md#microsofthealthbothealthbotsadminsecretsgenerateapikeyaction
   technique: Health Bot API key generation
-  reason: Service management API of one bot; no Azure identity.
+  reason: "NEEDS SCHEMA: prove the generated API key authenticates a concrete Healthcare Agent management identity and grants effective access beyond the caller."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#microsoftcontainerregistryregistriesrunslistlogsasurlaction
   technique: ACR run log SAS
   reason: Data read.
@@ -295,24 +297,16 @@
   reason: Callback secret read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountslistkeysaction
   technique: Cosmos DB listKeys
-  reason: Returns a reusable account-wide read/write master key when local key authentication is enabled; a scoped
-    Cosmos credential target is needed to avoid treating data-plane access as Azure identity control.
-  source_revision: 0b36331
+  reason: Data-plane key; data access.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountslistconnectionstringsaction
   technique: Cosmos DB listConnectionStrings
-  reason: For SQL API accounts the connection string embeds a reusable read/write master key; account API and local-key-auth
-    configuration must be checked before a scoped credential edge.
-  source_revision: 0b36331
+  reason: Data-plane key; data access.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbdatabaseaccountsreadonlykeysaction
   technique: Cosmos DB read-only keys
-  reason: Returns reusable account-wide read-only master keys; a scoped read-only credential target and local-key-auth
-    check are needed.
-  source_revision: 0b36331
+  reason: Data read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftinferenceserviceinferenceaccountslistkeysaction
   technique: Inference account listKeys / regenerateKeys / invoke
-  reason: Returns a reusable Semantic Reranker key for billed inference when key authentication is enabled; it grants
-    no Cosmos document or ARM access.
-  source_revision: 0b36331
+  reason: Billed inference access only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbmongoclustersread--microsoftdocumentdbmongoclustersfirewallruleswrite
   technique: MongoDB cluster firewall rules write
   reason: Network exposure only.
@@ -321,10 +315,9 @@
   reason: No attacker-controlled code; existing pipeline behaviour only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#exchange-a-supplied-github-authorization-code-with-factoriesgetgithubaccesstokenaction
   technique: Factory GitHub OAuth token theft
-  reason: Returns a GitHub OAuth token for the factory integration. Repository rights depend on the token scope
-    and configured GitHub account; an external application identity target is needed.
-  source_revision: 0b36331
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#read-plaintext-parameters-from-pipeline-run-history
+  reason: 'The broad historical GitHub-token entry had no exact account or usable-repository proof. A separate typed variant now requires exact subject, repository, prior denial, and newly allowed action (dataset sink-replacement section moved to post-exploitation).'
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-data-factory-post-exploitation.md#read-plaintext-parameters-from-pipeline-run-history
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Pipeline run parameter read
   reason: Data read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md#secret-delivery-attribute-disclosure
@@ -341,25 +334,27 @@
   reason: Data read.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#iot-hub-shared-access-policy-keys
   technique: IoT Hub shared access keys
-  reason: IoT device-plane control; no Azure/Entra identity.
+  reason: "NEEDS SCHEMA: Exact IoT Hub policy identity, usable key, and newly permitted hub action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#device-provisioning-service-shared-access-policy-keys
   technique: DPS shared access keys
-  reason: IoT device-plane control; no Azure/Entra identity.
+  reason: "NEEDS SCHEMA: Exact DPS policy identity, usable key, and newly permitted provisioning action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#device-and-module-identity-takeover
   technique: IoT device/module identity takeover
-  reason: IoT device identities are not Azure/Entra principals.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#device-twin-disclosure-and-commandconfiguration-injection
+  reason: "NEEDS SCHEMA: Exact device or module identity, usable credential or assigned key, and newly permitted device action must be verified."
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-iot-hub-post-exploitation.md#device-twin-disclosure-and-commandconfiguration-injection
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Device twin read/write
   reason: Device configuration injection; device-side effect.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#cloud-to-device-messages-direct-methods-and-jobs
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-iot-hub-post-exploitation.md#cloud-to-device-messages-direct-methods-and-jobs
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: C2D messages, direct methods, jobs
   reason: Device-side effect; no Azure identity.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#full-registry-export-and-import
   technique: Registry export/import
-  reason: IoT device credentials; no Azure identity.
+  reason: "NEEDS SCHEMA: Exact exported device identity, usable credential, and newly permitted device action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#dps-attestation-key-disclosure-and-unauthorized-provisioning
   technique: DPS attestation keys
-  reason: IoT device provisioning; no Azure identity.
+  reason: "NEEDS SCHEMA: Exact attested device or enrollment identity and newly permitted provisioning action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#lower-impact-boundaries
   technique: IoT lower-impact operations
   reason: Low impact per page.
@@ -368,22 +363,16 @@
   reason: Control weakening; no identity.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#access-key-disclosure-and-message-injection
   technique: SignalR/Web PubSub access keys
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    for SignalR or Web PubSub access key, service-specific local-auth condition. Key return grants service management
-    API authority, but Web PubSub may disable local auth.
+  reason: Real-time message control; application-dependent.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#signalr-temporary-signing-material-with-only-authaccesskeyaction
   technique: SignalR auth/accessKey
-  reason: A credential or permission gain is documented, but it is deferred until azure_service_credential target
-    for temporary SignalR client JWT signer and known hub. The transient key mints client tokens, not a durable
-    Azure principal.
+  reason: Real-time message control; application-dependent.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#targeted-client-message-injection
   technique: SignalR/Web PubSub message injection
   reason: Message injection; escalation depends on downstream consumer logic, not modelable from RBAC.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-signalr-web-pubsub-privesc.md#web-pubsub-client-token-minimum-pair
   technique: Web PubSub client token
-  reason: A credential or permission gain is documented, but it is deferred until azure_application_client target
-    with Web PubSub hub binding and two-action conjunction. The page tests that generateToken alone gets HTTP 403;
-    write is also required.
+  reason: Application client connection only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#modify-network-restrictions
   technique: Key Vault network ACL change
   reason: Network reachability only.
@@ -446,26 +435,22 @@
   reason: Data-plane SQL permission; not RBAC.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-sql-privesc.md#elastic-jobs-run-arbitrary-t-sql-through-jobagentsjobsstepswrite--executionswrite
   technique: Elastic Jobs T-SQL as stored credential
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies sql.elasticJobs[{agentId,jobId,stepId,credentialId,targetGroupId,targetDatabaseIds}].
-    The stored credential and target group must belong to the same runnable job.
+  reason: Reaches a SQL login of unknown privilege, not an Azure principal or necessarily admin.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsitessnippetswrite
   technique: SWA snippet injection
-  reason: Client-side content injection; no Azure identity.
+  reason: "NEEDS SCHEMA: Exact authenticated visitor principal, credential/session capture, and newly authorized action must be verified; generic client-side injection alone is terminal."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#read-configured-third-party-credentials
   technique: Third-party source-control tokens
-  reason: A credential or permission gain is documented, but it is deferred until external_service_credential target
-    with provider OAuth scopes and current-account ownership. The sourcecontrols response can contain OAuth tokens;
-    downstream rights depend on token scopes.
+  reason: "NEEDS SCHEMA: Exact GitHub or other source-control credential, subject, usability, and newly permitted action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#overwrite-file---overwrite-routes-html-js
   technique: Overwrite repo files with GitHub token
-  reason: Non-Azure repository write.
+  reason: "NEEDS SCHEMA: Exact source-control or application principal, attacker-controlled file execution, and newly authorized action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsitesconfigwrite
   technique: SWA basic auth change
   reason: Content access control only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsiteslistsecretsaction
   technique: SWA deployment token
-  reason: A credential or permission gain is documented, but it is deferred until the collector supplies staticWebApps.deploymentAuth[{siteId,tokenEnabled,azureTokenAllowed}].
-    A returned deployment token must be accepted by the site deployment endpoint.
+  reason: "NEEDS SCHEMA: Exact deployment key subject, usability, and newly permitted deployment action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsiteswrite
   technique: SWA source repository change
   reason: Static content deployment; no managed identity reached.
@@ -474,9 +459,7 @@
   reason: Disruption.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#microsoftwebstaticsitescreateinvitationaction
   technique: SWA user invitation
-  reason: A credential or permission gain is documented, but it is deferred until azure_application_role target
-    for Static Web App protected-path role, plus invitation acceptance condition. An invitation only becomes a role
-    after a matching user accepts it.
+  reason: "NEEDS SCHEMA: Exact invited application user, assigned app role, and before/after permitted action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-static-web-apps-privesc.md#pull-requests
   technique: SWA PR preview deployments
   reason: Repository-level abuse; no Azure identity.
@@ -488,9 +471,7 @@
   reason: Control weakening only.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#hns-acl-takeover-and-blob-super-user-data-action
   technique: HNS ACL takeover / runAsSuperUser
-  reason: A credential or permission gain is documented, but it is deferred until azure_storage_path target with
-    HNS ACL/ancestor-execute evaluator and separate read permission. ACL modification or owner change only permits
-    access after path ACL and read checks; runAsSuperUser bypasses ACL.
+  reason: Storage data access; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#operational-blob-backup-rollback-with-microsoftdataprotectionbackupvaultsbackupinstancesrestoreaction
   technique: Blob backup rollback
   reason: Data integrity/recovery; no identity gain.
@@ -499,18 +480,13 @@
   reason: Data retention control.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsfileservicestakeownershipaction
   technique: Azure Files take ownership
-  reason: A credential or permission gain is documented, but it is deferred until azure_file_path target with ownership
-    and NTFS ACL evaluation. Taking ownership gives ability to edit ACL, not automatic file read.
+  reason: Storage data access; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsfileservicesfilesharesfilesmodifypermissionsaction
   technique: Azure Files modify permissions
-  reason: A credential or permission gain is documented, but it is deferred until azure_file_path target with NTFS
-    ACL evaluation and self-grant outcome. modifypermissions changes a file ACL; access depends on the granted ACE
-    and separate read action.
+  reason: Storage data access; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#microsoftstoragestorageaccountsfileservicesfilesharesfilesactassuperuseraction
   technique: Azure Files act as superuser
-  reason: A credential or permission gain is documented, but it is deferred until azure_file_path target with superuser
-    bypass outcome and file data-operation check. actassuperuser is an ACL bypass for file operations, not an ARM
-    role grant.
+  reason: Storage data access; no identity gain.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#azure-files-and-local-user-credential-boundaries
   technique: Azure Files / local-user boundaries
   reason: Page states not standalone primitives.
@@ -541,10 +517,10 @@
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-search-privesc.md#on-demand-skillset-detonation-with-microsoftsearchsearchservicesdebugsessionswrite--debugsessionsexecuteaction
   technique: "Debug-session skillset detonation"
-  reason: "Covered by azure-ai-search-skillset-write-identity-token (debugSessions any_of alternative)."
+  reason: 'NEEDS SCHEMA: exact Search skill/vectorizer/debug execution, audience-bound token receipt, and new permission are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-search-privesc.md#index-schema-poisoning--vectorizer-repoint-with-microsoftsearchsearchservicesindexeswrite
   technique: "Index vectorizer repoint"
-  reason: "Covered by azure-ai-search-skillset-write-identity-token (indexes/write any_of alternative)."
+  reason: 'NEEDS SCHEMA: exact Search skill/vectorizer/debug execution, audience-bound token receipt, and new permission are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-ai-search-privesc.md#enumeration-when-search-reads-are-denied
   technique: "Enumeration when reads are denied"
   reason: "Enumeration guidance only; no privilege gain."
@@ -560,7 +536,8 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-center-privesc.md#api-center
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-center-privesc.md#internal-api-recon-data-reader
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-api-center-post-exploitation.md#internal-api-recon-data-reader
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Internal API inventory recon"
   reason: "Data read of API metadata; no identity gained."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#api-management
@@ -568,7 +545,7 @@
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementservicebackendslistsecretsaction
   technique: "APIM backend secret listing"
-  reason: "Returns backend credentials (keys/basic auth/certificates) of downstream APIs; Entra credentials stored as named values are modelled by the APIM named-value entries, backends yield no Azure identity by themselves."
+  reason: "NEEDS SCHEMA: APIM backend reads may expose downstream API credentials, but exact credential subject, usable secret, newly permitted action, and prior-absence proof are not verified. Named-value Entra paths are separately modelled. no Azure identity by themselves."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceopenidconnectproviderslistsecretsaction
   technique: "APIM OpenID Connect provider client secret"
   reason: "Covered by azure-apim-oauth-server-secret."
@@ -581,10 +558,12 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#app-configuration
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#microsoftappconfigurationconfigurationstoreslistkeyvalueaction
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#microsoftappconfigurationconfigurationstoreslistkeyvalueaction
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "App Configuration key-value listing"
   reason: "Data read of configuration values; Key Vault references resolve only with the consumer's identity, so no Azure identity is gained by the source."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#microsoftappconfigurationconfigurationstoreskeyvaluesread
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#microsoftappconfigurationconfigurationstoreskeyvaluesread
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "App Configuration key-value data read"
   reason: "Data read; no identity gained."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#weaken-store-posture-with-configurationstoreswrite
@@ -601,14 +580,10 @@
   reason: "Covered by azure-appservice-config-write."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#replace-function-code-on-its-azure-files-content-share-fileswrite--writefilebackupsemantics
   technique: "Function content share code replacement"
-  reason: "Covered by azure-functions-content-storage-write."
+  reason: 'NEEDS SCHEMA: exact Function App to content storage binding, code overwrite, and identity execution are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesbackupaction-backup-exfiltration-to-attacker-storage
-  technique: Backup exfiltration
-  reason: The backup can disclose an Entra application client secret in app settings or connection strings, but
-    ARM configuration alone does not show whether the backed-up content contains a still-valid secret or identify
-    its service principal. The site must support backup, and the caller must provide a writable Storage SAS destination
-    and retrieve the ZIP. Exclude until content and credential validity can be established without inferring an
-    identity from backup/action alone.
+  technique: "Backup exfiltration"
+  reason: "Data exfiltration of site content/secrets; no identity gained directly."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesnetworkconfigwrite-vnet-integration-for-an-internal-pivot
   technique: "VNet integration pivot"
   reason: "Network pivot; needs code execution modelled elsewhere."
@@ -646,11 +621,8 @@
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md#export-partner-kubeconfig-and-hybrid-connection-listener-token
-  technique: Partner kubeconfig / listener token export
-  reason: The returned kubeconfig and hybrid-connection Listener token may grant appliance or relay access, but
-    their effective RBAC, relay-token scope and network reachability require response and appliance/relay facts
-    absent from the ARM configuration snapshot. The deleted azure-arc-resource-bridge-credential-export rule did
-    not establish an administrator target.
+  technique: "Partner kubeconfig / listener token export"
+  reason: "Covered by azure-arc-resource-bridge-credential-export."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md#built-in-role-exposure
   technique: "Built-in role exposure"
   reason: "Role inventory guidance; no separate primitive."
@@ -660,7 +632,8 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arm-template-spec-privesc.md#arm-templates--deployments
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-attestation-privesc.md#azure-attestation
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-attestation-post-exploitation.md#azure-attestation
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#entra-id-azuread--azure-iam
@@ -671,16 +644,16 @@
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsscheduleswrite-microsoftautomationautomationaccountsjobscheduleswrite
   technique: "Schedule an existing runbook"
-  reason: "Covered by azure-automation-trigger-existing-runbook (jobSchedules/write; schedules/write only creates the schedule)."
+  reason: 'NEEDS SCHEMA: exact runbook trigger, behavior, execution, and named identity outcome are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountswebhooks--microsoftautomationautomationaccountsrunbooksread
   technique: "Webhook trigger of an existing runbook"
-  reason: "Covered by azure-automation-trigger-existing-runbook."
+  reason: 'NEEDS SCHEMA: exact runbook trigger, behavior, execution, and named identity outcome are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#microsoftautomationautomationaccountsrunbooksdraftwrite-microsoftautomationautomationaccountsrunbooksdraftcontentwrite-microsoftautomationautomationaccountsrunbooksdrafttestjobwrite
   technique: "Draft test job"
   reason: "Covered by azure-automation-runbook-author-and-run (testJob alternative)."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#automation---malicious-modules
   technique: "Malicious module"
-  reason: "Covered by azure-automation-poison-module-or-package."
+  reason: 'NEEDS SCHEMA: exact runbook import and execution under named identity are uncollected.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-batch-privesc.md#azure-batch
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
@@ -693,15 +666,17 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#communication-services
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#org-domain-phishing-infrastructure-with-emailservicesdomainssenderusernameswrite
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-communication-services-post-exploitation.md#org-domain-phishing-infrastructure-with-emailservicesdomainssenderusernameswrite
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Org-domain sender phishing"
   reason: "Phishing infrastructure; no Azure identity."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#push-channel-redirect-with-communicationserviceslinknotificationhubaction
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-communication-services-post-exploitation.md#push-channel-redirect-with-communicationserviceslinknotificationhubaction
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Push channel redirect"
   reason: "Notification redirection; no Azure identity."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-communication-services-privesc.md#inbound-sms2fa-interception-with-communicationserviceseventgridfilterswrite
   technique: "Inbound SMS / 2FA interception"
-  reason: "Message interception (possible external account takeover), not an Azure identity edge."
+  reason: "NEEDS SCHEMA: Exact intercepted factor, named account subject, and successful newly authorized account action must be verified; message interception alone is terminal."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-confidential-ledger-privesc.md#confidential-ledger
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
@@ -736,10 +711,8 @@
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftinferenceserviceinferenceaccountsregeneratekeysaction
-  technique: Inference account key regeneration
-  reason: Rotates and returns a reusable Semantic Reranker key for billed inference when key authentication is enabled;
-    it grants no Cosmos document or ARM access.
-  source_revision: 0b36331
+  technique: "Inference account key regeneration"
+  reason: "Rotate-and-capture of the semantic reranker key gives billed inference access only; no Azure identity."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftinferenceserviceinferenceaccountsinvokesemanticrerankeraction
   technique: "Semantic reranker invocation"
   reason: "Inference usage; no identity."
@@ -756,10 +729,8 @@
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-database-migration-service-privesc.md#microsoftdatamigrationsqlmigrationserviceslistauthkeysaction--rogue-ir-worker-on-prem-credential-relay
-  technique: DMS IR auth key rogue worker
-  reason: Returns DMS IR registration keys, enabling a rogue worker when default-ir exists. Capturing source SQL
-    credentials additionally requires a migration job assigned to that worker.
-  source_revision: 0b36331
+  technique: "DMS IR auth key rogue worker"
+  reason: "NEEDS SCHEMA: a rogue DMS integration runtime may obtain an on-prem SQL credential, but the exact SQL login, usable secret, observed target authority, and prior-absence proof are not verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-database-migration-service-privesc.md#microsoftsqlserverswrite-bundled-in-the-migration-roles--unexpected-sql-control-plane-reach
   technique: "Migration roles include servers/write"
   reason: "Covered by azure-sql-server-admin-password-reset."
@@ -767,10 +738,8 @@
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#unity-catalog-storage-credential--external-location-abuse
-  technique: Unity Catalog storage credential abuse
-  reason: Unity Catalog temporary credentials can grant Azure Storage access through an Access Connector MI. Databricks
-    UC permissions, storage credential links and Azure Storage scope are required to evaluate this.
-  source_revision: 0b36331
+  technique: "Unity Catalog storage credential abuse"
+  reason: "NEEDS SCHEMA: a storage credential or external location can confer additional Unity Catalog or backing storage authority, but the exact caller, resource grant, and before/after effective permissions are not verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-databricks-privesc.md#microsoftdatabricksaccessconnectorswrite--attach-an-over-privileged-managed-identity
   technique: "Access connector identity attach"
   reason: "Using the connector identity needs Unity Catalog storage-credential privileges outside Azure RBAC."
@@ -785,7 +754,7 @@
   reason: "Identity gain needs Microsoft.Logic/workflows/write on the target Logic App; covered by azure-logicapp-workflow-write-existing-identity."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-defender-for-cloud-privesc.md#deployifnotexists-remediation-identities-via-azure-policy
   technique: "DINE remediation identities"
-  reason: "Covered by azure-policy-definition-write-remediation-identity / azure-policy-assignment-write-user-assigned-identity."
+  reason: 'Definition-rewrite branch NEEDS SCHEMA for exact assignment/MI join and observed remediation; assignment-write branch is separate.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-defender-for-cloud-privesc.md#microsoftsecuritypricings--connector-service-principals
   technique: "Defender connector service principals"
   reason: "Entra application credential paths (Entra ID catalog scope)."
@@ -838,10 +807,8 @@
   technique: "System topic event subscription"
   reason: "Event feed exfiltration; no identity."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md#backdoor-mqtt-client-via-namespacesclients--clientgroups--permissionbindingswrite
-  technique: MQTT client backdoor
-  reason: Creating an MQTT client, group and permission binding grants persistent broker publish/subscribe authority
-    with attacker-held client credentials; this requires a scoped MQTT authority target.
-  source_revision: 0b36331
+  technique: "MQTT client backdoor"
+  reason: 'The broad historical MQTT entry did not prove client creation, group membership, permission binding, usable credential, or new publish/subscribe access. A separate typed variant now requires all of these.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md#authnetwork-downgrade-with-namespaceswrite-topicswrite-domainswrite
   technique: "Event Grid auth / network downgrade"
   reason: "Posture downgrade; no identity."
@@ -853,14 +820,16 @@
   reason: "Page title / introduction heading; no technique."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-fabric-privesc.md#connection--gateway-credential-confused-deputy-exfil
   technique: "Fabric connection / gateway credential abuse"
-  reason: "Fabric connection permissions, not Azure RBAC; data-source credential use only."
+  reason: "NEEDS SCHEMA: a Fabric connection or gateway may convey exact Fabric or downstream data-source authority, but the caller, target connection identity, usable access, and new effective permission are not verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-fluid-relay-privesc.md#fluid-relay
   technique: "Page title"
   reason: "Page title / introduction heading; no technique."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-fluid-relay-privesc.md#container-id-enumeration-with-fluidrelaycontainersread
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-fluid-relay-post-exploitation.md#container-id-enumeration-with-fluidrelaycontainersread
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Fluid Relay container enumeration"
   reason: "Enumeration only."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-fluid-relay-privesc.md#cmkidentity-tamper-with-fluidrelayserverswrite
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-fluid-relay-post-exploitation.md#cmkidentity-tamper-with-fluidrelayserverswrite
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: "Fluid Relay CMK / identity tamper"
   reason: "Service-side CMK identity use (DoS); no code path for the source."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesconfiglistaction-microsoftwebsitesconfigwrite
@@ -887,40 +856,3 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsiteshostsyncaction--reload-tampered-keystriggers-enabler-low-alone
   technique: "host/sync"
   reason: "Enabler only (reloads tampered keys/triggers); no gain alone."
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arc-resource-bridge-privesc.md#export-customer-kubeconfig-and-ssh-credentials
-  technique: Export customer Arc Resource Bridge kubeconfig and SSH credentials
-  reason: The Actions can return appliance kubeconfigs and SSH key material, but the exported kubeconfig role, usable
-    Kubernetes RBAC, SSH server acceptance, network reachability and relay scope are not in the ARM configuration
-    snapshot. They do not establish appliance administrator, Kubernetes cluster-admin or Azure administration. A
-    scoped appliance/SSH credential target and measured host or Kubernetes authorization are needed before an identity
-    edge can be drawn.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-cosmosDB-privesc.md#microsoftdocumentdbmongoclusterslistconnectionstringsaction--mongoclustersusersread--userswrite
-  technique: MongoDB vCore native user creation
-  source_revision: 0b36331
-  reason: users/write creates a native password user with configured data-plane rights. It does not register an
-    Entra principal; listConnectionStrings returns endpoint templates only. A native database-user target is needed
-    to represent the new credential without implying cluster administrator rights.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md#microsoftdigitaltwinsdigitaltwinsinstanceswrite--managed-identity-attach-confused-deputy-foothold
-  technique: Attach a user-assigned identity to a Digital Twins instance and import with it
-  source_revision: 0b36331
-  reason: Digital Twins only fetches an import-source Blob using its managed identity. The caller does not receive
-    a general MI token or its other role grants; disclosure depends on chosen NDJSON content and import parser/error
-    behavior. A scoped Blob-read confused-deputy target and content fact are needed.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-digital-twins-privesc.md#microsoftdigitaltwinsjobsimportswrite--bulk-graph-import-mass-poisoning--mi-confused-deputy-read
-  technique: Use an import job to read blobs with the Digital Twins instance identity
-  source_revision: 0b36331
-  reason: Digital Twins only fetches an import-source Blob using its managed identity. The caller does not receive
-    a general MI token or its other role grants; disclosure depends on chosen NDJSON content and import parser/error
-    behavior. A scoped Blob-read confused-deputy target and content fact are needed.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entra-id-governance-privesc.md#catalog-scoped-self-grant-privesc
-  technique: Catalog-scoped self-grant of an Entra role packaged in a catalog the source manages
-  source_revision: 0b36331
-  reason: The cited page packages group membership or ownership, application roles and SharePoint roles. Direct
-    Entra directory-role packaging is not documented; role-assignable-group gain is already covered by azure-entraid-entitlement-catalog-self-grant-group.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-virtual-machines-and-network-privesc.md#microsoftserialconsoleserialportsconnectaction
-  technique: Direct Serial Console login with an already known local guest password
-  source_revision: 0b36331
-  reason: The connect action opens a console, but login requires a valid local guest account password already known
-    to the source. That credential, guest account state, console availability and IMDS reachability are host/runtime
-    facts absent from the Azure permission snapshot; connect/action alone cannot establish access to the VM managed
-    identities.

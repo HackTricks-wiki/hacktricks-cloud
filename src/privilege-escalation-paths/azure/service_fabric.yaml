@@ -1,53 +1,21 @@
-- id: azure-servicefabric-application-deploy-node-identity
-  provider: azure
-  service: service_fabric
-  title: Deploy a Service Fabric application to run code on cluster nodes
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#application-deploy--node-rce
-  source_revision: 171e422
-  summary: Application code runs on the cluster's VMSS nodes, exposing the managed identities attached to the node scale sets.
-  requires:
-    all_of: []
-    any_of:
-      - - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/write
-          scope: "{pivot}"
-        - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/versions/write
-          scope: "{pivot}"
-        - action: Microsoft.ServiceFabric/managedClusters/applications/write
-          scope: "{pivot}"
-      - - action: Microsoft.ServiceFabric/clusters/applicationTypes/write
-          scope: "{pivot}"
-        - action: Microsoft.ServiceFabric/clusters/applicationTypes/versions/write
-          scope: "{pivot}"
-        - action: Microsoft.ServiceFabric/clusters/applications/write
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.ServiceFabric/managedClusters|Microsoft.ServiceFabric/clusters
-  target:
-    kind: azure_managed_identity
-    selector:
-      attached_to_service: Microsoft.Compute/virtualMachineScaleSets
-      azure_host_linked_to_pivot: service_fabric_node_vmss
-    scope: inherited_scope
-    aggregate_as: "Node scale-set identities of Service Fabric cluster {pivot}"
-  conditions:
-    - id: package_reachable
-      description: The application type version must reference a package URL the cluster can download.
-    - id: node_identity_present
-      description: Only identities attached to the node scale sets are reachable through IMDS; application-level identities need the identity-assignment entry.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict Service Fabric application and application-type writes (Service Fabric Managed Cluster Contributor grants them), keep node scale-set identities least-privileged, and alert on application deployments.
-  references:
-    - https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/compute#microsoftservicefabric
-    - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-managed-cluster-virtual-machine-scale-sets
-  notes: Template-based deployments additionally need Microsoft.Resources/deployments write. For managed clusters the node scale sets live in a service-managed resource group. Running code on a node also exposes the cluster certificate in the node certificate store (Service Fabric data-plane admin, not an Azure principal).
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Service Fabric techniques (declarative only).
+# Source: hacktricks-cloud az-service-fabric-privesc.md (rev 171e422).
+# Action names checked against the Azure RBAC permissions reference (Compute > Microsoft.ServiceFabric);
+# RBAC matching is case-insensitive (the reference spells managedclusters / nodetypes in lower case).
+# Cluster nodes are VM scale sets; the cluster -> node VMSS link is not collected, so node-identity
+# targets use azure_host_linked_to_pivot (unknown until collected).
+
 - id: azure-servicefabric-application-user-assigned-identity
   provider: azure
   service: service_fabric
   title: Deploy a Service Fabric application bound to a user-assigned identity
   source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#managed-identity-token-theft-via-the-sf-token-service
-  source_revision: 171e422
+  source_revision: 8c54da7d5c
   summary: An attacker-supplied application bound to a user-assigned identity obtains that identity's tokens from the Service Fabric token service.
   requires:
     all_of:
@@ -55,28 +23,27 @@
         scope: "{target.id}"
     any_of:
       - - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/write
-          scope: "{pivot}"
+          scope: "*"
         - action: Microsoft.ServiceFabric/managedClusters/applicationTypes/versions/write
-          scope: "{pivot}"
+          scope: "*"
         - action: Microsoft.ServiceFabric/managedClusters/applications/write
-          scope: "{pivot}"
+          scope: "*"
       - - action: Microsoft.ServiceFabric/clusters/applicationTypes/write
-          scope: "{pivot}"
+          scope: "*"
         - action: Microsoft.ServiceFabric/clusters/applicationTypes/versions/write
-          scope: "{pivot}"
+          scope: "*"
         - action: Microsoft.ServiceFabric/clusters/applications/write
-          scope: "{pivot}"
-  pivot_resource_type: Microsoft.ServiceFabric/managedClusters|Microsoft.ServiceFabric/clusters
+          scope: "*"
   target:
     kind: azure_managed_identity
     selector:
       managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "User-assigned identities assignable in {scope}"
+      azure_servicefabric_application_uami_path: true
+    scope: any
+    aggregate_as: "User-assigned identities in writable Service Fabric applications"
   conditions:
     - id: cluster_managed_identity_token_service
-      description: The cluster must have the managed identity token service enabled; on classic clusters the identity must also be assigned to the node scale set (a separate Compute write).
+      description: Managed clusters enable the token service when an identity-enabled application is deployed; classic clusters must have the token service enabled and the application must map the identity to its service.
   blockers:
     - azure_deny_assignment
   confidence: conditional
@@ -85,70 +52,4 @@
   references:
     - https://learn.microsoft.com/en-us/azure/service-fabric/concepts-managed-identity
     - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-service-fabric-app-code
-  notes: Theft of an existing application's identity from other code on the node depends on per-activation secrets and process isolation and is not modelled separately; node scale-set identities are covered by azure-servicefabric-application-deploy-node-identity.
-- id: azure-servicefabric-managed-nodetype-user-assigned-identity
-  provider: azure
-  service: service_fabric
-  title: Attach a user-assigned identity to a managed-cluster node type
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#cluster--node-type-create-or-modify
-  source_revision: a66f094ede
-  summary: Adding a user-assigned identity to a node type exposes that identity through IMDS to code running on the nodes.
-  requires:
-    all_of:
-      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
-        scope: "{target.id}"
-      - action: Microsoft.ServiceFabric/managedClusters/write
-        scope: "{pivot}"
-      - action: Microsoft.ServiceFabric/managedClusters/nodeTypes/write
-        scope: "{pivot}"
-  pivot_resource_type: Microsoft.ServiceFabric/managedClusters
-  target:
-    kind: azure_managed_identity
-    selector:
-      managed_identity_type: user_assigned
-      azure_identity_assignable_in_scope: true
-    scope: inherited_scope
-    aggregate_as: "User-assigned identities assignable in {scope}"
-  conditions:
-    - id: sfrp_identity_operator
-      description: The Azure Service Fabric Resource Provider service principal must hold Managed Identity Operator on the identity (a one-time role assignment that itself needs roleAssignments/write).
-    - id: node_code_execution
-      description: The source also needs code on the nodes, through an application deployment or a node-type VM extension.
-  blockers:
-    - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict managedClusters/nodeTypes/write and userAssignedIdentities/assign/action, and alert on Managed Identity Operator grants to the Service Fabric Resource Provider.
-  references:
-    - https://learn.microsoft.com/en-us/azure/service-fabric/how-to-managed-identity-managed-cluster-virtual-machine-scale-sets
-  notes: The classic-cluster variant changes the paired scale set directly and is covered by azure-vmss-model-write.
-- id: azure-audit-cluster-client-certificate-theft-data-plane-admin
-  provider: azure
-  service: service_fabric
-  title: Cluster / client certificate theft → data-plane admin
-  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-service-fabric-privesc.md#cluster--client-certificate-theft--data-plane-admin
-  summary: cluster certificate identity, able to deploy apps and reach node identity
-  requires:
-    all_of:
-    - action: Microsoft.KeyVault/vaults/secrets/getSecret/action
-      scope: '{target.scope}'
-  target:
-    kind: azure_verified_authority
-    scope: inherited_scope
-    aggregate_as: Cluster / client certificate theft → data-plane admin on {target.scope}
-    outcome: permission_grant
-    selector:
-      azure_challenge_fact: azure-audit-cluster-client-certificate-theft-data-plane-admin
-  conditions:
-  - id: collector_fact_required
-    description: Exact source, target, scope and requested collector facts must be verified; missing facts remain
-      UNKNOWN.
-  blockers:
-  - azure_deny_assignment
-  confidence: conditional
-  severity: high
-  mitigation: Restrict the listed action to principals that need this service privilege.
-  references:
-  - https://learn.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-security
-  notes: 'Draft is disabled until the stated schema feature or collector fact is implemented; unresolved facts must
-    evaluate UNKNOWN. Collector fact required: serviceFabric.certSecretLinks.'
+  notes: The source must be able to write the application type, version, and application under one inventoried cluster and assign the exact UAMI. Application deployment and service identity mapping remain conditional. Other node code cannot use an application's identity without its per-activation secret; node scale-set identities are modeled separately.

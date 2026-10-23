@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 # GCP Cloud Domains privilege escalation techniques.
 # Source: hacktricks-cloud gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md (rev 171e422).
 # Needs the domains_registration inventory {name, domainName} (not collected yet -> unresolved placeholders).
@@ -6,8 +7,8 @@
   provider: gcp
   service: domains
   title: Repoint a Cloud Domains registration's name servers to recover the Workspace super administrator
-  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md#domainsregistrationsconfiguredns--redirect-authoritative-dns
-  source_revision: 171e422
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workspace-privesc.md#cloud-dns-to-workspace-administrator-recovery
+  source_revision: 4e9b5eaaa6
   summary: The source can obtain the privileges of Workspace super administrators of tenants whose primary domain is a Cloud Domains registration whose DNS settings it can change.
   requires:
     all_of:
@@ -35,10 +36,10 @@
 - id: gcp-domains-configuremanagement-transfer-workspace-admin-recovery
   provider: gcp
   service: domains
-  title: Transfer a Cloud Domains registration out with its authorization code to recover the Workspace super administrator
-  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-cloud-domains-post-exploitation.md#domainsregistrationsconfiguremanagement--obtain-the-transfer-credential-and-transfer-the-domain
-  source_revision: 6fb9ac51fd
-  summary: The source can obtain the privileges of Workspace super administrators of tenants whose primary domain is a Cloud Domains registration whose management settings (registrar lock, transfer authorization code) it can change, because a completed transfer gives it control of the domain's DNS.
+  title: Transfer a Cloud Domains registration to attempt Workspace administrator recovery
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-workspace-privesc.md#cloud-dns-to-workspace-administrator-recovery
+  source_revision: 4e9b5eaaa6
+  summary: The source can retrieve a transfer authorization code or initiate a push transfer for an eligible Cloud Domains registration. A completed transfer to a controlled registrar could give it DNS control of the matching Workspace customer's primary domain, which may support administrator recovery.
   requires:
     all_of:
       - action: domains.registrations.configureManagement
@@ -51,9 +52,9 @@
     aggregate_as: "Workspace super administrators of domains registered in Cloud Domains"
   conditions:
     - id: transfer_eligibility
-      description: The registration must be transfer-eligible (older than 60 days, unlocked where supported, TLD rules); push-transfer TLDs need the push flow instead of an authorization code.
+      description: Authorization-code retrieval requires the initial registration to be at least 60 days old. The registration must meet lock, registry and TLD transfer rules; push-transfer TLDs need a receiving registrar tag instead of an authorization code.
     - id: receiving_registrar
-      description: The source must complete the transfer at a receiving registrar it controls and then publish DNS for the domain.
+      description: The source must complete any required registrar or registrant confirmation, transfer the domain to a registrar it controls, and publish DNS for the domain.
     - id: recovery_process
       description: Depends on Google's administrator-recovery process accepting the DNS domain-verification challenge for the tenant.
   blockers: [gcp_deny_policy]

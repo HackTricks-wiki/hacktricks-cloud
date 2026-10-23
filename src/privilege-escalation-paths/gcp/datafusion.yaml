@@ -1,3 +1,4 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
 
 # GCP Cloud Data Fusion privilege escalation techniques.
 # Source: hacktricks-cloud gcp-privilege-escalation/gcp-data-fusion-privesc.md (rev 171e422).
@@ -11,38 +12,35 @@
   title: Deploy and run a code-capable Data Fusion pipeline as the pipeline VM service account
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-data-fusion-privesc.md#create-and-execute-a-pipeline-as-its-configured-vm-service-account
   source_revision: 171e422
-  summary: The source can obtain the privileges of the pipeline VM service account of Data Fusion instances where
-    it can create and execute pipelines (PySpark / Scala Spark plugins run arbitrary code on the Dataproc cluster).
+  summary: The source can run user-controlled code as the pipeline VM service account when a code-capable plugin is available to a pipeline it can create and execute in an authorized namespace.
   requires:
     all_of:
     - action: datafusion.instances.get
-      resource: '{target.host_resource}'
+      resource: '*'
     - action: datafusion.namespaces.get
-      resource: '{target.host_resource}'
+      resource: '*'
     - action: datafusion.pipelines.create
-      resource: '{target.host_resource}'
+      resource: '*'
     - action: datafusion.pipelines.execute
-      resource: '{target.host_resource}'
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: datafusion_instance
-    scope: same_project
-    aggregate_as: Pipeline VM SAs of Data Fusion instances where the source can run pipelines
+      gcp_datafusion_pipeline_path: true
+    scope: any
+    aggregate_as: Pipeline VM SAs of runnable Data Fusion profiles in authorized namespaces
   conditions:
   - id: plugin_installed
-    description: A code-capable plugin (PySpark Program, Scala Spark) must be installed; uploading one needs datafusion.artifacts.create/update.
+    description: A code-capable plugin must be available to an installed pipeline artifact in the namespace.
   - id: valid_compute_profile
-    description: The Data Fusion service agent must already be able to act as the profile's SA; no caller actAs
-      is needed.
+    description: The Data Fusion service agent must already be able to act as the profile's SA; no caller actAs is needed.
   - id: namespace_scope
     description: Pipeline permissions may be granted per namespace on RBAC-enabled instances.
   blockers:
   - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict roles/datafusion.developer and higher; use a low-privilege pipeline SA per compute profile
-    instead of the Compute Engine default SA.
+  mitigation: Restrict roles/datafusion.developer and higher; use a low-privilege pipeline SA per compute profile instead of the Compute Engine default SA.
   references:
   - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
   - https://docs.cloud.google.com/data-fusion/docs/concepts/service-accounts
@@ -52,60 +50,63 @@
   title: Self-grant a Data Fusion instance or namespace role, then run pipelines
   source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-data-fusion-privesc.md#self-grant-a-data-fusion-instance-or-namespace-role
   source_revision: 171e422
-  summary: The source can obtain the privileges of the pipeline VM service account of Data Fusion instances whose instance or namespace IAM policy it can write.
+  summary: The source can grant itself pipeline access through a writable Data Fusion instance or namespace IAM policy, then run an installed code plugin as an authorized profile's pipeline VM service account.
   requires:
     any_of:
-      - - action: datafusion.instances.setIamPolicy
-          resource: "{target.host_resource}"
-      - - action: datafusion.namespaces.setIamPolicy
-          resource: "{target.host_resource}"
+    - - action: datafusion.instances.setIamPolicy
+        resource: '*'
+    - - action: datafusion.namespaces.setIamPolicy
+        resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: datafusion_instance
-    scope: same_project
-    aggregate_as: "Pipeline VM SAs of Data Fusion instances whose IAM policy the source controls"
+      gcp_datafusion_selfgrant_path: true
+    scope: any
+    aggregate_as: Pipeline VM SAs of runnable Data Fusion profiles on instances or namespaces whose IAM policy the source controls
   conditions:
-    - id: accessor_gate
-      description: The namespace path also needs effective datafusion.instances.get (roles/datafusion.accessor); Google's RBAC pages disagree on whether it is implicit.
-    - id: plugin_installed
-      description: A code-capable plugin must be installed.
+  - id: accessor_gate
+    description: The namespace path also needs effective datafusion.instances.get (roles/datafusion.accessor); Google's RBAC pages disagree on whether it is implicit.
+  - id: plugin_installed
+    description: A code-capable plugin must be available to an installed pipeline artifact, and its selected runner and service agent must have their runtime permissions.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
   mitigation: Keep Data Fusion setIamPolicy permissions to administrators (Data Fusion Admin, Owner).
   references:
-    - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
-
+  - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
 - id: gcp-datafusion-artifacts-create-plugin-poison
   provider: gcp
   service: datafusion
   title: Plant a trojanized CDAP plugin used by existing Data Fusion pipelines
-  source: src/pentesting-cloud/gcp-security/gcp-persistence/gcp-data-fusion-persistence.md#malicious-artifact--plugin-planted-in-the-namespace-datafusionartifactscreate
-  source_revision: 171e422
-  summary: The source can obtain the privileges of the pipeline VM service account of Data Fusion instances where it can upload artifacts, when legitimate pipelines load the planted plugin.
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-data-fusion-privesc.md#malicious-artifact--plugin-planted-in-the-namespace-datafusionartifactscreate
+  source_revision: 4e9b5eaaa6
+  summary: The source can replace the exact user-scoped plugin artifact used by an enabled pipeline schedule and reach that pipeline's resolved runner service account.
   requires:
     all_of:
-      - action: datafusion.instances.get
-        resource: "{target.host_resource}"
-      - action: datafusion.artifacts.create
-        resource: "{target.host_resource}"
+    - action: datafusion.instances.get
+      resource: '*'
+    - action: datafusion.namespaces.get
+      resource: '*'
+    - action: datafusion.artifacts.create
+      resource: '*'
+    - action: datafusion.artifacts.update
+      resource: '*'
   target:
     kind: gcp_service_account
     selector:
-      attached_to_service: datafusion_instance
-    scope: same_project
-    aggregate_as: "Pipeline VM SAs of Data Fusion instances where the source can upload plugins"
+      gcp_datafusion_artifact_poison_path: true
+    scope: any
+    aggregate_as: Pipeline runner SAs of scheduled Data Fusion pipelines using replaceable plugins
   conditions:
-    - id: victim_pipeline_uses_plugin
-      description: A deployed pipeline must resolve and run the planted plugin (same name with a newer/selected version, or a widget that runs on load) after the upload.
-    - id: namespace_scope
-      description: Artifact permissions may be granted per namespace on RBAC-enabled instances.
+  - id: victim_pipeline_uses_plugin
+    description: An enabled schedule must run a deployed pipeline that references the exact user-scoped artifact name and version after replacement.
+  - id: namespace_scope
+    description: The caller needs namespace get/create/update permissions; an existing non-snapshot artifact also needs delete permission on that namespace.
   blockers:
-    - gcp_deny_policy
+  - gcp_deny_policy
   confidence: conditional
   severity: high
-  mitigation: Restrict datafusion.artifacts.create/update, pin plugin versions in pipelines and use a low-privilege pipeline SA.
+  mitigation: Restrict artifact create/update/delete on pipeline namespaces, avoid mutable SNAPSHOT plugins, and use a low-privilege pipeline runner SA.
   references:
-    - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac
+  - https://docs.cloud.google.com/data-fusion/docs/concepts/rbac

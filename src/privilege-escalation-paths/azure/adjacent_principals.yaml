@@ -1,0 +1,130 @@
+# catalog_description: These ARM actions create an escalation edge only when
+# unique reviewed evidence binds the exact adjacent-plane principal, usable
+# credential or grant, prior denial, and newly allowed action.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-apim-developer-portal-sso-external-principal
+  provider: azure
+  service: api_management
+  title: Sign in as one named API Management developer-portal user
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceuserstokenaction
+  source_revision: db5b136660
+  summary: A generated SSO URL can reach the exact requested portal user only when its token is usable and newly grants a named portal or subscription action.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/users/generateSsoUrl/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: apim_developer_portal
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact API Management developer-portal user reached by SSO URL
+  conditions:
+    - id: exact_portal_user_sso
+      description: Reviewed evidence must bind the requested users resource, returned usable SSO token, authenticated portal user, prior denial, and newly allowed portal or API-subscription action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict users/generateSsoUrl/action and audit developer-portal SSO URL generation.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/apimanagement/user/generate-sso-url
+  notes: The portal user is an adjacent-plane identity; generating a URL without observed authentication and new authority emits no path. The separate users/token/action returns a shared-access token for portal SSO.
+
+- id: azure-datafactory-github-oauth-external-principal
+  provider: azure
+  service: data_factory
+  title: Exchange a supplied GitHub authorization code through Data Factory
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-data-factory-privesc.md#exchange-a-supplied-github-authorization-code-with-factoriesgetgithubaccesstokenaction
+  source_revision: a9948bc18d
+  summary: A supplied GitHub authorization code can be exchanged through the factory action; a path exists only when its returned token grants a new action to an exact GitHub subject and repository.
+  requires:
+    all_of:
+      - action: Microsoft.DataFactory/factories/getGitHubAccessToken/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: github_repository
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact GitHub repository principal reached through factory OAuth
+  conditions:
+    - id: exact_github_subject_and_repository_authority
+      description: Reviewed evidence must bind a supplied GitHub authorization code, exact factory response token, authenticated GitHub subject and repository, prior denial, and newly allowed repository action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict getGitHubAccessToken/action and protect GitHub authorization codes and app credentials.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/datafactory/factories/get-git-hub-access-token
+  notes: The API requires a caller-supplied GitHub authorization code and token base URL. Permission alone cannot retrieve a configured factory credential. A token-shaped value or configured Git repository does not establish GitHub authority.
+
+- id: azure-eventgrid-mqtt-client-grant-external-principal
+  provider: azure
+  service: event_grid
+  title: Give an attacker-owned MQTT client new topic publish or subscribe authority
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-event-grid-privesc.md#backdoor-mqtt-client-via-namespacesclients--clientgroups--permissionbindingswrite
+  source_revision: 01399090fa
+  summary: Creating or updating a permission binding for a client group containing an attacker-owned MQTT client can give its usable credential a new broker action.
+  requires:
+    all_of:
+      - action: Microsoft.EventGrid/namespaces/permissionBindings/write
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: eventgrid_mqtt
+    scope: inherited_scope
+    outcome: identity
+    aggregate_as: Exact MQTT client with reviewed new topic authority
+  conditions:
+    - id: exact_mqtt_client_group_binding_and_credential
+      description: Reviewed evidence must bind the owned client and usable credential to the exact namespace, matching client group, permission binding, topic space, prior denial, and newly allowed publish or subscribe action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Event Grid namespace client, group, and permission-binding writes; review newly registered MQTT clients.
+  references:
+    - https://learn.microsoft.com/en-us/azure/event-grid/mqtt-overview
+    - https://learn.microsoft.com/en-us/rest/api/eventgrid/controlplane/permission-bindings/create-or-update?view=rest-eventgrid-controlplane-2025-02-15
+    - https://learn.microsoft.com/en-us/azure/event-grid/mqtt-client-groups
+  notes: The typed proof requires a successful new MQTT authorization with the exact owned client, matching client group, binding, topic space and Publisher or Subscriber action. Existing clients and groups are valid; creating new ones also requires their respective write permissions, but successful reviewed evidence proves that step when used.
+- id: azure-apim-developer-portal-shared-token-external-principal
+  provider: azure
+  service: api_management
+  title: Sign in as one named developer-portal user with a shared token
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-api-management-privesc.md#microsoftapimanagementserviceuserstokenaction
+  source_revision: db5b136660
+  summary: A user shared-access token can reach the exact requested portal user only when reviewed evidence shows a usable sign-in and a newly allowed action.
+  requires:
+    all_of:
+      - action: Microsoft.ApiManagement/service/users/token/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: apim_developer_portal
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact API Management developer-portal user reached by shared token
+  conditions:
+    - id: exact_portal_user_shared_token
+      description: Reviewed evidence must bind the requested user, developer portal, returned usable token, authenticated portal user, prior denial, and newly allowed portal or API-subscription action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict users/token/action and audit developer-portal user-token generation.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/apimanagement/user/get-shared-access-token
+    - https://learn.microsoft.com/en-us/azure/api-management/developer-portal-faq
+    - https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-setup-delegation
+  notes: The token operation is separate from generateSsoUrl/action. Microsoft documents shared-token sign-in for self-hosted portals and delegated sign-in to managed portals. Without reviewed proof that the portal accepted it for the named user and granted a new action, no path is emitted.

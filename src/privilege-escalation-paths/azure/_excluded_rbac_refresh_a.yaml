@@ -1,3 +1,4 @@
+# Azure exclusions from the rev 171e422 catalog refresh (agent azA): guest-configuration through managed-grafana pages.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md#guest-configuration
   technique: Page intro / service link
   reason: Introductory section; the technique is modelled by azure-guestconfiguration-assignment-write.
@@ -9,7 +10,7 @@
   reason: Introductory section.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#hdinsight-overview
   technique: HDInsight overview
-  reason: Background section; the techniques are modelled by azure-hdinsight-get-gateway-settings, azure-hdinsight-update-gateway-settings, azure-hdinsight-execute-script-actions, azure-hdinsight-applications-write and azure-hdinsight-create-with-user-assigned-identity.
+  reason: 'HDInsight node/credential identity outcome NEEDS SCHEMA for exact execution and a newly allowed action.'
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-hdinsight-privesc.md#escalate-from-node-rce-to-storage--managed-identity
   technique: Node RCE to storage keys and user-assigned identity
   reason: Post-RCE step, not an independent permission combination; the cluster user-assigned identity it reaches is the target of the HDInsight code-execution entries (azure-hdinsight-execute-script-actions and siblings). Storage account keys in cluster configuration are data-plane credentials.
@@ -31,12 +32,13 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#hub-property-abuse-with-microsoftdevicesiothubswrite
   technique: iotHubs/write (SAS policy backdoor, routes, storage endpoint, auth rollback, identity attach)
   reason: Persistence, telemetry exfiltration and data-plane credentials over IoT device identities, which are not Azure/Entra principals. An identity attached to the hub is only used by the service for routing/egress; no code runs as it, so its token is never obtained by the source (confused-deputy egress only).
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#covert-built-in-events-consumer-group-with-eventhubendpointsconsumergroupswrite
+- source: src/pentesting-cloud/azure-security/az-post-exploitation/az-iot-hub-post-exploitation.md#covert-built-in-events-consumer-group-with-eventhubendpointsconsumergroupswrite
+  source_revision: 5c5783913ab52876e208ac45b94ec4c876a6a7db
   technique: Covert consumer group on the built-in events endpoint
   reason: Telemetry read and persistence; no new identity.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-iot-hub-privesc.md#rogue-x509-ca-for-device-auth-with-iothubscertificateswrite-and-the-dps-equivalent
   technique: Rogue X.509 CA for device authentication (IoT Hub / DPS)
-  reason: Grants impersonation of IoT device identities only (not Azure/Entra principals); persistence.
+  reason: "NEEDS SCHEMA: Exact device identity trusted under the CA and newly permitted authentication action must be verified."
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#key-vault
   technique: Page intro / service link
   reason: Introductory section.
@@ -45,9 +47,7 @@
   reason: Enabler of the template-deployment path; vaults/write is already a requirement branch of azure-keyvault-secret-read-sp-credentials (it can rewrite accessPolicies directly), and enabledForTemplateDeployment is the condition of azure-keyvault-template-deployment-secret-reference.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#swap-the-authorization-model-with-microsoftkeyvaultvaultswrite-enablerbacauthorization-toggle
   technique: vaults/write toggles enableRbacAuthorization to revive stored access policies
-  reason: A vaults/write permission can revive secret access only when the vault stores a stale secret-read access
-    policy for a source-controlled principal and the model can be switched to access policies. Requires a source-principal-to-access-policy
-    join and current permission model; otherwise UNKNOWN.
+  reason: Same permission and target set as the vaults/write branch of azure-keyvault-secret-read-sp-credentials (switching to the access-policy model and rewriting accessPolicies); the toggle-to-RBAC direction is denial of service.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#approve-an-attacker-private-endpoint-to-reach-a-publicnetworkaccessdisabled-vault
   technique: Approve an attacker private endpoint connection
   reason: Network reachability only; condition network_reachable of the Key Vault entries.
@@ -107,11 +107,7 @@
   reason: Overview of publisher authorizations and deny assignments; the escalation is mapped under listTokens.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-applications-privesc.md#deploy-as-identity-inside-a-managed-app
   technique: Deploy a malicious managed app definition
-  source_revision: 0b36331
-  reason: A managed-app template may create an identity and assign roles through the deployment authorization. The
-    path is conditional on the exact definition, deployment scope and platform authorization permitting a role assignment
-    beyond the source rights. Missing authorization/template facts are UNKNOWN; do not infer gain from applications/write
-    alone.
+  reason: The deployment only acts inside a newly created managed resource group, with authorizations the attacker defines for itself; it does not reach pre-existing identities. Cross-tenant delegatedManagedIdentityResourceId grants need publisher-tenant setup. Persistence, not escalation.
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-devops-pools-privesc.md#managed-devops-pools
   technique: Managed DevOps Pools introduction
   reason: Introductory section.
@@ -121,12 +117,3 @@
 - source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-managed-grafana-privesc.md#microsoftdashboardgrafanamanagedprivateendpointswrite--network-pivot-into-a-private-vnet
   technique: Grafana managed private endpoint
   reason: Network reachability only; no identity gain.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#aks-cluster-credentials
-  technique: clusterUser kubeconfig on AKS
-  reason: The returned clusterUser identity has cluster-admin authority only if its effective Kubernetes RBAC grants
-    it; local accounts and absence of Entra integration do not prove that binding. The collector must read cluster
-    RBAC bindings for the returned subject; until then the path is UNKNOWN.
-- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-kubernetes-privesc.md#kubernetes-rbac-operations
-  technique: User or service-account impersonation to cluster admin
-  reason: Requires an impersonable user or service account with effective cluster-admin RBAC, including namespace
-    scope; no subject-to-binding collector exists, so evaluate UNKNOWN until collected.
