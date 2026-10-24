@@ -1,0 +1,67 @@
+# Custom security attributes satisfying Azure ABAC role-assignment conditions (declarative only).
+# Source: hacktricks-cloud az-entraid-privesc/README.md (rev 171e422).
+# The dynamic-membership half of the heading is not modelled: Microsoft documents that dynamic membership
+# rules cannot reference custom security attributes (not verified offline). Role assignment conditions are
+# already collected; the attribute values that satisfy a condition are not evaluated.
+
+- id: azure-entraid-custom-security-attribute-abac-dataplane
+  provider: azure
+  service: entraid
+  title: Assign custom security attributes to satisfy a principal-attribute ABAC condition (data plane)
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#custom-security-attributes-feeding-abac--dynamic-membership
+  source_revision: 171e422
+  summary: An Attribute Assignment Administrator whose own data-plane role assignments are gated by @Principal custom security attribute conditions can set the attribute on itself and obtain the access those conditions gate.
+  requires:
+    all_of: []
+    any_of:
+      - - entra_role: Attribute Assignment Administrator
+      - - graph_app_permission: CustomSecAttributeAssignment.ReadWrite.All
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_assignment_condition_uses_principal_attribute: true
+    scope: any
+    aggregate_as: "Data-plane access gated by principal custom security attributes on {target.scope}"
+    outcome: permission_grant
+  conditions:
+    - id: attribute_value_satisfying_condition_not_verified
+      description: The condition must be satisfiable by a value of an attribute set the source may assign; condition expressions are not solved.
+    - id: attribute_set_scope
+      description: Attribute Assignment Administrator assigned on a single attribute set can only set attributes of that set.
+  blockers: []
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict Attribute Assignment Administrator to dedicated identities and attribute sets, and do not let principals that can assign attributes also hold attribute-conditioned role assignments.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-format#principal-attributes
+    - https://learn.microsoft.com/en-us/entra/fundamentals/custom-security-attributes-overview
+  notes: Only the source's own (or its groups') condition-gated assignments are considered, since it can assign the attribute to itself.
+
+- id: azure-entraid-custom-security-attribute-abac-scope-owner
+  provider: azure
+  service: entraid
+  title: Assign custom security attributes to satisfy a principal-attribute ABAC condition on role-assignment rights
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-entraid-privesc/README.md#custom-security-attributes-feeding-abac--dynamic-membership
+  source_revision: 171e422
+  summary: An Attribute Assignment Administrator whose role-assignment-write grant on a scope is gated by an @Principal custom security attribute condition can satisfy it and gain RBAC control of that scope.
+  requires:
+    all_of: []
+    any_of:
+      - - entra_role: Attribute Assignment Administrator
+      - - graph_app_permission: CustomSecAttributeAssignment.ReadWrite.All
+  target:
+    kind: azure_scope_owner
+    selector:
+      azure_assignment_condition_uses_principal_attribute: true
+    scope: any
+    aggregate_as: "RBAC control of {target.scope} gated by principal custom security attributes"
+  conditions:
+    - id: attribute_value_satisfying_condition_not_verified
+      description: The condition must be satisfiable by a value of an attribute set the source may assign; condition expressions are not solved.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Do not gate role-assignment rights on principal attributes that the same principal can assign.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-format#principal-attributes
+  notes: Matches the source's condition-gated assignments of roles that allow Microsoft.Authorization/roleAssignments/write at exactly the target scope.

@@ -1,0 +1,22 @@
+# Azure privesc completeness audit (g3-rbac-control): techniques reviewed and intentionally NOT modelled.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#forge-signatures-with-microsoftkeyvaultvaultskeyssignaction
+  technique: keys/sign (and keys/decrypt) forging artefacts for non-Entra consumers
+  source_revision: a66f094ede
+  reason: Forging JWT/SAML/code-signing artefacts trusted by a custom application is application-level trust abuse, and key usage by consumers is not collected. The
+    Entra service-principal certificate case (client assertion signed by a vault key) is modelled by azure-keyvault-key-sign-sp-client-assertion.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#forge-signatures-with-microsoftkeyvaultvaultskeyssignaction
+  technique: BloodHound AZGetKeys (keys/read)
+  source_revision: a66f094ede
+  reason: Key get returns only the public portion of a key; private key material is never exported by the key API. The identity risk is secrets/get and certificate
+    private keys (returned through the secret), already modelled by azure-keyvault-secret-read-sp-credentials, and signing, modelled by azure-keyvault-key-sign-sp-client-assertion.
+- source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-automation-accounts-privesc.md#compromising-state-configuration
+  technique: Azure Automation State Configuration (DSC) configuration push to registered nodes
+  source_revision: a66f094ede
+  reason: 'NEEDS SCHEMA: G3-rbac-control-proposals.md#automation-dsc-node-host-link. configurations/write + compilationjobs/write + nodeConfigurations/write runs
+    SYSTEM code on every DSC node of the account (and thus their managed identities), but the evaluator has no host link from an Automation account to its DSC nodes
+    (azure_host_linked_to_pivot only knows automation_hybrid_worker). The VM DSC extension route is already modelled in virtual_machines.yaml.'
+- source: src/pentesting-cloud/azure-security/az-services/az-misc.md#power-apps
+  technique: Reuse a broadly shared Power Apps on-premises SQL connection through Power Query
+  source_revision: a66f094ede
+  reason: Power Platform connection sharing and on-premises data gateways are not part of the Azure/Entra snapshot, and the gain is the on-premises SQL login behind
+    the connection, not an Azure/Entra principal.

@@ -1,0 +1,63 @@
+# Hybrid identity (Entra Connect Sync / Cloud Sync) techniques reachable from cloud-side configuration (declarative only).
+# Source: hacktricks-cloud az-lateral-movement-cloud-on-prem/ pages (rev a66f094ede).
+# Only edges whose source is a tenant principal holding a collected Entra role are modelled; techniques that start from
+# an on-prem server, device or AD object are excluded in the Azure exclusion files.
+
+- id: azure-entra-hybrid-directory-sync-role-password-reset
+  provider: azure
+  service: entraid
+  title: Directory Synchronization Accounts role holder resets user passwords through the sync API
+  source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-connect-sync.md#abusing-sync_-deprecated
+  source_revision: a66f094ede
+  summary: A principal holding the Directory Synchronization Accounts role (the legacy Sync_* user or the Cloud Sync service account) can set password hashes of synchronised users, and historically of cloud-only users including Global Administrators.
+  requires:
+    all_of:
+      - entra_role: Directory Synchronization Accounts
+  target:
+    kind: azure_user
+    scope: tenant
+    aggregate_as: "Users whose passwords the synchronisation service can set in {scope}"
+    outcome: credentials
+  conditions:
+    - id: sync_api_behaviour_version_dependent
+      description: The sync API behaviour is undocumented; resetting cloud-only users was reported historically and may be blocked now, so only password-hash-synchronised users are reliably reachable.
+    - id: legacy_sync_account_present
+      description: New Connect Sync installations (from January 2025) use the ConnectSyncProvisioning application instead of a Sync_* user; the edge exists only where a role holder is still present.
+    - id: mfa_or_ca_after_reset
+      description: A new password alone does not satisfy MFA / Conditional Access requirements registered for the target user.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Remove leftover Sync_* accounts after migrating to the application-based sync identity, never assign the Directory Synchronization Accounts role to other principals, exclude sync accounts from interactive sign-in with Conditional Access, and alert on any role assignment change for it.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#directory-synchronization-accounts
+  notes: The role is meant for the synchronisation service only. Its source is normally compromise of the sync server, but any principal assigned the role (including misassignment) yields this edge; the evaluator only needs the role assignment.
+
+- id: azure-entra-hybrid-directory-sync-role-sp-credentials
+  provider: azure
+  service: entraid
+  title: Directory Synchronization Accounts role holder adds credentials or privileges to service principals (historical)
+  source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-cloud-sync.md#principals-generated
+  source_revision: a66f094ede
+  summary: Historically the Directory Synchronization Accounts role carried hidden directory permissions that let its holder add credentials to, or grant privileged permissions to, service principals and then authenticate as them.
+  requires:
+    all_of:
+      - entra_role: Directory Synchronization Accounts
+  target:
+    kind: azure_service_principal
+    scope: tenant
+    aggregate_as: "Service principals in {scope}"
+    outcome: credentials
+  conditions:
+    - id: hidden_role_permissions_removed
+      description: Microsoft's current role reference lists only onPremisesSynchronization standard read for this role; the historical service principal paths may no longer work in the tenant.
+    - id: service_principal_conditional_access
+      description: Conditional Access for workload identities can block sign-in of the target service principal.
+  blockers:
+    - sp_lock_configuration_credentials
+  confidence: conditional
+  severity: critical
+  mitigation: Do not assign the Directory Synchronization Accounts role to any principal other than the synchronisation service, remove legacy Sync_* accounts, and monitor service principal credential and app role assignment changes made by sync identities.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#directory-synchronization-accounts
+  notes: Kept as a conditional edge because tenants with legacy sync identities are common and the historical capability is documented by Tenable research cited on the source page.

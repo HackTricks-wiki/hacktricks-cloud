@@ -1,0 +1,146 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Workstations privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloud-workstations-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: workstations_config -> SA pinned in an existing workstation config (host.gceInstance.serviceAccount);
+# workstations_workstation -> SA of the config an existing workstation was created from.
+
+- id: gcp-workstations-config-create-actas
+  provider: gcp
+  service: workstations
+  title: Create a workstation config pinning a chosen service account and start a workstation from it
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#workstationsworkstationconfigscreate--actas--pin-an-arbitrary-sa-and-steal-its-token
+  source_revision: 171e422
+  summary: The source can obtain the privileges of any service account in the project on which it holds iam.serviceAccounts.actAs.
+  requires:
+    all_of:
+      - action: workstations.workstationConfigs.create
+        resource: "*"
+      - action: workstations.workstations.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.email}"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+      gcp_workstations_create_config_path: true
+    scope: same_project
+    aggregate_as: "Service accounts usable as Cloud Workstations SA in {project}"
+  conditions:
+    - id: session_access
+      description: The creator receives roles/workstations.user on a new workstation; a custom image or startup script can also run code without a session.
+    - id: cluster
+      description: A workstation cluster must exist or be creatable (workstations.workstationClusters.create).
+    - id: access_scopes
+      description: The default token may carry only limited scopes; full power needs the config to request cloud-platform scopes.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated workstation SAs; restrict workstations.workstationConfigs.create/update (roles/workstations.admin, roles/workstations.editor, roles/editor).
+  references:
+    - https://cloud.google.com/workstations/docs/access-control
+  notes: Omitting the SA uses a service-managed workstation VM identity, so there is no no-actAs path.
+- id: gcp-workstations-config-update-code
+  provider: gcp
+  service: workstations
+  title: Update an existing workstation config's image or startup script to run code as its SA
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#code-exec-as-sa-via---container-custom-image----startup-script-uri-no-breakout-needed
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts pinned in workstation configs on which it holds workstations.workstationConfigs.update and iam.serviceAccounts.actAs on the pinned SA.
+  requires:
+    all_of:
+    - action: workstations.workstationConfigs.update
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: workstations_config
+      gcp_actas_granted_on_target: true
+    scope: same_project
+    aggregate_as: SAs pinned in updatable Cloud Workstations configs
+  conditions:
+  - id: workstation_boot
+    description: The payload runs when a workstation from the config next boots (started by its users or by the source with workstations.create/start).
+  - id: image_access
+    description: A custom image must be pullable by the pinned SA.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workstations.workstationConfigs.update and monitor config changes to image and startup script fields.
+  notes: HackTricks @171e422 lists workstationConfigs.create/.update plus actAs on the pinned SA as the minimum permissions for the custom-image / startup-script code-execution path.
+- id: gcp-workstations-use-existing-workstation
+  provider: gcp
+  service: workstations
+  title: Connect to an existing workstation (directly or after an IAM self-grant) and use its SA
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#workstationsworkstationconfigscreate--actas--pin-an-arbitrary-sa-and-steal-its-token
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the service accounts of existing workstations it can use or whose IAM policy it controls.
+  requires:
+    any_of:
+    - - action: workstations.workstations.use
+        resource: '{target.host_resource}'
+    - - action: workstations.workstations.setIamPolicy
+        resource: '{target.host_resource}'
+    - - action: workstations.workstationConfigs.setIamPolicy
+        resource: '{target.workstation_config}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: workstations_workstation
+      gcp_workstations_use_existing_path: true
+    scope: same_project
+    aggregate_as: SAs of Cloud Workstations the source can connect to
+  conditions:
+  - id: scoped_config_actas
+    description: If the config sets service-account scopes, users also need actAs on the SA at launch/use time.
+  - id: stopped_workstation
+    description: A stopped workstation also needs workstations.workstations.start; an already running one needs only use.
+  - id: other_user_session
+    description: Using another developer's workstation also exposes that user's session data; IAM on workstations is granted per workstation or config.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Grant roles/workstations.user per workstation only to its owner and restrict workstations.*.setIamPolicy (roles/workstations.policyAdmin, roles/workstations.admin, roles/owner).
+  notes: Connection tokens from generateAccessToken cannot be revoked and last up to 24h.
+- id: gcp-workstations-create-from-existing-config
+  provider: gcp
+  service: workstations
+  title: Launch a new workstation from an existing service-account-pinned config
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloud-workstations-privesc.md#workstationsworkstationconfigscreate--actas--pin-an-arbitrary-sa-and-steal-its-token
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service accounts pinned in existing Cloud Workstations configs on which it can create workstations, because the new workstation it owns runs as the config's SA.
+  requires:
+    all_of:
+    - action: workstations.workstations.create
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: workstations_config
+      gcp_workstations_create_from_config_path: true
+    scope: same_project
+    aggregate_as: SAs pinned in Cloud Workstations configs the source can launch from
+  conditions:
+  - id: session_access
+    description: The creator receives roles/workstations.user on the new workstation and can start and use it; roles/workstations.workstationLimitExemptedCreator alone has no create grant.
+  - id: scoped_config_actas
+    description: If the config sets service-account scopes, users also need actAs on the SA at launch/use time.
+  - id: access_scopes
+    description: The usable token is limited by the config's service-account scopes.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Grant roles/workstations.workstationCreator only on configs whose SA is low privilege and keep privileged SAs out of shared workstation configs.
+  references:
+  - https://cloud.google.com/workstations/docs/access-control
+  notes: HackTricks @6fb9ac51fd states roles/workstations.workstationCreator can launch workstations only from existing configs, so its power depends on the SA those configs already carry. Creating the config with a chosen SA is gcp-workstations-config-create-actas.

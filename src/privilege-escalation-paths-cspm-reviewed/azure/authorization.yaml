@@ -1,0 +1,140 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure RBAC / authorization-plane privilege escalation techniques.
+# Source: hacktricks-cloud az-authorization-privesc.md (rev 171e422; policy entries originally authored against 6bdd8e89e6).
+# Conventions used across catalog/azure/*.yaml (see SCHEMA EXTENSIONS in the agent report):
+#   requirement scope "{target.scope}"          -> the MG / subscription / RG / resource the target entity controls;
+#                                                  the permission must be granted at that scope or an ancestor (RBAC inheritance).
+#   requirement scope "{target.id}"             -> ARM id of the target user-assigned managed identity resource.
+#   requirement scope "{target.host_resource}"  -> ARM id of the Azure resource the target managed identity is attached to.
+#   requirement scope "{pivot}"                 -> one resource of type `pivot_resource_type` (existing or newly created);
+#                                                  every requirement using {pivot} must cover the SAME resource.
+#   data_action: true                           -> the action must be granted via DataActions (not Actions).
+
+- id: azure-authorization-elevateaccess-global-admin
+  provider: azure
+  service: authorization
+  title: Global Administrator elevates to User Access Administrator at root scope
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
+  source_revision: e8f25bff43
+  summary: A Global Administrator can grant itself User Access Administrator at root scope "/", gaining RBAC control over every management group and subscription in the tenant.
+  source_kind: azure_user
+  requires:
+    all_of:
+      - entra_role: Global Administrator
+        directory_scope: "dir:/"
+  target:
+    kind: azure_scope_owner
+    selector:
+      any_principal_in_scope: true
+      azure_root_scope_only: true
+    scope: tenant
+    aggregate_as: "Azure root scope (/) of the tenant"
+  conditions: []
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Minimise Global Administrators, require PIM with approval, and alert on elevateAccess events and root-scope role assignments.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
+  notes: Only users with an active tenant-wide Global Administrator assignment can call elevateAccess. PIM eligibility alone needs activation and is not an active grant. Elevation yields User Access Administrator at root scope; the source can then assign itself Owner.
+
+- id: azure-managedidentity-federated-credential-write
+  provider: azure
+  service: authorization
+  title: Add a federated identity credential to a user-assigned managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftmanagedidentityuserassignedidentitiesfederatedidentitycredentialswrite
+  source_revision: 171e422
+  summary: The source can add a trust to an external IdP it controls and obtain tokens as the user-assigned managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_uami_fic_write_path: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned managed identities in {scope}"
+  conditions: []
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict federatedIdentityCredentials/write (included in Managed Identity Contributor/Contributor/Owner) and alert on new FICs; consider an Azure Policy restricting allowed FIC issuers.
+  references:
+    - https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust-user-assigned-managed-identity
+  notes: Only user-assigned identities support FICs; system-assigned identities are not reachable this way.
+
+- id: azure-policy-assignment-write-user-assigned-identity
+  provider: azure
+  service: authorization
+  title: Create or update a deployIfNotExists/modify policy assignment running as an existing user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#policy-assignment-remediation-with-an-existing-user-assigned-identity
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  summary: The source can obtain the Azure RBAC control-plane privileges of user-assigned managed identities on which it holds assign/action, by making them the remediation identity of a policy assignment whose custom definition it controls.
+  requires:
+    all_of:
+      - action: Microsoft.Authorization/policyAssignments/write
+        scope: '*'
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.Authorization/policyDefinitions/write
+        scope: '*'
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_policy_assignment_identity_path: true
+    scope: any
+    aggregate_as: User-assigned identities usable by writable policy assignments
+  conditions:
+    - id: definition_visible_at_assignment
+      description: The writable custom deployIfNotExists definition must be at a subscription or management-group scope visible to the writable policy assignment.
+    - id: remediation_trigger
+      description: 'The deployment runs only after a remediation task or a create or update of a resource matching the policy assignment.'
+    - id: arm_control_plane_only
+      description: The gain is what an ARM template deployment can do with the identity's existing role assignments (Actions). DataActions are not exercised directly.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Grant userAssignedIdentities/assign/action (Managed Identity Operator) on privileged user-assigned identities only to their owners, and restrict policyAssignments/write plus policyDefinitions/write to policy administrators.
+  references:
+    - https://learn.microsoft.com/en-us/azure/governance/policy/how-to/remediate-resources#configure-the-managed-identity
+    - https://azure.github.io/enterprise-azure-policy-as-code/policy-assignments/
+  notes: No roleAssignments/write is needed. The user-assigned identity keeps its existing role assignments; only the portal auto-grants roleDefinitionIds, and SDK or REST assignments do not. Using a user-assigned identity on a policy assignment needs Managed Identity Operator, which is userAssignedIdentities/assign/action on the identity (EPAC documentation and the ARM linked-access check). A new system-assigned identity has no roles unless the source can also create role assignments, which azure-authorization-roleassignments-write already covers. Repointing an existing assignment that has a system-assigned identity is not modelled, because it is not verified whether policyDefinitionId can change on update.
+- id: azure-authorization-elevateaccess-pim-eligible-global-admin
+  provider: azure
+  service: authorization
+  title: Activate an eligible Global Administrator role and elevate Azure access
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-authorization-privesc.md#microsoftauthorizationelevateaccessaction
+  source_revision: 171e422
+  summary: A user eligible for tenant-wide Global Administrator can activate that role, then grant itself User Access Administrator at root scope.
+  source_kind: azure_user
+  requires:
+    all_of:
+      - entra_pim_eligible_role: "dir:62e90394-69f5-4237-9190-012177145e10"
+        directory_scope: "dir:/"
+  target:
+    kind: azure_scope_owner
+    selector:
+      any_principal_in_scope: true
+      azure_root_scope_only: true
+    scope: tenant
+    aggregate_as: "Azure root scope (/) of the tenant"
+  conditions:
+    - id: pim_activation_requirements
+      description: The user must satisfy any MFA, approval, or other PIM activation requirements before calling elevateAccess.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Require PIM approval for eligible Global Administrator assignments and monitor role activation and root-scope elevation.
+  references:
+    - https://learn.microsoft.com/en-us/azure/role-based-access-control/elevate-access-global-admin
+    - https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-activate-role
+  notes: A current tenant-wide eligibility is required. Eligibility alone is a conditional path and never counts as an active Global Administrator grant.

@@ -1,0 +1,45 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Cloud Control API privilege escalation techniques.
+# Source: hacktricks-cloud aws-cloudcontrol-privesc/README.md (rev 171e422299).
+# Cloud Control API actions use the cloudformation: IAM prefix.
+
+- id: aws-cloudcontrol-passrole-createresource
+  provider: aws
+  service: cloudcontrol
+  title: Create an administrator user through Cloud Control API with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-cloudcontrol-privesc/README.md#cloudformationcreateresource--iampassrole
+  source_revision: ee45f5f10abb8aef3fcf4216ab7971f342b3c274
+  summary: The source can use a passable CloudFormation role to create an IAM user with an administrator policy and a chosen console password through Cloud Control.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_account_admin
+    selector:
+      any_principal_in_scope: true
+    scope: same_account
+    outcome: scope_control
+    aggregate_as: "Administrator of {account} through Cloud Control"
+  preconditions:
+    - cloudcontrol_source_can_create_admin_user
+  conditions:
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions on the PassRole grant may exclude cloudformation.amazonaws.com.
+    - id: iam_user_resource
+      description: The passed role must create one new IAM user, set a chosen console password, and attach or write administrator permissions on that same user.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on CloudFormation service roles with iam:PassedToService and specific role ARNs; deny cloudformation:CreateResource/UpdateResource to principals that should not provision resources directly.
+  references:
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/userguide/resource-operations.html
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/APIReference/API_CreateResource.html
+    - https://docs.aws.amazon.com/cloudcontrolapi/latest/userguide/supported-resources.html
+    - https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-iam-user.html
+  notes: Cloud Control assumes a passable role through cloudformation.amazonaws.com. The evaluator requires CreateResource with global Resource scope and a role that can create, read, and give a console password and administrator policy to one new IAM user. A grant limited to an existing stack ARN does not authorize CreateResource. Other Cloud Control resource types need their own permission and outcome checks.

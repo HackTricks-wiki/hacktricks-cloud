@@ -1,0 +1,43 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Dataplex privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-dataplex-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-dataplex-tasks-create-actas
+  provider: gcp
+  service: dataplex
+  title: Create a Dataplex Spark task with a chosen execution service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataplex-privesc.md#dataplextaskscreate--iamserviceaccountsactas--execute-attacker-code-as-a-service-account
+  source_revision: 6fb9ac51fd
+  summary: The source can create a Spark task in an active lake with a service account it can act as, using a Python payload it can place in a bucket that the runner can read.
+  requires:
+    all_of:
+      - action: dataplex.tasks.create
+        resource: "*"
+      - action: iam.serviceAccounts.actAs
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_dataplex_task_path: true
+    scope: any
+    aggregate_as: Service accounts usable by a Dataplex Spark task in an active lake
+  conditions:
+    - id: execution_project_sa
+      description: The execution SA must belong to the task's execution project (the lake project by default, or a chosen execution project); cross-project execution adds service-agent, networking and quota prerequisites in both projects.
+    - id: sa_baseline_roles
+      description: The SA needs the serverless Spark runtime permissions (e.g. roles/dataproc.worker) and read access to every referenced script, JAR or file.
+    - id: payload_upload
+      description: The source must be able to create a Python object in an existing bucket that the runner can read; another proven writable code source could also work.
+    - id: lake
+      description: An existing Dataplex lake is required (creating one is not part of the minimum set); Dataplex and Dataproc APIs must be enabled.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated Dataplex task SAs; roles/editor contains both permissions.
+  references:
+    - https://docs.cloud.google.com/knowledge-catalog/docs/reference/rest/v1/projects.locations.lakes.tasks/create
+    - https://docs.cloud.google.com/sdk/gcloud/reference/dataplex/tasks/create
+  notes: Task updates revalidate actAs on the bound execution identity, so updating an existing task is not modelled as an actAs bypass.

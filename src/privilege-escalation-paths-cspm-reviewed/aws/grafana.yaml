@@ -1,0 +1,145 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon Managed Grafana application-plane privilege escalation techniques (aws_service_plane_admin targets).
+# Source: hacktricks-cloud aws-managed-grafana-privesc/README.md (rev 171e422299).
+# Collected workspace summaries provide ARN, status and Grafana version.
+
+- id: aws-grafana-createworkspaceapikey-admin
+  provider: aws
+  service: grafana
+  title: Mint an ADMIN Grafana workspace API key
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#grafanacreateworkspaceapikey--arbitrary-role-legacy-api-key
+  source_revision: 171e422299
+  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by minting a legacy API key with a chosen role.
+  requires:
+    all_of:
+      - action: grafana:CreateWorkspaceApiKey
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:CreateWorkspaceApiKey
+    scope: same_account
+    aggregate_as: "Managed Grafana administrators in {account}"
+    grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_api_key_workspace_eligible
+  conditions:
+    - id: legacy_api_keys_supported
+      description: Grafana versions before 12 support API keys through the AWS API; workspace network access controls still apply.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict grafana:CreateWorkspaceApiKey, migrate to service accounts and alert on ADMIN key creation.
+  notes: Grafana application administration (dashboards, alerts, data sources and their proxies); not IAM credentials.
+
+- id: aws-grafana-serviceaccounttoken-admin
+  provider: aws
+  service: grafana
+  title: Create a Grafana ADMIN service account and mint its token
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#createworkspaceserviceaccounttoken--existing-or-attacker-created-service-account
+  source_revision: 171e422299
+  summary: The source can obtain Grafana ADMIN access to Managed Grafana workspaces by creating an ADMIN service account and minting a token for it.
+  requires:
+    all_of:
+      - action: grafana:CreateWorkspaceServiceAccount
+        resource: "{target.resource_arn}"
+      - action: grafana:CreateWorkspaceServiceAccountToken
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:CreateWorkspaceServiceAccountToken
+    scope: same_account
+    aggregate_as: "Managed Grafana administrators in {account}"
+    grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_service_account_workspace_eligible
+  conditions:
+    - id: grafana_9_or_later
+      description: Service accounts require Grafana 9 or later; workspace network access controls still apply.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict grafana:CreateWorkspaceServiceAccount and CreateWorkspaceServiceAccountToken and inventory workspace service accounts and tokens.
+  notes: This creates a new ADMIN account and its token. Token vending for a recorded, enabled existing ADMIN account is modeled separately by aws-grafana-existing-admin-serviceaccount-token.
+
+- id: aws-grafana-updateworkspaceauthentication-saml-admin
+  provider: aws
+  service: grafana
+  title: Add an attacker-controlled SAML administrator to an existing Grafana workspace
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#grafanaupdateworkspaceauthentication--attacker-controlled-saml-idp
+  source_revision: b587e6bd26
+  summary: The source can gain Grafana administrator access to a workspace through a SAML identity provider it controls.
+  requires:
+    all_of:
+      - action: grafana:UpdateWorkspaceAuthentication
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:UpdateWorkspaceAuthentication
+    scope: same_account
+    aggregate_as: Managed Grafana workspace administrators in {account}
+    outcome: application_admin
+    grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_saml_workspace_active
+  conditions:
+    - id: saml_assertions
+      description: The source must control valid SAML metadata and assertions mapped to the workspace ADMIN role and be able to reach its endpoint.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict workspace authentication updates and alert on SAML metadata and administrator role-mapping changes.
+  references:
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_UpdateWorkspaceAuthentication.html
+  notes: The grant is limited to Grafana's application plane and configured data sources; it does not issue IAM credentials.
+
+- id: aws-grafana-existing-admin-serviceaccount-token
+  provider: aws
+  service: grafana
+  title: Mint a token for an existing Grafana ADMIN service account
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-grafana-privesc/README.md#createworkspaceserviceaccounttoken--existing-or-attacker-created-service-account
+  source_revision: 171e422299
+  summary: The source can obtain Grafana ADMIN API access by minting a token for an enabled ADMIN service account already present in one workspace.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: grafana:CreateWorkspaceServiceAccountToken
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: grafana
+      resource_permission_covers_target: grafana:CreateWorkspaceServiceAccountToken
+    scope: same_account
+    aggregate_as: "Managed Grafana administrators in {account}"
+    outcome: application_admin
+    grants: [Grafana ADMIN]
+  preconditions:
+    - grafana_existing_admin_service_account_token_ready
+  conditions:
+    - id: existing_admin_account
+      description: An enabled ADMIN service account ID must be recorded for the exact ACTIVE workspace, and the caller must be able to create a token for that workspace.
+    - id: workspace_network_access
+      description: Grafana HTTP API access still depends on the workspace network controls.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateWorkspaceServiceAccountToken to administrators and review token creation for existing ADMIN service accounts.
+  references:
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_ListWorkspaceServiceAccounts.html
+    - https://docs.aws.amazon.com/grafana/latest/APIReference/API_CreateWorkspaceServiceAccountToken.html
+  notes: This grants the service account's Grafana application permissions, not AWS IAM credentials. A disabled, missing, non-ADMIN, or uncollected account cannot establish this route.

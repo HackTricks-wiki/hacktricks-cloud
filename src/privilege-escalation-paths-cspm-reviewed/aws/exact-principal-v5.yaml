@@ -1,0 +1,214 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+- id: aws-audit-use-existing-parameterized-automation-runbook-with-runtime-passrole
+  provider: aws
+  service: ssm
+  title: Use existing parameterized Automation runbook with runtime PassRole
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
+  source_revision: 57bd5c07df
+  summary: The source can run an existing Automation document with a passable role
+    supplied through its assumeRole parameter when an observed step performs an action
+    that the source cannot perform directly.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: ssm.amazonaws.com
+  preconditions:
+  - ssm_existing_automation_runtime_role_effect_reviewed
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+    scope: same_account
+    outcome: workload_execution
+  conditions:
+  - id: exact_verified_prerequisites
+    description: 'A reviewed execution must bind the exact immutable Automation
+      document version, an assumeRole parameter supplied with the passed role,
+      StartAutomationExecution authorization for that document, and a successful
+      useful step performed under that role.'
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the listed actions to approved operators and review the exact
+    target configuration.
+  notes: A fixed-role runbook does not allow a caller to select this role. IAM grants
+    on unrelated Automation documents or a passable role alone do not establish an
+    execution path. The document version, passed role, actual execution and useful
+    role action must be joined; missing facts stay UNKNOWN.
+  references:
+  - https://cloud.hacktricks.wiki/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/
+- id: aws-codebuild-ssm-debug-session-role
+  provider: aws
+  service: codebuild
+  title: Connect to a paused CodeBuild build through Session Manager
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc/README.md#ssm
+  source_revision: 57bd5c07df
+  summary: A live paused CodeBuild debug session may give shell access under the
+    role used by that exact build when Session Manager access and an actual role
+    action are observed.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: ssm:StartSession
+  preconditions:
+  - codebuild_ssm_debug_session_role_effect_reviewed
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: codebuild.amazonaws.com
+    scope: same_account
+    outcome: workload_execution
+  conditions:
+  - id: live_breakpoint
+    description: The exact running build must have session connections enabled and be paused at codebuild-breakpoint.
+  - id: verified_collector_fact
+    description: A fresh reviewed session must bind the build's sessionTarget, its actual service role, StartSession authorization and a useful action performed with that role.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the named operation to trusted administrators and review downstream
+    grants.
+  references:
+  - https://docs.aws.amazon.com/codebuild/latest/userguide/session-manager.html
+  - https://docs.aws.amazon.com/codebuild/latest/APIReference/API_DebugSession.html
+  notes: A CodeBuild Sandbox or an unpaused build does not establish this path. IAM
+    permission on another Session Manager target and the project's configured role
+    do not prove access to this build, which may use a role override. Missing runtime
+    joins or shell effects remain UNKNOWN.
+- id: aws-devicefarm-schedulerun-existing-test-spec-passrole
+  provider: aws
+  service: devicefarm
+  title: Schedule an existing malicious Device Farm test spec with a passed role
+  summary: Attacker commands execute inside the Device Farm test runtime with the
+    passed execution role. Conditional principal access requires the exact inventoried
+    identity, usable authority equivalent to its observed full IAM rights, fresh evidence
+    and matching authorization fingerprint. A scoped token/session is insufficient.
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-device-farm-privesc/README.md#devicefarmcreateprojectupdateprojectschedulerun--iampassrole
+  source_revision: 57bd5c07df
+  requires:
+    all_of:
+      - action: devicefarm:ScheduleRun
+  source_kind: [aws_user, aws_role]
+  preconditions:
+  - devicefarm_existing_test_spec_role_effect_reviewed
+  target:
+    kind: aws_role
+    selector:
+      aws_challenge_fact: aws-devicefarm-schedulerun-existing-test-spec-passrole
+    scope: same_account
+    outcome: workload_execution
+  conditions:
+  - id: condition_1
+    description: An existing project, compatible app/test package, device pool and
+      attacker-controlled custom test-spec upload already exist.
+  - id: condition_2
+    description: configuration.executionRoleArn in ScheduleRun overrides the project
+      role; a new CreateUpload or CreateProject/UpdateProject is unnecessary in this
+      case.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource,
+      newly reachable authority and all runtime prerequisites; without it the result
+      is UNKNOWN.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict the required actions to reviewed resources and principals.
+  references:
+  - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_ScheduleRun.html
+  - https://docs.aws.amazon.com/service-authorization/latest/reference/list_devicefarm.html
+  - https://docs.aws.amazon.com/devicefarm/latest/APIReference/API_Upload.html
+  notes: The evaluator joins an existing project, compatible pool, successful Appium
+    Web Node test spec and package uploads, exact scoped ScheduleRun grants and PassRole
+    to devicefarm.amazonaws.com. Fresh reviewed evidence must show the controlled spec
+    ran under the role and performed a useful action unavailable to the caller. Missing
+    or mismatched resources, restricted sessions and stale evidence stay unresolved.
+- id: aws-iot-byo-certificate-existing-rolealias
+  provider: aws
+  service: iot
+  title: Use a BYO certificate with an existing privileged role alias
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-privesc/README.md#iotregistercertificatewithoutca--register-an-attacker-generated-byo-certificate-as-a-device-identity
+  source_revision: 57bd5c07df
+  summary: The source can register an attacker-held certificate and attach a policy
+    that permits credential exchange through an existing role alias. Conditional principal
+    access requires the exact inventoried identity, usable authority equivalent to
+    its observed full IAM rights, fresh evidence and matching authorization fingerprint.
+    A scoped token/session is insufficient.
+  requires:
+    all_of:
+    - action: iot:RegisterCertificateWithoutCA
+      resource: '*'
+    - action: iot:AttachPolicy
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      aws_challenge_fact: aws-iot-byo-certificate-existing-rolealias
+    scope: same_account
+    outcome: credentials
+  severity: high
+  mitigation: Restrict certificate registration and policy attachment, and scope role-alias
+    policies tightly.
+  references:
+  - https://docs.aws.amazon.com/iot/latest/developerguide/authorizing-direct-aws.html
+  - https://docs.aws.amazon.com/iot/latest/apireference/API_RegisterCertificateWithoutCA.html
+  confidence: conditional
+  conditions:
+  - id: active_certificate_existing_alias
+    description: Certificate is registered ACTIVE; an attachable policy allows AssumeRoleWithCertificate
+      on an existing alias pointing to the target role; if policy must be created,
+      iot:CreatePolicy is additionally required.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource,
+      newly reachable authority and all runtime prerequisites; without it the result
+      is UNKNOWN.
+  notes: The existing role alias must be inventoried with RoleArn equal to the exact target role. Fresh reviewed evidence binds an attacker-held ACTIVE certificate, registration without a CA, AttachPolicy on that certificate, an attached IoT policy allowing AssumeRoleWithCertificate on that alias, and successful credential-provider authentication. The full-principal attestation also needs the target's current authorization fingerprint and a usable unrestricted role session. Missing alias detail, mismatched role or certificate, or incomplete credential evidence remains UNKNOWN.
+- id: aws-iot-provisioning-claim-existing-rolealias
+  provider: aws
+  service: iot
+  title: Mint a provisioning certificate for an existing privileged role alias
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-iot-privesc/README.md#iotcreateprovisioningtemplate--iampassrole--iotcreateprovisioningclaim--self-replenishing-fleet-of-attacker-certificates
+  source_revision: 57bd5c07df
+  summary: A claim-derived device certificate can use an IoT policy permitting credential
+    exchange through an existing role alias. Conditional principal access requires
+    the exact inventoried identity, usable authority equivalent to its observed full
+    IAM rights, fresh evidence and matching authorization fingerprint. A scoped token/session
+    is insufficient.
+  requires:
+    all_of:
+    - action: iot:CreateProvisioningTemplate
+      resource: '*'
+    - action: iot:CreateProvisioningClaim
+      resource: '*'
+    - action: iam:PassRole
+      resource: '*'
+  target:
+    kind: aws_role
+    selector:
+      aws_challenge_fact: aws-iot-provisioning-claim-existing-rolealias
+    scope: same_account
+    outcome: credentials
+  severity: high
+  mitigation: Restrict provisioning-template creation, claim minting, passable registration
+    roles, and role-alias policies.
+  references:
+  - https://docs.aws.amazon.com/iot/latest/developerguide/provisioning-templates.html
+  - https://docs.aws.amazon.com/iot/latest/developerguide/authorizing-direct-aws.html
+  confidence: conditional
+  conditions:
+  - id: existing_alias_chain
+    description: Template binds an active certificate to an IoT policy allowing AssumeRoleWithCertificate
+      on an existing role alias that points to the target role; claim must be used
+      over MQTT.
+  - id: verified_collector_fact
+    description: The requested collector fact must bind the source, exact resource,
+      newly reachable authority and all runtime prerequisites; without it the result
+      is UNKNOWN.
+  notes: The existing role alias must be inventoried with RoleArn equal to the exact target role. Fresh reviewed evidence binds CreateProvisioningTemplate and CreateProvisioningClaim to the same exact template, PassRole to a distinct provisioning role for iot.amazonaws.com, a claim used over MQTT, an ACTIVE permanent certificate with an attached policy allowing AssumeRoleWithCertificate on that alias, and successful credential-provider authentication. The full-principal attestation needs the target's current authorization fingerprint and a usable unrestricted role session. Missing alias detail, mismatched template or role, or incomplete credential evidence remains UNKNOWN.

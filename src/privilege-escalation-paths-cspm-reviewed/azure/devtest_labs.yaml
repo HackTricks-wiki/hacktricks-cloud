@@ -1,0 +1,39 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure DevTest Labs techniques (declarative only).
+# Source: hacktricks-cloud az-devtest-labs-privesc.md (rev 171e422).
+# A lab VM (Microsoft.DevTestLab/labs/virtualMachines) is backed by a compute VM; the link is not collected,
+# so the target uses azure_host_linked_to_pivot (unknown until collected).
+
+- id: azure-devtestlabs-apply-artifacts
+  provider: azure
+  service: devtest_labs
+  title: Apply an artifact to a lab VM to run code in the guest
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-devtest-labs-privesc.md#applyartifacts--in-guest-rce--managed-identity-theft-marquee
+  source_revision: 171e422
+  summary: A script-capable artifact on an exact writable lab VM may run code in its backing compute VM and reach that VM's attached identity.
+  requires:
+    all_of:
+      - action: Microsoft.DevTestLab/labs/virtualMachines/ApplyArtifacts/action
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.DevTestLab/labs/virtualMachines
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_devtestlab_artifact_identity: true
+    scope: inherited_scope
+    aggregate_as: "Managed identity of the compute VM behind the writable lab VM"
+  conditions:
+    - id: artifact_source_available
+      description: The same lab must have an enabled source and an OS-compatible script artifact; public Run PowerShell or Run Bash is checked from native metadata, while custom scripts need fresh reviewed execution semantics.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict ApplyArtifacts/action, disable unneeded artifact sources and keep lab VM identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/devtest-labs/add-artifact-vm
+  notes: The lab VM computeId must name the exact inventoried compute VM carrying the target identity. A stopped lab VM or unavailable script artifact creates no named path. Guest execution and identity-token use remain conditional.

@@ -1,0 +1,47 @@
+# Exact originals: docs/privesc-ledgers/aws-scope-archive-20261016/eks-strict-re-audit.yaml.txt.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreateaccessentry-alone--join-an-existing-privileged-kubernetes-group
+  source_revision: 171e422299
+  technique: Create an EKS access entry that places the source in an existing privileged
+    Kubernetes group
+  reason: No joined Kubernetes RBAC binding proves the chosen custom group grants
+    cluster-admin; access-entry creation alone authenticates but does not establish
+    authorization.
+  prior_id: aws-eks-createaccessentry-privileged-kubernetes-group
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksupdateaccessentry--escalate-an-access-entry-that-already-exists
+  source_revision: 171e422299
+  technique: Rewrite the Kubernetes groups of an existing EKS access entry
+  reason: The edited access entry is not proved to name a principal the source controls,
+    and no joined Kubernetes RBAC binding proves the selected group grants cluster-admin.
+  prior_id: aws-eks-updateaccessentry-kubernetes-groups
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#ekscreatepodidentityassociation-iampassrole-iamgetrole--bind-an-aws-role-to-a-namespace-you-control
+  source_revision: 171e422299
+  technique: Bind a passable role to a Kubernetes service account through EKS Pod
+    Identity
+  reason: CreatePodIdentityAssociation and PassRole configure a Kubernetes ServiceAccount;
+    source pod execution/control and the exact association-to-role credential path
+    are not evaluated.
+  prior_id: aws-eks-createpodidentityassociation-passrole
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksupdatepodidentityassociation-iampassrole--repoint-an-existing-association-role-swap-cross-account-chaining-tag-guardrail-bypass
+  source_revision: 171e422299
+  technique: Repoint an existing EKS Pod Identity association to another passable
+    role
+  reason: UpdatePodIdentityAssociation changes a workload mapping; the source is not
+    proved to control a pod using that association or receive the role credentials.
+  prior_id: aws-eks-updatepodidentityassociation-passrole
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#iampassrole-ekscreatenodegroup--ekscreatefargateprofile--run-pods-on-capacity-you-control
+  source_revision: 171e422299
+  technique: Create a managed node group with a passed node role
+  reason: CreateNodegroup launches nodes with the role but does not give the source
+    node code execution or instance-profile credentials; that separate foothold is
+    only a condition.
+  prior_id: aws-eks-passrole-createnodegroup
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eks-privesc/README.md#eksassociateidentityproviderconfig-with-a-matching-privileged-rbac-group
+  source_revision: b587e6bd26
+  technique: Associate an attacker-controlled OIDC identity provider with an EKS cluster
+    that binds a privileged RBAC group
+  reason: The source-controlled OIDC tokens are not joined to an existing privileged
+    Kubernetes group binding; adding the issuer alone does not grant cluster-admin.
+    Even a proven Kubernetes-admin path reaches another AWS principal only after
+    joining control of a specific workload service account to an IRSA or Pod Identity
+    role association, its trust and effective role permissions.
+  prior_id: aws-eks-associateidentityproviderconfig-privileged-group

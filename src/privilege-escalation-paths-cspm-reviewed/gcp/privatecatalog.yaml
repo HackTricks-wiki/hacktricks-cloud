@@ -1,0 +1,38 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+
+# GCP Service Catalog (formerly Private Catalog) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-private-catalog-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+- id: gcp-privatecatalog-product-version-poison
+  provider: gcp
+  service: cloudprivatecatalogproducer
+  title: Replace a shared Service Catalog solution version
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-private-catalog-privesc.md#cloudprivatecatalogproducerproductsupdate--poison-an-existing-deployable-solution-version
+  source_revision: 171e422
+  summary: The source can update an exact shared Deployment Manager solution version. A consumer deployment could use a Google APIs Service Agent with project IAM authority the source lacks; other sensitive agent permissions remain unresolved until their template path is verified.
+  requires:
+    all_of:
+    - action: cloudprivatecatalogproducer.products.update
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_privatecatalog_dm_iam_path: true
+    scope: any
+    outcome: bounded_authority
+    aggregate_as: Project IAM control possible through shared Service Catalog solutions
+  conditions:
+  - id: consumer_deploys
+    description: A consumer must explicitly preview, deploy or update the poisoned version in their project; nothing runs at update time.
+  - id: attached_catalog
+    description: The product must already be attached to a catalog associated with the consumer hierarchy, and the modified asset must pass validation.
+  - id: deployment_manager_only
+    description: This path covers validated Deployment Manager versions; Terraform versions use a different execution identity.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: medium
+  mitigation: Restrict cloudprivatecatalogproducer editor/admin roles and review solution versions before consumers deploy them.
+  references:
+  - https://docs.cloud.google.com/service-catalog/docs/create-solutions
+  notes: This path is limited to the consumer project IAM permission verified on its Google APIs Service Agent; it does not imply possession of that agent's credentials or automatic deployment.

@@ -1,0 +1,96 @@
+# catalog_description: An AVS ARM action reaches an adjacent-plane principal only
+# when unique reviewed evidence binds the exact private cloud, returned credential
+# or successful grant, named subject, usable access, and newly allowed action.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-avs-list-vcenter-cloudadmin-external-principal
+  provider: azure
+  service: avs
+  title: Reach the named AVS vCenter CloudAdmin with a verified returned credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#cloudadmin--nsx-t-credential-disclosure-listadmincredentials
+  source_revision: 171e422
+  summary: Reading AVS administrator credentials can reach the exact vCenter CloudAdmin only when a reviewed login proves that the returned credential grants a new vCenter action.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/listAdminCredentials/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_vcenter
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact AVS vCenter CloudAdmin reached with reviewed credential
+  conditions:
+    - id: exact_vcenter_login_and_permission
+      description: Unique complete reviewed evidence must bind the returned vcenterUsername and vcenterPassword to this private cloud, successful authentication, prior source denial, and a newly allowed named vCenter action within the CloudAdmin role.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict listAdminCredentials/action and rotate exposed CloudAdmin credentials.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-identity
+  notes: The azure_external_principal_evidence record must bind the returned vCenter username, password response, exact vCenter service, and a newly authorized vCenter privilege or UI action. A private-cloud resource proxy or plaintext password alone cannot create an edge.
+
+- id: azure-avs-list-nsxt-admin-external-principal
+  provider: azure
+  service: avs
+  title: Reach the named AVS NSX-T admin with a verified returned credential
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#cloudadmin--nsx-t-credential-disclosure-listadmincredentials
+  source_revision: 171e422
+  summary: Reading AVS administrator credentials can reach the exact NSX-T admin only when a reviewed login proves that the returned credential grants a new NSX-T action.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/listAdminCredentials/action
+        scope: '{target.scope}'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_nsx
+    scope: inherited_scope
+    outcome: credentials
+    aggregate_as: Exact AVS NSX-T admin reached with reviewed credential
+  conditions:
+    - id: exact_nsxt_login_and_permission
+      description: Unique complete reviewed evidence must bind the returned nsxtUsername and nsxtPassword to this private cloud, successful authentication, prior source denial, and a newly allowed named NSX action within the Cloud Admin role.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict listAdminCredentials/action and rotate exposed NSX-T credentials.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-identity
+  notes: The azure_external_principal_evidence record must name the exact NSX-T subject and resource; a private-cloud resource proxy or plaintext password alone cannot create an edge.
+
+- id: azure-avs-run-command-vcenter-grant-external-principal
+  provider: azure
+  service: avs
+  title: Gain a named vCenter identity through a verified AVS Run Command grant
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-vmware-solution-avs-privesc.md#run-command-identity-grants-without-reading-credentials-scriptexecutionswrite
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  summary: An AVS Run Command cmdlet can grant a named vCenter account new access only when the chosen package and cmdlet succeed and a reviewed login proves the added permission.
+  requires:
+    all_of:
+      - action: Microsoft.AVS/privateClouds/scriptExecutions/write
+        scope: '*'
+  target:
+    kind: azure_external_principal
+    selector:
+      azure_external_principal_evidence: true
+      azure_external_plane: vmware_vcenter
+    scope: inherited_scope
+    outcome: identity
+    aggregate_as: Exact vCenter identity granted by verified AVS Run Command
+  conditions:
+    - id: exact_cmdlet_subject_and_grant
+      description: Unique complete reviewed evidence must bind the executed identity cmdlet and granted group to a source-controlled member login, prior denial, successful grant, and newly allowed vCenter action.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict AVS script execution and audit vCenter SSO identity sources and administrators.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-vmware/using-azure-vmware-solution-run-command
+  notes: Package and cmdlet read permissions aid discovery but are not needed when the cmdlet ID is already known. The selector checks write permission on the exact script execution, including a grant limited to that child resource. Only a reviewed identity_grant artifact naming the execution, granted group, source-controlled member login, and successful subsequent authorization creates an edge.

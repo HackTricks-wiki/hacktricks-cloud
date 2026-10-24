@@ -1,0 +1,309 @@
+# catalog_description: Only principal-to-principal or principal-to-additional-permission
+# escalation paths belong here. A source must control a credential or hold the
+# required verbs, perform the named action, and reach a known target identity
+# or new effective permission. Generic Secret reads and guardrail changes
+# without a proven identity or permission gain are excluded.
+# Canonical provider policy: peaso/privesc/catalog_policy.yaml.
+# OpenShift-specific techniques (SCC, privileged projects, run-level label, Tekton); each needs the
+# k8s_openshift_cluster precondition. The dangling ServiceAccount reference lives in rbac.yaml.
+# Conventions: see header of rbac.yaml. "Host SCC" = an SCC that allows privileged containers or
+# host directory volumes / host PID (default: privileged, hostaccess, hostmount-anyuid,
+# node-exporter); custom SCCs with allowPrivilegedContainer or allowHostDirVolumePlugin qualify.
+# Source: hacktricks-cloud rev a53b46392c, re-verified against 171e422.
+
+- id: k8s-openshift-scc-use-host-scc
+  provider: k8s
+  service: openshift
+  title: Use a host-access SCC and create pods
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc.md#use-scc
+  source_revision: 2415fadfbd
+  summary: The source can obtain the privileges of nodes by creating pods admitted under a host-access SCC it may use.
+  requires:
+    all_of:
+      - verb: create
+        resource: pods
+        namespace: "{pivot.namespace}"
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+      openshift_source_host_scc_path: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: scc_direct_users_groups
+      description: The selector checks both namespace-scoped RBAC use grants and SCC users/groups entries against a collected SCC that permits privileged containers or host filesystem mounts.
+    - id: other_admission_blocks_host_access
+      description: Other admission policies may still reject the pod.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [pod_security_admission, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Grant use on privileged/host SCCs only to platform ServiceAccounts; never to users, groups or system:authenticated.
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: SCC admission checks the requesting user and the pod's ServiceAccount. This entry is the requesting-user path, so the source must create the Pod directly. Host filesystem mounts without privileged containers remain conditional because UID and SELinux restrictions may limit access.
+
+- id: k8s-openshift-scc-via-namespace-sa
+  provider: k8s
+  service: openshift
+  title: Create pods as a ServiceAccount that may use a host-access SCC
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc.md#use-scc
+  source_revision: 2415fadfbd
+  summary: The source can obtain the privileges of nodes by creating pods (or controllers) as a ServiceAccount of the namespace that may use a host-access SCC.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: deploymentconfigs, api_group: apps.openshift.io, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      # Repoint an existing controller to the SCC ServiceAccount and a host-access pod template.
+      - - {verb: patch, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: patch, resource: deploymentconfigs, api_group: apps.openshift.io, namespace: "{pivot.namespace}"}
+      - - {verb: update, resource: deploymentconfigs, api_group: apps.openshift.io, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+      openshift_namespace_has_sa_with_host_scc: "{pivot.namespace}"
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: controller_object_exists
+      description: The patch/update alternatives require an existing controller in the namespace covered by the grant.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [pod_security_admission, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Keep ServiceAccounts with privileged SCC access in namespaces where untrusted subjects cannot create workloads.
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: The selector requires some ServiceAccount in the pivot namespace that may use a host SCC, either through RBAC use on security.openshift.io securitycontextconstraints or through the SCC object's users[] (system:serviceaccount:<ns>:<sa>) / groups[] (e.g. system:serviceaccounts:<ns>), which the K8s collector now collects and the effective-permissions hook evaluates. That ServiceAccount itself is already reached by pods create (workloads.yaml).
+
+- id: k8s-openshift-privileged-default-projects
+  provider: k8s
+  service: openshift
+  title: Create pods in OpenShift namespaces without SCC admission
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md#privileged-namespaces
+  source_revision: a66f094ede
+  summary: The source can obtain node privileges by creating host-privileged pods in an OpenShift default project or an existing namespace carrying openshift.io/run-level.
+  requires:
+    all_of: []
+    any_of:
+      - - any_of:
+            - {verb: create, resource: pods, namespace: default}
+            - {verb: create, resource: deployments, api_group: apps, namespace: default}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: default}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: default}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: default}
+            - {verb: create, resource: replicationcontrollers, namespace: default}
+            - {verb: create, resource: jobs, api_group: batch, namespace: default}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: default}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: kube-system}
+            - {verb: create, resource: deployments, api_group: apps, namespace: kube-system}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: kube-system}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: kube-system}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: kube-system}
+            - {verb: create, resource: replicationcontrollers, namespace: kube-system}
+            - {verb: create, resource: jobs, api_group: batch, namespace: kube-system}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: kube-system}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: kube-public}
+            - {verb: create, resource: deployments, api_group: apps, namespace: kube-public}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: kube-public}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: kube-public}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: kube-public}
+            - {verb: create, resource: replicationcontrollers, namespace: kube-public}
+            - {verb: create, resource: jobs, api_group: batch, namespace: kube-public}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: kube-public}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: openshift-node}
+            - {verb: create, resource: deployments, api_group: apps, namespace: openshift-node}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: openshift-node}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: openshift-node}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: openshift-node}
+            - {verb: create, resource: replicationcontrollers, namespace: openshift-node}
+            - {verb: create, resource: jobs, api_group: batch, namespace: openshift-node}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: openshift-node}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: openshift-infra}
+            - {verb: create, resource: deployments, api_group: apps, namespace: openshift-infra}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: openshift-infra}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: openshift-infra}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: openshift-infra}
+            - {verb: create, resource: replicationcontrollers, namespace: openshift-infra}
+            - {verb: create, resource: jobs, api_group: batch, namespace: openshift-infra}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: openshift-infra}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: openshift}
+            - {verb: create, resource: deployments, api_group: apps, namespace: openshift}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: openshift}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: openshift}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: openshift}
+            - {verb: create, resource: replicationcontrollers, namespace: openshift}
+            - {verb: create, resource: jobs, api_group: batch, namespace: openshift}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: openshift}
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+      openshift_namespace_without_scc: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: openshift_cluster
+      description: Only applies to OpenShift clusters.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [pod_security_admission, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Never grant workload creation in OpenShift default/system projects to untrusted subjects.
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: The fixed alternatives cover Red Hat's six default projects. The pivot alternative requires a collected existing namespace with openshift.io/run-level before it permits any other namespace.
+
+- id: k8s-openshift-run-level-label-existing-namespace
+  provider: k8s
+  service: openshift
+  title: Add the openshift.io/run-level label to a namespace and create pods
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md#namespace-label
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of nodes by labelling a namespace so SCCs are not applied and creating host-privileged pods there.
+  requires:
+    all_of:
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+    any_of:
+      - - {verb: patch, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
+      - - {verb: update, resource: namespaces, namespace: "*", resource_name: "{pivot.namespace}"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+      openshift_unlabeled_existing_namespace: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: openshift_cluster
+      description: Only applies to OpenShift clusters.
+    - id: admission_protects_run_level_label
+      description: A Gatekeeper/VAP policy rejecting the reserved label removes the edge.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Prevent untrusted subjects from modifying namespaces and reject the openshift.io/run-level label via admission.
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: Namespaces that already carry the label are reached with workload creation alone through k8s-openshift-privileged-default-projects.
+
+- id: k8s-openshift-run-level-label-new-namespace
+  provider: k8s
+  service: openshift
+  title: Create a namespace with the openshift.io/run-level label and create pods
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-scc-bypass.md#namespace-label
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of nodes by creating a namespace where SCCs are not applied and creating host-privileged pods in it.
+  requires:
+    all_of:
+      - {verb: create, resource: namespaces, namespace: "*"}
+      - any_of:
+          - {verb: create, resource: pods, namespace: "*"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "*"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "*"}
+          - {verb: create, resource: replicationcontrollers, namespace: "*"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "*"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "*"}
+  target:
+    kind: k8s_node
+    selector:
+      k8s_node_schedulable: true
+    scope: cluster
+    aggregate_as: "Nodes of {cluster}"
+  conditions:
+    - id: openshift_cluster
+      description: Only applies to OpenShift clusters.
+    - id: admission_protects_run_level_label
+      description: A Gatekeeper/VAP policy rejecting the reserved label removes the edge.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: critical
+  mitigation: Restrict namespace creation (users normally create projects through projectrequests, which do not set this label).
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: Requires create on namespaces (not projectrequests) and pods create effective in the new namespace (cluster-wide grant).
+
+- id: k8s-openshift-scc-users-missing-serviceaccount
+  provider: k8s
+  service: openshift
+  title: Create a missing ServiceAccount named in an SCC users list
+  source: src/pentesting-cloud/openshift-pentesting/openshift-privilege-escalation/openshift-missing-service-account.md#missing-service-account
+  source_revision: a66f094ede
+  summary: The source can obtain the SCC privileges granted to a non-existent ServiceAccount named in an SCC's users list by creating that ServiceAccount and running pods as it.
+  requires:
+    all_of:
+      - {verb: create, resource: serviceaccounts, namespace: "{target.namespace}"}
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{target.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{target.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{target.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
+          - {verb: create, resource: deploymentconfigs, api_group: apps.openshift.io, namespace: "{target.namespace}"}
+  target:
+    kind: k8s_service_account
+    selector:
+      k8s_sa_missing_in_host_scc_users: true
+    scope: cluster
+    aggregate_as: "ServiceAccounts named in SCC users of {cluster}"
+  conditions:
+    - id: scc_grant_is_host_level
+      description: The named SCC must allow privileged or host access, and the named ServiceAccount must be absent from an existing namespace; these facts are checked from the inventories.
+  preconditions: [k8s_openshift_cluster]
+  blockers: [pod_security_admission, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: conditional
+  severity: high
+  mitigation: Remove SCC users entries whose ServiceAccount no longer exists.
+  references:
+    - https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/authentication_and_authorization/managing-pod-security-policies
+  notes: The selector accepts only missing ServiceAccounts named in host-access SCC users[] entries within an existing namespace. If the namespace is missing too, see k8s-rbac-serviceaccount-in-absent-namespace.

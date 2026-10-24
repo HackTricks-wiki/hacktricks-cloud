@@ -1,0 +1,43 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Machine Configuration (Guest Configuration) techniques (declarative only).
+# Source: hacktricks-cloud az-guest-configuration-privesc.md (rev 171e422).
+# The Guest Configuration agent runs the assigned DSC package as LocalSystem/root, so in-guest code
+# reaches every managed identity exposed by IMDS (Azure VM) or HIMDS (Arc server) on that machine.
+
+- id: azure-guestconfiguration-assignment-write-arc
+  provider: azure
+  service: guest_configuration
+  title: Create a guest configuration assignment on an Arc-enabled server
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-guest-configuration-privesc.md#in-guest-rce-via-a-guest-configuration-assignment-marquee
+  source_revision: 547f1ea0c8
+  summary: The source can obtain the privileges of the Arc machine's managed identity, because the built-in guest configuration agent runs the package as LocalSystem/root.
+  requires:
+    all_of:
+      - action: Microsoft.GuestConfiguration/guestConfigurationAssignments/write
+        scope: "*"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.HybridCompute/machines
+      azure_arc_guest_configuration_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identity of Arc machine {target.host_resource}"
+  conditions:
+    - id: arc_agent_connected
+      description: The Connected Machine agent must be connected and guest configuration must not be disabled in the agent's local configuration.
+    - id: custom_package_runs
+      description: The machine must download and run the attacker's valid custom package before its identity can be used.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict guestConfigurationAssignments/write (Azure Connected Machine Resource Manager, Guest Configuration Resource Contributor) on Arc servers and keep Arc machine identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/governance/machine-configuration/overview
+    - https://learn.microsoft.com/en-us/azure/governance/machine-configuration/how-to/assign-configuration/azure-resource-manager
+    - https://learn.microsoft.com/en-us/azure/azure-arc/servers/security-extensions
+  notes: The Arc agent includes guest configuration, so no separate extension write is required. The selector checks write authority on the exact machine's assignment child, including an existing assignment if its resource is collected. Agent-side disablement and package execution are not collected and remain conditional.

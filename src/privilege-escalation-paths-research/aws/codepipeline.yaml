@@ -1,0 +1,137 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS CodePipeline privilege escalation techniques.
+# Source: hacktricks-cloud aws-codepipeline-privesc/README.md.
+
+- id: aws-codepipeline-passrole-createpipeline-codebuild
+  provider: aws
+  service: codepipeline
+  title: Create a pipeline and CodeBuild project using an S3 source
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#iampassrole-codepipelinecreatepipeline-codebuildcreateproject-codepipelinestartpipelineexecution
+  source_revision: 171e422299
+  summary: The source may obtain a CodeBuild role's privileges by creating a project and pipeline, placing a source ZIP in S3, and starting the pipeline.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: codebuild.amazonaws.com
+    scope: same_account
+    aggregate_as: "CodeBuild roles reachable through new S3 sourced pipelines in {account}"
+  preconditions:
+    - codepipeline_new_s3_project_route
+  conditions:
+    - id: passable_pipeline_role
+      description: The source must pass the target to CodeBuild and a pipeline role to CodePipeline. That pipeline role must be able to start the new project.
+    - id: readable_source
+      description: A versioned S3 bucket in the pipeline Region must accept a ZIP source object, and the pipeline and build roles must be able to use the artifact store.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict who can pass CodeBuild roles and who can create pipelines and projects with those roles.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-S3.html
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html
+  notes: This entry validates the S3 source path. Other source providers require their own source and artifact authorization checks.
+
+- id: aws-codepipeline-passrole-createpipeline-codebuild-codecommit
+  provider: aws
+  service: codepipeline
+  title: Create a pipeline and CodeBuild project using a CodeCommit source
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#iampassrole-codepipelinecreatepipeline-codebuildcreateproject-codepipelinestartpipelineexecution
+  source_revision: 171e422299
+  summary: The source may obtain a CodeBuild role's privileges by creating a project and pipeline that runs a recorded CodeCommit branch or one it can push.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: codebuild.amazonaws.com
+    scope: same_account
+    aggregate_as: "CodeBuild roles reachable through new CodeCommit sourced pipelines in {account}"
+  preconditions:
+    - codepipeline_new_codecommit_project_route
+  conditions:
+    - id: passable_pipeline_role
+      description: The source must pass the target to CodeBuild and a pipeline role to CodePipeline. The pipeline role must be able to start the new project.
+    - id: available_source
+      description: A recorded branch or a branch the source can push must be available. The pipeline role must read and archive the repository into an artifact bucket that the build role can read.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict who can pass CodeBuild roles and who can create pipelines and projects with those roles.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeCommit.html
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html
+  notes: The ZIP output format uses the pipeline role to archive the repository and does not require the build role to clone it.
+
+- id: aws-codepipeline-passrole-createpipeline-codebuild-ecr
+  provider: aws
+  service: codepipeline
+  title: Create a pipeline and CodeBuild project using an ECR source
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#iampassrole-codepipelinecreatepipeline-codebuildcreateproject-codepipelinestartpipelineexecution
+  source_revision: 171e422299
+  summary: The source may obtain a CodeBuild role's privileges by creating a project and pipeline that uses a recorded tagged ECR image as its source.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: codebuild.amazonaws.com
+    scope: same_account
+    aggregate_as: "CodeBuild roles reachable through new ECR sourced pipelines in {account}"
+  preconditions:
+    - codepipeline_new_ecr_project_route
+  conditions:
+    - id: existing_image
+      description: An ECR repository must contain a tagged image the pipeline role can describe, and the resulting source artifact must be readable by the build role.
+    - id: passable_pipeline_role
+      description: The source must pass the target to CodeBuild and a pipeline role to CodePipeline, and that pipeline role must start the new project.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict who can pass CodeBuild roles and who can create pipelines and projects with those roles.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-ECR.html
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html
+  notes: The ECR source provides an imageDetail.json artifact; the controlled buildspec is supplied when creating the project.
+
+- id: aws-codepipeline-updatepipeline-codebuild-updateproject
+  provider: aws
+  service: codepipeline
+  title: Change a pipeline's CodeBuild project and run the pipeline
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codepipeline-privesc/README.md#codebuildupdateproject-codepipelineupdatepipeline-codepipelinestartpipelineexecution
+  source_revision: 171e422299
+  summary: The source may obtain the privileges of a CodeBuild role by changing the buildspec of a project used by a pipeline and starting that pipeline.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: codebuild.amazonaws.com
+    scope: same_account
+    aggregate_as: "CodeBuild roles reachable through configured pipelines in {account}"
+  preconditions:
+    - codepipeline_existing_project_update_buildspec
+  conditions:
+    - id: pipeline_can_start_project
+      description: Earlier actions must actually produce every named build input, the build action must consume those inputs and use the changed project buildspec, and the pipeline or action role must be able to start the exact project. Batch builds and build role overrides add requirements.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict who can change buildspecs and start pipelines that use privileged CodeBuild roles.
+  references:
+    - https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html
+  notes: The route uses an existing pipeline and project, so UpdatePipeline is unnecessary. AWS does not let a pipeline change its service role after creation. A configured artifact name alone does not show that a source revision or earlier action can deliver it; reporting a role edge requires a fresh reviewed execution bound to the exact pipeline and project definitions, consumed input artifacts, changed buildspec and useful action under the CodeBuild role.

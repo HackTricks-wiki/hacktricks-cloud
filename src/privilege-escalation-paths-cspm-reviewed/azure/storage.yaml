@@ -1,0 +1,34 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-storage-blob-content-credential
+  provider: azure
+  service: storage
+  title: Read Entra credentials embedded in blobs
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#read-a-verified-credential-from-a-blob
+  source_revision: 2cd8240244
+  summary: Read a verified usable credential from a readable blob and gain its Entra service principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a verified usable service-principal credential in the exact blob content creates this edge; the source must have effective read access to that blob.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob
+  notes: Reviewed azure_privesc_challenge_evidence must identify the exact BlobResourceId, verified returned content, a usable credential, and its named Entra service principal. Missing or incomplete review creates no path.

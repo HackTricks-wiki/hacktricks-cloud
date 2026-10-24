@@ -1,0 +1,46 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon Braket privilege escalation techniques.
+# Source: hacktricks-cloud aws-braket-privesc/README.md (rev 171e422299).
+
+- id: aws-braket-passrole-createjob
+  provider: aws
+  service: braket
+  title: Create a Braket hybrid job with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-braket-privesc/README.md#braketcreatejob--iampassrole
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of any passable role trusting braket.amazonaws.com by running job
+    code it controls.
+  requires:
+    all_of:
+    - action: iam:PassRole
+      resource: '{target.arn}'
+      request_context:
+        iam:PassedToService: braket.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: braket.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: Roles trusting braket.amazonaws.com passable in {account}
+    outcome: workload_execution
+  preconditions:
+  - braket_createjob_device_authorized
+  conditions:
+  - id: controlled_job_code
+    description: The source must write one script archive that the passed role can read, and the role must write the job output prefix.
+  - id: passrole_condition_key
+    description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Braket job roles with iam:PassedToService and limit braket:CreateJob.
+  references:
+  - https://docs.aws.amazon.com/braket/latest/APIReference/API_CreateJob.html
+  notes: CreateJob must authorize both an ONLINE SV1 simulator observed in the Region and the service-generated job ARN. The precondition joins those grants with exact PassRole, Braket service trust, a same-Region script archive writable by the source and readable by the role, and a complete output prefix writable by the role. Other devices and container-image routes remain unresolved. Job scheduling and successful execution remain conditional.

@@ -1,0 +1,43 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cluster Director (hypercomputecluster) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cluster-director-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: hypercomputecluster_cluster -> the SA attached to the Slurm login-node VMs of an existing Cluster
+#   ("{target.host_resource}" = that Cluster).
+- id: gcp-hypercomputecluster-login-node-startup-actas
+  provider: gcp
+  service: hypercomputecluster
+  title: Replace a cluster's login-node startup script to run as the login VM service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cluster-director-privesc.md#hypercomputeclusterclustersupdate--iamserviceaccountsactas--execute-a-login-node-startup-script-as-the-retained-vm-identity
+  source_revision: 171e422
+  summary: The source can run a changed login-node startup script as the service account on a running VM explicitly listed by an existing Cluster Director cluster, when it can update that cluster and use that account.
+  requires:
+    all_of:
+    - action: hypercomputecluster.clusters.update
+      resource: '{target.host_resource}'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: hypercomputecluster_cluster
+      gcp_actas_granted_on_target: true
+    scope: any
+    aggregate_as: Login-node SAs of Cluster Director clusters the source can update
+  conditions:
+  - id: login_nodes_exist
+    description: The cluster must be stable and list a running login VM whose exact Compute record names an enabled service account.
+  - id: access_scopes
+    description: The VM must have the cloud-platform OAuth scope so the service-account edge is not overstated; egress and target IAM still bound actual API use.
+  - id: disruptive
+    description: The update restarts all login nodes.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/hypercomputecluster.editor and admin and grant Service Account User on login-node SAs only to operators.
+  notes: roles/hypercomputecluster.editor/admin carry clusters.update but not actAs; the live API rechecks actAs on the retained SA even though the update does not change identity. getAccessToken is not needed.
+  references:
+  - https://docs.cloud.google.com/cluster-director/docs/reference/rest/v1/projects.locations.clusters
+  - https://docs.cloud.google.com/cluster-director/docs/manage/modify-cluster

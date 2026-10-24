@@ -21,3 +21,14 @@ def test_source_errors_checks_techniques_and_exclusions(tmp_path):
     assert any('scopescloud-platform' in error for error in errors)
     assert any('discover-secrets-in-etcd' in error for error in errors)
     assert any('not-a-heading' in error for error in errors)
+
+
+def test_source_errors_preserves_angle_brackets_in_inline_code(tmp_path):
+    page = tmp_path / 'src' / 'page.md'
+    page.parent.mkdir()
+    page.write_text('## Pivot via `<send-request>`\n', encoding='utf-8')
+    catalog = tmp_path / 'src' / 'privilege-escalation-paths' / 'azure'
+    catalog.mkdir(parents=True)
+    (catalog / '_excluded.yaml').write_text(
+        '- source: src/page.md#pivot-via-send-request\n', encoding='utf-8')
+    assert source_errors(tmp_path, catalog.parent) == []

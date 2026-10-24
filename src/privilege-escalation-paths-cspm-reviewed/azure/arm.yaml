@@ -1,0 +1,37 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Resource Manager deployment / template spec techniques (declarative only).
+# Source: hacktricks-cloud az-arm-deployment-privesc.md, az-arm-template-spec-privesc.md (rev 171e422).
+
+- id: azure-arm-deploymentscript-with-user-assigned-identity
+  provider: azure
+  service: arm
+  title: Deployment script running as an assignable user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-arm-deployment-privesc.md#microsoftresourcesdeploymentscriptswrite
+  source_revision: 171e422
+  summary: The source can obtain the privileges of user-assigned identities it can assign.
+  requires:
+    all_of:
+      - action: Microsoft.Resources/deploymentScripts/write
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_deployment_script_uami_path: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: deployment_script_execution
+      description: The script and its support resources must be provisioned successfully so the code can run as the assigned identity.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict userAssignedIdentities/assign/action and deploymentScripts/write; use Azure Policy to restrict which identities deployment scripts may use.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/deployment-script-template
+  notes: The selector joins exact deploymentScripts/write and UAMI assign/action rights to a creatable or inventoried script, checks the required storage/ACI permissions on support resources in its resource group, and requires containerGroups/delete when a retained support container is inventoried. Missing retained-container evidence remains unresolved.

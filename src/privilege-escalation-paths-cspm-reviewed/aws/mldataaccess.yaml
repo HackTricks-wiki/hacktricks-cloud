@@ -1,0 +1,57 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# PassRole techniques from the ML/analytics data-access page that yield code execution as the role.
+# Source: hacktricks-cloud aws-ml-dataaccess-passrole-privesc/README.md (rev 171e422299).
+# The data-only (confused-deputy read/write) services on that page are excluded in _excluded_refresh_g4.yaml.
+
+- id: aws-kafkaconnect-passrole-createconnector
+  provider: aws
+  service: kafkaconnect
+  title: Create an MSK Connect connector with a passed service execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ml-dataaccess-passrole-privesc/README.md#affected-actions-non-exhaustive
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of passable roles trusting kafkaconnect.amazonaws.com by running connector plugin code it controls in MSK Connect workers that carry that role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: kafkaconnect.amazonaws.com
+      - action: kafkaconnect:CreateConnector
+        resource: "*"
+      - action: kafkaconnect:CreateCustomPlugin
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: kafkaconnect.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting kafkaconnect.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - kafkaconnect_plugin_execution_unverified
+  conditions:
+    - id: controlled_plugin_code
+      description: CreateCustomPlugin must register connector code the source supplies; an AWS-provided or unrelated existing plugin does not run source-controlled code.
+    - id: plugin_object_readable
+      description: When a new custom plugin is registered, its code object must be stored in S3 at a location readable for plugin creation.
+    - id: reachable_kafka_cluster
+      description: The connector needs a reachable Apache Kafka cluster (MSK or self-managed) and VPC subnets and security groups to attach to.
+    - id: ec2_dependent_actions
+      description: Connector creation also needs EC2 network-interface and VPC/subnet/security-group describe permissions, plus log-delivery permissions if worker logging is configured.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on MSK Connect service execution roles and kafkaconnect:CreateConnector / CreateCustomPlugin to platform administrators, keep connector roles least-privileged, and alert on CreateConnector calls that name an unexpected service execution role.
+  references:
+    - https://docs.aws.amazon.com/msk/latest/developerguide/msk-connect-service-execution-role.html
+    - https://docs.aws.amazon.com/msk/latest/developerguide/mkc-iam-policy-examples.html
+  notes: CreateCustomPlugin and CreateConnector are authorized on * and PassRole must cover the exact service execution role for kafkaconnect.amazonaws.com. A concrete route requires fresh reviewed evidence that the source controlled the exact S3 JAR or ZIP registered as a custom plugin, the connector selected that plugin and a reachable Kafka cluster with working network configuration, and the running plugin performed a useful action under the immutable role ID that the caller could not perform directly. Missing artifact, cluster or execution evidence remains UNKNOWN.

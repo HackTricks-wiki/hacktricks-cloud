@@ -1,0 +1,36 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: azure-appconfig-snapshot-credential
+  provider: azure
+  service: app_configuration
+  title: Recover credentials retained in App Configuration snapshot
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-app-configuration-post-exploitation.md#bulk-exfil--loot-persistence-via-snapshots-configurationstoressnapshotsread--write
+  source_revision: 658a097d5c
+  summary: Read a verified usable Entra client secret from a named, readable App Configuration snapshot and gain that service principal's permissions.
+  requires:
+    all_of:
+    - action: Microsoft.AppConfiguration/configurationStores/snapshots/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.AppConfiguration/configurationStores
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only an exact service-principal client secret verified in the returned content of a named snapshot creates this edge; the secret must still be usable.
+  - id: snapshot_access
+    description: The named snapshot must already exist and return the credential-bearing content; creating a new snapshot additionally needs keyValues/read and snapshots/write.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/azure-app-configuration/concept-snapshots
+  notes: Reviewed azure_privesc_challenge_evidence must bind SnapshotName, SnapshotContentReadVerified, CredentialInSnapshotVerified, and SnapshotContentEvidenceRef to the same store and exact service principal. Missing or incomplete review creates no path.

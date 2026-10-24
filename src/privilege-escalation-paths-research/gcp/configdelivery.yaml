@@ -1,0 +1,48 @@
+
+# GCP Config Delivery (fleet packages) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-config-delivery-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+
+- id: gcp-configdelivery-fleetpackage-publish
+  provider: gcp
+  service: configdelivery
+  title: Publish a resource-bundle release to fleet clusters through a fleet package
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-config-delivery-privesc.md#resourcebundlescreate--releasescreate--variantscreate--releasesupdate--fleetpackagescreate--publish-manifests-to-fleet-clusters
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain cluster-admin on fleet member clusters selected by a fleet package it creates or updates, because Config Sync's root reconciler applies the published manifests with cluster-admin by default.
+  requires:
+    all_of:
+      - action: configdelivery.resourceBundles.create
+        resource: "*"
+      - action: configdelivery.releases.create
+        resource: "*"
+      - action: configdelivery.releases.update
+        resource: "*"
+      - action: configdelivery.variants.create
+        resource: "*"
+    any_of:
+      - - action: configdelivery.fleetPackages.create
+          resource: "*"
+      - - action: configdelivery.fleetPackages.update
+          resource: "*"
+  target:
+    kind: k8s_cluster_admin
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "Cluster admin of fleet-member clusters in {project}"
+  conditions:
+    - id: fleet_selection
+      description: Only fleet members matched by the fleet package target selector are reached (an empty selector matches all members); Config Sync must be enabled on them.
+    - id: reconciler_rbac
+      description: Google documents that RootSync root reconcilers have cluster-admin by default; customized reconciler RBAC or admission policy limits what is applied.
+  blockers:
+    - gcp_deny_policy
+    - admission_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict roles/configdelivery.configDeliveryAdmin and fleetPackages create/update; narrow Config Sync reconciler RBAC.
+  references:
+    - https://docs.cloud.google.com/kubernetes-engine/config-sync/docs/concepts/architecture
+    - https://cloud.google.com/kubernetes-engine/enterprise/config-sync/docs/how-to/fleet-packages
+  notes: HackTricks states the chain does not by itself prove cluster-admin; the edge is conditional on the default root reconciler RBAC (Google Config Sync architecture docs).

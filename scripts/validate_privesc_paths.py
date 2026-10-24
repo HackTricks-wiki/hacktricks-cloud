@@ -21,6 +21,8 @@ from collections import Counter
 import yaml
 
 PATH = 'src/privilege-escalation-paths'
+CATALOG_PATHS = (PATH, 'src/privilege-escalation-paths-cspm-reviewed',
+                 'src/privilege-escalation-paths-research')
 PROVIDERS = ('aws', 'gcp', 'azure', 'k8s')
 FILE_NAME = re.compile(r'^_?[a-z0-9][a-z0-9_.-]*\.yaml$')
 ROOT_EXTRAS = re.compile(r'^(README\.md|[A-Za-z0-9_.-]+\.schema\.json)$')
@@ -31,6 +33,8 @@ HEADING = re.compile(r'^(#{1,6})\s+(.*?)\s*#*\s*$')
 def heading_slug(title):
     """Use the same heading slug rules as the Blue-CloudPEASS source audit."""
     title = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', title)
+    # Angle brackets inside inline code are literal operation names, not HTML tags.
+    title = re.sub(r'`([^`]*)`', lambda match: match.group(1).replace('<', '').replace('>', ''), title)
     title = re.sub(r'<[^>]+>', '', title).strip().lower()
     return ''.join(ch if ch.isalnum() or ch in '_-' else '-' if ch.isspace() else '' for ch in title)
 
@@ -102,9 +106,11 @@ def main():
     parser.add_argument('--book-root', type=Path, default=Path('.'))
     parser.add_argument('--peaso-root', type=Path,
                         help='optional Blue-CloudPEASS checkout to compare the loader and exported schema')
+    parser.add_argument('--catalog-path', choices=CATALOG_PATHS, default=PATH,
+                        help='catalog directory to validate (default: current reviewed paths)')
     args = parser.parse_args()
     book = args.book_root.resolve()
-    root = book / PATH
+    root = book / args.catalog_path
     spec = importlib.util.spec_from_file_location('privesc_paths_schema', book / 'scripts/privesc_paths_schema.py')
     schema = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(schema)

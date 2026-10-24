@@ -1,0 +1,45 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+
+# GCP Developer Connect privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-developer-connect-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml. attached_to_service: sourcerepo_trigger_consumer is
+# defined in securesourcemanager.yaml ("{target.artifact_arn}" here is the Developer Connect gitRepositoryLink).
+- id: gcp-developerconnect-readwrite-token-pipeline-poison
+  provider: gcp
+  service: developerconnect
+  title: Write to a linked repository through Developer Connect and poison the pipeline that builds from it
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-developer-connect-privesc.md#fetchreadwritetoken-or-git-proxy-write---poison-a-privileged-repository-driven-pipeline
+  source_revision: 6fb9ac51fd
+  summary: The source can write to the exact Developer Connect repository link watched by an enabled Cloud Build push trigger that reads its build configuration from that repository and runs as a more privileged service account.
+  requires:
+    any_of:
+    - - action: developerconnect.gitRepositoryLinks.fetchReadWriteToken
+        resource: '*'
+    - - action: developerconnect.gitRepositoryLinks.gitProxyRead
+        resource: '*'
+      - action: developerconnect.gitRepositoryLinks.gitProxyWrite
+        resource: '*'
+  target:
+    kind: gcp_service_account
+    include_service_managed: true
+    selector:
+      gcp_developerconnect_pipeline_path: true
+    scope: any
+    aggregate_as: Run-as SAs of pipelines building from repositories writable through Developer Connect
+  conditions:
+  - id: git_proxy_enabled
+    description: The gitProxyRead plus gitProxyWrite alternative (roles/developerconnect.gitProxyUser, roles/developerconnect.admin) needs the connection's system Git proxy enabled and its URI known; roles/developerconnect.admin does not contain fetchReadWriteToken.
+  - id: provider_write_allowed
+    description: The provider integration must allow writes to the repository, and the triggering ref/file must not be protected by provider branch rules or approvals.
+  - id: automatic_consumer
+    description: An enabled Cloud Build push trigger must watch the same exact Developer Connect link, run without approval or a custom filter, and load its build configuration from that repository as an identity with additional permissions.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict fetchReadWriteToken (roles/developerconnect.tokenAccessor) and Git proxy write roles, protect trigger branches in the provider, and require approval on privileged build triggers.
+  references:
+  - https://docs.cloud.google.com/developer-connect/docs/access-control
+  - https://docs.cloud.google.com/developer-connect/docs/api/reference/rest/v1/projects.locations.connections.gitRepositoryLinks/fetchReadWriteToken
+  - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.triggers
+  notes: Developer Connect itself runs no code. Provider branch rules and actual repository write access remain conditional. A proxy-only path needs the exact link's collected gitProxyUri; other deployment consumers remain unresolved when their attachment is not collected.

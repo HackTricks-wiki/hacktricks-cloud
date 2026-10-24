@@ -1,0 +1,44 @@
+# Additional role targets whose service execution is bounded by a fixed configuration or file/SQL session.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-appsync-privesc/README.md#hijack-resolver-function-or-data-source-behavior
+  technique: aws-appsync-updateresolver-existing-datasource-role
+  reason: Only HTTP data sources with IAM authorization can sign arbitrary AWS API calls. This entry targets every
+    existing AppSync data-source role, including DynamoDB/OpenSearch/RDS/EventBridge backends whose role use is
+    bounded; reauthor an exact HTTP selector and invocation proof.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-datasync-privesc/README.md#datasyncupdatelocations3-datasyncstarttaskexecution-iampassrole--replace-a-stored-location-role
+  technique: aws-datasync-updatelocations3-starttaskexecution
+  reason: The fixed bucket and destination limit the effect to a selected S3 copy, not the full passable DataSync
+    role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-pipes-privesc/README.md#pipescreatepipe-or-updatepipe--iampassrole
+  technique: aws-pipes-passrole-createpipe-or-updatepipe
+  reason: Pipes can only read supported sources and invoke configured enrichment/targets; the entry itself says
+    arbitrary role API calls are unavailable.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-eventbridge-pipe-stored-role-privesc/README.md#pipesstartpipe--execute-a-stopped-pipe-with-its-stored-role
+  technique: aws-pipes-startpipe-stored-role
+  reason: Starting a fixed pipe triggers only its stored source/enrichment/target operations and does not yield
+    its role or new general permissions.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbcluster-iampassrole
+  technique: aws-rds-addroletodbcluster-passrole
+  reason: Adding a role to a DB cluster enables only engine-specific SQL integrations; the source does not receive
+    the full passed role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rdsaddroletodbinstance-iampassrole
+  technique: aws-rds-addroletodbinstance-passrole
+  reason: Adding a role to a DB instance enables only engine-specific SQL integrations; the source does not receive
+    the full passed role.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc/README.md#rds-dbconnect
+  technique: aws-rds-dbconnect-iam-auth-associated-roles
+  reason: IAM DB authentication grants a database session and configured SQL integration actions, not the associated
+    IAM role session or full permissions.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#ssmstartautomationexecution--execute-a-preauthorized-runbook-role
+  technique: aws-ssm-startautomationexecution-stored-role
+  reason: Starting a fixed Automation runbook triggers only its stored steps; the source does not receive the hardcoded
+    role session. A policy-attachment step should be modeled as an exact added permission.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferimportsshpublickey--impersonate-a-service-managed-user
+  technique: aws-transfer-importsshpublickey
+  reason: Transfer Family supplies only session-policy/home-directory-limited file access; the entry explicitly
+    says no AWS API credentials are obtained.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#secretsmanagerputsecretvalue--poison-a-secrets-manager-backed-custom-idp-user
+  technique: aws-transfer-secret-backed-idp-record
+  reason: A custom IdP record can select a Transfer role for a file session, but does not give broad IAM role permissions.
+- source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-transfer-family-privesc/README.md#transferupdateserver-lambdaupdatefunctioncode-or-api-gateway-response-writes--take-over-a-custom-identity-provider
+  technique: aws-transfer-custom-idp-takeover
+  reason: Controlling the custom IdP response selects a Transfer file-session role, not a general IAM role session.

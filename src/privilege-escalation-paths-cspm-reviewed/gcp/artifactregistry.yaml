@@ -1,0 +1,110 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Artifact Registry privilege escalation techniques (supply chain into workloads that pull artifacts).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-artifact-registry-privesc.md (rev 171e422); gcr.io squat and dependency confusion now live on gcp-persistence/gcp-artifact-registry-persistence.md.
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: artifact_consumer -> run-as SA of any workload (GKE node/KSA-bound GSA, Cloud Run, Cloud Build, VM,
+# Batch, Vertex, ...) whose image/package reference resolves to the repository in "{target.artifact_arn}". The consumer
+# mapping must come from collected workload specs; pinned-digest references are not affected.
+- id: gcp-artifactregistry-upload-artifacts
+  provider: gcp
+  service: artifactregistry
+  title: Replace a tagged Docker image consumed by a privileged workload
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriesuploadartifacts--poison-an-artifact-consumed-by-a-privileged-workload
+  source_revision: 171e422
+  summary: The source may reach a runtime or build account when it can replace an exact tagged image that an observed Cloud Run, Cloud Build, or GKE consumer later fetches.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.uploadArtifacts
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_artifact_upload_consumer_path: true
+    scope: any
+    aggregate_as: Runtime SAs of observed Cloud Run, Cloud Build, and GKE consumers of writable tagged images
+  conditions:
+  - id: mutable_reference
+    description: An observed Cloud Run image, inline Cloud Build step, or joined GKE Pod must reference a tag in the same standard Docker repository, and the repository must allow tag changes.
+  - id: redeploy
+    description: Cloud Run services and worker pools resolve tags to digests per revision; jobs, build steps, and new GKE Pods may fetch the changed tag later.
+  - id: immutable_tags
+    description: Repositories with immutable tags enabled reject re-tagging an existing tag.
+  - id: binary_authorization
+    description: Binary Authorization / signature verification on the consumer blocks unsigned images.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict roles/artifactregistry.writer, enable immutable tags, pin consumers to digests and enforce Binary Authorization.
+  references:
+  - https://cloud.google.com/iam/docs/roles-permissions/artifactregistry
+  notes: The active path covers Docker tags with exact consumers. Replacing a stored image does not change already-deployed Cloud Functions or App Engine versions.
+- id: gcp-artifactregistry-repositories-setiampolicy
+  provider: gcp
+  service: artifactregistry
+  title: Self-grant writer on a repository through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#artifactregistryrepositoriessetiampolicy--self-grant-control-of-a-repository
+  source_revision: 171e422
+  summary: The source can grant itself upload rights on an exact Docker repository and may reach the runtime account of a workload that later fetches its tagged image.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.setIamPolicy
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_artifact_policy_consumer_path: true
+    scope: any
+    aggregate_as: Run-as SAs of workloads consuming Artifact Registry repositories whose IAM the source controls
+  conditions:
+  - id: followup_upload
+    description: The repository must be a standard Docker repository used by a recorded tag-based Cloud Run image; a future deployment or execution must fetch the altered image.
+  - id: allowed_member_domains
+    description: An effective allowed-member-domains policy may reject a self-grant and leaves the path unresolved until the source member is checked against it.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict artifactregistry.repositories.setIamPolicy (roles/artifactregistry.admin, roles/owner).
+  references:
+  - https://docs.cloud.google.com/artifact-registry/docs/reference/rest/v1/projects.locations.repositories/setIamPolicy
+  - https://docs.cloud.google.com/artifact-registry/docs/reference/rest/v1/projects.locations.repositories
+  notes: A blind setIamPolicy call does not require getIamPolicy. The path is conditional on a successful self-grant, upload, and future tag pull. Immutable tags or unknown allowed-member constraints remain unresolved. Public exposure through allUsers is a data-exposure outcome and is not modeled.
+- id: gcp-artifactregistry-gcrio-namespace-squat
+  provider: gcp
+  service: artifactregistry
+  title: Create the missing gcr.io-named repository to claim a redirected legacy namespace
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-artifact-registry-privesc.md#squat-the-legacy-gcrio-namespace-as-a-permanent-backdoor---artifactregistryrepositoriescreate
+  source_revision: 4e9b5eaaa6
+  summary: The source can put a controlled image into a missing gcr.io repository after redirection and may reach a workload's runtime service account if its tagged image is fetched on a later deployment or execution.
+  requires:
+    all_of:
+    - action: artifactregistry.repositories.create
+      resource: '*'
+    - action: artifactregistry.repositories.uploadArtifacts
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_gcr_namespace_path: true
+    scope: any
+    aggregate_as: Runtime SAs of workloads with tagged images in a missing redirected gcr.io repository
+  conditions:
+  - id: redirection_enabled
+    description: The image's registry project must have full gcr.io redirection enabled, and that host's repository must be absent from a complete listing of its matching multi-region.
+  - id: legacy_consumers
+    description: An observed Cloud Run service or job must use a tag-based gcr.io image from that project and fetch it after the repository is created; digest-pinned references cannot be replaced through this path.
+  - id: push_after_create
+    description: The caller must push a modified image into the newly created repository; uploadArtifacts is required for that action.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Create the intended gcr.io-named repositories in migrated projects, limit repository creation and upload rights, and pin workload images by digest.
+  references:
+  - https://docs.cloud.google.com/artifact-registry/docs/reference/rest/v1/ProjectSettings
+  - https://docs.cloud.google.com/artifact-registry/docs/transition/gcr-repositories
+  notes: The modeled edge requires matching create and upload rights plus a recorded Cloud Run consumer and remains conditional on a future image fetch. GKE and other consumers without an exact runtime identity join remain unresolved. The runtime service account may be in another project.

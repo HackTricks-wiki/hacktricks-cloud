@@ -1,0 +1,42 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Identity (Google Groups) privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-cloudidentity-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# cloudidentity.groups.memberships.create is NOT a GCP IAM permission on the group: the evaluator must resolve it from the
+# source's Cloud Identity group role on that group (OWNER or MANAGER), a Workspace Groups Admin / Super Admin role, or a
+# group whose settings allow self-join (see SCHEMA EXTENSIONS: group-management facts).
+
+- id: gcp-cloudidentity-add-member-to-group
+  provider: gcp
+  service: cloudidentity
+  title: Add a controlled principal to a Google group that holds IAM roles
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-cloudidentity-privesc.md#control-an-iam-bound-groups-membership--inherit-its-existing-gcp-roles
+  source_revision: 171e422
+  summary: The source can join or add itself to an IAM-bound Google group and gain permissions it does not already hold.
+  requires:
+    all_of:
+      - action: cloudidentity.groups.memberships.create
+        resource: "{target.resource}"
+  target:
+    kind: gcp_group
+    selector:
+      resource_permission_covers_target: cloudidentity.groups.memberships.create
+    scope: any
+    aggregate_as: "Google groups whose membership the source can manage"
+  conditions:
+    - id: membership_authority
+      description: Requires a Workspace Groups Admin/Super Admin role or a group configured to allow self-join, plus a group IAM binding that adds a permission for the source.
+    - id: dynamic_groups
+      description: Dynamic (query-based) groups cannot take direct members; editing the query is an alternate path that needs Cloud Identity Premium.
+    - id: locked_groups
+      description: Locked groups restrict membership edits to authorized administrators, whose exact conditions may need separate verification.
+    - id: external_members
+      description: Group settings may forbid members outside the organization's domain.
+  blockers:
+    - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Keep privileged groups owned by a small admin set, disallow self-join and external members, and review group OWNERs/MANAGERs.
+  references:
+    - https://cloud.google.com/identity/docs/groups
+  notes: Existing members already inherit the group's IAM roles, so they are excluded from this self-gain path. Dynamic groups cannot take a direct new member. Locked groups need an authorized administrator. Cloud Identity groups.memberships.create is resolved from directory evidence, not from a GCP IAM role.

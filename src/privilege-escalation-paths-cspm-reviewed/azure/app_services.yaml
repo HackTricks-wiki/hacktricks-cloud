@@ -1,0 +1,413 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure App Service (Microsoft.Web/sites) privilege escalation techniques.
+# Applies to Web Apps AND Function Apps (both are Microsoft.Web/sites); Function-only techniques live in functions.yaml.
+# Source: hacktricks-cloud az-app-services-privesc.md and az-functions-app-privesc.md (rev 171e422, re-verified).
+# Placeholder conventions: see catalog/azure/authorization.yaml header.
+# Deployment slots (Microsoft.Web/sites/slots) have their own managed identity configuration and their own
+# RBAC actions; they are modelled separately in azure-appservice-slot-code-execution.
+
+- id: azure-appservice-kudu-publish-action
+  provider: azure
+  service: app_services
+  title: Use the Kudu/SCM API with Entra credentials to run commands in the app
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitespublishaction-and-microsoftwebsitesslotspublishaction
+  source_revision: 171e422
+  summary: Microsoft.Web/sites/publish/action may allow code deployment or access to the running app container through the exact app's SCM endpoint, exposing its managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/publish/action
+        scope: "{target.host_resource}"
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_kudu_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: scm_network_access
+      description: SCM site access restrictions / private endpoints may require network reachability.
+    - id: app_code_execution
+      description: Kudu access must allow code to run in the app context; Linux Kudu commands run in a separate container unless the main app container is targeted.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.Web/sites/publish/action (Website Contributor, Contributor), restrict SCM site network access, and keep app identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/resources-kudu
+  notes: Linux Function Apps on Consumption and Flex plans lack Advanced Tools; a stopped app also needs a start route. Publish permission on another host of the same managed identity cannot satisfy this path. Kudu reachability and code execution remain conditional.
+
+- id: azure-appservice-publishing-credentials-enable-basic-auth
+  provider: azure
+  service: app_services
+  title: Obtain SCM/FTP publishing credentials and enable basic auth to deploy code
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#obtaining-scm-credentials--enabling-basic-authentication
+  source_revision: 171e422
+  summary: Reading an app's publishing credentials and enabling its SCM basic auth policy may allow deployment of code that runs as that app's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/basicPublishingCredentialsPolicies/write
+    any_of:
+      - - action: Microsoft.Web/sites/publishxml/action
+      - - action: Microsoft.Web/sites/config/list/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_enable_publishing_credentials_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: policy_change_and_scm_code_execution
+      description: The SCM policy change must be allowed, the endpoint must be reachable, and a valid package must run in the app context.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Keep SCM/FTP basic authentication disabled (enforce with Azure Policy) and restrict publishxml/config list and basicPublishingCredentialsPolicies/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/configure-basic-auth-disable
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-configure-credentials
+  notes: Requires basicPublishingCredentialsPolicies/write on the exact site's scm child, plus publishxml or config/list on that same app. If SCM basic auth is already enabled, the separate publishing-credentials entry covers that path. FTP policy alone cannot enable SCM deployment. Custom container execution remains unresolved.
+
+- id: azure-appservice-publishing-credentials-basic-auth-enabled
+  provider: azure
+  service: app_services
+  title: Obtain SCM/FTP publishing credentials when basic auth is already enabled
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#publish-code-using-scm-credentials
+  source_revision: 171e422
+  summary: With SCM basic auth allowed on the exact code app, access to its publishing credentials may allow deployment of code that runs as the app's managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/publishxml/action
+      - - action: Microsoft.Web/sites/config/list/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_publishing_credentials_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: scm_reachability_and_package_execution
+      description: The source must reach the SCM endpoint, deploy a valid package, and have it run in the app context.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Disable SCM and FTP basic authentication and restrict publishxml/config list.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/configure-basic-auth-disable
+  notes: The selector requires SCM basicPublishingCredentialsPolicies allow=true on the same app as the identity; FTP policy alone does not authorize SCM deployment. Custom container execution remains unresolved. config/list/action also returns app settings/connection strings (data exposure, not modelled).
+
+- id: azure-appservice-sourcecontrols-write
+  provider: azure
+  service: app_services
+  title: Redirect App Service deployment to an attacker repository
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitessourcecontrolswrite-and-microsoftwebsitesslotssourcecontrolswrite
+  source_revision: 171e422
+  summary: Pointing the app's source control at an attacker repository deploys attacker code that runs with the app's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/sourcecontrols/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_sourcecontrol_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: build_succeeds
+      description: The deployment/build must succeed for the code to run.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sourcecontrols/write and monitor deployment source changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-continuous-deployment
+  notes: The selector binds sourcecontrols/web write to the exact identity app and checks the app's runtime kind and stopped state. Container-image deployments remain unresolved. This also covers the "Change GitHub repo" technique on the Function App page.
+
+- id: azure-appservice-sitecontainers-write
+  provider: azure
+  service: app_services
+  title: Replace an App Service sidecar/main SiteContainer image
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitessitecontainerswrite-and-microsoftwebsitesslotssitecontainerswrite
+  source_revision: 171e422
+  summary: Writing a main or sidecar SiteContainer on a Linux app in SiteContainers mode may run attacker code alongside the app and expose its managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/sitecontainers/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_sitecontainers_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: image_run_and_identity_access
+      description: An attacker image must be pulled and run in the app environment, and its container must be able to use the attached managed identity endpoint.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sitecontainers/write and enforce trusted registries.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/configure-sidecar
+  notes: Require LinuxFxVersion=sitecontainers on the exact app carrying the target identity and write on a child of that app. Existing child-scoped grants are included. Classic DOCKER mode does not load SiteContainer children without a separate mode change; a sidecar in SiteContainers mode can share the app environment.
+
+- id: azure-appservice-config-write
+  provider: azure
+  service: app_services
+  title: Change app configuration to load attacker code
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesconfigwrite
+  source_revision: 171e422
+  summary: A write to the exact app's configuration can replace its startup command, container, or supported package and may run code with its attached managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/config/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_config_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: app_runtime_execution
+      description: The changed configuration must cause attacker code to run; app state, package compatibility, and token use remain conditional.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.Web/sites/config/write (Website Contributor, Contributor) and alert on appsettings/container/startup command changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/configure-common
+    - https://learn.microsoft.com/en-us/azure/azure-functions/run-functions-from-deployment-package
+  notes: Check config/write on the exact app's config/web or config/appsettings child. Linux apps can use a direct startup command; Windows containers can replace their image. Function package URLs are plan-dependent, and Flex Consumption does not support WEBSITE_RUN_FROM_PACKAGE. Remote debugging alone does not prove code execution.
+
+- id: azure-appservice-siteextensions-write
+  provider: azure
+  service: app_services
+  title: Install an attacker NuGet site extension
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitessiteextensionswrite--attacker-nuget-site-extension
+  source_revision: 171e422
+  summary: Installing an attacker-controlled site extension on the exact Windows code app may change content the app runs and expose its attached managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/siteextensions/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_siteextensions_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: attacker_package_and_app_code_execution
+      description: The site extension feed must provide the attacker package, its install must succeed, and the app must run modified content with its managed identity.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict siteextensions/write.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/install-site-extension
+    - https://github.com/projectkudu/kudu/wiki/Azure-Site-Extensions
+  notes: Require siteextensions/write on a selectable child of the exact Windows code app carrying the identity. A grant limited to one named extension stays unresolved without evidence that the source controls that package. The Kudu install script alone does not prove execution as the app identity; it must alter content the main app runs.
+
+- id: azure-appservice-onedeploy-extensions-write
+  provider: azure
+  service: app_services
+  title: Replace app content through the OneDeploy extension route
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesextensionswrite--onedeploy-zip-replacement
+  source_revision: 171e422
+  summary: Microsoft.Web/sites/extensions/write on the exact onedeploy child can replace a code app's package and may run it with the app's managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/extensions/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_onedeploy_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: package_deployment_and_execution
+      description: The package must be reachable, valid for the app, deployed successfully, and run in the app context.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Microsoft.Web/sites/extensions/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-zip
+    - https://learn.microsoft.com/en-us/azure/azure-functions/functions-infrastructure-as-code
+  notes: Require extensions/write on the exact site's extensions/onedeploy child. Flex Consumption Function Apps support this ARM package path. A custom container may not execute files deployed to its content share, and a stopped app needs a start route before code runs.
+
+- id: azure-appservice-restore-from-backup-blob
+  provider: azure
+  service: app_services
+  title: Restore the app from an attacker-supplied backup
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesrestorefrombackupblobaction--restore-an-attacker-backup
+  source_revision: 171e422
+  summary: Restoring a valid attacker-controlled backup to a supported code app may replace its content and run code with its attached managed identity.
+  requires:
+    all_of:
+      - action: Microsoft.Web/sites/restoreFromBackupBlob/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_backup_restore_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of App Service {target.host_resource}"
+  conditions:
+    - id: compatible_attacker_backup_and_sas
+      description: A valid backup of the same OS, accessible through a usable container SAS, must restore successfully with overwrite enabled and run code in the app.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict restoreFromBackupBlob/action.
+  references:
+    - https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/restore-from-backup-blob
+    - https://learn.microsoft.com/en-us/azure/app-service/manage-backup
+  notes: Bind restoreFromBackupBlob/action to the exact app carrying the identity. Azure documents backups for Basic, Standard, Premium and Isolated App Service plans; Functions backup support is limited to Dedicated. Free, Shared, Consumption, Flex and Elastic Premium plans do not establish this route. A modified backup may be invalid, and restoring a custom container's content may not change its running image.
+
+- id: azure-appservice-assign-user-assigned-identity
+  provider: azure
+  service: app_services
+  title: Attach a user-assigned identity to a controlled App Service
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsiteswrite-microsoftwebsitesread-microsoftmanagedidentityuserassignedidentitiesassignaction
+  source_revision: 171e422
+  summary: Adding a user-assigned identity to an existing or creatable app where the source can run code may expose that identity's tokens.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: "{target.id}"
+      - action: Microsoft.Web/sites/write
+        scope: "{pivot}"
+  pivot_resource_type: Microsoft.Web/sites
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_appservice_assignable_uami: true
+    scope: inherited_scope
+    aggregate_as: "User-assigned identities assignable in {scope}"
+  conditions:
+    - id: app_runtime_and_code_execution
+      description: The source must be able to run or deploy code in the same inventoried app, or create an app on an inventoried joinable plan; runtime execution and token use remain conditional.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and Microsoft.Web/sites/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity
+  notes: Match the write and code path to one inventoried App Service. For a new app, require an inventoried resource group and same-subscription plan with serverfarms/join/action. Function code writes count only on Function Apps; host keys alone invoke existing functions and do not grant arbitrary code execution.
+
+- id: azure-appservice-slot-code-execution
+  provider: azure
+  service: app_services
+  title: Run code in a deployment slot
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesslotsconfigwrite--recycle-a-deployment-slot-into-attacker-code
+  source_revision: 171e422
+  summary: A code-bearing publish, source control, SiteContainer or config permission on a slot may run code with that slot's own managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/slots/publish/action
+      - - action: Microsoft.Web/sites/slots/sourcecontrols/write
+      - - action: Microsoft.Web/sites/slots/sitecontainers/write
+      - - action: Microsoft.Web/sites/slots/config/write
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites/slots
+      azure_appservice_slot_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of deployment slot {target.host_resource}"
+  conditions:
+    - id: slot_code_deployment_and_execution
+      description: The selected route must deploy or start attacker code in the slot, and that code must access the slot's identity endpoint.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Treat slot permissions like production permissions and keep slot identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-staging-slots
+  notes: Match each action to the exact slot carrying the identity. SiteContainer writes require Linux SiteContainers mode; config writes must target a code-bearing child. A slot master key alone invokes existing functions and is not evidence of arbitrary code execution. Slot swaps and production identities have separate techniques.
+
+- id: azure-appservice-slot-publishxml
+  provider: azure
+  service: app_services
+  title: Obtain slot publishing credentials and deploy into the slot
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-functions-app-privesc.md#microsoftwebsitesslotspublishxmlaction
+  source_revision: a66f094ede
+  summary: Reading publishing credentials for the exact slot may allow code deployment under that slot's managed identity when its SCM basic auth policy allows it.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/slots/publishxml/action
+      - - action: Microsoft.Web/sites/slots/config/list/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites/slots
+      azure_appservice_slot_publishing_credentials_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of deployment slot {target.host_resource}"
+  conditions:
+    - id: slot_scm_reachability_and_code_execution
+      description: The slot SCM endpoint must be reachable, accept the credentials and package, and run deployed code in the slot.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Disable basic auth on slots and restrict slots/publishxml/action.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/configure-basic-auth-disable
+  notes: The selector requires slots/publishxml/action or slots/config/list/action on the exact identity slot and a collected slots/basicPublishingCredentialsPolicies/scm allow=true value. FTP policy alone does not authorize SCM deployment. A custom container's package execution remains unresolved.
+
+- id: azure-appservice-slot-swap-promote-code
+  provider: azure
+  service: app_services
+  title: Plant code in a deployment slot and swap it into production
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-services-privesc.md#microsoftwebsitesslotsswapaction-promote-staged-code--steal-production-sticky-secrets
+  source_revision: 171e422
+  summary: Code planted in a slot runs under the production site's managed identities after a swap, because identities stay with the site and are not swapped.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Web/sites/slotsswap/action
+      - - action: Microsoft.Web/sites/slots/slotsswap/action
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Web/sites
+      azure_appservice_slot_swap_code_path: true
+    scope: inherited_scope
+    aggregate_as: "Managed identities of production site {target.host_resource}"
+  conditions:
+    - id: swap_not_gated
+      description: Swap with preview or deployment pipelines gating swaps can delay or surface the promotion.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Restrict slotsswap/action to release automation and treat slot write permissions like production permissions.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/deploy-staging-slots#which-settings-are-swapped
+  notes: The selector joins a code-bearing write and a swap action on the same inventoried slot of the production app. Site-level and slot-level swap operations are supported. Microsoft documents that managed identities are not swapped; promoted code uses the production identity.

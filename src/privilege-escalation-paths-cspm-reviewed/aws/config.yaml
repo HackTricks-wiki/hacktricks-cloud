@@ -1,0 +1,50 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Config privilege escalation techniques.
+# Source: hacktricks-cloud aws-config-privesc/README.md (rev 171e422299).
+
+- id: aws-config-passrole-automatic-remediation
+  provider: aws
+  service: config
+  title: Attach an automatic remediation that runs an Automation document as a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-config-privesc/README.md#privilege-escalation-through-automatic-remediation
+  source_revision: 171e422299
+  summary: The source can cause an automatic remediation on an existing AWS Config rule to run an Automation document with a passable role when that document performs a useful privileged action.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting ssm.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - config_automatic_remediation_effect_unverified
+  conditions:
+    - id: noncompliant_rule
+      description: An existing non-service-linked Config rule must have a noncompliant resource in its compliance snapshot, with the configuration recorder running.
+    - id: automatic_mode
+      description: Only Automatic=true remediation runs through AWSServiceRoleForConfigRemediation as the passed role and checks iam:PassRole; manual remediation runs as the initiating principal and gives nothing extra. The service-linked role must exist or the source needs iam:CreateServiceLinkedRole.
+    - id: document_reuse
+      description: The source may use an existing Automation document; ssm:CreateDocument is required only when the source creates a new one.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict config:PutRemediationConfigurations and iam:PassRole on Automation roles (iam:PassedToService=ssm.amazonaws.com) to compliance administrators, and restrict ssm:CreateDocument.
+  references:
+    - https://docs.aws.amazon.com/config/latest/developerguide/remediation.html
+    - https://docs.aws.amazon.com/config/latest/developerguide/setup-autoremediation.html
+  notes: Automatic remediation works even when the source is explicitly denied ssm:StartAutomationExecution. A concrete role path requires exact PutRemediationConfigurations authorization, the existing rule, a runnable document using AutomationAssumeRole with the passed role, and a fresh witnessed automatic remediation that performs a useful action. The classic config:PutRemediationConfigurations + iam:PassRole subsection is covered by this entry; missing joins stay UNKNOWN.

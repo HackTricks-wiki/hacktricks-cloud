@@ -1,0 +1,36 @@
+# Microsoft Entra Domain Services techniques (declarative only).
+# Source: hacktricks-cloud az-lateral-movement-cloud-on-prem/az-domain-services.md (rev a66f094ede).
+# Domain-joined VMs are recognised from the JsonADDomainExtension domain matching a collected Domain Services
+# domainName; VMs without the extension are unknown.
+
+- id: azure-entra-domain-services-dc-admins-vm-identity
+  provider: azure
+  service: entra_domain_services
+  title: AAD DC Administrators member takes over Domain Services-joined VMs and their managed identities
+  source: src/pentesting-cloud/azure-security/az-lateral-movement-cloud-on-prem/az-domain-services.md#pivoting
+  source_revision: 171e422
+  summary: Members of AAD DC Administrators are local administrators on VMs joined to the managed domain and can use the managed identities attached to those VMs.
+  requires:
+    all_of:
+      - entra_group_member: AAD DC Administrators
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.Compute/virtualMachines
+      attached_to_vm_joined_to_entra_domain_services: true
+    scope: any
+    aggregate_as: "Managed identities of VMs joined to Entra Domain Services"
+    outcome: workload_execution
+  conditions:
+    - id: domain_join_state_not_verified
+      description: The join extension shows the VM was joined to the managed domain; whether it is still joined and reachable over RDP / WinRM from the source is not verified.
+    - id: password_hash_sync_to_domain
+      description: The source must be able to authenticate to the managed domain (its password hash must have been synchronised to Domain Services after password change).
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Keep AAD DC Administrators membership minimal and role-protected, and avoid attaching privileged managed identities to Domain Services-joined VMs.
+  references:
+    - https://learn.microsoft.com/en-us/entra/identity/domain-services/tutorial-create-management-vm
+    - https://learn.microsoft.com/en-us/entra/identity/domain-services/administration-concepts
+  notes: Adding a user to AAD DC Administrators is covered by group-write entries. Domain controllers themselves are not reachable through this membership. Cached user credentials on the VMs are not modelled.

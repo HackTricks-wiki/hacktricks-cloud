@@ -1,0 +1,102 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS Migration Hub and Migration Hub Orchestrator privilege escalation techniques.
+# Source: hacktricks-cloud aws-migration-hub-privesc/README.md and aws-migration-hub-orchestrator-privesc/README.md (rev 171e422299).
+
+- id: aws-mgh-passrole-automation-unit
+  provider: aws
+  service: mgh
+  title: Run a custom Migration Hub automation unit with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-migration-hub-privesc/README.md#migration-hub-automation-custom-unit--passrole---execute-as-a-more-privileged-role
+  source_revision: 171e422299
+  summary: The source may be able to drive a passed role through a custom automation unit if the account can use the preview feature and the source controls a runnable target.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: migrationhub.amazonaws.com
+      - action: mgh:CreateAutomationUnit
+        resource: "*"
+      - action: mgh:AssociateAutomationUnitRole
+        resource: "*"
+      - action: mgh:CreateAutomationRun
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: migrationhub.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting migrationhub.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - mgh_automation_unit_home_region_target_and_run
+  conditions:
+    - id: preview_region
+      description: The preview feature is available only in us-east-1 with a us-east-1 Migration Hub home Region.
+    - id: controlled_runtime_target
+      description: The unit must target an SSM Automation document or Lambda function the source controls; SSM targets also need the role to trust ssm.amazonaws.com.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on Migration Hub service roles with iam:PassedToService and limit automation-unit creation and runs to migration administrators.
+  references:
+    - https://docs.aws.amazon.com/migrationhub/latest/ug/automation.html
+  notes: The Migration Hub Automation guide warns that a user with these four permissions can perform actions the service role allows. A concrete edge requires fresh reviewed evidence of the us-east-1 home Region and feature access, one source-controlled SSM or Lambda target, successful creation, role association and run of the same unit, and a useful action performed under the exact role but unavailable directly to the caller. Current permissions must still allow creation, association on that unit, running and PassRole to migrationhub.amazonaws.com. Missing or conflicting execution evidence remains unresolved.
+
+- id: aws-migrationhub-orchestrator-workflow-step
+  provider: aws
+  service: migrationhub-orchestrator
+  title: Add or change a workflow step that runs a script on managed nodes
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-migration-hub-orchestrator-privesc/README.md#createworkflowstep--startworkflow---execute-an-s3-script-through-the-orchestrator-service-role
+  source_revision: 6fb9ac51fd
+  summary: A source-controlled script may run on an SSM-managed EC2 instance through a runnable Orchestrator workflow and reach that instance's role.
+  requires:
+    any_of:
+    - - action: migrationhub-orchestrator:CreateWorkflowStep
+        resource: arn:{source.partition}:migrationhub-orchestrator:*:{source.account}:workflow/*
+        bind: workflow
+      - action: migrationhub-orchestrator:StartWorkflow
+        resource: arn:{source.partition}:migrationhub-orchestrator:*:{source.account}:workflow/*
+        bind: workflow
+    - - action: migrationhub-orchestrator:UpdateWorkflowStep
+        resource: arn:{source.partition}:migrationhub-orchestrator:*:{source.account}:workflow/*
+        bind: workflow
+      - action: migrationhub-orchestrator:RetryWorkflowStep
+        resource: arn:{source.partition}:migrationhub-orchestrator:*:{source.account}:workflow/*
+        bind: workflow
+  target:
+    kind: aws_role
+    selector:
+      has_instance_profile: true
+      via_resource_type: ec2_instance
+    scope: same_account
+    aggregate_as: Instance-profile roles of SSM-managed instances in {account}
+    outcome: workload_execution
+  preconditions:
+  - migrationhub_orchestrator_bound_workflow_script_and_managed_target
+  conditions:
+  - id: script_in_prefixed_bucket
+    description: The script must be in a migrationhub-orchestrator-* bucket (s3:PutObject
+      there, or an existing usable script).
+  - id: workflow_state
+    description: An existing workflow in a state that can be changed and started (or
+      a failed custom step for the retry variant), and the service-linked role, must
+      exist.
+  - id: instance_managed
+    description: The selected EC2 target must be an online SSM-managed node.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict workflow-step create/update/start/retry actions to migration
+    administrators and restrict writes to migrationhub-orchestrator-* buckets.
+  references:
+  - https://docs.aws.amazon.com/migrationhub-orchestrator/latest/userguide/security-iam-awsmanpol.html
+  notes: The two permissions in each alternative must authorize the same workflow. No iam:PassRole or ssm:SendCommand is needed because the service-linked role runs AWS-RunRemoteScript. A concrete edge requires fresh reviewed evidence that an automated step in a runnable workflow retrieved a source-controlled script, executed on the exact online SSM-managed EC2 instance, and performed a useful action under its exact instance role that the caller could not perform directly. Current workflow and S3 write permissions must still cover that same workflow and script. Missing or conflicting execution evidence remains unresolved.

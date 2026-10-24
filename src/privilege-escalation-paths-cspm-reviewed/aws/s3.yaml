@@ -1,0 +1,82 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon S3 privilege escalation techniques (artifact tampering only).
+# Source: hacktricks-cloud aws-s3-privesc/README.md (rev a53b46392c).
+# Uses {target.artifact_arn} and via_artifact_type (see header of lambda.yaml). S3 techniques only count when the
+# written object is code/state that ANOTHER principal later executes; pure bucket data access is in _excluded_b.yaml.
+# Service-specific S3 artifact entries live in glue.yaml, emr.yaml, sagemaker.yaml and elasticbeanstalk.yaml.
+
+- id: aws-s3-putbucketpolicy-self-grant
+  provider: aws
+  service: s3
+  title: Grant the source principal GetObject on an exact S3 prefix through a bucket policy
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3putbucketpolicy--grant-your-principal-new-object-access
+  source_revision: e5a7b415ff
+  summary: The source uses s3:PutBucketPolicy on a same-account bucket to add a resource-policy Allow naming itself, gaining previously denied s3:GetObject on the reviewed prefix.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: s3:PutBucketPolicy
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_s3_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["s3:GetObject on the exact reviewed bucket prefix"]
+    aggregate_as: "Reviewed S3 GetObject self-grants in {account}"
+  conditions:
+    - id: reviewed_effective_permission_differential
+      description: A unique collected aws_s3_policy_self_grant_evidence record must prove the exact source, owned bucket, prefix, policy principal and resource, accepted policy, prior denial and observed new GetObject access after guardrail review.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict s3:PutBucketPolicy on sensitive buckets, review policy changes granting the caller access and retain explicit denies for protected prefixes.
+  references:
+    - https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-policies.html
+  notes: The target is only the source's new GetObject permission on the reviewed bucket prefix. Missing, duplicate, partial or mismatched reviewed evidence creates no path.
+
+- id: aws-s3-accessgrants-self-grant
+  provider: aws
+  service: s3
+  title: Vend a newly authorized S3 Access Grants READ session for the source principal
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-s3-privesc/README.md#s3-access-grants--vend-a-new-prefix-scoped-read-session
+  source_revision: e036a395d3
+  summary: The source registers a location with a passable role, creates a READ grant for itself and obtains a usable, prefix-scoped S3 STS session that newly allows GetObject.
+  source_kind: [aws_user, aws_role]
+  requires:
+    all_of:
+      - action: s3:CreateAccessGrantsLocation
+        resource: "{target.location_arn}"
+      - action: iam:PassRole
+        resource: "{target.role_arn}"
+        request_context:
+          iam:PassedToService: access-grants.s3.amazonaws.com
+      - action: s3:CreateAccessGrant
+        resource: "{target.grant_arn}"
+      - action: s3:GetDataAccess
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_s3_access_grants_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["s3:GetObject through the reviewed Access Grants session on the exact bucket prefix"]
+    aggregate_as: "Reviewed S3 Access Grants READ self-grants in {account}"
+  conditions:
+    - id: reviewed_scoped_access_grants_session
+      description: Unique collected evidence must bind the exact source, instance, registered location, passable role, source-named READ grant, successful GetDataAccess session, prefix scope, prior denial and observed new GetObject access.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict Access Grants location and grant creation, PassRole, and GetDataAccess; review new grants to the requesting principal and their prefix scope.
+  references:
+    - https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_GetDataAccess.html
+    - https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_CreateAccessGrantsLocation.html
+  notes: The target is a bounded S3 permission, not the location role's full authority. Missing, duplicate, partial or mismatched session evidence creates no path.

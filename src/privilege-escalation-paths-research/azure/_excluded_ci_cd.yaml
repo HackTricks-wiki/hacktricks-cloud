@@ -1,0 +1,450 @@
+# Reviewed source techniques without a supported principal escalation edge.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-context-script-injections.md#vulnerable-pattern--rce-on-runner
+  source_revision: 0b36331
+  technique: Issue/PR-derived expression inserted into run shell
+  reason: A workflow must interpolate an attacker-controlled issue or pull-request field into a shell step,
+    and that job must expose a more privileged token, secret, or identity. GitHub workflow text, event permissions,
+    and runner/secret binding are absent from the four-provider snapshot.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-context-script-injections.md#comment-state-confusion-spoofed-bot-comments--shell-injection
+  source_revision: 0b36331
+  technique: Spoof find-comment bot marker and inject through comment-body
+  reason: Requires a find-comment step that matches body text without checking author, then interpolates the
+    selected comment into a privileged shell step. The repository workflow and comment-selection behavior are
+    not in the snapshot.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-context-script-injections.md#toctou-race-against-bot-comments
+  source_revision: 0b36331
+  technique: Race bot comment to win find-comment selection
+  reason: Requires the attacker comment to win a live timing race against the bot comment and to be selected
+    for shell interpolation; a static snapshot cannot establish the winner.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#lifecycle-hooks
+  source_revision: 0b36331
+  technique: Publish malicious npm lifecycle hook
+  reason: Requires control of an npm release consumed by a victim job or workstation with install scripts enabled.
+    Package-version content and the consuming host/job identity are not collected.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#bindinggyp--node-gyp-execution-phantom-gyp
+  source_revision: 0b36331
+  technique: Publish native binding.gyp execution path
+  reason: Requires a published package with binding.gyp to be installed or rebuilt through node-gyp on a credential-bearing
+    host; package content and the install/rebuild event are not in the snapshot.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#runtime-backdoors-at-plaintext-secret-boundaries
+  source_revision: 0b36331
+  technique: Backdoor package credential/seed handling method
+  reason: Requires a malicious package method to receive an actual secret before validation or encryption and
+    exfiltrate it. Runtime data flow and secret value are unavailable to configuration evaluation.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#runner-secret-theft-after-install-time-execution
+  source_revision: 0b36331
+  technique: Read CI env/files or Runner.Worker memory
+  reason: Requires already-running attacker code on the runner plus readable environment, files, or Runner.Worker
+    memory and a live credential. Those host/process facts are not configuration.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#workflow-assisted-exfiltration
+  source_revision: 0b36331
+  technique: Use workflow-write GitHub token to run toJSON(secrets) artifact workflow
+  reason: Requires repository workflow-write authority, an executable workflow, and secrets available to its
+    job after environment protection. GitHub workflow authorization and secret delivery are not collected.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#wormable-npm-publishing
+  source_revision: 0b36331
+  technique: Republish malicious versions using stolen npm token
+  reason: Requires a stolen, valid npm publisher token and a future downstream install. Neither token possession
+    nor install timing is a configured source-to-target edge.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#repository-to-workstation-propagation
+  source_revision: 0b36331
+  technique: Plant VS Code task or Claude SessionStart hook
+  reason: Requires a maintainer to open the poisoned repository in VS Code or start a Claude session with hooks
+    enabled; that workstation action is not a configuration fact.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#dead-drop-c2-and-github-exfiltration
+  source_revision: 0b36331
+  technique: Reuse stolen classic GitHub token for public repo exfiltration
+  reason: Requires possession of a stolen live GitHub token and runtime exfiltration behavior; the token holder
+    and its current scope cannot be inferred from cloud configuration.
+- source: src/pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md#trusted-publishing-and-provenance-limits
+  source_revision: 0b36331
+  technique: Compromised id-token:write trusted-publisher release job mints npm credential
+  reason: Requires attacker code in a release job whose OIDC subject matches the npm trusted-publisher binding
+    and whose job grants id-token:write. GitHub workflow content and npm binding are uncollected.
+- source: src/pentesting-ci-cd/github-security/basic-github-information.md#oauth-applications
+  source_revision: 0b36331
+  technique: OAuth consent grants third-party application user scopes
+  reason: OAuth consent must be granted by the victim user for specific scopes; app registration alone does
+    not convey that user identity. Consent records and victim action are outside the snapshot.
+- source: src/pentesting-ci-cd/github-security/basic-github-information.md#git-secrets
+  source_revision: 0b36331
+  technique: Execute Actions job to read declared secrets
+  reason: A GitHub job must execute attacker-controlled code and declare a secret available in that event/environment.
+    Workflow text, job execution, and secret delivery are not collected.
+- source: src/pentesting-ci-cd/github-security/basic-github-information.md#git-action-compromise
+  source_revision: 0b36331
+  technique: Malicious action steals GITHUB_TOKEN or job secrets
+  reason: A malicious action must be selected by a job that exposes GITHUB_TOKEN, secrets, or a cloud identity.
+    Action content, workflow invocation, and job secret grants are not collected.
+- source: src/pentesting-ci-cd/github-security/basic-github-information.md#branch-protections
+  source_revision: 0b36331
+  technique: Unbound required check or bot skip directive bypasses merge gate
+  reason: A required check must be unbound or a bot must honor a skip directive for the protected branch; resulting
+    privileged pipeline execution still needs a consumer workflow. Branch rules and bot behavior are outside
+    the snapshot.
+- source: src/pentesting-ci-cd/gogs-security/README.md#abusing-git-rebase---exec-for-rce
+  source_revision: 0b36331
+  technique: Gogs attacker ref parsed as git rebase --exec
+  reason: The vulnerable Gogs handler must pass an attacker-controlled ref to git rebase without option termination,
+    and its host must hold a target identity. Server version/code path and host identity are not collected.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#sso-login
+  source_revision: 0b36331
+  technique: Misconfigured SSO maps external identity into privileged Jenkins role
+  reason: Requires an external account to map through the configured SSO plugin into a privileged Jenkins role.
+    Plugin mapping and resulting user role are outside the snapshot.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#dumping-builds-to-find-cleartext-secrets
+  source_revision: 0b36331
+  technique: Read build logs/environment output for credentials
+  reason: Requires a readable build log or dumped environment containing a live credential for another identity;
+    Jenkins read rights and log contents are absent from the provider snapshot.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#formvalidationtestconnection-endpoints-csrf-to-ssrfcredential-theft
+  source_revision: 0b36331
+  technique: Abuse unchecked plugin validation to reuse stored credentials
+  reason: Requires a specific Jenkins plugin endpoint lacking POST and permission checks, a configured reusable
+    credential, and a reachable exfiltration target. Plugin code and runtime request behavior are absent.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#stealing-ssh-credentials
+  source_revision: 0b36331
+  technique: Modify/create Jenkins node to send stored SSH credential to attacker host
+  reason: Requires Jenkins node-configuration permission, a stored SSH credential selected for the node, and
+    nonverifying host-key behavior. Jenkins node and credential configuration are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#pipeline-exploitation
+  source_revision: 0b36331
+  technique: Poison writable Jenkinsfile used by privileged build
+  reason: Requires write to a Jenkinsfile actually consumed by a privileged build, with review and branch protection
+    permitting that revision; Jenkins SCM mapping and later build execution are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#dumping-secrets
+  source_revision: 0b36331
+  technique: Use withCredentials in custom pipeline to expose in-scope credentials
+  reason: Requires Job/Configure or writable Jenkinsfile plus a build that can bind the target credential in
+    its scope. Credential scope and build execution are not collected.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#nodes--agents
+  source_revision: 0b36331
+  technique: Select built-in or more privileged node to read cloud/local identity
+  reason: Requires a build to schedule on a higher-privilege node whose host/cloud token is reachable to the
+    job. Jenkins agent placement and host identity are not in the snapshot.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#from-disk
+  source_revision: 0b36331
+  technique: Read Jenkins master.key and encrypted credential files then decrypt
+  reason: Requires filesystem read of both Jenkins master.key and encrypted credential material plus usable
+    ciphertext; these live host files are not represented.
+- source: src/pentesting-ci-cd/jenkins-security/README.md#create-new-admin-user
+  source_revision: 0b36331
+  technique: Disable Jenkins security in config.xml and reset administrator
+  reason: Requires write to Jenkins controller config.xml and a service restart; cloud configuration alone
+    cannot prove host file access or restart capability.
+- source: src/pentesting-ci-cd/jenkins-security/basic-jenkins-information.md#cookie
+  source_revision: 0b36331
+  technique: Reuse stolen JSESSIONID to impersonate Jenkins user
+  reason: Requires possession of a still-valid JSESSIONID cookie from a different user; session theft and validity
+    are runtime facts.
+- source: src/pentesting-ci-cd/jenkins-security/basic-jenkins-information.md#credentials-access
+  source_revision: 0b36331
+  technique: Run job code to access in-scope Jenkins credentials
+  reason: Requires runnable job code and an in-scope Jenkins credential actually bound to that job; job/credential
+    scope and execution are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/basic-jenkins-information.md#secrets-in-pluginjob-configs-on-disk
+  source_revision: 0b36331
+  technique: Read plaintext/encrypted secrets from plugin/job XML
+  reason: Requires read of particular plugin or job XML files containing live secrets and, for encrypted values,
+    decryption material. Host file content is absent.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-arbitrary-file-read-to-rce-via-remember-me.md#detailed-exploitation-process
+  source_revision: 0b36331
+  technique: CVE-2024-43044 file read forges admin remember-me cookie
+  reason: Requires a vulnerable Jenkins version, readable user and signing-key files, and an accepted forged
+    cookie. Vulnerability state and host file contents are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-dumping-secrets-from-groovy.md#jenkins-dumping-secrets-from-groovy
+  source_revision: 0b36331
+  technique: Administer uses Script Console to enumerate/decrypt global credentials
+  reason: Requires Jenkins Administer and stored global credentials to enumerate via Script Console; Jenkins
+    authorization and credential inventory are outside the provider snapshot.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-pipeline.md#creating-a-new-pipeline
+  source_revision: 0b36331
+  technique: Create pipeline with shell step and run on agent
+  reason: Requires Job/Create, permission to run the new job, and an agent carrying a more privileged host/cloud
+    identity. Jenkins job and agent bindings are not collected.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-pipeline.md#modifying-a-pipeline
+  source_revision: 0b36331
+  technique: Modify existing pipeline script for next run
+  reason: Requires Job/Configure on an existing pipeline, later execution, and an agent with a target identity
+    or secret. Jenkins configuration and scheduling are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-project.md#creating-a-project
+  source_revision: 0b36331
+  technique: Create Freestyle project with Execute shell
+  reason: Requires permission to create and run a Freestyle job on a credential-bearing agent. Jenkins permissions
+    and agent placement are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-rce-creating-modifying-project.md#modifying-a-project
+  source_revision: 0b36331
+  technique: Add shell build step to configured project
+  reason: Requires Job/Configure on a project, a later build, and a credential-bearing agent. Jenkins permissions,
+    configuration, and scheduling are uncollected.
+- source: src/pentesting-ci-cd/jenkins-security/jenkins-rce-with-groovy-script.md#jenkins-rce-with-groovy-script
+  source_revision: 0b36331
+  technique: Administer executes Groovy on controller/agent
+  reason: Jenkins Administer can invoke Groovy on controller or agents, but the reachable host/cloud identity
+    depends on server/agent placement and host credentials not in the snapshot.
+- source: src/pentesting-ci-cd/okta-security/README.md#login-in-okta-via-kerberos
+  source_revision: 0b36331
+  technique: Use AD ticket for Kerberos Okta sign-in
+  reason: Requires possession of a valid AD user Kerberos ticket and an enabled Okta Kerberos integration;
+    ticket possession and the mapped Okta user are runtime/integration facts.
+- source: src/pentesting-ci-cd/okta-security/README.md#login-in-okta-via-kerberos
+  source_revision: 0b36331
+  technique: Silver Ticket via compromised Okta delegation SPN
+  reason: Requires a compromised delegation key/SPN, a forgeable ticket, and an Okta Kerberos mapping. Key
+    compromise and accepted ticket are not configuration-only facts.
+- source: src/pentesting-ci-cd/okta-security/README.md#hijacking-okta-ad-agent
+  source_revision: 0b36331
+  technique: Steal/decrypt AD Agent token and intercept authentication
+  reason: Requires host access to the AD Agent, DPAPI decryption of its token, and live authentication traffic
+    to capture credentials. Host key material and traffic are absent.
+- source: src/pentesting-ci-cd/okta-security/README.md#hijacking-ad-as-an-admin
+  source_revision: 0b36331
+  technique: Register rogue Okta AD connector as admin
+  reason: Requires Okta administrator authority to register the rogue AD connector and victim authentication
+    routed through it; the latter is a runtime event outside the snapshot.
+- source: src/pentesting-ci-cd/okta-security/README.md#okta-fake-saml-provider
+  source_revision: 0b36331
+  technique: Privileged user adds attacker-controlled SAML IdP
+  reason: Requires Okta IdP administrator authority and a routing/account-link rule accepting the attacker-controlled
+    SAML subject. Okta policy and subject mapping are uncollected.
+- source: src/pentesting-ci-cd/okta-security/README.md#colleague-impersonation-attack
+  source_revision: 0b36331
+  technique: User-editable mapped primaryEmail impersonates colleague in app
+  reason: Requires a user-editable Okta field mapped as a target app identifier and app account-link behavior
+    that accepts the collision. Neither mapping nor target-app behavior is collected.
+- source: src/pentesting-ci-cd/okta-security/README.md#evading-behavioural-detection-policies
+  source_revision: 0b36331
+  technique: Replay captured Okta access token at app URL
+  reason: Requires a captured live access token and an app-specific sign-on path accepting replay. Token possession
+    and session validity are runtime facts.
+- source: src/pentesting-ci-cd/okta-security/okta-hardening.md#profile-editor
+  source_revision: 0b36331
+  technique: User-editable Okta attribute mapped into external app identifier
+  reason: Requires a user-editable profile field to map into another application identifier and the app to
+    link that value to a victim account. The mapping and collision behavior are uncollected.
+- source: src/pentesting-ci-cd/okta-security/okta-hardening.md#identity-providers
+  source_revision: 0b36331
+  technique: Compromised trusted inbound IdP pivots into Okta
+  reason: Requires a trusted inbound IdP, attacker control of a matching subject, and an Okta account-link/routing
+    rule accepting it. IdP and Okta mapping facts are absent.
+- source: src/pentesting-ci-cd/okta-security/okta-hardening.md#delegated-authentication
+  source_revision: 0b36331
+  technique: Compromised AD/LDAP identity authenticates through Okta delegation
+  reason: Requires a compromised AD/LDAP user credential and delegated authentication mapping to an Okta user;
+    credential possession is runtime evidence.
+- source: src/pentesting-ci-cd/okta-security/okta-hardening.md#api
+  source_revision: 0b36331
+  technique: Steal or use Okta API token with creator privileges
+  reason: The token must actually be stolen or issued, remain valid, and inherit its creator’s current privileges.
+    Token secret possession is not implied by API-token metadata.
+- source: src/pentesting-ci-cd/pentesting-ci-cd-methodology.md#vcs-pentesting-methodology
+  source_revision: 0b36331
+  technique: Repository secrets in source/commit history
+  reason: A repository or historical commit must contain a live credential that maps to a target principal.
+    Code content, secret validity, and identity join are not in the snapshot.
+- source: src/pentesting-ci-cd/pentesting-ci-cd-methodology.md#vcs-pentesting-methodology
+  source_revision: 0b36331
+  technique: Repository write poisons production/developer/CI code
+  reason: Requires a writable repository path consumed by a privileged deployment or workstation, followed
+    by execution. SCM ACL, consumer mapping, and execution are absent.
+- source: src/pentesting-ci-cd/pentesting-ci-cd-methodology.md#ppe---poisoned-pipeline-execution
+  source_revision: 0b36331
+  technique: D-PPE/I-PPE/3PE reaches privileged pipeline
+  reason: Requires writable pipeline input that reaches an executing privileged pipeline under D-PPE, I-PPE,
+    or 3PE; SCM/CI configuration and consumer identity are uncollected.
+- source: src/pentesting-ci-cd/pentesting-ci-cd-methodology.md#dependency--registry-supply-chain-abuse
+  source_revision: 0b36331
+  technique: Malicious package hook/bin or stolen workflow/npm token propagates
+  reason: Requires malicious package/artifact content consumed by a privileged job and a future install or
+    execution; registry content and consumer events are not collected.
+- source: src/pentesting-ci-cd/supabase-security.md#database-configuration
+  source_revision: 0b36331
+  technique: Brute force known Supabase Postgres username/endpoint
+  reason: Requires successfully guessing a live Postgres password for the endpoint; endpoint and username disclosure
+    alone grant no database identity.
+- source: src/pentesting-ci-cd/supabase-security.md#rls-and-views-write-bypass-via-postgrest
+  source_revision: 0b36331
+  technique: Updatable definer view exposes base-table write beyond RLS
+  reason: Requires an exposed updatable definer view, grants to anon/auth, owner RLS bypass, and an actual
+    write to protected rows. Supabase/Postgres view and RLS facts are absent.
+- source: src/pentesting-ci-cd/supabase-security.md#jwt-secret
+  source_revision: 0b36331
+  technique: Leaked JWT signing secret forges service_role or user JWT
+  reason: Requires possession of the live Supabase JWT signing secret and a service_role/user token accepted
+    by the project. Secret value and validity are runtime facts.
+- source: src/pentesting-ci-cd/supabase-security.md#edge-functions
+  source_revision: 0b36331
+  technique: Modify/create Edge Function to read function-scoped secrets
+  reason: Requires Edge Function edit/deploy authority, a function that receives the secret, and invocation.
+    Supabase function permissions, secret scope, and execution are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#guest-access-abuse
+  source_revision: 0b36331
+  technique: Guest downloads logs/artifacts containing credentials
+  reason: Requires a guest-visible build log or artifact containing a live credential; guest access alone does
+    not imply secret exposure. Artifact content and credential validity are absent.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#unauthenticated-takeover-cve-2024-27198--cve-2024-27199
+  source_revision: 0b36331
+  technique: Auth bypass creates SYSTEM_ADMIN or admin token
+  reason: Requires a TeamCity version vulnerable to CVE-2024-27198/27199 and a successful bypass request; deployment
+    patch level and exploitability are not in the provider snapshot.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#unauthenticated-takeover-cve-2023-42793
+  source_revision: 0b36331
+  technique: Auth bypass via RPC2 admin token
+  reason: Requires a pre-2023.05.4 vulnerable TeamCity instance and successful RPC2 token creation; version
+    and endpoint behavior are not collected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#unauthenticated-agent-deserialization-rce-xstream--cve-2026-63077
+  source_revision: 0b36331
+  technique: Agent-session XStream deserialization reaches server RCE
+  reason: Requires the vulnerable agent-session XStream code path and attacker-controlled serialized traffic;
+    software version and runtime deserialization are absent.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#admin-rce-by-uploading-a-plugin
+  source_revision: 0b36331
+  technique: System Administrator uploads server plugin for RCE
+  reason: Requires TeamCity SYSTEM_ADMIN and plugin upload/load on the server; TeamCity roles and server host
+    identity are not in the snapshot.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#rce-by-creating-or-modifying-build-steps
+  source_revision: 0b36331
+  technique: Edit build steps and queue build
+  reason: Requires TeamCity build-configuration edit/create and build-run rights on an agent carrying a target
+    identity. TeamCity ACL and agent mapping are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#target-a-more-interesting-agent
+  source_revision: 0b36331
+  technique: Select or force privileged agent
+  reason: Requires rights to choose or force a specific more-privileged agent and a build that runs there;
+    agent requirements and scheduling are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#dump-build-parameters--password-parameters
+  source_revision: 0b36331
+  technique: Read raw or execute code with password parameters
+  reason: Requires a password parameter exposed to the caller or injected into a runnable build; TeamCity parameter
+    scope, masking and execution are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#poison-versioned-settings--kotlin-dsl
+  source_revision: 0b36331
+  technique: Write trusted .teamcity Kotlin DSL to add privileged step
+  reason: Requires write to the trusted .teamcity Kotlin DSL path and a synchronization/build that applies
+    it; VCS settings and approval flow are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#pull-request--untrusted-build-abuse
+  source_revision: 0b36331
+  technique: Everybody PR build executes external code with secrets
+  reason: Requires an Everybody-triggerable PR build that checks out untrusted code and delivers secrets or
+    credentials; TeamCity trigger, branch and secret rules are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#run-custom-build-parameter-injection
+  source_revision: 0b36331
+  technique: Run Build parameter or branch injected into unsafe command
+  reason: Requires Run Build with controllable parameter/branch and an unsafe command interpolation in the
+    build step; TeamCity step text is uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#service-message-abuse
+  source_revision: 0b36331
+  technique: Untrusted build output changes parameters/artifacts for downstream job
+  reason: Requires an untrusted build output service message to influence a later privileged step/job and deliver
+    an identity or secret; downstream dependency behavior is uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#artifact--dependency-poisoning
+  source_revision: 0b36331
+  technique: Poison artifact consumed by privileged build
+  reason: Requires write access to an artifact selected by a later privileged build and execution of its content;
+    artifact mapping and future build are not collected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#pivot-into-internal-services
+  source_revision: 0b36331
+  technique: Forge internal JWT using secret found on agent
+  reason: Requires an actual shared JWT/HMAC secret on the agent and a service that trusts it for an admin
+    subject. Secret value and target service acceptance are runtime facts.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#vcs-root--repository-credential-abuse
+  source_revision: 0b36331
+  technique: Use TeamCity VCS root PAT/SSH key to control repository
+  reason: Requires access to a VCS root credential value (not just metadata) and a token/key scoped to the
+    target repo. TeamCity credential storage and VCS grants are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#debug--diagnostics-endpoints
+  source_revision: 0b36331
+  technique: Admin debug database/process endpoint
+  reason: Requires TeamCity administrator/debug endpoint right, enabled diagnostics property, and an endpoint
+    that reaches DB or process identity. These settings are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#agent-server-trust--rogue-agent-angles
+  source_revision: 0b36331
+  technique: Rogue/compromised agent receives build credentials
+  reason: Requires rogue-agent authorization and a later build scheduled with credentials on that agent; authorization,
+    scheduling, and credential delivery are uncollected.
+- source: src/pentesting-ci-cd/teamcity-security/README.md#logs-artifacts--data-directory-as-secrets
+  source_revision: 0b36331
+  technique: Read super-user token from teamcity-server.log
+  reason: Requires OS/log-platform read of teamcity-server.log containing a still-valid super-user token; TeamCity
+    guest/project access does not grant server-log read.
+
+# Travis source exclusions; reviewed in pa-k8s-other-s08.yaml.
+- source: src/pentesting-ci-cd/travisci-security/README.md#triggers
+  technique: Repository writer runs attacker-controlled CI code in the build identity
+  reason: A push or accepted PR starts a job, but privilege gain depends on runtime execution of attacker code
+    and which secret-bearing variables the branch or fork receives; the page names no independent build identity.
+- source: src/pentesting-ci-cd/travisci-security/README.md#third-party-pr
+  technique: Fork PR receives protected CI environment variables
+  reason: A fork PR can receive secrets only when the project shares encrypted variables with forks and the
+    PR job executes attacker code; credential value and represented principal require runtime secret content.
+- source: src/pentesting-ci-cd/travisci-security/README.md#dumping-secrets
+  technique: Read configured environment and secure values through a job
+  reason: Reading job environment values requires attacker code to run in an eligible build; whether any value
+    is a usable credential and which identity it represents require secret content.
+- source: src/pentesting-ci-cd/travisci-security/README.md#dumping-secrets
+  technique: Read encrypted-file plaintext or key and IV from a job
+  reason: Decrypting an .enc file requires an eligible job, injected key and IV, and the file payload; whether
+    its plaintext contains a credential requires file content.
+- source: src/pentesting-ci-cd/travisci-security/basic-travisci-information.md#environment-variables
+  technique: Project environment secrets become readable inside a permitted build
+  reason: The basic page describes secret injection into an eligible job, but identifying an escalation requires
+    the actual variable value, its credential type, and the job branch/fork exposure.
+- source: src/pentesting-ci-cd/travisci-security/basic-travisci-information.md#custom-encrypted-secrets
+  technique: RSA-encrypted secure values in .travis.yml are decrypted in a permitted build
+  reason: The RSA public key alone does not decrypt secure values; an eligible running job and the decrypted
+    value are needed to identify a gained credential.
+- source: src/pentesting-ci-cd/travisci-security/basic-travisci-information.md#custom-encrypted-files
+  technique: Encrypted file can be decrypted with build-injected key and IV
+  reason: The .enc file and injected key/IV are necessary, but only the decrypted file contents can establish
+    a credential and target identity.
+
+# Vercel source exclusions; reviewed in pa-k8s-other-s08.yaml.
+- source: src/pentesting-ci-cd/vercel-security.md#domains
+  technique: Map a production domain to a different environment that exposes secrets or functions
+  reason: Changing a domain environment alone does not grant credentials; the served application content, protected
+    function authorization, and actual secret disclosure must be inspected.
+- source: src/pentesting-ci-cd/vercel-security.md#environments
+  technique: Share production secrets with lower-trust development or preview environment
+  reason: Variable sharing is a configuration fact, but the lower-trust environment must execute code or expose
+    the value and the value must contain a usable credential; those runtime and content facts are needed.
+- source: src/pentesting-ci-cd/vercel-security.md#environment-variables
+  technique: NEXT_PUBLIC_ team variable exposes credential to every linked project client
+  reason: NEXT_PUBLIC_ can put a value in client code, but the deployed bundle must actually contain that value
+    and it must be a usable credential; require bundle and secret-content inspection.
+- source: src/pentesting-ci-cd/vercel-security.md#environment-variables
+  technique: Non-sensitive team variable is readable to members with sufficient environment access
+  reason: A non-sensitive variable may be readable under team access, but a principal edge requires the variable
+    value to be a usable credential and its represented identity to be identified.
+- source: src/pentesting-ci-cd/vercel-security.md#deployment-protection
+  technique: Bypass deployment protection through public bypass secret, share link, weak password, exception,
+    or broad allowlist
+  reason: A bypassed deployment gives application access; privilege gain requires a protected endpoint or response
+    that yields credentials or a stronger application identity, which needs application runtime/content inspection.
+- source: src/pentesting-ci-cd/vercel-security.md#security
+  technique: Public build logs or source paths can reveal secrets if logs/source contain them
+  reason: Public build logs or source paths only yield a principal edge if the exposed artifact contains a
+    usable credential; the particular log/source content and represented identity are needed.
+- source: src/pentesting-ci-cd/vercel-security.md#advanced
+  technique: Directory listing exposes files that could contain credentials
+  reason: Directory listing exposes files only if enabled and the directory is reachable; a principal edge
+    further requires a listed file containing a usable credential and identification of its target identity.
+- source: src/pentesting-ci-cd/vercel-security.md#source
+  technique: Read complete deployment source to find embedded credentials
+  reason: Source readability alone is not privilege escalation; the deployment source must contain a usable
+    credential and its target principal must be identified.
+- source: src/pentesting-ci-cd/vercel-security.md#log-drains
+  technique: Configure external Log Drain to receive logs containing secrets
+  reason: A Log Drain receives logs, but a credential edge requires a log record containing a usable credential
+    and its represented principal; inspect runtime log content.
+- source: src/pentesting-ci-cd/vercel-security.md#security--privacy
+  technique: Sensitive environment variable policy disabled permits readable team variables
+  reason: Disabling sensitive-variable enforcement does not itself expose credentials; a specific non-sensitive
+    variable, readable to the source, must contain a usable credential.
+- source: src/pentesting-ci-cd/vercel-security.md#environment-variables-1
+  technique: Team NEXT_PUBLIC_ variables leak application credentials to public clients
+  reason: The team-level NEXT_PUBLIC_ case is the same exposure mechanism as the project section, but a deployed
+    bundle and credential-bearing value are needed for a principal edge.
+- source: src/pentesting-ci-cd/vercel-security.md#environment-variables-1
+  technique: Non-sensitive team variable values can be read by members
+  reason: Reading a non-sensitive team variable is only an escalation if its value is a usable credential of
+    a stronger principal; the value and target identity are needed.

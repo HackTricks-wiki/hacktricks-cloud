@@ -1,0 +1,40 @@
+# A row-policy GRANT TO automatically gives the named principal the system-managed
+# filteredDataViewer role. A path requires typed reviewed before/after evidence
+# for an exact table and the acting principal; the DDL permission alone is not
+# proof that the caller was granted access.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+- id: gcp-bigquery-row-policy-create-self-grant
+  provider: gcp
+  service: bigquery
+  title: Self-grant filtered row access by creating a row access policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-bigquery-privesc.md#bigqueryrowaccesspoliciescreateupdate--self-grant-filtered-row-access
+  source_revision: f0f683242a
+  summary: The source can create a new row access policy with itself in GRANT TO on a table that already has row policies, adding filtered row access it does not currently hold.
+  requires:
+    all_of:
+    - action: bigquery.rowAccessPolicies.create
+      resource: '{target.policy_resource}'
+    - action: bigquery.rowAccessPolicies.setIamPolicy
+      resource: '{target.policy_resource}'
+    - action: bigquery.tables.getData
+      resource: '{target.policy_resource}'
+    - action: bigquery.jobs.create
+      resource: '{target.scope}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_resource_self_grant: true
+    scope: same_project
+    outcome: permission_grant
+    grants:
+    - bigquery.rowAccessPolicies.getFilteredData
+    aggregate_as: Possible row-policy self-grant on an exact table
+  conditions:
+  - id: exact_row_policy_self_grant
+    description: Requires an existing table with row policies, complete policy IAM inventory, no prior filteredDataViewer grant to the source, and the exact permissions to create a policy that grants the source access.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict row access policy creation on sensitive tables and review policy grantees and filters.
+  notes: A new policy can grant the source filteredDataViewer on this table. Tables without existing row policies already expose all rows to a principal with tables.getData, so they are excluded. Missing policy IAM, group, deny, or organization evidence leaves the path unresolved; the 400-policy table limit blocks a new policy.

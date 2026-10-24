@@ -1,0 +1,46 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# AWS ssm-incidents privilege escalation techniques.
+# Added by the HackTricks privesc completeness audit (rev 6fb9ac51fd).
+
+- id: aws-ssm-incidents-response-plan-automation-passrole
+  provider: aws
+  service: ssm-incidents
+  title: Run controlled incident automation with a passed role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-ssm-privesc/README.md#hijack-response-plan-actions-chat-channel-and-contacts
+  source_revision: b587e6bd26
+  summary: The source can create or update a response plan with a controlled SSM Automation document and pass a runbook service role to Incident Manager, then start an incident under that same plan.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: ssm-incidents.amazonaws.com
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ssm-incidents.amazonaws.com
+    scope: same_account
+    aggregate_as: Passable Incident Manager runbook roles in {account}
+    outcome: workload_execution
+  preconditions:
+    - ssm_incident_response_plan_runs_new_automation_document
+  conditions:
+    - id: incident_trigger
+      description: StartIncident must use the same response plan created or updated by the source and trigger its automation action.
+    - id: automation_document
+      description: The source must be able to create an automation document whose steps use the passed role's authority.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict passing the execution role.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict response-plan mutation and iam:PassRole to approved incident automation roles and review automation documents referenced by plans.
+  references:
+    - https://docs.aws.amazon.com/incident-manager/latest/userguide/response-plans.html
+  notes: CreateResponsePlan has no resource-level permissions, while UpdateResponsePlan and StartIncident use a Regionless response-plan ARN. The runbook service role trusts ssm-incidents.amazonaws.com and needs StartAutomationExecution on the document and generated execution; a separate Automation AssumeRole is not used by this path. The evaluator requires an active Incident Manager replication set, a creatable Automation document, and creation or update plus StartIncident on the same plan. Successful Automation execution remains conditional.

@@ -1,0 +1,34 @@
+# Amazon SNS topic-policy permission gain for an exact same-account IAM user.
+# Source: hacktricks-cloud aws-sns-privesc/README.md (rev fd9bf8863b).
+
+- id: aws-sns-settopicattributes-self-subscribe
+  provider: aws
+  service: sns
+  title: Grant the caller permission to subscribe to a topic
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sns-privesc/README.md#snssettopicattributes--grant-subscribe-access-to-a-controlled-iam-user
+  source_revision: fd9bf8863b
+  summary: A same-account IAM user who can replace one topic policy can name itself and gain Subscribe on that topic.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: sns:SetTopicAttributes
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_sns_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["sns:Subscribe on the exact reviewed topic"]
+    aggregate_as: "SNS Subscribe self-grants in {account}"
+  conditions:
+    - id: subscription_endpoint
+      description: Receiving messages also requires a controlled endpoint and any applicable delivery or confirmation permission.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict sns:SetTopicAttributes on sensitive topics and use explicit denies where a caller must never subscribe.
+  references:
+    - https://docs.aws.amazon.com/sns/latest/dg/sns-using-identity-based-policies.html
+    - https://docs.aws.amazon.com/sns/latest/dg/sns-access-policy-language-api-permissions-reference.html
+  notes: Only an exact collected topic and same-account IAM user with effective SetTopicAttributes, no prior Subscribe and no surviving identity, boundary or organization deny qualify. Replacing the topic policy can remove an old topic-policy Deny. The route grants permission to request a subscription; it does not prove that an endpoint was confirmed or any message delivered.

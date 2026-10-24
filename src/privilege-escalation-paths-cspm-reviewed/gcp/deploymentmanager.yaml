@@ -1,0 +1,107 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Cloud Deployment Manager privilege escalation techniques (legacy; end of support 2026-03-31).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Deployments always execute as the Google APIs Service Agent <PROJECT_NUMBER>@cloudservices.gserviceaccount.com
+# (roles/editor by default). attached_to_service: cloudservices_agent -> that project's Google APIs Service Agent.
+# The agent's roles/editor includes actAs but NOT resourcemanager.projects.setIamPolicy, so onward reach (e.g. VMs with
+# any project SA) is through the agent node's own edges, not project ownership.
+- id: gcp-deploymentmanager-deployments-create
+  provider: gcp
+  service: deploymentmanager
+  title: Create a Deployment Manager deployment executed by the Google APIs Service Agent
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
+  source_revision: 171e422
+  summary: The source can submit a deployment that uses its project's Google APIs Service Agent to create a VM with a service account the caller cannot attach directly.
+  requires:
+    all_of:
+    - action: deploymentmanager.deployments.create
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_deploymentmanager_create_path: true
+    scope: same_project
+    aggregate_as: Google APIs Service Agent of {project}
+  conditions:
+  - id: legacy_service
+    description: The V2 API must be enabled and a prior deployment must establish an existing customer, since new users cannot create a first deployment after 2026-06-30.
+  - id: agent_roles
+    description: The exact project-number agent needs VM, startup-script, disk, subnet, image and service-account attachment rights.
+  - id: indirect_use
+    description: A ready image, usable subnet, and an attachable project service account must support a VM the caller could not create directly; the source does not receive the agent's token.
+  - id: gcloud_get
+    description: The gcloud helper also needs deploymentmanager.deployments.get to finish, but sends the insert before that read, so create alone triggers the deployment.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Disable the Deployment Manager API, remove roles/editor from the cloudservices agent where possible and restrict roles/deploymentmanager.editor.
+  references:
+  - https://cloud.google.com/deployment-manager/docs/access-control
+  - https://docs.cloud.google.com/deployment-manager/docs/deprecations
+  - https://docs.cloud.google.com/compute/docs/reference/rest/v1/instances/insert
+  notes: The per-deployment credential.serviceAccount field is ignored by the live service (HackTricks), so the identity is always the cloudservices agent. A complete deployment list without current entries cannot disprove historical customer eligibility; that case stays unknown. Other supported resource paths stay unresolved when the concrete VM path is unavailable.
+- id: gcp-deploymentmanager-deployments-update
+  provider: gcp
+  service: deploymentmanager
+  title: Update an existing Deployment Manager deployment
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentscreate--update--deploy-through-the-google-apis-service-agent
+  source_revision: 171e422
+  summary: The source can update an exact existing deployment and use its Google APIs Service Agent to create a VM with a service account the caller cannot attach directly.
+  requires:
+    all_of:
+    - action: deploymentmanager.deployments.update
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_deploymentmanager_update_path: true
+    scope: same_project
+    aggregate_as: Google APIs Service Agent of {project}
+  conditions:
+  - id: existing_deployment
+    description: The caller needs get and update on the same listed deployment to retrieve its current fingerprint; deletePolicy=ABANDON can avoid deleting resources omitted from the new config.
+  - id: legacy_service
+    description: The enabled V2 API must still serve this existing customer, and the exact service agent must retain a viable downstream VM path.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: critical
+  mitigation: Disable the Deployment Manager API and restrict deploymentmanager.deployments.update.
+  references:
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/update
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments
+  notes: A caller with a separately known current fingerprint may use the raw API without deployments.get; that case remains unresolved when the read grant is absent.
+- id: gcp-deploymentmanager-deployments-setiampolicy
+  provider: gcp
+  service: deploymentmanager
+  title: Self-grant update on a deployment through its IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-deploymentmaneger-privesc.md#deploymentmanagerdeploymentssetiampolicy--self-grant-control-of-one-existing-deployment
+  source_revision: 171e422
+  summary: The source can add itself to an existing deployment's Admin policy, update that deployment, and use its Google APIs Service Agent for a VM path the source lacks directly.
+  requires:
+    all_of:
+    - action: deploymentmanager.deployments.setIamPolicy
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_deploymentmanager_selfgrant_path: true
+    scope: same_project
+    aggregate_as: Google APIs Service Agent of {project}
+  conditions:
+  - id: grantable_role
+    description: The caller needs getIamPolicy and setIamPolicy on the same deployment, a complete policy with etag, a grantable Admin role that includes update, and no deny on the gained update permission.
+  - id: existing_deployment
+    description: The exact deployment and enabled legacy API must exist; the agent also needs a viable downstream resource path.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict deploymentmanager.deployments.setIamPolicy (Owner, Deployment Manager Admin, Security Admin).
+  references:
+  - https://docs.cloud.google.com/deployment-manager/docs/access-control
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/getIamPolicy
+  - https://docs.cloud.google.com/deployment-manager/docs/reference/latest/deployments/setIamPolicy
+  - https://docs.cloud.google.com/iam/docs/roles-permissions/deploymentmanager

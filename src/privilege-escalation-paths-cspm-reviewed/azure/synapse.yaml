@@ -1,0 +1,39 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Synapse techniques (declarative only).
+# Source: hacktricks-cloud az-synapse-privesc.md (rev 171e422).
+
+- id: azure-synapse-entra-admin-write
+  provider: azure
+  service: synapse
+  title: Replace the Synapse workspace Entra administrator
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-synapse-privesc.md#replace-the-workspace-microsoft-entra-administrator
+  source_revision: f9d46eadb8
+  summary: The source can become the Microsoft Entra administrator for the Synapse workspace dedicated SQL endpoint and manage its user databases.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Synapse/workspaces/administrators/write
+          scope: "*"
+      - - action: Microsoft.Synapse/workspaces/sqlAdministrators/write
+          scope: "*"
+  target:
+    kind: azure_dataplane_admin
+    selector:
+      azure_resource_type: Microsoft.Synapse/workspaces
+      azure_synapse_entra_admin_path: true
+    scope: inherited_scope
+    aggregate_as: "Synapse SQL admins of {target.scope}"
+  conditions:
+    - id: sql_endpoint_reachable
+      description: Workspace firewall or private networking must allow the source to reach the SQL endpoint.
+  blockers: []
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict administrators/write and sqlAdministrators/write and alert on Entra admin changes.
+  references:
+    - https://learn.microsoft.com/en-us/azure/synapse-analytics/security/how-to-set-up-access-control
+  notes: The selected principal must be controlled by the source, and the write must authorize the activeDirectory child of an inventoried Synapse workspace. Applies to the dedicated SQL endpoint; does not grant Synapse RBAC administrator or serverless SQL access.

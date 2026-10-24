@@ -1,0 +1,110 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP to Google Workspace pivots and Application Integration / Agent Identity identity edges.
+# Source: hacktricks-cloud gcp-to-workspace-pivoting/*.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml. New attached_to_service values (Workspace facts,
+# not collected; see SCHEMA_EXTENSIONS.md ## GCP): workspace_dwd_delegation, workspace_super_admin_of_zone_domain,
+# workspace_addon_user, agentidentity_authorized_user. pivot_resource_type values: gcp_dwd_service_account (SA whose client ID
+# has a Workspace DWD grant), dns_managed_zone, agentidentity_auth_provider.
+
+- provider: gcp
+  source_revision: 4e9b5eaaa6
+  id: gcp-appintegration-runas-sa-actas
+  service: integrations
+  title: Publish an Application Integration version with a chosen run-as service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-application-integration-privesc.md#runasserviceaccount--author--publish-an-integration-that-runs-as-an-arbitrary-sa
+  summary: The source can test a caller-supplied integration draft or author and publish an integration that runs an authenticated task as a service account it may act as.
+  requires:
+    all_of:
+    - any_of:
+      - - action: integrations.integrationVersions.create
+          resource: '*'
+      - - action: integrations.integrations.invoke
+          resource: '*'
+    - action: iam.serviceAccounts.actAs
+      resource: '{target.email}'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_actas_granted_on_target: true
+      gcp_sa_in_scope_of_permission: true
+      gcp_appintegration_run_as_path: true
+    scope: same_project
+    aggregate_as: Service accounts usable as Application Integration run-as SA in {project}
+  conditions:
+  - id: task_level
+    description: An authored Connector, REST caller or Cloud Function task can use a token from the chosen run-as account when no auth config overrides it.
+  - id: invocation
+    description: Draft testing needs invoke on the same integration; publishing and direct execution also need create and deploy on that integration and invoke on it. Scheduled or event-triggered execution without caller invoke remains unresolved.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: critical
+  mitigation: Grant actAs only on dedicated integration SAs; roles/editor and roles/owner contain both halves.
+  references:
+  - https://docs.cloud.google.com/application-integration/docs/reference/rest/v1/projects.locations.integrations/test
+  - https://docs.cloud.google.com/application-integration/docs/reference/rest/v1/projects.locations.integrations.versions/publish
+  - https://docs.cloud.google.com/application-integration/docs/prepare-for-authorization-changes
+  notes: The tested draft and published version paths require a collected enabled service and an observed integration in the same project and region. Other regions, new integration creation, and unattended trigger execution remain unresolved if not evidenced.
+- provider: gcp
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  id: gcp-agentidentity-retrieve-credentials
+  service: agentidentity
+  title: Retrieve an authorized Google OAuth credential from Agent Identity
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-identity-auth-manager-privesc.md#agentidentityauthprovidersretrievecredentials
+  summary: The source may use the existing Google OAuth authorization for an exact client user ID, limited to that authorization's active scopes.
+  requires:
+    all_of:
+    - action: agentidentity.authProviders.retrieveCredentials
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_agentidentity_retrieve_path: true
+    scope: any
+    outcome: bounded_authority
+    aggregate_as: Active Google OAuth authorizations available through Agent Identity
+  conditions:
+  - id: exact_active_authorization
+    description: Requires an enabled Google 3-legged OAuth provider and an active per-user authorization with a known exact client user ID and useful granted Google API scopes.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Treat roles/agentidentity.user and custom roles with retrieveCredentials as credential-vault access.
+  references:
+  - https://docs.cloud.google.com/iam/docs/reference/agentidentity/rest/v1/projects.locations.authProviders.authorizations/list
+  - https://docs.cloud.google.com/iam/docs/reference/agentidentitycredentials/rest/v1/projects.locations.authProviders.credentials/retrieve
+  notes: The client user ID is supplied by the client application and is not independently verified as a Workspace identity. The path grants only the scopes on the existing authorization and remains conditional until credential retrieval succeeds.
+- provider: gcp
+  source_revision: 4393380a88845b42bd208d3adbb6d61ad89f02fb
+  id: gcp-agentidentity-update-token-url
+  service: agentidentity
+  title: Change an Agent Identity auth provider's token endpoint to intercept future refreshes
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-agent-identity-auth-manager-privesc.md#agentidentityauthprovidersupdate-token-endpoint-interception
+  summary: The source could redirect an enabled Google OAuth provider's token endpoint and obtain a stored refresh token on a later refresh for an active authorization.
+  requires:
+    all_of:
+    - action: agentidentity.authProviders.update
+      resource: '{target.policy_resource}'
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_agentidentity_update_path: true
+    scope: any
+    outcome: bounded_authority
+    aggregate_as: Active Google OAuth authorizations exposed by a changed token endpoint
+  conditions:
+  - id: exact_active_authorization
+    description: Requires an enabled Google 3-legged OAuth provider and an active per-user authorization with useful granted Google API scopes.
+  - id: later_refresh
+    description: A legitimate caller must refresh a stored authorization after the endpoint change; authorization metadata does not reveal whether a refresh token exists or is still valid.
+  blockers:
+  - gcp_deny_policy
+  confidence: conditional
+  severity: high
+  mitigation: Restrict authProviders.update (roles/agentidentity.editor) and alert on authorization/token URL changes.
+  references:
+  - https://docs.cloud.google.com/iam/docs/reference/agentidentity/rest/v1/projects.locations.authProviders/patch
+  - https://docs.cloud.google.com/iam/docs/reference/agentidentity/rest/v1/projects.locations.authProviders.authorizations/list
+  notes: The client user ID is a lookup key, not proof of the consenting account's identity. The path remains conditional on a successful provider update and a later refresh sent to the changed endpoint.

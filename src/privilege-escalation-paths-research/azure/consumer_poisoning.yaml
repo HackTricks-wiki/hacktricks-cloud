@@ -1,0 +1,188 @@
+# Second-order escalation through a privileged workload that consumes data the source can write
+# (declarative only). Source: hacktricks-cloud az-key-vault-privesc.md, az-storage-privesc.md,
+# az-app-configuration-privesc.md, az-queue-privesc.md (rev 171e422; all entries re-reviewed at
+# a66f094ede).
+# Targets use azure_consumer_of_pivot: until workload bindings (Key Vault / App Configuration references,
+# Functions trigger bindings, content storage) are collected, managed identities holding the matching
+# data-read action on the pivot are reported conditional (consumer_binding_not_collected) and every
+# other identity unknown. Whether the consumer trusts the value enough to change what it executes is
+# application logic, so these entries are never derived.
+
+- id: azure-keyvault-secret-poisoning-consumer
+  provider: azure
+  service: key_vault
+  title: Poison a Key Vault secret read by a privileged workload
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-key-vault-privesc.md#write-only-secret-poisoning
+  source_revision: a66f094ede
+  summary: Writing a new version of a secret that a workload reads as a credential, endpoint or command makes that workload act on attacker input with its own managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.KeyVault/vaults/secrets/setSecret/action
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.KeyVault/vaults/secrets/write
+          scope: "{pivot}"
+      - - action: Microsoft.KeyVault/vaults/accessPolicies/write
+          scope: "{pivot}"
+      - - action: Microsoft.KeyVault/vaults/write
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.KeyVault/vaults
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_consumer_of_pivot: key_vault_reference
+    scope: any
+    aggregate_as: "Workload identities consuming secrets of vault {pivot}"
+    outcome: workload_execution
+  conditions:
+    - id: consumer_trusts_secret
+      description: The consuming workload must use the latest secret version in a way that changes what it executes, targets or authenticates to.
+    - id: access_policy_model_only
+      description: The accessPolicies/write and vaults/write (full vault PUT rewriting properties.accessPolicies) alternatives only work on vaults using the access-policy permission model (not Azure RBAC).
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Separate secret writers from readers, pin secret versions in references, and monitor SecretSet on vaults that back privileged workloads.
+  references:
+    - https://learn.microsoft.com/en-us/azure/app-service/app-service-key-vault-references
+  notes: secrets/write is the control-plane (ARM child resource) form of setSecret. Consumer bindings are not collected yet; candidate consumers are managed identities that can read secrets of the vault.
+
+- id: azure-storage-blob-poisoning-consumer
+  provider: azure
+  service: storage
+  title: Poison blobs consumed by a privileged service
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-storage-privesc.md#poison-a-privileged-consumer-with-microsoftstoragestorageaccountsblobservicescontainersblobswrite
+  source_revision: a66f094ede
+  summary: Overwriting scripts, packages or configuration blobs that Data Factory, Batch, Stream Analytics or similar services load makes them run attacker content with their managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/regenerateKey/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listAccountSas/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listServiceSas/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/localUsers/write
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/localUsers/regeneratePassword/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_consumer_of_pivot: storage_content
+    scope: any
+    aggregate_as: "Workload identities loading content from storage account {pivot}"
+    outcome: workload_execution
+  conditions:
+    - id: consumer_executes_content
+      description: The consumer must load and execute or trust the overwritten blob. The Function App package/content case is modelled separately in functions.yaml.
+    - id: shared_key_access_enabled
+      description: The listKeys, regenerateKey, listAccountSas and listServiceSas alternatives require shared key authorization to be enabled on the account (SAS tokens are signed with an account key).
+    - id: sftp_local_user
+      description: The localUsers alternatives require an HNS-enabled account with SFTP enabled; regeneratePassword only reaches the containers an existing local user already has write scope on.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: high
+  mitigation: Keep code and configuration blobs for privileged workloads in dedicated accounts with writer separation, and use immutable or versioned packages.
+  references:
+    - https://learn.microsoft.com/en-us/azure/storage/blobs/authorize-access-azure-active-directory
+  notes: Consumer bindings are not collected yet; candidate consumers are managed identities that can read blobs of the account.
+
+- id: azure-appconfig-keyvalue-poisoning-consumer
+  provider: azure
+  service: app_configuration
+  title: Poison App Configuration key-values read by a privileged application
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-app-configuration-privesc.md#microsoftappconfigurationconfigurationstoreskeyvalueswrite
+  source_revision: a66f094ede
+  summary: Overwriting a key-value or feature flag that a privileged application, job or pipeline uses as an endpoint, module path or command changes what that consumer does with its identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.AppConfiguration/configurationStores/keyValues/write
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.AppConfiguration/configurationStores/keyValues/write
+          scope: "{pivot}"
+      - - action: Microsoft.AppConfiguration/configurationStores/ListKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.AppConfiguration/configurationStores/RegenerateKey/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.AppConfiguration/configurationStores
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_consumer_of_pivot: app_configuration_reference
+    scope: any
+    aggregate_as: "Workload identities consuming App Configuration store {pivot}"
+    outcome: workload_execution
+  conditions:
+    - id: consumer_trusts_value
+      description: The consumer must use the poisoned value in a way that changes what it executes or targets.
+    - id: local_auth_enabled
+      description: The ListKeys / RegenerateKey alternatives require access-key (local) authentication to be enabled on the store.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Disable local auth, separate configuration writers from readers, and use labels/snapshots that are pinned for production consumers.
+  references:
+    - https://learn.microsoft.com/en-us/azure/azure-app-configuration/concept-enable-rbac
+  notes: keyValues/write exists both as a data action (App Configuration Data Owner) and as a control-plane action on the ARM keyValues child; each authorizes its own endpoint. Consumer bindings are not collected yet.
+
+- id: azure-queue-message-injection-consumer
+  provider: azure
+  service: storage
+  title: Inject queue messages into a privileged consumer
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-queue-privesc.md#conditional-escalation-through-a-downstream-consumer
+  source_revision: a66f094ede
+  summary: A consumer that trusts queue message fields as commands, URLs or serialized objects runs attacker input with its managed identity.
+  requires:
+    all_of: []
+    any_of:
+      - - action: Microsoft.Storage/storageAccounts/queueServices/queues/messages/add/action
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/queueServices/queues/messages/write
+          data_action: true
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listKeys/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/regenerateKey/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listAccountSas/action
+          scope: "{pivot}"
+      - - action: Microsoft.Storage/storageAccounts/listServiceSas/action
+          scope: "{pivot}"
+  pivot_resource_type: Microsoft.Storage/storageAccounts
+  target:
+    kind: azure_managed_identity
+    selector:
+      azure_consumer_of_pivot: queue_trigger
+    scope: any
+    aggregate_as: "Workload identities triggered by queues of storage account {pivot}"
+    outcome: workload_execution
+  conditions:
+    - id: consumer_trusts_message
+      description: The page states queue write alone does not guarantee code execution; the consumer must unsafely trust message fields.
+    - id: existing_message_rewrite
+      description: The messages/write alternative only alters existing messages and needs their ID and current pop receipt (obtained by a receive).
+    - id: shared_key_access_enabled
+      description: The listKeys, regenerateKey, listAccountSas and listServiceSas alternatives require shared key authorization to be enabled on the account.
+  blockers:
+    - azure_deny_assignment
+  confidence: conditional
+  severity: medium
+  mitigation: Validate and authenticate message content in consumers, and separate queue writers from privileged consumers.
+  references:
+    - https://learn.microsoft.com/en-us/azure/storage/queues/authorize-access-azure-active-directory
+  notes: Service Bus and Event Grid injection use the same selector in service_bus.yaml and event_grid.yaml; Event Hubs injection waits for an event_hubs_trigger binding.

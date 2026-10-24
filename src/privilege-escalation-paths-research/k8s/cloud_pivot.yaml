@@ -1,0 +1,521 @@
+# Kubernetes <-> cloud identity pivots (EKS IRSA / Pod Identity / kiam / aws-auth, GKE Workload
+# Identity, AKS Workload ID / identity bindings, node cloud identities).
+# Conventions: see header of rbac.yaml. Entries with source_kind describe edges from an identity
+# (ServiceAccount or node) to a cloud principal; who reaches that identity is modelled elsewhere
+# (pods create, exec, tokens...). Source: hacktricks-cloud rev a53b46392c, re-verified against 171e422.
+
+- id: k8s-cloud-eks-irsa
+  provider: k8s
+  service: eks
+  title: ServiceAccount assumes an IAM role through IRSA (OIDC web identity)
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#iam-role-for-k8s-service-accounts-via-oidc
+  source_revision: 171e422
+  summary: A ServiceAccount can obtain the privileges of the IAM roles whose trust policy accepts the cluster OIDC issuer with that ServiceAccount's subject.
+  source_kind: k8s_service_account
+  requires:
+    all_of: []
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_sa_cloud_binding: irsa
+      trust_allows_k8s_sa_oidc_subject: true
+    scope: any
+    aggregate_as: "IAM roles trusting {source.namespace}/{source.name} via IRSA"
+  conditions:
+    - id: aws_trust_not_collected
+      description: Needs the AWS snapshot of the role trust (federated principal = cluster OIDC provider, sub/aud conditions). With only the K8s snapshot, the eks.amazonaws.com/role-arn annotation is used as evidence and the edge stays conditional.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Scope IRSA trust policies to an exact sub (system:serviceaccount:<ns>:<sa>) and aud sts.amazonaws.com; prefer EKS Pod Identity with tag conditions.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
+  notes: The annotation is not a security gate; any holder of a token for the ServiceAccount with audience sts.amazonaws.com (a pod can request a projected token with any audience) can call AssumeRoleWithWebIdentity. Hence the reachable set is defined by the trust policy, not the annotation. Trusts with wildcard or missing sub conditions are reached by every matching ServiceAccount.
+
+- id: k8s-cloud-eks-irsa-create-matching-sa
+  provider: k8s
+  service: eks
+  title: Create a ServiceAccount matching a wildcard IRSA trust
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#iam-role-for-k8s-service-accounts-via-oidc
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of IAM roles whose IRSA trust uses a wildcard subject by creating a ServiceAccount whose name matches and running a pod as it.
+  requires:
+    all_of:
+      - verb: create
+        resource: serviceaccounts
+        namespace: "{pivot.namespace}"
+    any_of:
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: serviceaccounts, subresource: token, namespace: "{pivot.namespace}"}
+  target:
+    kind: cloud_identity
+    selector:
+      trust_allows_oidc_subject_wildcard: "system:serviceaccount:{pivot.namespace}:*"
+    scope: any
+    aggregate_as: "IAM roles with wildcard IRSA trust matching {pivot.namespace}"
+  conditions:
+    - id: aws_trust_not_collected
+      description: Requires the AWS role trust policy to evaluate the StringLike sub pattern.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Never use wildcards in the sub condition of IRSA trust policies.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
+  notes: Only adds reach beyond k8s-cloud-eks-irsa when the wildcard matches names that do not yet exist; existing matching ServiceAccounts are already reachable via pods create in their namespace.
+
+- id: k8s-cloud-eks-irsa-wildcard-trust-existing-sa
+  provider: k8s
+  service: eks
+  title: Use an existing ServiceAccount that matches a wildcard IRSA trust
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#iam-role-for-k8s-service-accounts-via-oidc
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of IAM roles whose IRSA trust uses a wildcard subject covering the namespace by obtaining an sts.amazonaws.com-audience token for any existing ServiceAccount there (for example default).
+  requires:
+    all_of: []
+    any_of:
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+      - - {verb: create, resource: serviceaccounts, subresource: token, namespace: "{pivot.namespace}"}
+  target:
+    kind: cloud_identity
+    selector:
+      trust_allows_oidc_subject_wildcard: "system:serviceaccount:{pivot.namespace}:*"
+    scope: any
+    aggregate_as: "IAM roles with wildcard IRSA trust matching {pivot.namespace}"
+  conditions:
+    - id: existing_sa_matches_wildcard
+      description: Some existing ServiceAccount name in the namespace must match the trust's StringLike sub pattern (system:serviceaccount:<ns>:* always matches default); for narrower patterns with no matching ServiceAccount use k8s-cloud-eks-irsa-create-matching-sa.
+    - id: token_audience
+      description: The token must carry the trusted audience (sts.amazonaws.com); a pod can request it with a projected serviceAccountToken volume and TokenRequest accepts any audience, so the eks.amazonaws.com/role-arn annotation is not needed.
+    - id: aws_trust_not_collected
+      description: Requires the AWS role trust policy to evaluate the StringLike sub pattern.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Never use wildcards in the sub condition of IRSA trust policies; pin both sub and aud.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
+    - https://kubernetes.io/docs/concepts/storage/projected-volumes/#serviceaccounttoken
+  notes: HackTricks (171e422) states that a wildcard trust lets any controlled ServiceAccount assume the role once annotated; annotation (patch serviceaccounts) only drives webhook injection, the trust check is on the token sub/aud, so no ServiceAccount write is required.
+
+- id: k8s-cloud-eks-pod-identity
+  provider: k8s
+  service: eks
+  title: ServiceAccount receives an IAM role through EKS Pod Identity
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#eks-pod-identity
+  source_revision: 171e422
+  summary: A ServiceAccount can obtain the privileges of the IAM role of the EKS Pod Identity association for its (namespace, name).
+  source_kind: k8s_service_account
+  requires:
+    all_of: []
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_sa_cloud_binding: eks_pod_identity
+    scope: any
+    aggregate_as: "IAM roles associated with {source.namespace}/{source.name}"
+  conditions:
+    - id: pod_identity_association_from_related_aws
+      description: Associations live in the EKS API and come from the related AWS snapshot (eks_pod_identity_association); without it no edge is drawn. The edge is derived when the role trust admits pods.eks.amazonaws.com, otherwise conditional.
+    - id: pod_identity_agent_running
+      description: The EKS Pod Identity Agent must run on the nodes; credentials are served only to pods running as that ServiceAccount.
+    - id: trust_tag_conditions
+      description: Trust conditions on kubernetes-namespace/kubernetes-service-account/cluster tags may further restrict the role.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Associate roles only with dedicated ServiceAccounts in namespaces where untrusted subjects cannot create pods; add tag conditions to the trust.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html
+  notes: The role may chain into other accounts; those hops belong to the aws catalog.
+
+- id: k8s-cloud-kiam-kube2iam-annotation
+  provider: k8s
+  service: eks
+  title: Request a permitted IAM role via kiam/kube2iam pod annotation
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#kiam--kube2iam-iam-role-for-pods
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of the IAM roles permitted by the namespace's kiam/kube2iam annotation by creating annotated pods in it.
+  requires:
+    all_of:
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+  target:
+    kind: cloud_identity
+    selector:
+      kube2iam_namespace_permits_role: "{pivot.namespace}"
+    scope: any
+    aggregate_as: "IAM roles permitted for pods in {pivot.namespace}"
+  conditions:
+    - id: kiam_or_kube2iam_running
+      description: A kiam or kube2iam agent must be intercepting the pods' metadata traffic; the namespace annotations (iam.amazonaws.com/permitted for kiam, iam.amazonaws.com/allowed-roles for kube2iam) are not kept by the collector.
+    - id: role_trusts_agent_role
+      description: The requested role must trust the kiam server / node role that performs the AssumeRole.
+    - id: kube2iam_namespace_restrictions_disabled
+      description: If kube2iam runs without --namespace-restrictions, any role trusting the node role is requestable regardless of annotations.
+  blockers: [admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Migrate from kiam/kube2iam to IRSA or EKS Pod Identity; until then restrict permitted-role regexes per namespace.
+  references:
+    - https://github.com/jtblin/kube2iam#namespace-restrictions
+  notes: HackTricks marks this mechanism as outdated; kept because clusters still run it. Also, the agent role can itself assume all permitted roles, so compromising a node reaches them too.
+
+- id: k8s-cloud-eks-aws-auth-configmap
+  provider: k8s
+  service: eks
+  title: Edit the aws-auth ConfigMap to map an IAM principal to system:masters
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/secrets-and-configmaps.md#aws-eks-aws-auth-configmaps
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of cluster-admin by mapping an IAM principal it controls to system:masters in aws-auth.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: update, resource: configmaps, namespace: "kube-system", resource_name: "aws-auth"}
+      - - {verb: patch, resource: configmaps, namespace: "kube-system", resource_name: "aws-auth"}
+      - - {verb: create, resource: configmaps, namespace: "kube-system"}
+  target:
+    kind: k8s_cluster_admin
+    selector:
+      any_principal_in_scope: true
+    scope: cluster
+    aggregate_as: "cluster-admin of {cluster}"
+  conditions:
+    - id: eks_auth_mode_includes_config_map
+      description: The cluster authentication mode must be CONFIG_MAP or API_AND_CONFIG_MAP; in API mode aws-auth is ignored.
+    - id: access_entry_precedence
+      description: In API_AND_CONFIG_MAP mode an access entry for the same IAM principal takes precedence over aws-auth, so the new mapping grants no additional access for that principal.
+    - id: create_only_if_absent
+      description: The create group only applies when no aws-auth ConfigMap exists yet.
+    - id: source_controls_iam_principal
+      description: The source needs some IAM principal to authenticate with; any account's principal can be mapped, so this is normally satisfiable.
+  preconditions: [k8s_eks_cluster]
+  blockers: []
+  confidence: derived
+  severity: critical
+  mitigation: Migrate to EKS access entries (authentication mode API) and remove configmap write access in kube-system.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/grant-k8s-access.html
+  notes: Only EKS clusters. Mapping a principal from another account also works (cross-account), which is why the AWS-side control of the mapped principal is not limiting.
+
+- id: k8s-cloud-gke-workload-identity
+  provider: k8s
+  service: gke
+  title: ServiceAccount impersonates a Google service account via GKE Workload Identity
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#workload-identity-federation-for-gke
+  source_revision: 171e422
+  summary: A ServiceAccount can obtain the privileges of the Google service accounts that grant roles/iam.workloadIdentityUser to its Workload Identity member.
+  source_kind: k8s_service_account
+  requires:
+    all_of: []
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_sa_cloud_binding: gke_workload_identity
+      gcp_workload_identity_user_granted_to_k8s_sa: true
+    scope: any
+    aggregate_as: "GSAs impersonable by {source.namespace}/{source.name}"
+  conditions:
+    - id: gcp_iam_not_collected
+      description: The IAM binding serviceAccount:<PROJECT>.svc.id.goog[<ns>/<ksa>] on the GSA lives in the GCP snapshot; with only the iam.gke.io/gcp-service-account annotation the edge stays conditional.
+    - id: identity_sameness
+      description: Every cluster in the same project/fleet workload pool shares the member identity, so the same namespace/name in another cluster also reaches the GSA.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Grant workloadIdentityUser only to dedicated KSAs in namespaces untrusted subjects cannot write to; avoid shared workload pools across trust boundaries.
+  references:
+    - https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+  notes: The IAM binding, not the annotation, is the authorization gate. Direct IAM grants to the KSA principal (principal://iam.googleapis.com/projects/<n>/locations/global/workloadIdentityPools/<pool>/subject/ns/<ns>/sa/<ksa>) also give it cloud privileges; the evaluator should treat that federated principal as the cloud_identity reached.
+
+- id: k8s-cloud-aks-workload-identity
+  provider: k8s
+  service: aks
+  title: ServiceAccount obtains an Entra identity via AKS Workload ID federation
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#azure--aks
+  source_revision: 171e422
+  summary: A ServiceAccount can obtain the privileges of the managed identities or app registrations whose federated identity credential matches the cluster issuer and its subject.
+  source_kind: k8s_service_account
+  requires:
+    all_of: []
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_sa_cloud_binding: azure_workload_identity
+      azure_fic_matches_k8s_sa: true
+    scope: any
+    aggregate_as: "Entra identities federated with {source.namespace}/{source.name}"
+  conditions:
+    - id: azure_fic_not_collected
+      description: Federated identity credentials (issuer + subject system:serviceaccount:<ns>:<sa>) live in the Azure/Entra snapshot; the azure.workload.identity/client-id annotation alone is evidence only.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Federate identities only with dedicated ServiceAccounts in namespaces where untrusted subjects cannot create pods or tokens.
+  references:
+    - https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview
+  notes: The annotation and the azure.workload.identity/use label only drive token injection by the webhook; any holder of a token for the SA with audience api://AzureADTokenExchange can exchange it, so they are not gates.
+
+- id: k8s-cloud-aks-identity-binding
+  provider: k8s
+  service: aks
+  title: ServiceAccount allowed to use a managed identity through AKS identity bindings
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#azure--aks
+  source_revision: 171e422
+  summary: A ServiceAccount granted use-managed-identity on a managed identity client ID can obtain the privileges of that user-assigned managed identity.
+  source_kind: k8s_service_account
+  requires:
+    all_of:
+      - verb: use-managed-identity
+        resource: "{target.client_id}"
+        api_group: cid.wi.aks.azure.com
+        namespace: "*"
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_sa_cloud_binding: aks_identity_binding
+    scope: any
+    aggregate_as: "Managed identities bound to {cluster} and usable by {source.namespace}/{source.name}"
+  conditions:
+    - id: identity_binding_exists
+      description: An AKS identity binding must map the managed identity to this cluster (ARM side, not collected by the K8s collector).
+    - id: pod_opt_in_label
+      description: The pod must opt in with the azure.workload.identity/use-identity-binding label; anyone creating pods as the SA can set it.
+    - id: preview_feature
+      description: Identity bindings are a preview feature.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Grant use-managed-identity in narrow ClusterRoles bound to specific ServiceAccounts, never to broad groups such as system:serviceaccounts.
+  references:
+    - https://learn.microsoft.com/en-us/azure/aks/identity-bindings-concepts
+  notes: Per Microsoft docs, operators authorize namespaces/ServiceAccounts with ClusterRole/ClusterRoleBinding. HackTricks states the rule uses verb use-managed-identity on cid.wi.aks.azure.com resources named after client IDs; the exact apiGroups/resources split could not be confirmed from the concepts page, so treat the resource field as the client id under that API group.
+
+- id: k8s-cloud-node-cloud-identity
+  provider: k8s
+  service: nodes
+  title: Node identity reaches the node's cloud identity
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#node-iam-role-to-cluster-admin
+  source_revision: 171e422
+  summary: A compromised node can obtain the privileges of the cloud identity attached to it (EC2 instance profile role, GCE node service account, AKS node/kubelet managed identity).
+  source_kind: k8s_node
+  requires:
+    all_of: []
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_node_cloud_identity: true
+    scope: any
+    aggregate_as: "Cloud identity of nodes in {cluster}"
+  conditions:
+    - id: node_cloud_identity_not_collected
+      description: The attached identity is known from the cloud snapshot (instance profile, node pool service account, VMSS identity), not from the K8s collector.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Give node identities only the minimal permissions (registry pull, CNI); never attach broad roles to node pools.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html
+    - https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster#use_least_privilege_sa
+  notes: On GKE with Workload Identity enabled on the node pool, pods are served by the GKE metadata server, but the node itself still holds the node service account.
+
+- id: k8s-cloud-pod-imds-node-identity
+  provider: k8s
+  service: nodes
+  title: Ordinary pod reaches the node metadata service
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#node-iam-role-to-cluster-admin
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of the node cloud identity by creating any pod when pods can reach
+    the instance metadata service.
+  requires:
+    all_of:
+    - any_of:
+      - verb: create
+        resource: pods
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: deployments
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: daemonsets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: statefulsets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: replicasets
+        api_group: apps
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: replicationcontrollers
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: jobs
+        api_group: batch
+        namespace: '{pivot.namespace}'
+      - verb: create
+        resource: cronjobs
+        api_group: batch
+        namespace: '{pivot.namespace}'
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_node_cloud_identity: true
+    scope: any
+    aggregate_as: Cloud identity of nodes in {cluster}
+  conditions:
+  - id: imds_reachable_from_pod
+    description: EKS needs an IMDS hop limit >= 2 (AL2023 managed node groups without a launch template and Auto
+      Mode default to 1) and no disablePodIMDS; GKE needs node pools without Workload Identity/metadata concealment;
+      AKS needs no network policy blocking 169.254.169.254.
+  - id: network_policy_blocks_imds
+    description: An egress NetworkPolicy denying the metadata address removes the edge.
+  blockers:
+  - admission_policy
+  - admission_webhook
+  - kyverno_policy
+  - gatekeeper_constraint
+  confidence: derived
+  severity: high
+  mitigation: Block pod access to IMDS (hop limit 1, disablePodIMDS, GKE Workload Identity, egress policies) and
+    use workload identities instead.
+  references:
+  - https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html#restrict-access-to-the-instance-profile-assigned-to-the-worker-node
+  notes: Creating a Pod or workload controller also requires the workload to pass admission; the admission_policy,
+    admission_webhook, kyverno_policy, and gatekeeper_constraint blockers above apply. Once an ordinary Pod is admitted,
+    IMDS hop limit and network reachability decide whether it can obtain node credentials. Exec into an existing
+    Pod gives the same network reach and is modelled implicitly through the ServiceAccount chain.
+
+- id: k8s-cloud-hostnetwork-pod-node-identity
+  provider: k8s
+  service: nodes
+  title: hostNetwork pod reaches the node metadata service (not node root)
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-privilege-escalation/workload-and-pod-access.md#pod-create---move-to-cloud
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of the node cloud identity by creating a hostNetwork pod, which bypasses pod-level IMDS hop restrictions.
+  requires:
+    all_of:
+      - any_of:
+          - {verb: create, resource: pods, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: deployments, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: daemonsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: statefulsets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicasets, api_group: apps, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: replicationcontrollers, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: jobs, api_group: batch, namespace: "{pivot.namespace}"}
+          - {verb: create, resource: cronjobs, api_group: batch, namespace: "{pivot.namespace}"}
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_node_cloud_identity: true
+    scope: any
+    aggregate_as: "Cloud identity of nodes in {cluster}"
+  conditions:
+    - id: other_admission_blocks_host_network
+      description: Non-PSA admission may reject hostNetwork pods.
+    - id: gke_metadata_server_on_host_network
+      description: On GKE node pools with Workload Identity, hostNetwork pods are not intercepted by the GKE metadata server and reach the node service account, so Workload Identity is not a blocker here.
+  blockers: [pivot_namespace_psa_enforce_baseline_or_restricted, admission_policy, admission_webhook, kyverno_policy, gatekeeper_constraint]
+  confidence: derived
+  severity: high
+  mitigation: Enforce PSA baseline (which disallows hostNetwork) and minimize node identity permissions.
+  references:
+    - https://kubernetes.io/docs/concepts/security/pod-security-standards/
+  notes: Distinct from k8s-cloud-pod-imds-node-identity because it is gated by PSA rather than IMDS network settings; it only adds reach where ordinary pods are kept from the metadata service (EKS hop limit 1 / disablePodIMDS, GKE metadata server, egress NetworkPolicy, which does not apply to hostNetwork pods). hostNetwork places the pod in the node network namespace but is not a host escape and does not reach node root or the kubelet credential; node-local loopback services remain subject to their own authentication.
+
+- id: k8s-cloud-eks-node-role-to-node
+  provider: k8s
+  service: eks
+  title: EKS node IAM role authenticates to the cluster as a node
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#privesc-to-cluster-admin
+  source_revision: 171e422
+  summary: Credentials of the EKS node IAM role can obtain the privileges of the node identity (system:node:<name>, group system:nodes) mapped to that instance session.
+  source_kind: cloud_identity
+  source_selector:
+    eks_access_entry_type: EC2_LINUX
+  requires:
+    all_of: []
+  target:
+    kind: k8s_node
+    selector:
+      k8s_nodes_mapped_to_cloud_identity: true
+    scope: cluster
+    aggregate_as: "Nodes mapped to the node role in {cluster}"
+  conditions:
+    - id: node_name_from_session
+      description: The username is derived from the instance (EC2PrivateDNSName) of the role session; stolen instance credentials map to that instance's node. Principals able to assume the node role with another session can reach other nodes.
+  blockers: []
+  confidence: derived
+  severity: high
+  mitigation: Block pod access to IMDS so node role credentials cannot be stolen from pods, and keep privileged ServiceAccounts' pods on dedicated nodes.
+  references:
+    - https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html
+  notes: Combined with k8s-nodes-node-mint-pod-sa-tokens this yields the "node IAM role to cluster-admin" path when privileged ServiceAccounts' pods share the node. Mapping is via access entries of type EC2_LINUX/EC2_WINDOWS or aws-auth mapRoles to system:nodes. Evaluated from the related AWS snapshot; an EC2_LINUX entry for the node role is derived, no entry for the role (entries collected) is conditional because aws-auth mapRoles contents are not collected (dropped in API-only mode), and the selector is not evaluated without the eks_access_entry inventory. EC2_WINDOWS-only node roles are not matched by this entry's EC2_LINUX source selector.
+
+- id: k8s-cloud-pivot-secret-static-gcp-sa-key
+  provider: k8s
+  service: gke
+  title: Read a static Google service-account key stored in a Secret
+  source: src/pentesting-cloud/kubernetes-security/kubernetes-post-exploitation/kubernetes-pivoting-to-clouds.md#static-google-service-account-key-mounted-as-a-secret
+  source_revision: a66f094ede
+  summary: The source can obtain the privileges of a Google service account by reading its static JSON key from a Kubernetes Secret, directly or by mounting the Secret in a pod.
+  requires:
+    all_of: []
+    any_of:
+      - - {verb: get, resource: secrets, namespace: "{target.namespace}", resource_name: "{target.name}"}
+      - - {verb: list, resource: secrets, namespace: "{target.namespace}"}
+      - - {verb: watch, resource: secrets, namespace: "{target.namespace}"}
+      # Mount the Secret in a pod the source creates directly or through a controller.
+      - - any_of:
+            - {verb: create, resource: pods, namespace: "{target.namespace}"}
+            - {verb: create, resource: deployments, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: daemonsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: statefulsets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicasets, api_group: apps, namespace: "{target.namespace}"}
+            - {verb: create, resource: replicationcontrollers, namespace: "{target.namespace}"}
+            - {verb: create, resource: jobs, api_group: batch, namespace: "{target.namespace}"}
+            - {verb: create, resource: cronjobs, api_group: batch, namespace: "{target.namespace}"}
+  target:
+    kind: cloud_identity
+    selector:
+      k8s_secret_holds_cloud_credential: gcp
+    scope: cluster
+    aggregate_as: "Google service-account keys in Secrets of {cluster}"
+  conditions:
+    - id: secret_content_not_verified
+      description: The Secret is recognised from its metadata only (name, labels, annotations, type); its data is never read, so the key may be absent, disabled or expired.
+    - id: gsa_privileges_unknown
+      description: The Google service account behind the key is not resolved, so its GCP privileges are evaluated separately.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Replace static service-account keys with GKE Workload Identity Federation and disable key creation by organization policy.
+  references:
+    - https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity
+  notes: Also maps kubernetes-pivoting-to-clouds.md#mounting-gcp-sa-keys-as-secret (same technique). pods (or controller) create in the namespace lets the source mount the Secret as a volume and read the key (a66f094ede).

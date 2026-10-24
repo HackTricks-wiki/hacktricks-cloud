@@ -1,0 +1,35 @@
+# Amazon DynamoDB table-policy permission gain for an exact same-account IAM user.
+# Source: hacktricks-cloud aws-dynamodb-privesc/README.md (rev fd9bf8863b).
+
+- id: aws-dynamodb-putresourcepolicy-self-getitem
+  provider: aws
+  service: dynamodb
+  title: Grant the caller permission to read items from a table
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc/README.md#dynamodbputresourcepolicy-and-optionally-dynamodbgetresourcepolicy
+  source_revision: fd9bf8863b
+  summary: A same-account IAM user who can replace one table policy can name itself and gain GetItem on that table.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: dynamodb:PutResourcePolicy
+        resource: "{target.arn}"
+  target:
+    kind: aws_verified_authority
+    selector:
+      aws_dynamodb_policy_self_grant: true
+    scope: same_account
+    outcome: permission_grant
+    grants: ["dynamodb:GetItem on the exact reviewed table"]
+    aggregate_as: "DynamoDB GetItem self-grants in {account}"
+  conditions:
+    - id: table_policy_propagation
+      description: The new resource policy may take time to become effective; no item read is observed.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Restrict dynamodb:PutResourcePolicy on sensitive tables and use explicit denies where a caller must never read items.
+  references:
+    - https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/rbac-auth-iam-id-based-policies-DDB.html
+    - https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/rbac-iam-actions.html
+    - https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutResourcePolicy.html
+  notes: Only an exact collected active table using the default AWS-owned encryption and a same-account IAM user with effective PutResourcePolicy, no prior GetItem and no surviving identity, boundary or organization deny qualify. Replacing the table policy can remove an old table-policy Deny. A direct user grant bypasses a boundary's implicit deny; an explicit boundary Deny still blocks it. An existing account-root Allow only delegates to IAM and is not prior user access. Tables using AWS-managed or customer-managed KMS keys remain unresolved until key authorization is joined.

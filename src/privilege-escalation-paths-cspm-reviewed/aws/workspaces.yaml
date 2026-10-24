@@ -1,0 +1,50 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon WorkSpaces (WorkSpaces Instances) privilege escalation techniques.
+# Source: hacktricks-cloud aws-workspaces-privesc/README.md (rev 171e422299).
+
+- id: aws-workspaces-instances-passrole-createworkspaceinstance
+  provider: aws
+  service: workspaces-instances
+  title: Create a WorkSpaces instance with a passed instance profile
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-workspaces-privesc/README.md#workspaces-instancescreateworkspaceinstance-iampassrole-ec2runinstances
+  source_revision: 171e422299
+  summary: The source can obtain the privileges of any passable instance-profile role trusting ec2.amazonaws.com by launching a WorkSpaces instance whose user data it controls.
+  requires:
+    all_of:
+      - action: workspaces-instances:CreateWorkspaceInstance
+        resource: "*"
+      - action: iam:PassRole
+        resource: "{target.arn}"
+      - action: ec2:RunInstances
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: ec2.amazonaws.com
+      has_instance_profile: true
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Instance-profile roles passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - workspaces_instances_bound_launch_role_effect
+  conditions:
+    - id: forward_access_session
+      description: ec2:RunInstances is evaluated through a forward access session; aws:CalledVia conditions must admit workspaces-instances.amazonaws.com.
+    - id: service_linked_role
+      description: The AWSServiceRoleForWorkSpacesInstances service-linked role must exist (or the source needs iam:CreateServiceLinkedRole).
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: critical
+  mitigation: Restrict iam:PassRole on instance-profile roles and treat workspaces-instances:CreateWorkspaceInstance like ec2:RunInstances.
+  references:
+    - https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-instances.html
+  notes: ManagedInstanceRequest accepts an instance profile and user data. A concrete edge requires fresh reviewed evidence that a supported configuration launched, the exact profile was attached, controlled user data executed, and a useful action succeeded under that role but not for the caller. Current RunInstances grants must cover the exact AMI, network and instance resources with aws:CalledVia=workspaces-instances.amazonaws.com; PassRole must allow ec2.amazonaws.com and the service-linked role must be ready. Missing or conflicting execution evidence remains unresolved.

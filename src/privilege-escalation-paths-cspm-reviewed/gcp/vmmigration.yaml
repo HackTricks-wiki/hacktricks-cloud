@@ -1,0 +1,45 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+
+# GCP Migrate to Virtual Machines privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-vm-migration-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# attached_to_service: vmmigration_target_default -> the runtime service account already selected in a MigratingVm's
+# computeEngineTargetDefaults ({target.host_resource} is that MigratingVm).
+- id: gcp-vmmigration-migratingvm-metadata-clone
+  provider: gcp
+  service: vmmigration
+  title: Add startup metadata to a migrating VM and clone it with its configured runtime service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-vm-migration-privesc.md#vmmigrationmigratingvmsupdate--vmmigrationclonejobscreate--execute-startup-metadata-as-the-target-vm-identity
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the runtime service account already configured in the target defaults of every MigratingVm it can update and clone.
+  requires:
+    all_of:
+    - action: vmmigration.migratingVms.update
+      resource: '{target.host_resource}'
+    - action: vmmigration.cloneJobs.create
+      resource: '{target.host_resource}'
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: vmmigration_target_default
+      gcp_vmmigration_metadata_clone_path: true
+    scope: any
+    aggregate_as: Runtime SAs configured on MigratingVms the source can update and clone
+  conditions:
+  - id: existing_sa_default
+    description: The same existing MigratingVm must select the runtime service account in its target defaults and permit both the update and clone actions.
+  - id: service_agent_trust
+    description: The host-project Migrate to Virtual Machines service agent needs roles/vmmigration.serviceAgent on the target project and Service Account User on the runtime SA.
+  - id: guest_startup
+    description: The cloned guest must run the startup script (working guest environment) and have an exfiltration path; the token is limited by the VM's access scopes.
+  blockers:
+  - gcp_deny_policy
+  - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict vmmigration.migratingVms.update and cloneJobs/cutoverJobs.create (roles/vmmigration.admin) and avoid attaching privileged runtime SAs to migration target defaults.
+  references:
+  - https://docs.cloud.google.com/migrate/virtual-machines/docs/5.0/get-started/target-sa-compute-engine
+  - https://docs.cloud.google.com/migrate/virtual-machines/docs/5.0/reference/rest/v1/projects.locations.sources.migratingVms.cloneJobs/create
+  - https://docs.cloud.google.com/migrate/virtual-machines/docs/5.0/reference/roles-reference
+  notes: The caller needs no actAs; the service agent performs the attachment. Does not yield the service agent's own identity. A cut-over job delivers the same metadata.

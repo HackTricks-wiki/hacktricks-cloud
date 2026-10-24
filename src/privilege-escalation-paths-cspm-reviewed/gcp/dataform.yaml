@@ -1,0 +1,51 @@
+# Active GCP privilege escalation catalog: each entry must show the source principal's permissions and actions leading to a named second principal or to additional effective permissions for the source. A data read or secret access alone is not escalation; credential paths require verified usable credentials tied to the exact target principal. Every active source must cite a GCP privilege-escalation page and the technique's heading anchor.
+# GCP Dataform privilege escalation techniques (run-as service account limited to BigQuery jobs).
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-dataform-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Google enforces "strict act-as mode" on all repositories: the caller needs iam.serviceAccounts.actAs on the effective
+# service account for repository serviceAccount changes, manual workflow invocations, workflow configs and release configs.
+# Scheduled runs are started by the Dataform service agent, which must hold Token Creator (and Service Account User) on
+# the effective SA. Compilation runs in Google's environment; only the resulting BigQuery jobs run as the SA.
+
+- id: gcp-dataform-workflow-invocation-actas
+  provider: gcp
+  service: dataform
+  title: Run a Dataform workflow invocation as a chosen service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-dataform-privesc.md#dataformrepositoriescreate--iamserviceaccountsactas--create-an-attacker-controlled-run-as-repository
+  source_revision: 171e422
+  summary: A caller that can act as a service account may run authored Dataform SQL through an exact repository or enabled creator grant when the Dataform service agent can use that account and the SQL can read or export a protected table or create a table in a protected dataset.
+  requires:
+    all_of:
+      - action: iam.serviceAccounts.actAs
+        resource: "{target.resource}"
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_bounded_service_execution: dataform_workflow
+      gcp_actas_granted_on_target: true
+    scope: any
+    outcome: bounded_authority
+    aggregate_as: "Service accounts usable as Dataform workflow identity in {project}"
+  conditions:
+    - id: exact_repository_route
+      description: The caller must hold a complete code-write, compilation, and invocation route on one repository, or be eligible for the creator admin grant in one enabled location.
+    - id: exact_bigquery_gain
+      description: The service account must run jobs and either read a named ordinary table into a same-location caller-readable dataset, export it to a caller-readable bucket, or create a table in a named dataset where the caller lacks write access.
+    - id: service_agent_token_creator
+      description: The Dataform service agent (service-<number>@gcp-sa-dataform) must hold Token Creator on the target SA, otherwise invocations fail.
+    - id: cross_project_attachment
+      description: A repository using a service account from another project also needs the target project's effective cross-project attachment policy explicitly disabled.
+    - id: create_self_admin
+      description: repositories.create alone suffices because the creator can be granted roles/dataform.admin on the new repository at creation; repositories.setIamPolicy self-grants the same on an existing repository.
+    - id: bigquery_only
+      description: The SA identity is used only for BigQuery jobs (queries, DDL/DML, EXPORT DATA), not handed to the source as a general token.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Grant actAs only on dedicated Dataform SAs, do not grant the Dataform service agent Token Creator on privileged SAs, and restrict roles/dataform.admin and roles/dataform.editor.
+  references:
+    - https://docs.cloud.google.com/dataform/docs/strict-act-as-mode
+    - https://docs.cloud.google.com/dataform/docs/required-access
+  notes: Covers the repository serviceAccount, per-invocation invocationConfig.serviceAccount, repo setIamPolicy and direct-commit variants. Google's strict act-as mode (enforced for all repositories) requires actAs on the effective SA for repository/workflow-config creation and updates, release-config updates and manual invocations, so actAs is always required here (HackTricks at 171e422 agrees).

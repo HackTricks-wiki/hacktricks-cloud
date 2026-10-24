@@ -1,0 +1,80 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon Managed Service for Apache Flink privilege escalation techniques.
+# Source: hacktricks-cloud aws-managed-flink-privesc/README.md (rev 171e422299).
+# Uses {target.resource_arn} and via_resource_type (see header of lambda.yaml). Applications carry a service execution role
+# trusting kinesisanalytics.amazonaws.com; IAM actions use the kinesisanalytics prefix.
+
+- id: aws-flink-studio-presigned-url
+  provider: aws
+  service: kinesisanalytics
+  title: Open an existing Studio notebook with its execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#studio-presigned-url-to-zeppelin-execution
+  source_revision: 171e422299
+  summary: A principal allowed to open a running Studio notebook may run work through its recorded execution role.
+  requires:
+    all_of: []
+  source_kind: [aws_user, aws_role]
+  target:
+    kind: aws_role
+    scope: same_account
+    aggregate_as: Execution roles of running Studio notebooks in {account}
+    outcome: workload_execution
+  preconditions:
+  - flink_existing_studio_role_session
+  conditions:
+  - id: notebook_execution
+    description: The presigned URL must be used while valid and the notebook must permit code or query execution.
+  blockers:
+  - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict CreateApplicationPresignedUrl to approved Studio notebooks and keep notebook execution roles least privileged.
+  references:
+  - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplicationPresignedUrl.html
+  - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_DescribeApplication.html
+  - https://docs.aws.amazon.com/managed-flink/latest/java/how-notebook.html
+  notes: The evaluator joins a RUNNING INTERACTIVE application to its recorded ServiceExecutionRole and requires CreateApplicationPresignedUrl on the same application ARN. No PassRole or application mutation is needed.
+
+- id: aws-flink-passrole-createapplication
+  provider: aws
+  service: kinesisanalytics
+  title: Create and start a Managed Flink application with a passed execution role
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-managed-flink-privesc/README.md#createapplication--iampassrole--malicious-code
+  source_revision: 171e422299
+  summary: The source can start Flink application code it controls using a passable service role.
+  requires:
+    all_of:
+      - action: iam:PassRole
+        resource: "{target.arn}"
+        request_context:
+          iam:PassedToService: kinesisanalytics.amazonaws.com
+      - action: kinesisanalytics:CreateApplication
+        resource: "*"
+  target:
+    kind: aws_role
+    selector:
+      trust_allows_service: kinesisanalytics.amazonaws.com
+      resource_permission_covers_target: iam:PassRole
+    scope: same_account
+    aggregate_as: "Roles trusting kinesisanalytics.amazonaws.com passable in {account}"
+    outcome: workload_execution
+  preconditions:
+    - flink_new_application_startable
+  conditions:
+    - id: controlled_code
+      description: The source can provide application ZIP content in CreateApplication; code supplied from S3 instead needs the execution role to read that object.
+    - id: passrole_condition_key
+      description: iam:PassedToService conditions may restrict which roles can be passed.
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict iam:PassRole on Flink roles with iam:PassedToService=kinesisanalytics.amazonaws.com and restrict CreateApplication to the deployment pipeline.
+  references:
+    - https://docs.aws.amazon.com/managed-flink/latest/apiv2/API_CreateApplication.html
+  notes: The service does not expose role credentials directly; the code acts with the role's permissions. CreateApplication is authorized on * and StartApplication on the new application's ARN.

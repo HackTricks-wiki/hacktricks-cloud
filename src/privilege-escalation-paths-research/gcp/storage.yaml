@@ -1,0 +1,215 @@
+# GCP Cloud Storage privilege escalation techniques.
+# Source: hacktricks-cloud gcp-privilege-escalation/gcp-storage-privesc.md (rev 171e422).
+# Placeholder / selector conventions: see the header of catalog/gcp/iam.yaml.
+# Service-specific bucket write techniques (Composer, Cloud Functions, App Engine, Dataflow) live in those service files.
+
+- id: gcp-storage-hmackeys-create
+  provider: gcp
+  service: storage
+  title: Create an HMAC key for an in-project service account
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagehmackeyscreate--mint-a-cloud-storage-credential-for-another-service-account
+  source_revision: 171e422
+  summary: The source can obtain the Cloud Storage privileges of every service account in each project where it holds storage.hmacKeys.create.
+  requires:
+    all_of:
+      - action: storage.hmacKeys.create
+        resource: "*"
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_sa_in_scope_of_permission: true
+    scope: same_project
+    aggregate_as: "Service accounts of {project} usable through Storage HMAC keys"
+  conditions:
+    - id: storage_only
+      description: An HMAC key authenticates only to the Cloud Storage XML (S3-interoperable) API, so only the SA's Cloud Storage permissions are obtained, not its other IAM permissions.
+    - id: hmac_constraint
+      description: Org policy storage.restrictAuthTypes rejects creation and use only when its denied values cover service-account HMAC signed requests.
+    - id: key_quota
+      description: The service account must have fewer than 10 non-deleted HMAC keys.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+    - {id: org_policy_constraint, constraint: storage.restrictAuthTypes}
+    - {id: org_policy_constraint, constraint: iam.disableServiceAccountKeyCreation}
+    - {id: org_policy_constraint, constraint: iam.managed.disableServiceAccountKeyCreation}
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.hmacKeys.create (roles/storage.hmacKeyAdmin, roles/storage.admin at project level) and enforce storage.restrictAuthTypes.
+  references:
+    - https://cloud.google.com/storage/docs/authentication/hmackeys
+    - https://docs.cloud.google.com/storage/docs/authentication/managing-hmackeys
+    - https://docs.cloud.google.com/storage/docs/json_api/v1/projects/hmacKeys/create
+  notes: No actAs or SA-level permission is needed; any in-project SA email is accepted (HackTricks). The edge over-approximates when the engine treats the target node as full SA privileges; the storage-only limit must be applied by the consumer (e.g. reaching Composer/Functions buckets of that SA).
+
+- id: gcp-storage-buckets-setiampolicy-composer
+  provider: gcp
+  service: storage
+  title: Self-grant write on a Composer environment bucket through the bucket IAM policy
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of every Composer environment whose bucket IAM policy it controls.
+  requires:
+    any_of:
+      - - action: storage.buckets.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+      - - action: storage.managedFolders.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: composer_environment
+    scope: any
+    aggregate_as: "SAs of Composer environments whose bucket IAM the source controls"
+  conditions:
+    - id: followup_write
+      description: The self-granted object write then drops a DAG that runs as the environment SA (see gcp-composer-bucket-write).
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+    - id: blind_replace
+      description: setIamPolicy alone replaces the whole bucket policy; a non-destructive read-modify-write also needs storage.buckets.getIamPolicy.
+    - id: managed_folder
+      description: The managed-folder alternative needs a uniform-access bucket with a managed folder covering the dags/ prefix; it grants object write only under that prefix.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+    - https://docs.cloud.google.com/composer/docs/composer-3/access-control
+  confidence: derived
+  severity: critical
+  mitigation: Restrict storage.buckets.setIamPolicy (roles/storage.admin) on Composer and other code-bearing buckets.
+  notes: Dataproc staging and unpinned Cloud Build StorageSource consumers are modelled by gcp-storage-buckets-setiampolicy-code-consumers; function source and App Engine staging bucket techniques are race-conditional and not duplicated here.
+
+- id: gcp-storage-cloudbuild-unpinned-storagesource-poison
+  provider: gcp
+  service: storage
+  title: Replace an unpinned Cloud Build StorageSource archive consumed by a later build
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storageobjectscreate--storageobjectsdelete--poison-an-unpinned-cloud-build-storagesource
+  source_revision: 171e422
+  summary: The source can obtain the privileges of the build service account of Cloud Build triggers, automation or retried builds that fetch, without a pinned generation, a source archive object it can replace.
+  requires:
+    all_of:
+      - action: storage.objects.create
+        resource: "{target.host_resource.content_storage}"
+      - action: storage.objects.delete
+        resource: "{target.host_resource.content_storage}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service: cloudbuild_unpinned_storage_source
+    scope: any
+    aggregate_as: "Build SAs of builds consuming source archives the source can replace"
+  conditions:
+    - id: unpinned_reuse
+      description: A later legitimate build creation, trigger invocation or builds.retry must reuse the exact bucket/object with StorageSource.generation omitted; generation-pinned sources are unaffected.
+    - id: executes_source
+      description: The build steps must execute or trust content from the archive; replacing cloudbuild.yaml inside it is insufficient when steps are supplied separately to the API.
+    - id: object_protection
+      description: Retention locks, object holds or IAM Deny on the object block replacement.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Pin StorageSource.generation, keep build source buckets writable only by the build submitters, and avoid retrying builds from mutable sources.
+  references:
+    - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#StorageSource
+    - https://docs.cloud.google.com/build/docs/api/reference/rest/v1/projects.locations.builds/retry
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+  notes: No cloudbuild.builds.create or actAs is needed when another principal or automation starts or retries the vulnerable build. The build identity can be a user-specified SA, the Compute Engine default SA or the legacy Cloud Build SA.
+
+- id: gcp-storage-buckets-setiampolicy-code-consumers
+  provider: gcp
+  service: storage
+  title: Self-grant object write on a bucket whose code a Dataproc cluster or an unpinned Cloud Build source consumes
+  source: src/pentesting-cloud/gcp-security/gcp-privilege-escalation/gcp-storage-privesc.md#storagebucketssetiampolicy--storagemanagedfolderssetiampolicy--resource-scoped-self-grant
+  source_revision: 6fb9ac51fd
+  summary: The source can obtain the privileges of the service account of Dataproc clusters or Cloud Build builds that load code from a bucket whose IAM policy (or managed-folder policy) it controls, by granting itself object write and replacing the consumed object.
+  requires:
+    any_of:
+      - - action: storage.buckets.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+      - - action: storage.managedFolders.setIamPolicy
+          resource: "{target.host_resource.content_storage}"
+  target:
+    kind: gcp_service_account
+    selector:
+      attached_to_service:
+        - dataproc_cluster
+        - cloudbuild_unpinned_storage_source
+    scope: any
+    aggregate_as: "SAs of workloads loading code from buckets whose IAM the source controls"
+  conditions:
+    - id: followup_replace
+      description: The self-granted role must include storage.objects.create and storage.objects.delete so the consumed object can be replaced (see gcp-dataproc-staging-object-replace and gcp-storage-cloudbuild-unpinned-storagesource-poison); a later job, node startup or build must load it by name without a pinned generation.
+    - id: blind_replace
+      description: setIamPolicy alone replaces the whole policy; a non-destructive read-modify-write also needs the matching getIamPolicy permission.
+    - id: allowed_member_domains
+      description: iam.allowedPolicyMemberDomains can reject bindings for external principals.
+  blockers:
+    - gcp_deny_policy
+    - vpc_sc_perimeter
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.buckets.setIamPolicy and storage.managedFolders.setIamPolicy on buckets that hold code, staging artifacts or build sources.
+  references:
+    - https://docs.cloud.google.com/storage/docs/access-control/iam-permissions
+- id: gcp-designcenter-bucket-credential
+  provider: gcp
+  service: storage
+  title: Read known bucket objects through Design Center Viewer role
+  source: src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-application-design-center-post-exploitation.md#rolesdesigncenterviewer--read-objects-from-known-cloud-storage-buckets
+  source_revision: 0b36331
+  summary: Credential in known bucket object; emit only for the exact verified source, resource and target.
+  requires:
+    all_of:
+    - action: storage.objects.get
+      resource: '*'
+  source_kind:
+  - gcp_user
+  - gcp_service_account
+  target:
+    kind: gcp_verified_authority
+    selector:
+      gcp_challenge_fact: gcp-designcenter-bucket-credential
+    scope: any
+    outcome: scope_control
+    aggregate_as: Verified targets for Read known bucket objects through Design Center Viewer role
+  conditions:
+  - id: exact_verified_prerequisites
+    description: Exact source, resource, target, scope and gain must be verified; missing fact is UNKNOWN. Known
+      bucket/object; effective role grant supplies object get; object contains usable credential mapped to a principal.
+      Storage list is optional discovery.
+  confidence: conditional
+  severity: high
+  mitigation: Limit storage.objects.get to trusted operators and monitor the target-specific use.
+  references:
+  - src/pentesting-cloud/gcp-security/gcp-post-exploitation/gcp-application-design-center-post-exploitation.md#rolesdesigncenterviewer--read-objects-from-known-cloud-storage-buckets
+- id: gcp-storage-object-sa-credential
+  provider: gcp
+  service: storage
+  title: Read credential from Storage object or older generation of a GCP service account
+  source: src/pentesting-cloud/gcp-security/gcp-services/gcp-storage-enum.md#enumeration
+  source_revision: 0b36331
+  summary: A readable storage object generation contains a verified reusable credential belonging to another GCP
+    service account.
+  requires:
+    all_of:
+    - action: storage.objects.get
+      resource: '*'
+  target:
+    kind: gcp_service_account
+    selector:
+      gcp_challenge_fact: gcp-storage-object-sa-credential
+    scope: any
+    outcome: credentials
+  conditions:
+  - id: verified_content
+    description: Emit only for exact source, resource, target and scope evidence after verifying credential validity;
+      absent or incomplete content is UNKNOWN, and metadata or secret names alone do not qualify.
+  confidence: conditional
+  severity: high
+  mitigation: Restrict storage.objects.get on sensitive resources; rotate exposed service-account credentials.
+  references:
+  - https://docs.cloud.google.com/storage/docs/json_api/v1/objects/get

@@ -1,0 +1,101 @@
+# catalog_description: Active Azure entries require an identified source principal or intrinsic credential foothold,
+# X permission or capability enabling a stated action, and an exact target principal credential, token,
+# role/group membership, or additional permissions granted to the caller. Secret/config reads alone
+# are excluded unless verified content establishes a usable credential for a named target principal.
+# Canonical policy: peaso/privesc/catalog_policy.yaml
+# Azure Container Registry techniques (declarative only).
+# Source: hacktricks-cloud az-container-registry-privesc.md (rev 171e422, re-verified).
+
+- id: azure-acr-task-write-existing-identity
+  provider: azure
+  service: container_registry
+  title: Create or update an ACR Task running with the task's managed identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#microsoftcontainerregistryregistriestaskswrite
+  source_revision: db5b136660
+  summary: The source can obtain the privileges of the ACR Task's managed identities.
+  requires:
+    all_of:
+      - action: Microsoft.ContainerRegistry/registries/tasks/write
+        scope: '{target.host_resource}'
+  target:
+    kind: azure_managed_identity
+    selector:
+      attached_to_service: Microsoft.ContainerRegistry/registries/tasks
+      azure_acr_existing_task_identity: true
+    scope: inherited_scope
+    aggregate_as: Identities of ACR Task {target.host_resource}
+  conditions:
+    - id: task_runs
+      description: The task must run; tasks/write can itself set a timer trigger, so no separate run permission is strictly needed (the run waits for the schedule).
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict tasks/write and keep task identities least-privileged.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
+  notes: Only an existing task whose native identity matches the target qualifies; write on the exact task can change its steps or schedule without replacing its identity.
+
+- id: azure-acr-task-assign-user-assigned-identity
+  provider: azure
+  service: container_registry
+  title: Create an ACR Task with a user-assigned identity
+  source: src/pentesting-cloud/azure-security/az-privilege-escalation/az-container-registry-privesc.md#microsoftcontainerregistryregistriestaskswrite
+  source_revision: db5b136660
+  summary: The source can obtain the privileges of user-assigned identities assignable in scope.
+  requires:
+    all_of:
+      - action: Microsoft.ManagedIdentity/userAssignedIdentities/assign/action
+        scope: '{target.id}'
+      - action: Microsoft.ContainerRegistry/registries/tasks/write
+        scope: '{pivot}'
+  pivot_resource_type: Microsoft.ContainerRegistry/registries
+  target:
+    kind: azure_managed_identity
+    selector:
+      managed_identity_type: user_assigned
+      azure_identity_assignable_in_scope: true
+      azure_acr_assignable_uami: true
+    scope: inherited_scope
+    aggregate_as: User-assigned identities assignable in {scope}
+  conditions:
+    - id: task_runs
+      description: The task must run (schedule, source trigger, or a separate run permission).
+  blockers:
+    - azure_deny_assignment
+  confidence: derived
+  severity: high
+  mitigation: Restrict userAssignedIdentities/assign/action and tasks/write.
+  references:
+    - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-tasks-authentication-managed-identity
+  notes: Task write is evaluated on an inventoried ACR registry or existing task, and the target UAMI must have a matching resource record; missing inventory is unresolved.
+
+- id: azure-acr-layer-credential
+  provider: azure
+  service: container_registry
+  title: Extract credentials from ACR image layers
+  source: src/pentesting-cloud/azure-security/az-post-exploitation/az-container-registry-post-exploitation.md#microsoftcontainerregistryregistriespullread
+  source_revision: bd4bcd0ea3
+  summary: Read a verified usable credential from an ACR image layer and gain its Entra service principal permissions.
+  requires:
+    all_of:
+    - action: Microsoft.ContainerRegistry/registries/pull/read
+      scope: '{pivot}'
+      data_action: true
+  pivot_resource_type: Microsoft.ContainerRegistry/registries
+  target:
+    kind: azure_service_principal
+    selector:
+      credential_stored_in_scope: '{pivot}'
+    scope: any
+    aggregate_as: Verified credential holders in {pivot}
+  conditions:
+  - id: verified_credential
+    description: Only a collected, mapped, still-valid service-principal credential in the readable content creates this edge; uncollected, partial, or unverified content creates no path.
+  blockers: []
+  confidence: conditional
+  severity: high
+  mitigation: Remove reusable Entra credentials from the content and restrict the listed read permission.
+  references:
+  - https://learn.microsoft.com/en-us/azure/container-registry/container-registry-concepts
+  notes: Only an exact, usable credential mapped to a named Entra service principal by reviewed azure_privesc_challenge_evidence creates a path; missing or incomplete review creates no path.

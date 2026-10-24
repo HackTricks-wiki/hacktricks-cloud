@@ -1,0 +1,72 @@
+# AWS privilege escalation catalog: include only a known principal gaining another
+# exact principal or new effective permissions through specified actions. A secret,
+# token, API key, or password read is an edge only after evidence proves its exact
+# credential subject, usability, and additional authority. Generic data disclosure,
+# application effects, and unknown targets are not privilege escalation paths.
+
+# Amazon QuickSight application-plane privilege escalation techniques (aws_service_plane_admin targets).
+# Source: hacktricks-cloud aws-quicksight-privesc/README.md (rev 171e422299).
+# QuickSight user inventory is collected, but a new ADMIN registration needs
+# subscription, IAM identity, and requested user ARN evidence before sign-off.
+
+- id: aws-quicksight-updateuser-admin
+  provider: aws
+  service: quicksight
+  title: Promote an existing IAM-backed QuickSight user to administrator
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md#quicksightupdateuser--self-promote-to-admin
+  source_revision: 171e422299
+  summary: An IAM user can promote its own active QuickSight identity to ADMIN when UpdateUser is allowed on that exact QuickSight user.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: quicksight:UpdateUser
+        resource: "{target.resource_arn}"
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: quicksight
+      quicksight_existing_iam_user: true
+    scope: same_account
+    aggregate_as: "QuickSight administrator for {target.resource_arn}"
+    grants: [QuickSight ADMIN]
+  preconditions:
+    - quicksight_existing_iam_user_self_admin
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict quicksight:UpdateUser on users' own QuickSight identities and monitor changes to ADMIN.
+  notes: PrincipalId must exactly match the caller's immutable IAM UserId; a role session, QuickSight-native user, inactive user, or custom permission restriction is not a definite self-promotion.
+
+- id: aws-quicksight-registeruser-admin
+  provider: aws
+  service: quicksight
+  title: Register an IAM user as a QuickSight administrator
+  source: src/pentesting-cloud/aws-security/aws-privilege-escalation/aws-quicksight-privesc/README.md#quicksightregisteruser--map-a-controlled-iam-identity-to-an-admin
+  source_revision: 171e422299
+  summary: The source IAM user can register itself as a QuickSight ADMIN, gaining control of the account's QuickSight resources and data sources.
+  source_kind: [aws_user]
+  requires:
+    all_of:
+      - action: quicksight:RegisterUser
+        resource: "arn:{source.partition}:quicksight:{target.region}:{target.account}:user/default/{source.name}"
+        request_context:
+          quicksight:IamArn:
+            source_principal: true
+          quicksight:SessionName:
+            absent: true
+  target:
+    kind: aws_service_plane_admin
+    selector:
+      service_plane: quicksight
+    scope: same_account
+    aggregate_as: "QuickSight administrators in {account}"
+    grants: [QuickSight ADMIN]
+  preconditions:
+    - quicksight_subscribed
+  blockers:
+    - scp_or_boundary_deny
+  confidence: conditional
+  severity: high
+  mitigation: Restrict quicksight:RegisterUser to QuickSight administrators and alert on RegisterUser with Role=ADMIN.
+  notes: The request sets UserName to the source IAM user's name and IamArn to that same user, so RegisterUser authorizes the exact new user/default/<name> ARN. It omits SessionName, which is required only for assumed IAM roles. IAM role sessions need a separate session-bound path. This grants QuickSight administration, not IAM administrator access.
