@@ -20,6 +20,7 @@ LANGUAGES = (
     ("Swahili", "sw"),
     ("Turkish", "tr"),
     ("Ukrainian", "uk"),
+    ("Vietnamese", "vi"),
     ("Chinese", "zh"),
 )
 
