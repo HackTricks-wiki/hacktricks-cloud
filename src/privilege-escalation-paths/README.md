@@ -1,40 +1,40 @@
-# Privilege escalation paths
+# Các đường dẫn leo thang đặc quyền
 
 {{#include ../banners/hacktricks-training.md}}
 
-HackTricks Cloud maintains the machine-readable privilege escalation catalog consumed by [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS). Each technique states which permissions a principal must effectively hold, and on which resources, to obtain the privileges of a set of target principals. Blue-CloudPEASS evaluates these entries offline against a read-only inventory snapshot and draws principal-to-principal attack paths, with the granting policy or binding as evidence and the mitigation that removes the path. Edit the canonical files here, rather than the copies in the consumer.
+HackTricks Cloud duy trì danh mục leo thang đặc quyền có thể đọc bằng máy, được [Blue-CloudPEASS](https://github.com/peass-ng/Blue-CloudPEASS) sử dụng. Mỗi kỹ thuật nêu rõ principal cần nắm giữ hiệu quả những quyền nào và trên tài nguyên nào để có được đặc quyền của một tập hợp principal mục tiêu. Blue-CloudPEASS đánh giá các mục này offline dựa trên snapshot kiểm kê chỉ đọc, vẽ các đường tấn công giữa các principal, đồng thời dùng policy hoặc binding cấp quyền làm bằng chứng và đưa ra biện pháp giảm thiểu loại bỏ đường dẫn. Hãy chỉnh sửa các tệp chuẩn tại đây, thay vì các bản sao trong consumer.
 
-Entries describe preconditions, the reachable targets and the mitigation only. They contain no commands, payloads or execution steps; the linked HackTricks page explains the technique.
+Các mục chỉ mô tả điều kiện tiên quyết, mục tiêu có thể tiếp cận và biện pháp giảm thiểu. Chúng không chứa lệnh, payload hay các bước thực thi; trang HackTricks được liên kết giải thích kỹ thuật.
 
-## Layout
+## Bố cục
 
-There is one directory per platform (`aws`, `gcp`, `azure`, `k8s`) and one `<service>.yaml` file per service, each holding a YAML list of techniques. Files named `_excluded*.yaml` list reviewed HackTricks techniques that intentionally have no entry, such as post-exploitation, persistence or techniques that cannot be modelled from configuration, with the reason. `privesc-technique.schema.json` is the exported JSON Schema for editor completion and validation.
+Mỗi nền tảng có một thư mục riêng (`aws`, `gcp`, `azure`, `k8s`) và mỗi dịch vụ có một tệp `<service>.yaml` chứa danh sách kỹ thuật dạng YAML. Các tệp có tên `_excluded*.yaml` liệt kê những kỹ thuật HackTricks đã được xem xét nhưng cố ý không có mục tương ứng, chẳng hạn như post-exploitation, persistence hoặc kỹ thuật không thể mô hình hóa từ cấu hình, kèm theo lý do. `privesc-technique.schema.json` là JSON Schema được xuất ra để hỗ trợ hoàn thành và xác thực trong editor.
 
-## Technique fields
+## Các trường kỹ thuật
 
-- `id`: globally unique, lowercase and kebab-case, prefixed with the platform.
-- `provider`, `service`, `title` and `summary`: one sentence describing what the source gains.
-- `source`: the HackTricks page and anchor documenting the technique, relative to this book. `source_revision` is the book commit that was read.
-- `requires`: the permissions the source must hold. `all_of` lists every required item, and `any_of` lists alternatives. AWS and GCP items use `action` and `resource`, Azure items use `action` (or `data_action`) and `scope`, Entra ID items use `entra_permission` or `entra_role`, and Kubernetes items use `verb`, `resource`, `subresource`, `api_group` and `namespace`. Placeholders such as `{target.arn}` bind a requirement to the target.
-- `target`: the target `kind`, a `selector` whose conditions must all hold for a principal to be reachable, and its `scope`.
-- `conditions` and `blockers`: what may prevent the path in practice, such as condition keys, SCPs, boundaries or admission policies.
-- `confidence`, `severity`, `mitigation`, `references` and optional `notes`.
+- `id`: duy nhất trên toàn cục, viết thường theo kebab-case và có tiền tố nền tảng.
+- `provider`, `service`, `title` và `summary`: một câu mô tả những gì nguồn có được.
+- `source`: trang HackTricks và anchor ghi lại kỹ thuật, tính tương đối với cuốn sách này. `source_revision` là commit của cuốn sách đã được đọc.
+- `requires`: các quyền mà nguồn phải nắm giữ. `all_of` liệt kê mọi mục bắt buộc, còn `any_of` liệt kê các lựa chọn thay thế. Các mục AWS và GCP dùng `action` và `resource`; mục Azure dùng `action` (hoặc `data_action`) và `scope`; mục Entra ID dùng `entra_permission` hoặc `entra_role`; mục Kubernetes dùng `verb`, `resource`, `subresource`, `api_group` và `namespace`. Các placeholder như `{target.arn}` liên kết một yêu cầu với mục tiêu.
+- `target`: `kind` của mục tiêu, `selector` có các điều kiện đều phải thỏa mãn để principal có thể tiếp cận, và `scope` của mục tiêu.
+- `conditions` và `blockers`: những yếu tố có thể ngăn cản đường dẫn trong thực tế, chẳng hạn như condition key, SCP, boundary hoặc admission policy.
+- `confidence`, `severity`, `mitigation`, `references` và `notes` (tùy chọn).
 
-Unknown fields, target kinds, selector keys and placeholders are rejected rather than ignored, so an entry can never silently widen or narrow its target set. Add support for a new selector in the consumer evaluator first.
+Các trường, loại mục tiêu, khóa selector và placeholder không xác định sẽ bị từ chối thay vì bị bỏ qua, để một mục không bao giờ âm thầm mở rộng hoặc thu hẹp tập mục tiêu. Trước tiên, hãy bổ sung hỗ trợ selector mới trong evaluator của consumer.
 
-### Schema v2 joins
+### Các bổ sung trong Schema v2
 
-The v2 loader adds two placeholders and one AWS selector, and allows the existing K8s running-pod selector on GCP targets. These fields require an exact join to collected inventory; missing inventory yields unknown coverage, not a reachable path.
+Loader v2 bổ sung hai placeholder và một selector AWS, đồng thời cho phép selector K8s dành cho pod đang chạy hiện có được dùng với mục tiêu GCP. Các trường này yêu cầu khớp chính xác với dữ liệu kiểm kê đã thu thập; nếu thiếu dữ liệu kiểm kê, phạm vi bao phủ sẽ không xác định, chứ không được xem là đường dẫn có thể tiếp cận.
 
-| Field | Use and required shape |
+| Trường | Cách dùng và cấu trúc bắt buộc |
 | --- | --- |
-| `{source.assumable_role_attached_policy_arn}` and `target.selector.via_assumable_role_attached_policy_covered_by: iam:CreatePolicyVersion` | Use together on an AWS `aws_account_admin` target. Every requirement alternative must include `iam:CreatePolicyVersion` on that placeholder. The policy must be attached to a role the source can assume in the same account; the evaluator checks policy version capacity and recomputes the role's effective permissions. `SetDefaultPolicyVersion` is not covered. |
-| `target.selector.k8s_sa_used_by_running_pod: true` | On a GCP `k8s_service_account` target with `scope: cluster`, selects KSAs used by running pods with an available token in the matched GKE cluster. Do not combine it with `k8s_sa_in_cluster` or `k8s_sa_has_token_secret`. Existing K8s use is unchanged. |
-| `{source_rolebound_clusterrole}` | Use as `resource_name` on K8s `clusterroles` requirements with `api_group: rbac.authorization.k8s.io` and `namespace: "*"`. Each alternative needs `escalate` and `update` or `patch` on the same name. The target must be a `k8s_service_account` with `scope: same_namespace` and `selector.k8s_sa_in_namespace: "{target.namespace}"`; a RoleBinding must bind the source in that namespace. |
+| `{source.assumable_role_attached_policy_arn}` và `target.selector.via_assumable_role_attached_policy_covered_by: iam:CreatePolicyVersion` | Dùng kết hợp trên mục tiêu AWS `aws_account_admin`. Mọi phương án thay thế trong yêu cầu phải bao gồm `iam:CreatePolicyVersion` trên placeholder đó. Policy phải được gắn vào một role mà nguồn có thể assume trong cùng tài khoản; evaluator kiểm tra khả năng tạo phiên bản policy và tính toán lại các quyền hiệu lực của role. Không hỗ trợ `SetDefaultPolicyVersion`. |
+| `target.selector.k8s_sa_used_by_running_pod: true` | Dùng trên mục tiêu GCP `k8s_service_account` với `scope: cluster` để chọn các KSA được pod đang chạy sử dụng, có token khả dụng trong GKE cluster tương ứng. Không kết hợp với `k8s_sa_in_cluster` hoặc `k8s_sa_has_token_secret`. Cách dùng hiện có với K8s không thay đổi. |
+| `{source_rolebound_clusterrole}` | Dùng làm `resource_name` trong các yêu cầu K8s `clusterroles` với `api_group: rbac.authorization.k8s.io` và `namespace: "*"`. Mỗi phương án thay thế cần có `escalate` và `update` hoặc `patch` trên cùng tên đó. Mục tiêu phải là `k8s_service_account` với `scope: same_namespace` và `selector.k8s_sa_in_namespace: "{target.namespace}"`; RoleBinding phải bind nguồn trong namespace đó. |
 
-## Validation and synchronization
+## Xác thực và đồng bộ hóa
 
-Run `python scripts/validate_privesc_paths.py --book-root .` with PyYAML installed before submitting changes. It checks the directory layout, every entry with the evaluator's strict loader (`scripts/privesc_paths_schema.py`, a copy of the Blue-CloudPEASS schema module), unique ids, source pages and heading anchors, and that the JSON Schema is current. Use `--peaso-root /path/to/Blue-CloudPEASS` to also compare both schema files byte-for-byte with the consumer. The book's pull-request workflow runs the same validation.
+Trước khi gửi thay đổi, hãy chạy `python scripts/validate_privesc_paths.py --book-root .` khi đã cài PyYAML. Lệnh này kiểm tra bố cục thư mục, mọi mục bằng strict loader của evaluator (`scripts/privesc_paths_schema.py`, bản sao của mô-đun schema Blue-CloudPEASS), các id duy nhất, trang nguồn và heading anchor, đồng thời kiểm tra JSON Schema đã được cập nhật chưa. Dùng `--peaso-root /path/to/Blue-CloudPEASS` để so sánh từng byte của cả hai tệp schema với consumer. Quy trình pull request của cuốn sách cũng chạy cùng bước xác thực này.
 
-Every Monday, Blue-CloudPEASS checks out the current `master` of this book, validates these files, and compares each file's SHA-256 hash with the hashes recorded at the previous synchronization. Upstream additions, updates and deletions replace unchanged consumer copies. A file changed on both sides is reported as a conflict, and technique ids are never dropped without an explicit reviewed ledger. Invalid content or a failed test leaves the consumer's default branch unchanged. Unrelated changes to the book produce no consumer commit.
+Vào mỗi thứ Hai, Blue-CloudPEASS checkout phiên bản `master` hiện tại của cuốn sách, xác thực các tệp này và so sánh SHA-256 hash của từng tệp với hash được ghi nhận trong lần đồng bộ trước. Các tệp được thêm, cập nhật hoặc xóa ở upstream sẽ thay thế bản sao trong consumer nếu bản sao đó chưa bị chỉnh sửa. Tệp bị thay đổi ở cả hai phía sẽ được báo là xung đột, và các id kỹ thuật không bao giờ bị xóa nếu không có ledger được xem xét rõ ràng. Nội dung không hợp lệ hoặc kiểm thử thất bại sẽ khiến nhánh mặc định của consumer không thay đổi. Các thay đổi không liên quan trong cuốn sách sẽ không tạo commit trong consumer.
 {{#include ../banners/hacktricks-training.md}}
