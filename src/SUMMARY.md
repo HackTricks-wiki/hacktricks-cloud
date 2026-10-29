@@ -20,6 +20,7 @@
     - [GH Actions - Cache Poisoning](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-cache-poisoning.md)
     - [Gh Actions - Context Script Injections](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-context-script-injections.md)
     - [GH Actions - npm Supply Chain Abuse](pentesting-ci-cd/github-security/abusing-github-actions/gh-actions-npm-supply-chain-abuse.md)
+  - [GitHub Release Asset Substitution](pentesting-ci-cd/github-security/github-release-asset-substitution.md)
   - [Accessible Deleted Data in Github](pentesting-ci-cd/github-security/accessible-deleted-data-in-github.md)
   - [Basic Github Information](pentesting-ci-cd/github-security/basic-github-information.md)
 - [Gitea Security](pentesting-ci-cd/gitea-security/README.md)
