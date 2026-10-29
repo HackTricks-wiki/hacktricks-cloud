@@ -1,4 +1,5 @@
 import argparse
+from functools import lru_cache
 import json
 import os
 from openai import OpenAI #pip3 install openai
@@ -8,6 +9,7 @@ import tempfile
 import subprocess
 import sys
 import tiktoken
+from requests.exceptions import RequestException
 import concurrent.futures
 from tqdm import tqdm #pip3 install tqdm
 import traceback
@@ -46,6 +48,7 @@ PROTECTED_MARKUP_RE = re.compile(
 )
 
 MODEL_PREFIX_ENCODINGS = [
+    ("gpt-6", "o200k_base"),
     ("gpt-5", "o200k_base"),
     ("gpt-4o", "o200k_base"),
     ("gpt-4.1", "o200k_base"),
@@ -131,24 +134,42 @@ def _sanitize(text: str) -> str:
     """
     return text.replace(DISALLOWED_SPECIAL, REPLACEMENT_TOKEN)
 
+@lru_cache(maxsize=32)
 def _get_encoding_for_model(model: str):
     """
     Return a tokenizer for the requested model.
 
     Tiktoken does not necessarily know custom or newly released model names,
     so resolve known model families by prefix before treating a model as
-    unknown. For example, ``gpt-5.6-luna`` uses the GPT-5 tokenizer even if
-    that exact name is absent from tiktoken's model registry.
+    unknown. GPT-6 aliases use the existing o200k_base token-count estimate
+    when tiktoken has no native mapping. A native mapping always takes priority.
     """
     try:
-        return tiktoken.encoding_for_model(model)
+        encoding_name = tiktoken.encoding_name_for_model(model)
     except KeyError:
         lowered_model = model.lower()
-        for prefix, encoding_name in MODEL_PREFIX_ENCODINGS:
+        for prefix, candidate in MODEL_PREFIX_ENCODINGS:
             if lowered_model.startswith(prefix):
-                return tiktoken.get_encoding(encoding_name)
-        print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
-        return tiktoken.get_encoding(FINAL_TOKENIZER_FALLBACK)
+                encoding_name = candidate
+                break
+        else:
+            print(f"Tokenizer for model {model} not found. Falling back to {FINAL_TOKENIZER_FALLBACK}.")
+            encoding_name = FINAL_TOKENIZER_FALLBACK
+
+    # Older containers may need to fetch the vocabulary on first use. Retry
+    # temporary DNS/HTTP failures before starting any paid translation requests.
+    for attempt in range(3):
+        try:
+            return tiktoken.get_encoding(encoding_name)
+        except (OSError, RequestException) as exc:
+            if attempt == 2:
+                raise RuntimeError(
+                    f"Could not initialize tokenizer {encoding_name} for {model} "
+                    f"after 3 attempts; no pages were translated: {exc}"
+                ) from exc
+            delay = 2 ** attempt
+            print(f"Tokenizer {encoding_name} could not be loaded: {exc}. Retrying in {delay} seconds.", flush=True)
+            time.sleep(delay)
 
 def preserve_ref_blocks(source: str, translated: str) -> str:
     """Restore complete mdBook reference blocks, including their file paths."""
@@ -672,6 +693,9 @@ def translate_file(language, file_path, file_dest_path, model, client):
 
 
 def translate_selected_files(language, paths, dest_folder, model, client, num_threads):
+    # Initialize once before worker threads race to download the same vocabulary.
+    if paths:
+        _get_encoding_for_model(model)
     failures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = {
@@ -685,7 +709,10 @@ def translate_selected_files(language, paths, dest_folder, model, client, num_th
                 failures.append((futures[future], exc))
                 print(f'Translation failed for {futures[future]}: {exc}')
     if failures:
-        raise RuntimeError(f'{len(failures)} pages failed translation; no pages from this batch were published')
+        details = '; '.join(f'{path}: {exc}' for path, exc in failures)
+        raise RuntimeError(
+            f'{len(failures)} pages failed translation; no pages from this batch were published. {details}'
+        ) from failures[0][1]
 
 
 """

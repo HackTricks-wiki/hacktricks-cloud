@@ -16,7 +16,8 @@ LABEL org.opencontainers.image.description="Pinned mdBook translation and deploy
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -34,6 +35,11 @@ RUN apt-get update \
         openai==3.6.0 \
         tiktoken==0.14.0 \
         tqdm==4.70.0
+
+# Persist vocabulary files in the image so translation never needs a runtime
+# download from openaipublic.blob.core.windows.net for these encodings.
+RUN python -c 'import tiktoken; [tiktoken.get_encoding(name) for name in ("o200k_base", "cl100k_base")]' \
+    && chmod -R a+rX /opt/tiktoken-cache
 
 COPY --from=mdbook-builder /usr/local/cargo/bin/mdbook /usr/local/bin/mdbook
 COPY --from=mdbook-builder /usr/local/cargo/bin/mdbook-alerts /usr/local/bin/mdbook-alerts

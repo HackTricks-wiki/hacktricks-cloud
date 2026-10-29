@@ -28,11 +28,12 @@ class TranslationBatchTests(unittest.TestCase):
                 raise RuntimeError("API failed")
 
         with tempfile.TemporaryDirectory() as destination:
-            with patch.object(translator, "translate_file", side_effect=translate):
-                with self.assertRaisesRegex(RuntimeError, "1 pages failed translation"):
+            with patch.object(translator, "_get_encoding_for_model"), patch.object(translator, "translate_file", side_effect=translate):
+                with self.assertRaisesRegex(RuntimeError, "1 pages failed translation.*src/broken.md: API failed") as failure:
                     translator.translate_selected_files(
                         "French", ["src/okay.md", "src/broken.md"], destination, "gpt-4o", None, 2
                     )
+                self.assertEqual(str(failure.exception.__cause__), "API failed")
         self.assertCountEqual(calls, ["src/okay.md", "src/broken.md"])
 
     def test_broken_directives_retry_with_exact_source_markup(self):
