@@ -136,6 +136,29 @@ def add_read_time(content):
     return new_content
 
 
+README_LINKS = re.compile(
+    r"^ {0,3}(?P<fence>`{3,}|~{3,})[^\n]*\n.*?^ {0,3}(?P=fence)[`~]*[ \t]*$"
+    r"|(?P<ticks>`+)[^`\n]+(?P=ticks)"
+    r"|(?P<start>\]\([ \t]*<?|^ {0,3}\[[^\]\n]+\]:[ \t]*<?|\bhref=[\"'])"
+    r"(?P<target>(?:[^\s<>\"'()?#]*/)?README\.md)"
+    r"(?=[?#\s)>\"'])",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def normalize_readme_links(content, source_path, chapter_sources):
+    def replace(match):
+        target = match["target"]
+        if target is None or target.startswith("/") or "://" in target:
+            return match[0]
+        target_source = path.normpath(path.join(path.dirname(source_path), target))
+        if target_source not in chapter_sources:
+            return match[0]
+        return match["start"] + target.removesuffix("README.md") + "index.html"
+
+    return README_LINKS.sub(replace, content)
+
+
 def iterate_chapters(sections):
     if isinstance(sections, dict) and "PartTitle" in sections: # Not a chapter section
         return
@@ -163,8 +186,10 @@ if __name__ == '__main__':
 
     # Handle both old (sections) and new (items) mdbook API
     book_items = book.get('sections') or book.get('items', [])
+    chapters = list(iterate_chapters(book_items))
+    chapter_sources = {chapter["source_path"] for chapter in chapters if chapter}
     
-    for chapter in iterate_chapters(book_items):
+    for chapter in chapters:
         if chapter is None:
             continue
         logger.debug(f"Chapter: {chapter['path']}")
@@ -175,6 +200,7 @@ if __name__ == '__main__':
         regex = r'{{[\s]*#file[\s]*}}(?:\n)?([^\\\n]*)(?:\n)?{{[\s]*#endfile[\s]*}}'
         new_content = re.sub(regex, files, new_content)
         new_content = add_read_time(new_content)
+        new_content = normalize_readme_links(new_content, chapter["source_path"], chapter_sources)
         chapter['content'] = new_content
 
     content = json.dumps(book)
