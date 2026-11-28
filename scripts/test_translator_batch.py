@@ -42,6 +42,9 @@ class TranslationBatchTests(unittest.TestCase):
             localized = translator.translate_summary("Japanese", source, None, "fixture", None, "ja")
         self.assertEqual(localized, source)
         translate.assert_not_called()
+        with patch.object(translator, "translate_text", return_value="# 1. Az - Defender para Nuvem"):
+            portuguese = translator.translate_summary("Brazilian Portuguese", source, None, "fixture", None, "pt")
+        self.assertIn("Defender para Nuvem", portuguese)
 
     def test_french_summary_accepts_shared_french_vocabulary(self):
         source = "# Summary\n\n# Introduction\n"

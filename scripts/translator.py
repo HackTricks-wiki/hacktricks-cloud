@@ -645,7 +645,7 @@ def translate_summary(
                 if label is not None and not unchanged_summary_label(label, localized, language):
                     translations[label] = localized
 
-    translations.update({label: label for label in labels if fixed_summary_name(label)})
+    translations.update({label: label for label in labels if fixed_summary_name(label, language)})
     pending = [label for label in labels if label not in translations]
     for start in range(0, len(pending), 40):
         translations.update(translate_navigation_batch(language, pending[start:start + 40], model, client, fallback_model))

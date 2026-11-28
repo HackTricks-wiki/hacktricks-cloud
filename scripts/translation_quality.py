@@ -95,13 +95,14 @@ def summary_structure(parts):
     return [(prefix, label is None, suffix) for prefix, label, suffix in parts]
 
 
-def fixed_summary_name(label):
-    return " ".join(re.findall(r"[a-z]+", label.lower())) in FIXED_SUMMARY_NAMES
+def fixed_summary_name(label, language):
+    return (
+        language.lower() in {"ja", "japanese"}
+        and " ".join(re.findall(r"[a-z]+", label.lower())) in FIXED_SUMMARY_NAMES
+    )
 
 
 def needs_summary_translation(label):
-    if fixed_summary_name(label):
-        return False
     words = re.findall(r"[a-z]+", label.lower())
     return (
         " ".join(words) in NAVIGATION_WORDS
@@ -110,7 +111,7 @@ def needs_summary_translation(label):
 
 
 def unchanged_summary_label(source, translated, language=""):
-    if not needs_summary_translation(source):
+    if not needs_summary_translation(source) or fixed_summary_name(source, language):
         return False
     original = tuple(re.findall(r"[^\W\d_]+", source.casefold()))
     if original in SHARED_SUMMARY_WORDS.get(language.lower(), ()):
