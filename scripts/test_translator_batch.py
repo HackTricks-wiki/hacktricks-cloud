@@ -1,10 +1,16 @@
+import os
+import runpy
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import translator
-from translation_quality import copied_sentence, markdown_problems, preserve_source_heading_anchors
+from translation_quality import check_rendered_sidebar, copied_sentence, markdown_problems, preserve_source_heading_anchors
 
 
 class FailingClient:
@@ -16,6 +22,87 @@ class FailingClient:
 
 
 class TranslationBatchTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("mdbook"), "mdBook is required for the translation integration test")
+    def test_git_and_mdbook_integration_blocks_swapped_links_then_publishes_valid_output(self):
+        cli = str(Path(translator.__file__).resolve())
+        source = (
+            "# Reading guide\n\nOpen the [library](https://example.org/library).\n\n"
+            "Read the [catalog](https://example.org/catalog).\n"
+        )
+        localized = (
+            "# Guide de lecture\n\nOuvrez la [bibliothèque](https://example.org/library).\n\n"
+            "Consultez le [catalogue](https://example.org/catalog).\n"
+        )
+        summary = "# Summary\n\n# Welcome!\n\n- [Reading guide](guide.md)\n"
+        swapped = localized.replace(
+            "https://example.org/library", "https://example.org/temporary"
+        ).replace(
+            "https://example.org/catalog", "https://example.org/library"
+        ).replace("https://example.org/temporary", "https://example.org/catalog")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            repo = root / "repo"
+            repo.mkdir()
+
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=repo, text=True).strip()
+
+            git("init", "--bare", str(root / "remote.git"))
+            git("init", "-b", "master")
+            git("config", "user.name", "Translation Fixture")
+            git("config", "user.email", "fixture@example.com")
+            git("remote", "add", "origin", str(root / "remote.git"))
+            for folder in ("src", "src/images", "theme"):
+                (repo / folder).mkdir()
+            for name in (".gitignore", "src/robots.txt", "src/images/.keep", "theme/.keep",
+                         "hacktricks-preprocessor.py"):
+                (repo / name).touch()
+            (repo / "book.toml").write_text('[book]\ntitle = "Guide"\nlanguage = "fr"\n', encoding="utf-8")
+            (repo / "src/guide.md").write_text(source, encoding="utf-8")
+            (repo / "src/SUMMARY.md").write_text(summary, encoding="utf-8")
+            git("add", "-A")
+            git("commit", "-m", "English fixture")
+            revision = git("rev-parse", "HEAD")
+            git("branch", "fr")
+            git("push", "origin", "fr")
+            args = [
+                cli, "--language", "French", "--branch", "fr", "--model", "gpt-4o", "--api-key", "fixture",
+                "--source-ref", revision, "--initial-source-ref", revision, "--record-source",
+                "--file-paths", "src/guide.md,src/SUMMARY.md",
+            ]
+
+            def run(result):
+                def complete(**kwargs):
+                    text = kwargs["messages"][-1]["content"]
+                    output = result if text == source else "# 1. Bienvenue !\n# 2. Guide de lecture"
+                    return SimpleNamespace(choices=[
+                        SimpleNamespace(message=SimpleNamespace(content=output), finish_reason="stop")
+                    ])
+
+                client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=complete)))
+                with patch("openai.OpenAI", return_value=client), patch.object(sys, "argv", args):
+                    runpy.run_path(cli, run_name="__main__")
+
+            previous = Path.cwd()
+            try:
+                os.chdir(repo)
+                with self.assertRaisesRegex(RuntimeError, "moved Markdown links"):
+                    run(swapped)
+                self.assertEqual(git("rev-parse", "fr"), revision)
+                self.assertFalse((repo / ".translation-source-blobs.json").exists())
+                run(localized)
+                self.assertEqual(git("rev-parse", "fr"), git("rev-parse", "origin/fr"))
+                self.assertEqual(set(git("diff-tree", "-r", "--no-commit-id", "--name-only", "fr").splitlines()), {
+                    "src/guide.md", "src/SUMMARY.md", ".translation-source-blobs.json",
+                })
+                subprocess.run(["mdbook", "build"], cwd=repo, check=True, capture_output=True)
+                localized_summary = (repo / "src/SUMMARY.md").read_text(encoding="utf-8")
+                toc = (repo / "book/toc.html").read_text(encoding="utf-8")
+                check_rendered_sidebar(localized_summary, toc, "fr")
+            finally:
+                os.chdir(previous)
+
     def test_api_failure_does_not_publish_english_source(self):
         with self.assertRaisesRegex(RuntimeError, "could not be translated after retries"):
             translator.translate_text("French", "English content", "src/page.md", "gpt-4o", client=FailingClient())
