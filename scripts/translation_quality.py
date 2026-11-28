@@ -293,11 +293,19 @@ class ChapterHTML(HTMLParser):
 
 MARKDOWN = MarkdownIt("commonmark").enable("table")
 HEADING_ATTRIBUTES = re.compile(r"\s+\{([^{}]+)\}\s*$")
+TASK_LIST_MARKER = re.compile(r"^\[([ xX])\](?:\s|$)")
+NESTED_BLOCK_TYPES = frozenset({
+    "blockquote_open", "blockquote_close", "bullet_list_open", "bullet_list_close",
+    "ordered_list_open", "ordered_list_close", "list_item_open", "list_item_close",
+    "table_open", "table_close", "thead_open", "thead_close", "tbody_open", "tbody_close",
+    "tr_open", "tr_close", "th_open", "td_open", "hr",
+})
 
 
 class MarkdownInventory(NamedTuple):
     blocks: Counter
     heading_levels: tuple[str, ...]
+    nested_blocks: tuple[tuple[str, str | None], ...]
     targets: Counter
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
@@ -311,6 +319,7 @@ def markdown_inventory(text):
     env = {}
     blocks, targets, literals = Counter(), Counter(), Counter()
     heading_levels = []
+    nested_blocks = []
     inline_positions = []
     inline_block = 0
     html = ChapterHTML()
@@ -331,8 +340,15 @@ def markdown_inventory(text):
         elif token.type == "html_block":
             html.feed(token.content)
 
+        if token.type in NESTED_BLOCK_TYPES:
+            attribute = token.attrGet("start") if token.type == "ordered_list_open" else token.attrGet("style")
+            nested_blocks.append((token.type, attribute))
         if token.type == "inline":
             inline_block += 1
+            if index >= 2 and tokens[index - 2].type == "list_item_open" and tokens[index - 1].type == "paragraph_open":
+                marker = TASK_LIST_MARKER.match(token.content)
+                if marker:
+                    nested_blocks.append(("task list item", marker[1].lower()))
         for inline in token.children or ():
             if inline.type == "code_inline":
                 literals[("inline code", inline.content)] += 1
@@ -352,7 +368,7 @@ def markdown_inventory(text):
         targets[("reference definition", definition["href"])] += 1
     targets.update(html.targets)
     return MarkdownInventory(
-        blocks, tuple(heading_levels), targets, literals, tuple(inline_positions),
+        blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals, tuple(inline_positions),
         html.open_tags, html.unmatched_closing,
     )
 
@@ -366,6 +382,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("missing Markdown sections, paragraphs, list entries, or table cells")
     if original.heading_levels != localized.heading_levels:
         problems.append("changed Markdown heading order or nesting")
+    if original.nested_blocks != localized.nested_blocks:
+        problems.append("changed Markdown lists, block quotes, tables, or thematic breaks")
     old_targets, new_targets = original.targets, localized.targets
     if allow_source_aliases:
         old_targets = {key: count for key, count in old_targets.items() if key[1] != "translation alias"}

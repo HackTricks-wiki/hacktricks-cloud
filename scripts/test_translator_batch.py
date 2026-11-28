@@ -348,6 +348,33 @@ class TranslationBatchTests(unittest.TestCase):
         localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"
         self.assertEqual(markdown_problems(original, localized), ["changed Markdown heading order or nesting"])
 
+    def test_markdown_checks_preserve_list_quote_table_and_rule_structure(self):
+        original = (
+            "> Read this first.\n\n---\n\n"
+            "3. Get the forms\n   - [x] Application\n   - [ ] Receipt\n\n"
+            "| Form | Price |\n| :--- | ---: |\n| Receipt | 0 |\n"
+        )
+        localized = (
+            "> À lire en premier.\n\n***\n\n"
+            "3. Récupérez les formulaires\n   * [X] Demande\n   * [ ] Reçu\n\n"
+            "| Formulaire | Prix |\n| :--- | ---: |\n| Reçu | 0 |\n"
+        )
+        self.assertEqual(markdown_problems(original, localized), [])
+        for old, new in (
+            ("> À lire", "À lire"),
+            ("\n***\n", ""),
+            ("3. Récupérez", "1. Récupérez"),
+            ("3. Récupérez", "- Récupérez"),
+            ("   * [ ]", "* [ ]"),
+            ("[X] Demande", "[ ] Demande"),
+            ("| :--- | ---: |", "| ---: | :--- |"),
+        ):
+            with self.subTest(old=old, new=new):
+                self.assertIn(
+                    "changed Markdown lists, block quotes, tables, or thematic breaks",
+                    markdown_problems(original, localized.replace(old, new)),
+                )
+
     def test_translation_preserves_distinct_source_and_localized_heading_ids(self):
         source = (
             "# Reader guide\n\n## Find your receipt\n\n## Find your receipt\n\n"
