@@ -19,8 +19,8 @@ from translation_backlog import (
     SUMMARY_PATH, checkpoint_for_update, markdown_blobs, record_translations, reusable_chapter_labels,
 )
 from translation_quality import (
-    copied_prose, copied_sentence, english_segments, fenced_code_spans, fixed_summary_name, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts,
-    summary_structure, unchanged_summary_label, wrong_language,
+    copied_prose, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts,
+    summary_structure, unchanged_summary_label, verified_summary_name, wrong_language,
 )
 
 
@@ -645,7 +645,10 @@ def translate_summary(
                 if label is not None and not unchanged_summary_label(label, localized, language):
                     translations[label] = localized
 
-    translations.update({label: label for label in labels if fixed_summary_name(label, language)})
+    for label in labels:
+        official = verified_summary_name(label, language)
+        if official is not None:
+            translations[label] = official
     pending = [label for label in labels if label not in translations]
     for start in range(0, len(pending), 40):
         translations.update(translate_navigation_batch(language, pending[start:start + 40], model, client, fallback_model))

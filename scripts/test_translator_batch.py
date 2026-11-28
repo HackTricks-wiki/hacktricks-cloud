@@ -47,6 +47,13 @@ class TranslationBatchTests(unittest.TestCase):
             portuguese = translator.translate_summary("Brazilian Portuguese", source, None, "fixture", None, "pt")
         self.assertIn("Defender para Nuvem", portuguese)
 
+    def test_summary_uses_verified_turkish_product_name(self):
+        source = "# Summary\n\n- [Az - Defender for Cloud](guide.md)\n"
+        with patch.object(translator, "translate_text") as translate:
+            localized = translator.translate_summary("Turkish", source, None, "fixture", None, "tr")
+        self.assertIn("[Az - Bulut için Microsoft Defender](guide.md)", localized)
+        translate.assert_not_called()
+
     def test_french_summary_accepts_shared_french_vocabulary(self):
         source = "# Summary\n\n# Introduction\n"
         with patch.object(translator, "translate_text", return_value="# 1. Introduction") as translate:

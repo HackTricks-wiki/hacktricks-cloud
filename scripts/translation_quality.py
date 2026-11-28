@@ -95,12 +95,17 @@ def summary_structure(parts):
     return [(prefix, label is None, suffix) for prefix, label, suffix in parts]
 
 
-def fixed_summary_name(label, language):
-    return (
-        language.lower() in {"ja", "japanese", "zh", "chinese", "simplified chinese"}
-        and " ".join(re.findall(r"[a-z]+", label.lower())) in FIXED_SUMMARY_NAMES
-    )
-
+def verified_summary_name(label, language):
+    words = " ".join(re.findall(r"[a-z]+", label.lower()))
+    if words not in FIXED_SUMMARY_NAMES:
+        return None
+    locale = language.lower()
+    if locale in {"ja", "japanese", "zh", "chinese", "simplified chinese"}:
+        return label
+    if locale in {"tr", "turkish"}:
+        prefix = "Az - " if words.startswith("az ") else ""
+        return prefix + "Bulut için Microsoft Defender"
+    return None
 
 def needs_summary_translation(label):
     words = re.findall(r"[a-z]+", label.lower())
@@ -111,7 +116,7 @@ def needs_summary_translation(label):
 
 
 def unchanged_summary_label(source, translated, language=""):
-    if not needs_summary_translation(source) or fixed_summary_name(source, language):
+    if not needs_summary_translation(source) or verified_summary_name(source, language) == source:
         return False
     original = tuple(re.findall(r"[^\W\d_]+", source.casefold()))
     if original in SHARED_SUMMARY_WORDS.get(language.lower(), ()):
