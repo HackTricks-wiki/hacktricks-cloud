@@ -426,6 +426,21 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertEqual(markdown_problems(source, translated), [])
         self.assertEqual(markdown_problems(source, translated.replace("<strong>", "")), [])
 
+    def test_html_check_rejects_crossed_tags_even_when_all_tags_are_closed(self):
+        source = (
+            "<details>\n<summary><strong><em>Guide</em></strong></summary>\n\n"
+            "Read <em><strong>this guide</strong></em>.\n\n</details>\n"
+        )
+        translated = source.replace("Read", "Lisez").replace("this guide", "ce guide")
+        self.assertEqual(markdown_problems(source, translated), [])
+        for first, second in (("em", "strong"), ("strong", "em")):
+            with self.subTest(first=first, second=second):
+                broken = translated.replace(f"</{first}></{second}>", f"</{second}></{first}>")
+                self.assertEqual(
+                    markdown_problems(source, broken), ["introduced incorrectly nested HTML tags"],
+                )
+                self.assertEqual(markdown_problems(broken, broken.replace("Lisez", "Consultez")), [])
+
     def test_structurally_incomplete_page_never_writes_a_translation(self):
         source = "# Receipts\n\nFirst paragraph.\n\nSecond paragraph.\n"
         incomplete = "# Reçus\n\nPremier paragraphe.\n"

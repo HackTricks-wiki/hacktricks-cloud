@@ -268,12 +268,13 @@ class ChapterHTML(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.targets = Counter()
-        self.open_tags = Counter()
         self.unmatched_closing = Counter()
+        self.crossed_tags = Counter()
+        self.tag_stack = []
 
     def handle_starttag(self, tag, attrs):
         if tag in PAIRED_HTML_TAGS:
-            self.open_tags[tag] += 1
+            self.tag_stack.append(tag)
         generated_alias = tag == "span" and dict(attrs).get("class") == SOURCE_ANCHOR_CLASS
         for name, value in attrs:
             if generated_alias and name == "id":
@@ -285,10 +286,16 @@ class ChapterHTML(HTMLParser):
     def handle_endtag(self, tag):
         if tag not in PAIRED_HTML_TAGS:
             return
-        if self.open_tags[tag]:
-            self.open_tags[tag] -= 1
-        else:
+        if self.tag_stack and self.tag_stack[-1] == tag:
+            self.tag_stack.pop()
+            return
+        try:
+            index = len(self.tag_stack) - self.tag_stack[::-1].index(tag) - 1
+        except ValueError:
             self.unmatched_closing[tag] += 1
+            return
+        self.crossed_tags[(tag, tuple(self.tag_stack[index + 1:]))] += 1
+        del self.tag_stack[index]
 
 
 MARKDOWN = MarkdownIt("commonmark").enable("table")
@@ -311,6 +318,7 @@ class MarkdownInventory(NamedTuple):
     inline_positions: tuple[tuple[int, str, str], ...]
     open_tags: Counter
     unmatched_closing: Counter
+    crossed_tags: Counter
 
 
 @lru_cache(maxsize=128)
@@ -369,7 +377,7 @@ def markdown_inventory(text):
     targets.update(html.targets)
     return MarkdownInventory(
         blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals, tuple(inline_positions),
-        html.open_tags, html.unmatched_closing,
+        Counter(html.tag_stack), html.unmatched_closing, html.crossed_tags,
     )
 
 
@@ -397,6 +405,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("moved Markdown links, images, or inline code")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
+    if localized.crossed_tags - original.crossed_tags:
+        problems.append("introduced incorrectly nested HTML tags")
     return problems
 
 
