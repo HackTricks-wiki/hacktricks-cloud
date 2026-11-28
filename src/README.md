@@ -86,4 +86,5 @@ docker compose up
 - [12] [Mbinu ya Pentesting Cloud ya HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [HackTricks Values & FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Mchoro wa takwimu za Repobeats kwa HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
