@@ -13,8 +13,34 @@ from urllib.parse import unquote, urlsplit
 from markdown_it import MarkdownIt
 
 
+def markdown_line_offsets(text):
+    offsets = [0, *(match.end() for match in re.finditer(r"\r\n?|\n", text))]
+    if offsets[-1] != len(text):
+        offsets.append(len(text))
+    return offsets
+
+
 def fenced_code_spans(text):
-    """Locate fenced blocks without treating indented inner backticks as fences."""
+    """Locate code fences, including ones that open on a list marker."""
+    if "```" not in text and "~~~" not in text:
+        return []
+    offsets = markdown_line_offsets(text)
+    native = [(offsets[token.map[0]], offsets[token.map[1]])
+              for token in MARKDOWN.parse(text) if token.type == "fence"]
+    spans = []
+    cursor = 0
+    for start, end in [*native, (len(text), len(text))]:
+        # Some mdBook HTML preprocessors expose fences inside raw Markdown
+        # that the CommonMark parser treats as a single HTML block.
+        spans.extend((cursor + a, cursor + b) for a, b in fallback_fence_spans(text[cursor:start]))
+        if start != end:
+            spans.append((start, end))
+        cursor = end
+    return spans
+
+
+def fallback_fence_spans(text):
+    """Locate fences that were not exposed by the CommonMark parser."""
     spans = []
     opened = None
     offset = 0

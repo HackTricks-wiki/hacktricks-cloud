@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import translator
 from translation_quality import copied_sentence, markdown_problems, preserve_source_heading_anchors
@@ -140,8 +140,60 @@ class TranslationBatchTests(unittest.TestCase):
             translator, "reportTokens", side_effect=lambda text, _model: len(text)
         ):
             chunks = translator.split_text(source, "gpt-4o")
-        self.assertIn(ref, chunks)
+        self.assertEqual(sum(ref in chunk for chunk in chunks), 1)
         self.assertEqual("".join(chunks), source)
+
+    def test_chunking_never_splits_a_markdown_table_or_nested_list(self):
+        intro = "# Guide\n\nIntroductory paragraph.\n"
+        table = "\n| Name | Value |\n| --- | --- |\n| First | One |\n| Second | Two |\n"
+        items = "\n- Pack the parcel.\n  - Include the receipt.\n  - Add a label.\n"
+        end = "\nRead the shipping guide.\n"
+        source = intro + table + items + end
+        with patch.object(translator, "MAX_TOKENS", 22), patch.object(
+            translator, "reportTokens", side_effect=lambda text, _model: len(text)
+        ):
+            chunks = translator.split_text(source, "gpt-4o")
+        self.assertEqual("".join(chunks), source)
+        self.assertTrue(any(table.lstrip("\n") in chunk for chunk in chunks))
+        self.assertTrue(any(items.lstrip("\n") in chunk for chunk in chunks))
+
+    def test_context_error_splits_complete_blocks_and_preserves_spacing(self):
+        source = "First paragraph with one line.\n\nSecond paragraph with one line.\n"
+        left = "Premier paragraphe sur une ligne."
+        right = "Deuxième paragraphe sur une ligne."
+        def choice(value):
+            return SimpleNamespace(choices=[
+                SimpleNamespace(message=SimpleNamespace(content=value), finish_reason="stop")
+            ])
+        create = Mock(side_effect=[RuntimeError("maximum context length"), choice(left), choice(right)])
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        result = translator.translate_text("French", source, "src/guide.md", "test-model", client=client)
+        self.assertEqual(result, left + "\n\n" + right + "\n")
+        self.assertEqual(create.call_count, 3)
+
+    def test_oversized_indivisible_table_is_not_retried_as_broken_rows(self):
+        source = "| Name | Value |\n| --- | --- |\n| First | One |\n| Second | Two |\n"
+        create = Mock(side_effect=RuntimeError("maximum context length"))
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        with self.assertRaisesRegex(RuntimeError, "no safe Markdown boundary"):
+            translator.translate_text("French", source, "src/guide.md", "test-model", client=client)
+        create.assert_called_once()
+
+    def test_truncated_output_retries_as_smaller_markdown_blocks(self):
+        source = "First paragraph.\n\nSecond paragraph.\n"
+        def choice(value, reason):
+            return SimpleNamespace(choices=[
+                SimpleNamespace(message=SimpleNamespace(content=value), finish_reason=reason)
+            ])
+        create = Mock(side_effect=[
+            choice("Premier", "length"),
+            choice("Premier paragraphe.", "stop"),
+            choice("Deuxième paragraphe.", "stop"),
+        ])
+        client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        result = translator.translate_text("French", source, "src/guide.md", "test-model", client=client)
+        self.assertEqual(result, "Premier paragraphe.\n\nDeuxième paragraphe.\n")
+        self.assertEqual(create.call_count, 3)
 
     def test_summary_refuses_copied_labels_even_if_punctuation_changes(self):
         with patch.object(translator, "translate_text", return_value="# 1. WELCOME.") as translate:

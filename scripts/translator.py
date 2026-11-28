@@ -19,6 +19,7 @@ from translation_backlog import (
     SUMMARY_PATH, checkpoint_for_update, markdown_blobs, record_translations, reusable_chapter_labels,
 )
 from translation_quality import (
+    MARKDOWN, markdown_line_offsets,
     copied_prose, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts,
     summary_structure, unchanged_summary_label, verified_summary_name, wrong_language,
 )
@@ -390,7 +391,40 @@ def commit_and_push(translate_files, branch):
     print("Commit created and pushed")
 
 
-def translate_text(language, text, file_path, model, cont=0, slpitted=False, client=None):
+def safe_markdown_breaks(text):
+    """Find original offsets between top-level blocks outside mdBook refs."""
+    line_starts = markdown_line_offsets(text)
+    refs = list(MDBOOK_REF_BLOCK_RE.finditer(text))
+    offsets = {
+        line_starts[token.map[1]]
+        for token in MARKDOWN.parse(text)
+        if token.level == 0 and token.map
+    }
+    return sorted(
+        offset for offset in offsets
+        if 0 < offset < len(text) and not any(ref.start() < offset < ref.end() for ref in refs)
+    )
+
+
+def nearest_markdown_boundary(text):
+    return min(safe_markdown_breaks(text), key=lambda offset: abs(offset - len(text) / 2), default=None)
+
+
+def translate_at_boundary(language, text, file_path, model, cont, client, boundary):
+    """Retain source whitespace when retrying a model request as two blocks."""
+    parts = []
+    for fragment in (text[:boundary], text[boundary:]):
+        if not fragment.strip():
+            parts.append(fragment)
+            continue
+        leading = fragment[:len(fragment) - len(fragment.lstrip())]
+        trailing = fragment[len(fragment.rstrip()):]
+        translated = translate_text(language, fragment, file_path, model, cont=cont + 1, client=client)
+        parts.append(leading + translated.strip() + trailing)
+    return "".join(parts)
+
+
+def translate_text(language, text, file_path, model, cont=0, client=None):
     if not text:
         return text
     
@@ -456,28 +490,26 @@ Also don't add any extra stuff in your response that is not part of the translat
             time.sleep(60)
         
         elif "maximum context length" in str(e).lower() or "generated invalid unicode output" in str(e).lower():
-            if "maximum context length" in str(e).lower():
-                print("Maximum context length, splitting text in two and translating separately")
-
-            elif "generated invalid unicode output" in str(e).lower():
-                print("Invalid unicode error detected.")
-
-            if slpitted or len(text.split('\n')) < 2:
-                raise RuntimeError(f"Page {file_path} could not be translated after splitting") from e
-            
-            text1 = text.split('\n')[:len(text.split('\n'))//2]
-            text2 = text.split('\n')[len(text.split('\n'))//2:]
-            return translate_text(language, '\n'.join(text1), file_path, model, cont + 1, False, client) + '\n' + translate_text(language, '\n'.join(text2), file_path, model, cont + 1, True, client)
+            boundary = nearest_markdown_boundary(text)
+            if boundary is None:
+                raise RuntimeError(f"Page {file_path} has no safe Markdown boundary for splitting") from e
+            print(f"Retrying {file_path} at a Markdown block boundary")
+            return translate_at_boundary(language, text, file_path, model, cont, client, boundary)
 
         print("Retrying translation")
-        return translate_text(language, text, file_path, model, cont + 1, False, client)
+        return translate_text(language, text, file_path, model, cont=cont + 1, client=client)
 
     choice = response.choices[0]
     response_message = (choice.message.content or "").strip()
-    if not response_message or getattr(choice, "finish_reason", "stop") != "stop":
+    finish_reason = getattr(choice, "finish_reason", "stop")
+    if not response_message or finish_reason != "stop":
         if cont >= 2:
             raise RuntimeError(f"Page {file_path} returned incomplete translation after retries")
-        return translate_text(language, text, file_path, model, cont + 1, slpitted, client)
+        if finish_reason == "length":
+            boundary = nearest_markdown_boundary(text)
+            if boundary is not None:
+                return translate_at_boundary(language, text, file_path, model, cont, client, boundary)
+        return translate_text(language, text, file_path, model, cont=cont + 1, client=client)
     if file_path == SUMMARY_PATH:
         return response_message
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
@@ -524,7 +556,7 @@ Also don't add any extra stuff in your response that is not part of the translat
     if "__HTC_STRUCT_" not in text and not protected_markup_is_intact(text, response_message):
         if cont >= 2:
             raise RuntimeError(f"Page {file_path} changed protected markup after retries")
-        return translate_text(language, text, file_path, model, cont + 1, slpitted, client)
+        return translate_text(language, text, file_path, model, cont=cont + 1, client=client)
 
     return response_message
 
@@ -537,21 +569,15 @@ def split_text(text, model):
     """Chunk prose for the model while passing complete code blocks verbatim."""
     def prose_chunks(prose):
         result = []
-        chunk = ""
-        in_ref = False
-        for line in prose.splitlines(keepends=True):
-            if chunk and not in_ref:
-                limit = MAX_TOKENS * 0.8 if line.startswith("#") else MAX_TOKENS
-                if reportTokens(chunk + line, model) > limit:
-                    result.append(chunk)
-                    chunk = ""
-            chunk += line
-            if "{{#ref}}" in line:
-                in_ref = True
-            if "{{#endref}}" in line:
-                in_ref = False
-        if chunk:
-            result.append(chunk)
+        start = 0
+        end = 0
+        for boundary in [*safe_markdown_breaks(prose), len(prose)]:
+            if end > start and reportTokens(prose[start:boundary], model) > MAX_TOKENS:
+                result.append(prose[start:end])
+                start = end
+            end = boundary
+        if end > start:
+            result.append(prose[start:end])
         return result
 
     chunks = []

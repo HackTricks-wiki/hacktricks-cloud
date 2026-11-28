@@ -72,6 +72,22 @@ class CodeBlockPreservationTests(unittest.TestCase):
         self.assertEqual(translator.fenced_code_blocks(result), [code])
         self.assertIn('2. French prose', result)
 
+    def test_fence_on_list_marker_keeps_code_and_translates_following_prose(self):
+        code = "- ```text\n  Literal sample\n  ```"
+        source = code + "\n\nEnglish prose after the sample.\n"
+        payloads = []
+
+        def prose(_language, text, *_args, **_kwargs):
+            payloads.append(text)
+            return text.replace("English prose", "French prose")
+
+        self.assertEqual(translator.fenced_code_blocks(source), [code])
+        result = self.translate(source, prose)
+        self.assertIn("French prose after the sample.", result)
+        self.assertEqual(translator.fenced_code_blocks(result), [code])
+        self.assertTrue(payloads)
+        self.assertTrue(all("Literal sample" not in text for text in payloads))
+
     def test_longer_outer_fence_keeps_inner_fences_literal(self):
         code = '````markdown\n```python\n    example = 1\n```\n````'
         self.assertEqual(translator.fenced_code_blocks(self.translate('# English prose\n'+code+'\n')), [code])
