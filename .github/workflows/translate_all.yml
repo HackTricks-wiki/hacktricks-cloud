@@ -24,6 +24,8 @@ on:
       - '.github/workflows/translate_all.yml'
       - 'scripts/translation*.py'
       - 'scripts/seo_postprocess.py'
+      - 'scripts/render_localized_error.py'
+      - '.github/workflows/build_master.yml'
       - 'scripts/translator.py'
       - 'scripts/test_translat*.py'
       - 'theme/index.hbs'
@@ -151,6 +153,7 @@ jobs:
           echo "SOURCE_REF=$source_ref" >> "$GITHUB_ENV"
           python -m pip install --disable-pip-version-check py3langid==0.4.0 markdown-it-py==4.3.0
           cp scripts/translator.py scripts/translation_backlog.py scripts/translation_quality.py /tmp/
+          cp scripts/render_localized_error.py scripts/translation_matrix.py /tmp/
           git checkout --detach "$source_ref"
           python3 scripts/check_summary.py
 
@@ -267,10 +270,14 @@ jobs:
             export MDBOOK_OUTPUT__HTML__SEARCH__ENABLE=false
           else
             python /tmp/translation_backlog.py restore-anchors --language "$BRANCH" --source-ref "$SOURCE_REF"
+            python /tmp/render_localized_error.py --language "$BRANCH"
           fi
           python /tmp/translation_backlog.py localize-welcome-links --language "$BRANCH"
           MDBOOK_BOOK__LANGUAGE=$BRANCH mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
           python /tmp/translation_backlog.py verify-render --language "$BRANCH" --toc book/toc.html --toc-script book/toc.js
+          if [ "$NAVIGATION_ONLY" != true ]; then
+            python /tmp/render_localized_error.py --language "$BRANCH" --rendered
+          fi
           if [ "$NAVIGATION_ONLY" = true ]; then
             exit 0
           fi
