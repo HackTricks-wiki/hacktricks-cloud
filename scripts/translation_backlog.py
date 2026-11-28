@@ -357,11 +357,14 @@ def main() -> None:
     parser.add_argument("--extra-env", help="Environment variable with comma-delimited paths")
     parser.add_argument("--toc", type=Path, help="Rendered mdBook sidebar, for verify-render")
     parser.add_argument("--toc-script", type=Path, help="Rendered sidebar JavaScript, for verify-render")
+    parser.add_argument("--landing", action="store_true", help="Check that mdBook's first chapter is the landing page")
     parser.add_argument("--detailed", action="store_true",
                         help="Include mixed-prose and Markdown differences in the read-only audit")
     args = parser.parse_args()
     if args.detailed and args.action != "audit":
         parser.error("--detailed is only supported by audit")
+    if args.landing and args.action != "verify-navigation":
+        parser.error("--landing is only supported by verify-navigation")
 
     if args.action == "audit":
         print(json.dumps(audit(
@@ -383,6 +386,11 @@ def main() -> None:
         issue = summary_issue(source, summary, args.language)
         if issue:
             raise SystemExit(f"{args.language}: {SUMMARY_PATH} failed the sidebar check ({issue})")
+        if args.landing:
+            first_link = next((suffix for _, _, suffix in summary_parts(summary)
+                               if suffix.startswith(("](", "$$external:"))), "")
+            if not re.fullmatch(r"\]\((?:\./)?README\.md\)(?:[ \t]*<!--.*-->)?", first_link.strip()):
+                raise SystemExit(f"{args.language}: the landing page must be the first chapter in {SUMMARY_PATH}")
         print(f"{args.language}: sidebar labels are localized and chapter links match the source")
     elif args.action == "verify-render":
         if args.toc is None:

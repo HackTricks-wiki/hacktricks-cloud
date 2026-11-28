@@ -101,6 +101,20 @@ class TranslationBacklogTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "sidebar check \\(navigation_structure\\)"):
                 backlog.main()
 
+    def test_landing_gate_requires_the_landing_page_as_the_first_chapter(self):
+        summary = Path(backlog.SUMMARY_PATH)
+        english = summary.read_text(encoding="utf-8")
+        localized = "# Summary\n\n# Welkom!\n\n- [Oor die skrywer](old.md)\n"
+        argv = ["translation_backlog.py", "verify-navigation", "--language", "af", "--landing"]
+        with patch.object(sys, "argv", argv):
+            summary.write_text(localized, encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "landing page must be the first chapter"):
+                backlog.main()
+            summary.write_text(english.replace("old.md", "README.md"), encoding="utf-8")
+            self.git("commit", "-am", "Use the README as the first chapter")
+            summary.write_text(localized.replace("old.md", "README.md"), encoding="utf-8")
+            backlog.main()
+
     def test_detailed_audit_flags_paraphrased_english_without_scheduling_a_rewrite(self):
         page = self.root / "src/old.md"
         english = (

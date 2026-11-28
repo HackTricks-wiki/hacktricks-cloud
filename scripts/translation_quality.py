@@ -361,10 +361,11 @@ MARKDOWN_BLOCK_NAMES = {
 CJK_TEXT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 CJK_BOLD_BOUNDARIES = " \t\u00a0\u3000.,!?;:()。！？、；：，…（）「」『』《》【】〈〉〔〕［］“”‘’"
 PLAIN_BOLD_SPAN = re.compile(r"(?<![\\*])\*\*(?!\*)([^*\\`<>\[\]\r\n]+)\*\*(?!\*)")
+CJK_BOLD_LINK = re.compile(r"(?<![\\*])\*\*\[([^\[\]\\*\r\n]+)\]\(([^()\s]+)\)\*\*(?!\*)")
 
 
 def repair_cjk_bold_boundaries(text):
-    """Move CJK boundary spaces and punctuation outside failed bold delimiters."""
+    """Repair visible CJK bold delimiters around prose and simple links."""
     offsets = markdown_line_offsets(text)
     changes = {}
     for block in MARKDOWN.parse(text):
@@ -372,7 +373,8 @@ def repair_cjk_bold_boundaries(text):
             continue
         start, end = (offsets[index] for index in block.map)
         raw_block = text[start:end]
-        for token in block.children or ():
+        children = block.children or ()
+        for token in children:
             if token.type != "text" or "**" not in token.content:
                 continue
             for match in PLAIN_BOLD_SPAN.finditer(token.content):
@@ -391,6 +393,21 @@ def repair_cjk_bold_boundaries(text):
                 if text.startswith("*", position + len(original)):
                     continue
                 changes[position] = (original, replacement)
+        for previous, link, label, close, suffix in zip(children, children[1:], children[2:], children[3:], children[4:]):
+            if (
+                (previous.type, link.type, label.type, close.type, suffix.type)
+                != ("text", "link_open", "text", "link_close", "text")
+                or not previous.content.endswith("**")
+                or not suffix.content.startswith("**")
+                or not CJK_TEXT.match(suffix.content[2:])
+            ):
+                continue
+            matches = [match for match in CJK_BOLD_LINK.finditer(raw_block)
+                       if match.groups() == (label.content, link.attrGet("href"))
+                       and CJK_TEXT.match(raw_block, match.end())]
+            if len(matches) == 1:
+                match = matches[0]
+                changes[start + match.start()] = (match[0], f"[**{match[1]}**]({match[2]})")
     if not changes:
         return text
     before = markdown_inventory(text)

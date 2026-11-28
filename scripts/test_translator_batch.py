@@ -492,6 +492,16 @@ class TranslationBatchTests(unittest.TestCase):
                 self.assertEqual(expected.replace("**", ""), original.replace("**", ""))
                 self.assertEqual(repair_cjk_bold_boundaries(expected), expected)
 
+    def test_cjk_bold_repair_keeps_the_link_destination_and_code(self):
+        source = "The library is **available at [its home page](https://example.org/library)**.\n"
+        broken = "자료는 **[도서관](https://example.org/library)**에서 볼 수 있습니다.\n"
+        fixed = "자료는 [**도서관**](https://example.org/library)에서 볼 수 있습니다.\n"
+        self.assertEqual(repair_cjk_bold_boundaries(broken), fixed)
+        self.assertEqual(markdown_problems(source, fixed), [])
+        self.assertEqual(repair_cjk_bold_boundaries(fixed), fixed)
+        code = "`**[도서관](https://example.org/library)**에서`\n"
+        self.assertEqual(repair_cjk_bold_boundaries(code), code)
+
     def test_page_repairs_cjk_bold_only_after_full_structure_validation(self):
         english = "First, **open the guide**. Then begin.\n"
         chinese = "请先**打开指南。**然后开始。\n"
