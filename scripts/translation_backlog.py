@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
-    MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
+    MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
     unchanged_summary_label, wrong_language,
 )
 
@@ -283,6 +283,7 @@ def main() -> None:
     parser.add_argument("--extras", help="Comma- or newline-delimited paths to retry")
     parser.add_argument("--extra-env", help="Environment variable with comma-delimited paths")
     parser.add_argument("--toc", type=Path, help="Rendered mdBook sidebar, for verify-render")
+    parser.add_argument("--toc-script", type=Path, help="Rendered sidebar JavaScript, for verify-render")
     parser.add_argument("--detailed", action="store_true",
                         help="Include mixed-prose and Markdown differences in the read-only audit")
     args = parser.parse_args()
@@ -301,9 +302,10 @@ def main() -> None:
         if args.toc is None:
             parser.error("verify-render requires --toc")
         try:
-            check_rendered_sidebar(
-                Path(SUMMARY_PATH).read_text(encoding="utf-8"), args.toc.read_text(encoding="utf-8"), args.language,
-            )
+            summary = Path(SUMMARY_PATH).read_text(encoding="utf-8")
+            check_rendered_sidebar(summary, args.toc.read_text(encoding="utf-8"), args.language)
+            if args.toc_script:
+                check_sidebar_script(summary, args.toc_script.read_text(encoding="utf-8"), args.language)
             check_rendered_anchor_collisions(args.toc.parent)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc

@@ -1,5 +1,6 @@
 """Check Markdown translations for common coverage and structure regressions."""
 
+import ast
 import posixpath
 import re
 import unicodedata
@@ -432,6 +433,18 @@ def check_rendered_sidebar(summary, html, language):
                 raise ValueError(f"Rendered sidebar {kind} {index} differs from SUMMARY.md")
             if destination != sidebar_destination(rendered_href):
                 raise ValueError(f"Rendered sidebar {kind} {index} destination differs from SUMMARY.md")
+
+
+def check_sidebar_script(summary, script, language):
+    """Verify the sidebar HTML embedded in the JavaScript loaded by book pages."""
+    literal = re.search(r"^\s*var toc = ('[^\r\n]*');$", script, re.MULTILINE)
+    if literal is None:
+        raise ValueError("Cannot find the embedded sidebar in toc.js")
+    try:
+        markup = ast.literal_eval(literal[1])
+    except (SyntaxError, ValueError) as exc:
+        raise ValueError("The embedded sidebar in toc.js is not a valid string") from exc
+    check_rendered_sidebar(summary, f'<html lang="{language}">{markup}</html>', language)
 
 
 def check_rendered_anchor_collisions(book_dir):

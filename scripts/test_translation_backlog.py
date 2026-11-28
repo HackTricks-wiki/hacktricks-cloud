@@ -194,6 +194,19 @@ class TranslationBacklogTests(unittest.TestCase):
         (self.root / "print.html").write_text(markup)
         backlog.check_rendered_anchor_collisions(self.root)
 
+    def test_sidebar_script_rejects_stale_embedded_labels(self):
+        localized = "# Summary\n\n# Bienvenue !\n\n- [À propos de l'auteur](author.md)\n"
+        markup = (
+            '<li class="part-title">Bienvenue !</li>'
+            '<span class="chapter-link-wrapper"><a href="author.html">À propos de l’auteur</a></span>'
+        )
+        script = "var toc = '" + markup + "';\n"
+        backlog.check_sidebar_script(localized, script, "fr")
+        with self.assertRaisesRegex(ValueError, "chapter 1 differs"):
+            backlog.check_sidebar_script(localized, script.replace("À propos de l’auteur", "About the author"), "fr")
+        with self.assertRaisesRegex(ValueError, "Cannot find the embedded sidebar"):
+            backlog.check_sidebar_script(localized, "const toc = null;", "fr")
+
     def test_rendered_sidebar_rejects_english_fallback_with_correct_lang_tag(self):
         summary = "# Summary\n\n# Boas-vindas!\n"
         rendered = '<html lang="pt"><li class="part-title">Boas-vindas!</li></html>'
