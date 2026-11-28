@@ -348,6 +348,23 @@ class TranslationBatchTests(unittest.TestCase):
         localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"
         self.assertEqual(markdown_problems(original, localized), ["changed Markdown heading order or nesting"])
 
+    def test_markdown_checks_preserve_inline_formatting_without_restricting_word_order(self):
+        source = "This is **important** and *current*.  \nAsk for ~~paper~~ digital copies.\n\nThank you.\n"
+        localized = "Statut _actuel_ et __important__.\\\nDemandez une copie numérique ~~papier~~.\n\nMerci.\n"
+        self.assertEqual(markdown_problems(source, localized), [])
+        for old, new in (
+            ("_actuel_", "actuel"),
+            ("__important__", "_important_"),
+            ("~~papier~~", "papier"),
+            ("\\\n", "\n"),
+            ("~~papier~~.\n\nMerci", "papier.\n\n~~Merci~~"),
+        ):
+            with self.subTest(old=old, new=new):
+                self.assertEqual(
+                    markdown_problems(source, localized.replace(old, new)),
+                    ["changed Markdown emphasis, strikethrough, or hard line breaks"],
+                )
+
     def test_markdown_checks_preserve_list_quote_table_and_rule_structure(self):
         original = (
             "> Read this first.\n\n---\n\n"

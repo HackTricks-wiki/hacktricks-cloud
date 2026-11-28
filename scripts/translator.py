@@ -443,7 +443,7 @@ Translate all English prose, headings, navigation labels, link labels, and table
     - {{#include ./banners/hacktricks-training.md}}
     - {{#ref}}macos-tcc-bypasses/{{#endref}}
     - {{#ref}}0.-basic-llm-concepts.md{{#endref}}
-- Preserve Markdown punctuation, HTML tags, and attributes. Translate the reader-visible text inside links and HTML elements.
+- Preserve Markdown formatting, including emphasis, strikethrough, and explicit line breaks. Preserve HTML tags and attributes. Translate the reader-visible text inside links and HTML elements.
 - Keep the heading `## References` exactly in English.
 - Keep every `<sup>[[N]](#references)</sup>` citation unchanged.
 - In numbered reference bullets, translate only the source title. Do not change the number, order, or URL.

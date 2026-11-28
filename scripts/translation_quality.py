@@ -298,7 +298,7 @@ class ChapterHTML(HTMLParser):
         del self.tag_stack[index]
 
 
-MARKDOWN = MarkdownIt("commonmark").enable("table")
+MARKDOWN = MarkdownIt("commonmark").enable(["table", "strikethrough"])
 HEADING_ATTRIBUTES = re.compile(r"\s+\{([^{}]+)\}\s*$")
 TASK_LIST_MARKER = re.compile(r"^\[([ xX])\](?:\s|$)")
 NESTED_BLOCK_TYPES = frozenset({
@@ -307,6 +307,7 @@ NESTED_BLOCK_TYPES = frozenset({
     "table_open", "table_close", "thead_open", "thead_close", "tbody_open", "tbody_close",
     "tr_open", "tr_close", "th_open", "td_open", "hr",
 })
+INLINE_FORMAT_TYPES = frozenset({"em_open", "strong_open", "s_open", "hardbreak"})
 
 
 class MarkdownInventory(NamedTuple):
@@ -316,6 +317,7 @@ class MarkdownInventory(NamedTuple):
     targets: Counter
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
+    inline_formatting: Counter
     open_tags: Counter
     unmatched_closing: Counter
     crossed_tags: Counter
@@ -329,6 +331,7 @@ def markdown_inventory(text):
     heading_levels = []
     nested_blocks = []
     inline_positions = []
+    inline_formatting = Counter()
     inline_block = 0
     html = ChapterHTML()
     tokens = MARKDOWN.parse(text, env)
@@ -358,7 +361,9 @@ def markdown_inventory(text):
                 if marker:
                     nested_blocks.append(("task list item", marker[1].lower()))
         for inline in token.children or ():
-            if inline.type == "code_inline":
+            if inline.type in INLINE_FORMAT_TYPES:
+                inline_formatting[(inline_block, inline.type)] += 1
+            elif inline.type == "code_inline":
                 literals[("inline code", inline.content)] += 1
                 inline_positions.append((inline_block, "inline code", inline.content))
             elif inline.type == "link_open":
@@ -376,8 +381,9 @@ def markdown_inventory(text):
         targets[("reference definition", definition["href"])] += 1
     targets.update(html.targets)
     return MarkdownInventory(
-        blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals, tuple(inline_positions),
-        Counter(html.tag_stack), html.unmatched_closing, html.crossed_tags,
+        blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals,
+        tuple(inline_positions), inline_formatting, Counter(html.tag_stack),
+        html.unmatched_closing, html.crossed_tags,
     )
 
 
@@ -403,6 +409,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
     if (old_targets == new_targets and original.literals == localized.literals
             and original.inline_positions != localized.inline_positions):
         problems.append("moved Markdown links, images, or inline code")
+    if original.inline_formatting != localized.inline_formatting:
+        problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     if localized.crossed_tags - original.crossed_tags:
