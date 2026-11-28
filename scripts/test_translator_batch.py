@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import translator
+from translation_quality import copied_sentence, markdown_problems, preserve_source_heading_anchors
 
 
 class FailingClient:
@@ -18,6 +19,205 @@ class TranslationBatchTests(unittest.TestCase):
     def test_api_failure_does_not_publish_english_source(self):
         with self.assertRaisesRegex(RuntimeError, "could not be translated after retries"):
             translator.translate_text("French", "English content", "src/page.md", "gpt-4o", client=FailingClient())
+
+    def test_truncated_model_response_is_retried(self):
+        def response(text, reason):
+            return SimpleNamespace(choices=[
+                SimpleNamespace(message=SimpleNamespace(content=text), finish_reason=reason)
+            ])
+
+        with patch.object(FailingClient.chat.completions, "create", side_effect=[
+            response("Esta", "length"),
+            response("Esta é a mensagem.", "stop"),
+        ]) as create:
+            self.assertEqual(
+                translator.translate_text("Brazilian Portuguese", "This is the message.", "src/page.md", "gpt-4o", client=FailingClient()),
+                "Esta é a mensagem.",
+            )
+        self.assertEqual(create.call_count, 2)
+
+    def test_summary_translates_labels_and_keeps_structure_and_previous_labels(self):
+        old_source = "# Summary\n\n# Welcome!\n- [About the author](old.md)\n"
+        old_target = "# Summary\n\n# Bem-vindo!\n- [Sobre o autor](old.md)\n"
+        source = (
+            "# Summary\n\n# Welcome!\n- [About the author](changed.md)\n"
+            "  - [How to get started](loc(al).md#start) <!-- editorial (note) -->\n\n[External Guide]()\n"
+        )
+        with patch.object(translator, "translate_text", return_value=(
+            "# 1. Como começar\n# 2. Guia externo"
+        )) as translate:
+            translated = translator.translate_summary(
+                "Brazilian Portuguese", source, (old_source, old_target), "gpt-4o", None
+            )
+        self.assertEqual(translate.call_args.args[1], "# 1. How to get started\n# 2. External Guide")
+        self.assertEqual(translated, (
+            "# Summary\n\n# Bem-vindo!\n- [Sobre o autor](changed.md)\n"
+            "  - [Como começar](loc(al).md#start) <!-- editorial (note) -->\n\n[Guia externo]()\n"
+        ))
+
+    def test_summary_translates_only_remaining_labels_when_current_title_is_reusable(self):
+        source = "# Summary\n\n# Welcome!\n- [Read the guide](guide.md)\n"
+        with patch.object(translator, "translate_text", return_value="# 1. Bienvenue !") as translate:
+            localized = translator.translate_summary(
+                "French", source, None, "fixture", None, "fr", {"Read the guide": "Lire le guide"}
+            )
+        self.assertEqual(translate.call_args.args[1], "# 1. Welcome!")
+        self.assertIn("- [Lire le guide](guide.md)", localized)
+
+    def test_summary_translates_only_the_visible_external_link_label(self):
+        source = "# Summary\n\n- [About the author$$external:https://example.org/author?from=toc$$]()\n"
+        with patch.object(translator, "translate_text", return_value="# 1. Sobre o autor") as translate:
+            localized = translator.translate_summary("Brazilian Portuguese", source, None, "fixture", None, "pt")
+        self.assertEqual(translate.call_args.args[1], "# 1. About the author")
+        self.assertEqual(localized, source.replace("About the author", "Sobre o autor"))
+
+    def test_summary_repairs_wrong_language_checkpoint(self):
+        source = "# Summary\n\n# Welcome!\n"
+        previous = "# Summary\n\n# Willkommen!\n"
+        with patch.object(translator, "wrong_language", side_effect=[True, False]), patch.object(
+            translator, "translate_text", return_value="# 1. Bem-vindo!"
+        ) as translate:
+            self.assertEqual(
+                translator.translate_summary("Brazilian Portuguese", source, (source, previous), "gpt-4o", None, "pt"),
+                "# Summary\n\n# Bem-vindo!\n",
+            )
+        translate.assert_called_once()
+
+    def test_markdown_chunking_keeps_reference_block_and_arguments_intact(self):
+        ref = "{{#ref}}\n`../guide.md`\n{{#endref}}\n"
+        source = "Introduction to our guide.\n" + ref + "Read the documentation.\n"
+        with patch.object(translator, "MAX_TOKENS", 24), patch.object(
+            translator, "reportTokens", side_effect=lambda text, _model: len(text)
+        ):
+            chunks = translator.split_text(source, "gpt-4o")
+        self.assertIn(ref, chunks)
+        self.assertEqual("".join(chunks), source)
+
+    def test_summary_refuses_copied_labels_even_if_punctuation_changes(self):
+        with patch.object(translator, "translate_text", return_value="# 1. WELCOME.") as translate:
+            with self.assertRaisesRegex(RuntimeError, "untranslated navigation labels"):
+                translator.translate_summary("French", "# Summary\n\n# Welcome!\n", None, "gpt-4o", None)
+        self.assertEqual(translate.call_count, 3)
+
+    def test_same_language_does_not_require_rewriting_code_or_proper_names(self):
+        english = "This is the original message. The report shows how to update your account. " * 10
+        french = "Ce document explique comment consulter votre compte et mettre à jour vos coordonnées. " * 10
+        code = "\n\n```text\n" + english + "\n```"
+        self.assertFalse(translator.copied_prose(french + code, french + code))
+        self.assertFalse(translator.wrong_language(french + code, "fr"))
+        self.assertTrue(translator.wrong_language(french, "pt"))
+
+    def test_mixed_prose_detects_english_sentence_inside_a_translated_paragraph(self):
+        copied = "This guide contains the information that you need before you can finish the setup."
+        source = f"Welcome to our guide. {copied}"
+        localized = f"Bienvenue dans notre guide. {copied}"
+        self.assertFalse(translator.copied_prose(source, localized))
+        self.assertTrue(copied_sentence(source, localized))
+        self.assertFalse(copied_sentence(source, "Bienvenue.\n\n```text\n" + copied + "\n```"))
+
+    def test_markdown_checks_accept_localized_text_and_flag_structural_regressions(self):
+        source = (
+            "## Your receipt {#receipt .section}\n\n"
+            "View the [instructions](guide(v2).md#steps) using `--help`.\n\n"
+            "Open [the receipt][receipt].\n\n[receipt]: receipt.pdf\n"
+        )
+        localized = (
+            "## Votre reçu {#receipt .section}\n\n"
+            "Consultez le [guide](guide(v2).md#steps) avec `--help`.\n\n"
+            "Ouvrez [le reçu][receipt].\n\n[receipt]: receipt.pdf\n"
+        )
+        self.assertEqual(markdown_problems(source, localized), [])
+        for old, new, expected in [
+            ("#receipt .section", "#recu .section", "changed link, image, or HTML anchor targets"),
+            ("guide(v2).md#steps", "guide(v3).md#steps", "changed link, image, or HTML anchor targets"),
+            ("receipt.pdf", "recu.pdf", "changed link, image, or HTML anchor targets"),
+            ("`--help`", "`--aide`", "changed inline or indented code"),
+            ("Ouvrez [le reçu][receipt].\n\n", "", "missing Markdown sections, paragraphs, list entries, or table cells"),
+        ]:
+            with self.subTest(old=old):
+                self.assertIn(expected, markdown_problems(source, localized.replace(old, new)))
+
+    def test_translation_preserves_distinct_source_and_localized_heading_ids(self):
+        source = (
+            "# Reader guide\n\n## Find your receipt\n\n## Find your receipt\n\n"
+            "## About {#explicit}\n\n```markdown\n## Ignored heading\n```\n"
+        )
+        localized = (
+            "# Guide du lecteur\n\n## Trouver un reçu\n\n## Trouver un reçu\n\n"
+            "## À propos {#explicit}\n\n```markdown\n## Ignored heading\n```\n"
+        )
+        preserved = preserve_source_heading_anchors(source, localized)
+        for anchor in ["reader-guide", "find-your-receipt", "find-your-receipt-1"]:
+            self.assertIn(f'id="{anchor}"', preserved)
+        self.assertNotIn('id="explicit"', preserved)
+        self.assertNotIn('id="ignored-heading"', preserved)
+        self.assertEqual(preserve_source_heading_anchors(source, preserved), preserved)
+        self.assertEqual(markdown_problems(source, preserved, allow_source_aliases=True), [])
+
+    def test_translation_does_not_add_an_anchor_with_an_existing_id(self):
+        source = "# Introduction\n\n## Details\n"
+        localized = "# Bienvenue\n\n## Introduction\n"
+        preserved = preserve_source_heading_anchors(source, localized)
+        self.assertNotIn('id="introduction"', preserved)
+        self.assertIn('id="details"', preserved)
+
+    def test_translation_restores_heading_that_contains_a_legacy_bookmark(self):
+        source = '# <a href="#legacy-id" id="legacy-id"></a>Reader guide\n'
+        localized = '# <a href="#legacy-id" id="legacy-id"></a>Guide du lecteur\n'
+        restored = preserve_source_heading_anchors(source, localized)
+        self.assertIn('id="reader-guide"', restored)
+        self.assertEqual(restored.count('id="legacy-id"'), 1)
+
+    def test_translation_leaves_ambiguous_heading_structure_alone(self):
+        source = "# Overview\n\n## Summary\n"
+        localized = "# Présentation\n\n### Synthèse\n"
+        self.assertEqual(preserve_source_heading_anchors(source, localized), localized)
+
+    def test_html_check_rejects_the_stray_closing_tag_that_broke_mdbook(self):
+        source = "Read <strong>the guide</strong>.\n"
+        translated = "Lisez <strong>le guide</strong>.\n"
+        self.assertEqual(markdown_problems(source, translated), [])
+        self.assertIn("introduced unmatched HTML tags",
+                      markdown_problems(source, translated + "</strong>\n"))
+        self.assertIn("introduced unmatched HTML tags",
+                      markdown_problems(source, translated.replace("</strong>", "")))
+
+    def test_html_check_tolerates_a_legacy_imbalance_and_ignores_code(self):
+        source = "<strong>Reminder\n\n```html\n</strong>\n```\n"
+        translated = source.replace("Reminder", "Rappel")
+        self.assertEqual(markdown_problems(source, translated), [])
+        self.assertEqual(markdown_problems(source, translated.replace("<strong>", "")), [])
+
+    def test_structurally_incomplete_page_never_writes_a_translation(self):
+        source = "# Receipts\n\nFirst paragraph.\n\nSecond paragraph.\n"
+        incomplete = "# Reçus\n\nPremier paragraphe.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            origin = directory + "/source.md"
+            target = directory + "/target.md"
+            with open(origin, "w") as stream:
+                stream.write(source)
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", return_value=incomplete
+            ):
+                with self.assertRaisesRegex(RuntimeError, "missing Markdown"):
+                    translator.translate_file("French", origin, target, "gpt-4o", None, "fr")
+            self.assertFalse(translator.os.path.exists(target))
+
+    def test_page_retries_copied_prose_before_writing_output(self):
+        english = "This is the original text and it should be translated before publication.\n"
+        french = "Ce texte doit être traduit avant sa publication.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            source = directory + "/source.md"
+            target = directory + "/output.md"
+            with open(source, "w") as stream:
+                stream.write(english)
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", side_effect=[english, french]
+            ) as translate:
+                translator.translate_file("French", source, target, "gpt-4o", None, "fr")
+            with open(target) as stream:
+                self.assertEqual(stream.read(), french)
+        self.assertEqual(translate.call_count, 2)
 
     def test_failed_page_fails_the_entire_batch(self):
         calls = []

@@ -13,6 +13,10 @@ on:
       - 'autonomous_research/**'
   workflow_dispatch:
     inputs:
+      navigation_only:
+        description: "Translate and publish sidebar labels only"
+        type: boolean
+        default: false
       files:
         description: 'Optional comma-separated src/*.md paths to retry in addition to the language backlog'
         required: false
@@ -69,11 +73,13 @@ jobs:
       image: ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image:latest
 
     env:
+      NAVIGATION_ONLY: ${{ inputs.navigation_only }}
       LANGUAGE: ${{ matrix.language }}
       BRANCH:   ${{ matrix.branch }}
 
     steps:
       - name: Wait for build_master to start
+        if: ${{ !inputs.navigation_only }}
         run: |
           echo "Waiting 30 seconds to let build_master.yml initialize and reset the searchindex repo..."
           sleep 30
@@ -84,13 +90,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate translator directive safeguards
+      - name: Pin source and validate translation scripts
+        shell: bash
         run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          source_ref=$(git rev-parse refs/remotes/origin/master)
+          echo "SOURCE_REF=$source_ref" >> "$GITHUB_ENV"
+          python -m pip install --disable-pip-version-check py3langid==0.4.0 markdown-it-py==4.3.0
           python scripts/test_translator_directives.py -v
           python scripts/test_translator_batch.py -v
           python scripts/test_translator_code_blocks.py -v
           python scripts/test_translator_tokenizers.py -v
           python scripts/test_translation_backlog.py -v
+          cp scripts/translator.py scripts/translation_backlog.py scripts/translation_quality.py /tmp/
+          git checkout --detach "$source_ref"
+          python3 scripts/check_summary.py
 
       - name: Verify image tools and download scripts
         run: |
@@ -99,8 +114,6 @@ jobs:
 
           cp scripts/get_and_save_refs.py /tmp/get_and_save_refs.py
           cp scripts/compare_and_fix_refs.py /tmp/compare_and_fix_refs.py
-          cp scripts/translator.py /tmp/translator.py
-          cp scripts/translation_backlog.py /tmp/translation_backlog.py
           cp scripts/push_branch_with_retry.sh /tmp/push_branch_with_retry.sh
           cp scripts/seo_postprocess.py /tmp/seo_postprocess.py
           cp scripts/mark_unchanged_s3_files.py /tmp/mark_unchanged_s3_files.py
@@ -127,6 +140,7 @@ jobs:
           cp theme/discount.css /tmp/discount.css
 
       - name: Run get_and_save_refs.py
+        if: ${{ !inputs.navigation_only }}
         run: |
           python /tmp/get_and_save_refs.py
 
@@ -142,6 +156,9 @@ jobs:
           git config pull.rebase false
           git checkout "$BRANCH"
           git pull --ff-only origin "$BRANCH"
+          if [[ "$NAVIGATION_ONLY" == true ]]; then
+            exit 0
+          fi
           python /tmp/compare_and_fix_refs.py --files-unmatched-paths /tmp/ref-mismatches.txt
           git add -A
           if ! git diff --cached --quiet; then
@@ -149,73 +166,66 @@ jobs:
             bash /tmp/push_branch_with_retry.sh "$BRANCH"
           fi
 
-      - name: Run translation script on changed files
+      - name: Translate and verify pending pages
         shell: bash
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           INPUT_FILES: ${{ inputs.files }}
           BATCH_SIZE: ${{ inputs.batch_size || '80' }}
         run: |
           set -euo pipefail
-          git checkout master
-          # Repair known SUMMARY.md breakage (duplicate entries) before it is
-          # captured here, so the fixed copy is what gets synced to every
-          # language branch below and mdbook does not abort the whole build.
-          python3 scripts/check_summary.py --fix
-          cp src/SUMMARY.md /tmp/master-summary.md
-          git restore -- src/SUMMARY.md
-          python /tmp/translation_backlog.py plan \
-            --language "$BRANCH" \
-            --output /tmp/pending-pages.txt \
-            --extras /tmp/ref-mismatches.txt \
-            --extra-env INPUT_FILES
-          echo "$(wc -l < /tmp/pending-pages.txt) pages pending for $BRANCH"
-
-          if [ -s /tmp/pending-pages.txt ]; then
-            if [[ ! "$BATCH_SIZE" =~ ^(20|40|80)$ ]]; then
-              echo "Invalid batch size: $BATCH_SIZE" >&2
-              exit 1
-            fi
-            split -l "$BATCH_SIZE" -d -a 3 /tmp/pending-pages.txt /tmp/translation-batch-
-            for batch in /tmp/translation-batch-*; do
-              git checkout master
-              python /tmp/translator.py \
-                --language "$LANGUAGE" \
-                --branch "$BRANCH" \
-                --api-key "${{ secrets.OPENAI_API_KEY }}" \
-                --file-list "$batch" \
-                --threads 3
-              python /tmp/translation_backlog.py mark \
-                --language "$BRANCH" \
-                --file-list "$batch"
-              git add .translation-source-blobs.json
-              if ! git diff --cached --quiet; then
-                git commit -m "Record translated English source blobs for $BRANCH"
-                bash /tmp/push_branch_with_retry.sh "$BRANCH"
-              fi
-            done
+          git checkout --detach "$SOURCE_REF"
+          if [[ "$NAVIGATION_ONLY" == true ]]; then
+            python /tmp/translator.py \
+              --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" \
+              --source-ref "$SOURCE_REF" \
+              --record-source --file-paths src/SUMMARY.md --navigation-only
+            exit 0
           fi
-          git checkout master
-          python /tmp/translation_backlog.py verify --language "$BRANCH"
-
-      - name: Sync SUMMARY.md from master
-        run: |
-          git checkout "$BRANCH"
-          git pull
-          if [ -f /tmp/master-summary.md ]; then
-            cp /tmp/master-summary.md src/SUMMARY.md
-            git add src/SUMMARY.md
-            git commit -m "Sync SUMMARY.md with master" || echo "SUMMARY already up to date"
-            bash /tmp/push_branch_with_retry.sh "$BRANCH"
-          else
-            echo "master summary not exported; failing"
+          if [[ ! "$BATCH_SIZE" =~ ^(20|40|80)$ ]]; then
+            echo "Invalid batch size: $BATCH_SIZE" >&2
             exit 1
           fi
+
+          backlog=(python /tmp/translation_backlog.py)
+          scope=(--language "$BRANCH" --source-ref "$SOURCE_REF")
+          "${backlog[@]}" plan "${scope[@]}" \
+            --output /tmp/pending-pages.txt --extras /tmp/ref-mismatches.txt --extra-env INPUT_FILES
+
+          if [ -s /tmp/pending-pages.txt ]; then
+            split -l "$BATCH_SIZE" -d -a 3 /tmp/pending-pages.txt /tmp/translation-batch-
+          else
+            # Keep shared book configuration and assets in sync without translating any pages.
+            cp /tmp/pending-pages.txt /tmp/translation-batch-000
+          fi
+          batches=(/tmp/translation-batch-*)
+          last_batch="${batches[${#batches[@]}-1]}"
+          for batch in "${batches[@]}"; do
+            options=()
+            if [[ "$batch" != "$last_batch" ]]; then
+              options+=(--keep-removed)
+            fi
+            git checkout --detach "$SOURCE_REF"
+            python /tmp/translator.py \
+              --language "$LANGUAGE" --branch "$BRANCH" --api-key "$OPENAI_API_KEY" \
+              --source-ref "$SOURCE_REF" \
+              --record-source --file-list "$batch" --threads 3 "${options[@]}"
+          done
+          "${backlog[@]}" verify "${scope[@]}"
 
       - name: Build mdBook
         run: |
           git checkout "$BRANCH"
-          git pull
+          if [ "$NAVIGATION_ONLY" = true ]; then
+            export MDBOOK_OUTPUT__HTML__SEARCH__ENABLE=false
+          else
+            python /tmp/translation_backlog.py restore-anchors --language "$BRANCH" --source-ref "$SOURCE_REF"
+          fi
           MDBOOK_BOOK__LANGUAGE=$BRANCH mdbook build || (echo "Error logs" && cat hacktricks-preprocessor-error.log && echo "" && echo "" && echo "Debug logs" && (cat hacktricks-preprocessor.log | tail -n 20) && exit 1)
+          python /tmp/translation_backlog.py verify-render --language "$BRANCH" --toc book/toc.html
+          if [ "$NAVIGATION_ONLY" = true ]; then
+            exit 0
+          fi
           cp /tmp/immutable-images/* ./book/images/
           cp /tmp/discount.js ./book/discount.js
           mkdir -p ./book/theme
@@ -225,6 +235,7 @@ jobs:
           cp /tmp/ht_searcher.js ./book/theme/ht_searcher.js
 
       - name: Push search index to hacktricks-searchindex repo
+        if: ${{ !inputs.navigation_only }}
         shell: bash
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
@@ -336,7 +347,22 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Publish translated sidebar
+        if: ${{ inputs.navigation_only }}
+        shell: bash
+        env:
+          DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          test -s book/toc.html
+          test -s book/toc.js
+          aws s3 cp book/toc.html "s3://hacktricks-cloud/$BRANCH/toc.html"
+          aws s3 cp book/toc.js "s3://hacktricks-cloud/$BRANCH/toc.js"
+          aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" \
+            --paths "/$BRANCH/toc.html" "/$BRANCH/toc.js"
+
       - name: Post-process SEO artifacts
+        if: ${{ !inputs.navigation_only }}
         run: |
           python3 /tmp/seo_postprocess.py pages \
             --book-dir ./book \
@@ -347,6 +373,7 @@ jobs:
       
       # Sync the build to S3
       - name: Sync to S3
+        if: ${{ !inputs.navigation_only }}
         run: |
           echo "Current branch:"
           git rev-parse --abbrev-ref HEAD
@@ -370,7 +397,7 @@ jobs:
   finalize-deployment:
     name: Finalize translated deployment
     needs: translate
-    if: ${{ always() && !cancelled() }}
+    if: ${{ always() && !cancelled() && !inputs.navigation_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: prod
