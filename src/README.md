@@ -2,7 +2,7 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Hacktricks logoları ve animasyonu_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_ tarafından tasarlanmıştır._<sup>[[1]](#references)</sup>
+_Hacktricks logoları ve animasyonu_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/) _tarafından tasarlanmıştır._<sup>[[1]](#references)</sup>
 
 ### HackTricks Cloud'u Yerel Olarak Çalıştırma
 
