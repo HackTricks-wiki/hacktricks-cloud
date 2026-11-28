@@ -86,4 +86,5 @@ Die enthaltene `docker-compose.yml` stellt deinen aktuell ausgecheckten Branch u
 - [12] [HackTricks Cloud-Pentesting-Methodik](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [HackTricks-Werte und FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Repobeats-Statistikgrafik für HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
