@@ -86,4 +86,5 @@ Bundled `docker-compose.yml` služi vašu trenutno checkout-ovanu granu na [http
 - [12] [HackTricks Cloud metodologija za pentesting](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [HackTricks Values & FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Grafikon statistike za HackTricks Cloud na Repobeats-u](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
