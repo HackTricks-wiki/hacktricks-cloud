@@ -86,6 +86,21 @@ class TranslationBacklogTests(unittest.TestCase):
         self.assertEqual(report["untranslated"], [backlog.SUMMARY_PATH, "src/old.md"])
         self.assertIn("src/old.md", backlog.pending("af", "master", set()))
 
+    def test_sidebar_gate_checks_the_working_copy_before_building(self):
+        summary = Path(backlog.SUMMARY_PATH)
+        english = summary.read_text(encoding="utf-8")
+        localized = "# Summary\n\n# Welkom!\n\n- [Oor die skrywer](old.md)\n"
+        argv = ["translation_backlog.py", "verify-navigation", "--language", "af", "--source-ref", self.baseline]
+        with patch.object(sys, "argv", argv):
+            summary.write_text(localized, encoding="utf-8")
+            backlog.main()
+            summary.write_text(english, encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "sidebar check \\(untranslated\\)"):
+                backlog.main()
+            summary.write_text(localized.replace("old.md", "new.md"), encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "sidebar check \\(navigation_structure\\)"):
+                backlog.main()
+
     def test_detailed_audit_flags_paraphrased_english_without_scheduling_a_rewrite(self):
         page = self.root / "src/old.md"
         english = (

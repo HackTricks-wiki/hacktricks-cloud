@@ -67,6 +67,19 @@ def localize_cloud_welcome_links(summary: str, branch: str) -> str:
     )
 
 
+def summary_issue(source, localized, language):
+    source_parts = summary_parts(source)
+    localized_parts = summary_parts(localized)
+    if summary_structure(source_parts) != summary_structure(localized_parts):
+        return "navigation_structure"
+    if any(label is not None and unchanged_summary_label(label, translation, language)
+           for (_, label, _), (_, translation, _) in zip(source_parts, localized_parts)):
+        return "untranslated"
+    if wrong_language(summary_language_text(source_parts, localized_parts), language):
+        return "wrong_language"
+    return None
+
+
 def git(*args: str) -> bytes:
     return subprocess.check_output(["git", *args])
 
@@ -180,18 +193,15 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
         original, localized = texts[source[path]], texts[existing[path]]
         review_source = texts[comparable[path]] if path in comparable else original
         if path == SUMMARY_PATH:
-            target = summary_parts(localized)
-            source_parts = summary_parts(original)
-            if summary_structure(source_parts) == summary_structure(target):
-                if any(original_label is not None and unchanged_summary_label(original_label, localized_label, language)
-                       for (_, original_label, _), (_, localized_label, _) in zip(source_parts, target)):
-                    copied.append(path)
-                elif wrong_language(summary_language_text(source_parts, target), language):
-                    language_mismatches.append(path)
-            else:
+            issue = summary_issue(original, localized, language)
+            if issue == "navigation_structure":
                 navigation.append(path)
                 if existing[path] in historical_blobs:
                     copied.append(path)
+            elif issue == "untranslated":
+                copied.append(path)
+            elif issue == "wrong_language":
+                language_mismatches.append(path)
             continue
         if copied_prose(original, localized, majority=True) or (
             existing[path] in historical_blobs and english_segments(localized)
@@ -336,7 +346,7 @@ def file_list(path: str) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=(
-        "audit", "plan", "mark", "verify", "verify-render", "restore-anchors", "localize-welcome-links",
+        "audit", "plan", "mark", "verify", "verify-navigation", "verify-render", "restore-anchors", "localize-welcome-links",
     ))
     parser.add_argument("--language", required=True, help="Local or remote-tracking language branch")
     parser.add_argument("--source-ref", default="master")
@@ -367,6 +377,13 @@ def main() -> None:
         localized = localize_cloud_welcome_links(summary, args.language)
         if localized != summary:
             path.write_bytes(localized.encode("utf-8"))
+    elif args.action == "verify-navigation":
+        source = git("show", f"{args.source_ref}:{SUMMARY_PATH}").decode("utf-8")
+        summary = Path(SUMMARY_PATH).read_bytes().decode("utf-8")
+        issue = summary_issue(source, summary, args.language)
+        if issue:
+            raise SystemExit(f"{args.language}: {SUMMARY_PATH} failed the sidebar check ({issue})")
+        print(f"{args.language}: sidebar labels are localized and chapter links match the source")
     elif args.action == "verify-render":
         if args.toc is None:
             parser.error("verify-render requires --toc")
