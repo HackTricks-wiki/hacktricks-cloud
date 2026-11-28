@@ -8,7 +8,7 @@
 > <summary>HackTricks को support करें</summary>
 >
 > - [**subscription plans**](https://github.com/sponsors/carlospolop) देखें!
-> - 💬 [**Discord group**](https://discord.gg/hRep4RUj7f) या [**telegram group**](https://t.me/peass) **से जुड़ें**, या हमें **Twitter** 🐦 पर [**@hacktricks_live**](https://twitter.com/hacktricks_live)** को follow करें।**
+> - 💬 [**Discord समूह**](https://discord.gg/hRep4RUj7f) या [**Telegram समूह**](https://t.me/peass) **से जुड़ें**, या **Twitter** 🐦 पर [**@hacktricks_live**](https://twitter.com/hacktricks_live) को **फ़ॉलो करें**।
 > - [**HackTricks**](https://github.com/carlospolop/hacktricks) और [**HackTricks Cloud**](https://github.com/carlospolop/hacktricks-cloud) github repos में PRs सबमिट करके hacking tricks **share करें**।
 >
 > </details>
