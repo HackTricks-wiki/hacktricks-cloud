@@ -410,6 +410,19 @@ class TranslationBatchTests(unittest.TestCase):
                     ["changed Markdown emphasis, strikethrough, or hard line breaks"],
                 )
 
+    def test_markdown_checks_find_visible_bold_delimiters_with_equal_formatting_counts(self):
+        source = "Follow [the library](https://example.org) **for updates**. Use \\*\\* in examples.\n"
+        localized = (
+            "Suivez [la bibliothèque](https://example.org) pour les **nouveautés**. "
+            "Utilisez \\*\\* dans les exemples.\n"
+        )
+        broken = localized.replace("pour les **nouveautés**", "** pour les nouvelles** et les **nouveautés**")
+        self.assertEqual(markdown_problems(source, localized), [])
+        self.assertEqual(markdown_problems(source, broken), ["introduced visible Markdown bold markers"])
+        self.assertEqual(markdown_problems(source, localized.replace("dans les exemples", "avec `**` dans les exemples")), [
+            "changed inline or indented code",
+        ])
+
     def test_markdown_checks_preserve_callout_type_and_position(self):
         source = (
             "> [!NOTE]\n> The reading room is inside.\n\n"

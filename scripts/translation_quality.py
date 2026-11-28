@@ -350,6 +350,7 @@ NESTED_BLOCK_TYPES = frozenset({
     "tr_open", "tr_close", "th_open", "td_open", "hr",
 })
 INLINE_FORMAT_TYPES = frozenset({"em_open", "strong_open", "s_open", "hardbreak"})
+VISIBLE_BOLD_MARKER = re.compile(r"(?<!\*)\*\*(?!\*)")
 
 
 class MarkdownInventory(NamedTuple):
@@ -361,6 +362,7 @@ class MarkdownInventory(NamedTuple):
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
     inline_formatting: Counter
+    visible_bold_markers: int
     reader_labels: Counter
     open_tags: Counter
     unmatched_closing: Counter
@@ -378,6 +380,7 @@ def markdown_inventory(text):
     quote_number = 0
     inline_positions = []
     inline_formatting = Counter()
+    visible_bold_markers = 0
     reader_labels = Counter()
     inline_block = 0
     html = ChapterHTML()
@@ -414,7 +417,9 @@ def markdown_inventory(text):
                 if marker:
                     nested_blocks.append(("task list item", marker[1].lower()))
         for inline in token.children or ():
-            if inline.type in INLINE_FORMAT_TYPES:
+            if inline.type == "text":
+                visible_bold_markers += len(VISIBLE_BOLD_MARKER.findall(inline.content))
+            elif inline.type in INLINE_FORMAT_TYPES:
                 inline_formatting[(inline_block, inline.type)] += 1
             elif inline.type == "code_inline":
                 literals[("inline code", inline.content)] += 1
@@ -444,7 +449,7 @@ def markdown_inventory(text):
     reader_labels.update(html.reader_labels)
     return MarkdownInventory(
         blocks, tuple(heading_levels), tuple(nested_blocks), tuple(callouts), targets, literals,
-        tuple(inline_positions), inline_formatting, reader_labels, Counter(html.tag_stack),
+        tuple(inline_positions), inline_formatting, visible_bold_markers, reader_labels, Counter(html.tag_stack),
         html.unmatched_closing, html.crossed_tags,
     )
 
@@ -475,6 +480,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("moved Markdown links, images, or inline code")
     if original.inline_formatting != localized.inline_formatting:
         problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
+    if localized.visible_bold_markers > original.visible_bold_markers:
+        problems.append("introduced visible Markdown bold markers")
     if original.reader_labels - localized.reader_labels:
         problems.append("missing image alternative text, tooltip, or accessible label")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
