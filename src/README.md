@@ -86,4 +86,5 @@ Dołączony plik `docker-compose.yml` udostępnia aktualnie checkoutowaną gał�
 - [12] [Metodologia pentestów chmurowych HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [Wartości i FAQ HackTricks](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Grafika statystyk Repobeats dla HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
