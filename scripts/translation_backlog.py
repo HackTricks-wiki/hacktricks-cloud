@@ -137,10 +137,13 @@ def verified_source_blobs(branch, source, existing, historical_blobs):
     }
 
 
-def audit(branch, source, existing, historical_blobs, *, detailed=False):
+def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpoint_ref=None):
     missing = sorted(source.keys() - existing.keys())
     paths = sorted(source.keys() & existing.keys())
-    comparable = verified_source_blobs(branch, source, existing, historical_blobs) if detailed else {}
+    comparable = (
+        verified_source_blobs(checkpoint_ref or branch, source, existing, historical_blobs)
+        if detailed else {}
+    )
     texts = read_blobs(
         [blob for path in paths for blob in (source[path], existing[path])]
         + list(comparable.values())
