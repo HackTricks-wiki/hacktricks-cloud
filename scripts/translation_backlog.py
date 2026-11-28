@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
-    LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
+    LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, ignored_prose_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
     suspected_english_blocks, unchanged_summary_label, wrong_language,
 )
 
@@ -32,6 +32,28 @@ CLOUD_WELCOME_LINK = re.compile(
     r"\$\$external:https://book\.hacktricks\.wiki/en/welcome/"
     r"(?P<page>about-the-author|hacktricks-values-and-faq)\.html\$\$"
 )
+REFERENCE_FOOTER = re.compile(
+    r"^- \[\d+\] \[[^\]\r\n]+\]\([^\r\n]+\)[ \t]*(?P<newline>\r?\n)"
+    r"(?P<gap>(?:[ \t]*\r?\n)*)(?P<include>\{\{#include (?:\.\./)*banners/hacktricks-training\.md\}\})"
+    r"[ \t]*(?:\r?\n[ \t]*)*\Z",
+    flags=re.MULTILINE,
+)
+
+
+def normalize_reference_footer(source, localized):
+    """Restore a missing footer separator for comparison, while keeping the original reportable."""
+    original = REFERENCE_FOOTER.search(source)
+    translated = REFERENCE_FOOTER.search(localized)
+    if not original or not translated or not original["gap"] or translated["gap"]:
+        return localized
+    if original["include"] != translated["include"]:
+        return localized
+    for text, match in ((source, original), (localized, translated)):
+        code_spans, _ = ignored_prose_spans(text)
+        if any(start <= match.start("include") < end for start, end in code_spans):
+            return localized
+    include_start = translated.start("include")
+    return localized[:include_start] + translated["newline"] + localized[include_start:]
 
 
 def localize_cloud_welcome_links(summary: str, branch: str) -> str:
@@ -152,6 +174,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
     copied, language_mismatches, navigation, partial = [], [], [], []
     structural_review = {}
     english_review = {}
+    footer_spacing = []
     for path in paths:
         original, localized = texts[source[path]], texts[existing[path]]
         review_source = texts[comparable[path]] if path in comparable else original
@@ -182,7 +205,10 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
             if count:
                 english_review[path] = count
         if detailed and review_source != localized:
-            problems = markdown_problems(review_source, localized, allow_source_aliases=True)
+            normalized = normalize_reference_footer(review_source, localized)
+            if normalized != localized:
+                footer_spacing.append(path)
+            problems = markdown_problems(review_source, normalized, allow_source_aliases=True)
             if problems:
                 structural_review[path] = problems
     report = {
@@ -195,6 +221,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
             checkpoint_unverified=sorted(set(paths) - comparable.keys()),
             partly_untranslated=partial,
             english_prose_review=english_review,
+            reference_footer_spacing=footer_spacing,
             structural_review=structural_review,
         )
     return report

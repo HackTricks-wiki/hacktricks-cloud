@@ -122,6 +122,40 @@ class TranslationBacklogTests(unittest.TestCase):
         self.assertNotIn("src/old.md", report["partly_untranslated"])
         self.assertEqual(report["english_prose_review"], {"src/old.md": 1})
 
+    def test_detailed_audit_distinguishes_footer_spacing_from_missing_paragraphs(self):
+        intro = "Use the form to request a copy.\n\nKeep the receipt for your records.\n\n"
+        french_intro = "Utilisez le formulaire pour demander une copie.\n\nConservez le reçu.\n\n"
+        reference = "## References\n\n- [1] [Guide](https://example.org/guide)\n"
+        footer = "{{#include ../banners/hacktricks-training.md}}\n"
+        sources = ("src/old.md", "src/new.md")
+        for path in sources:
+            Path(path).write_text(intro + reference + "\n" + footer, encoding="utf-8")
+        self.git("commit", "-am", "Write source pages with their own reference footer")
+        self.git("checkout", "-b", "fr")
+        Path(sources[0]).write_text(french_intro + reference + footer, encoding="utf-8")
+        Path(sources[1]).write_text(french_intro.split("\n\n")[0] + "\n\n" + reference + footer, encoding="utf-8")
+        self.git("commit", "-am", "Translate pages without the footer separator")
+        report = backlog.audit(
+            "fr", backlog.markdown_blobs("master"), backlog.markdown_blobs("fr"),
+            backlog.english_history("master"), detailed=True,
+        )
+        self.assertEqual(report["reference_footer_spacing"], sorted(sources))
+        self.assertNotIn(sources[0], report["structural_review"])
+        self.assertIn("missing Markdown sections, paragraphs, list entries, or table cells",
+                      report["structural_review"][sources[1]])
+        self.assertNotIn("\n\n" + footer, Path(sources[0]).read_text(encoding="utf-8"))
+
+    def test_footer_normalization_preserves_line_endings_and_ignores_code(self):
+        ref = "- [1] [Guide](https://example.org/guide)\r\n"
+        footer = "{{#include ../banners/hacktricks-training.md}}\r\n"
+        source = ref + "\r\n" + footer
+        localized = ref + footer
+        self.assertEqual(backlog.normalize_reference_footer(source, localized), source)
+        code = "```markdown\r\n" + localized
+        self.assertEqual(backlog.normalize_reference_footer(source, code), code)
+        other = localized.replace("banners/hacktricks-training.md", "banners/other.md")
+        self.assertEqual(backlog.normalize_reference_footer(source, other), other)
+
     def test_detailed_audit_checks_structure_against_recorded_source(self):
         path = self.root / "src/old.md"
         path.write_text("Read [the guide](guide.md).\n")
