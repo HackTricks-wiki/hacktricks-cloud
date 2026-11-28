@@ -7,6 +7,7 @@ import unicodedata
 from collections import Counter
 from functools import lru_cache
 from html.parser import HTMLParser
+from typing import NamedTuple
 from urllib.parse import unquote, urlsplit
 
 from markdown_it import MarkdownIt
@@ -268,16 +269,27 @@ MARKDOWN = MarkdownIt("commonmark").enable("table")
 HEADING_ATTRIBUTES = re.compile(r"\s+\{([^{}]+)\}\s*$")
 
 
+class MarkdownInventory(NamedTuple):
+    blocks: Counter
+    heading_levels: tuple[str, ...]
+    targets: Counter
+    literals: Counter
+    open_tags: Counter
+    unmatched_closing: Counter
+
+
 @lru_cache(maxsize=128)
 def markdown_inventory(text):
     """Inventory structural blocks and protected content with a CommonMark parser."""
     env = {}
     blocks, targets, literals = Counter(), Counter(), Counter()
+    heading_levels = []
     html = ChapterHTML()
     tokens = MARKDOWN.parse(text, env)
     for index, token in enumerate(tokens):
         if token.type == "heading_open":
             blocks[token.tag] += 1
+            heading_levels.append(token.tag)
             attributes = HEADING_ATTRIBUTES.search(tokens[index + 1].content)
             if attributes:
                 for attribute in attributes[1].split():
@@ -303,24 +315,27 @@ def markdown_inventory(text):
     for definition in env.get("references", {}).values():
         targets[("reference definition", definition["href"])] += 1
     targets.update(html.targets)
-    return blocks, targets, literals, html.open_tags, html.unmatched_closing
+    return MarkdownInventory(blocks, tuple(heading_levels), targets, literals, html.open_tags, html.unmatched_closing)
 
 
 def markdown_problems(source, translated, *, allow_source_aliases=False):
     """Return actionable diagnostics without including any prose or code in logs."""
-    old_blocks, old_targets, old_literals, old_open, old_closing = markdown_inventory(source)
-    new_blocks, new_targets, new_literals, new_open, new_closing = markdown_inventory(translated)
+    original = markdown_inventory(source)
+    localized = markdown_inventory(translated)
     problems = []
-    if old_blocks - new_blocks:
+    if original.blocks - localized.blocks:
         problems.append("missing Markdown sections, paragraphs, list entries, or table cells")
+    if original.heading_levels != localized.heading_levels:
+        problems.append("changed Markdown heading order or nesting")
+    old_targets, new_targets = original.targets, localized.targets
     if allow_source_aliases:
         old_targets = {key: count for key, count in old_targets.items() if key[1] != "translation alias"}
         new_targets = {key: count for key, count in new_targets.items() if key[1] != "translation alias"}
     if old_targets != new_targets:
         problems.append("changed link, image, or HTML anchor targets")
-    if old_literals != new_literals:
+    if original.literals != localized.literals:
         problems.append("changed inline or indented code")
-    if new_open - old_open or new_closing - old_closing:
+    if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     return problems
 
@@ -527,7 +542,7 @@ def preserve_source_heading_anchors(source, localized):
         return localized
 
     used = {heading[2] for heading in target_headings}
-    _, raw_targets, _, _, _ = markdown_inventory(localized)
+    raw_targets = markdown_inventory(localized).targets
     used.update(target[-1] for target in raw_targets
                 if len(target) == 3 and target[1] in {"id", "name", "translation alias"})
     lines = localized.splitlines(keepends=True)

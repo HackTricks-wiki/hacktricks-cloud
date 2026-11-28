@@ -187,6 +187,11 @@ class TranslationBatchTests(unittest.TestCase):
             with self.subTest(old=old):
                 self.assertIn(expected, markdown_problems(source, localized.replace(old, new)))
 
+    def test_markdown_checks_detect_reordered_heading_levels_with_equal_counts(self):
+        original = "# Handbook\n\n## Reading\n\n### Examples\n\n## Writing\n"
+        localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"
+        self.assertEqual(markdown_problems(original, localized), ["changed Markdown heading order or nesting"])
+
     def test_translation_preserves_distinct_source_and_localized_heading_ids(self):
         source = (
             "# Reader guide\n\n## Find your receipt\n\n## Find your receipt\n\n"
