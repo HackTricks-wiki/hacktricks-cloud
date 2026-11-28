@@ -18,7 +18,7 @@ from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
     LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, ignored_prose_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
-    suspected_english_blocks, unchanged_summary_label, wrong_language,
+    missing_markdown_blocks, suspected_english_blocks, unchanged_summary_label, wrong_language,
 )
 
 
@@ -173,6 +173,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
     language = branch.rsplit('/', 1)[-1]
     copied, language_mismatches, navigation, partial = [], [], [], []
     structural_review = {}
+    missing_block_details = {}
     english_review = {}
     footer_spacing = []
     for path in paths:
@@ -211,6 +212,13 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
             problems = markdown_problems(review_source, normalized, allow_source_aliases=True)
             if problems:
                 structural_review[path] = problems
+                missing_blocks = missing_markdown_blocks(review_source, normalized)
+                if missing_blocks:
+                    missing_block_details[path] = {
+                        "comparison_source": "recorded_english" if path in comparable else "current_english",
+                        "source_blob": comparable.get(path, source[path]),
+                        "missing": missing_blocks,
+                    }
     report = {
         "missing": missing, "untranslated": copied, "wrong_language": language_mismatches,
         "navigation_structure": navigation,
@@ -223,6 +231,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
             english_prose_review=english_review,
             reference_footer_spacing=footer_spacing,
             structural_review=structural_review,
+            missing_block_details=missing_block_details,
         )
     return report
 

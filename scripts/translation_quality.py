@@ -351,6 +351,13 @@ NESTED_BLOCK_TYPES = frozenset({
 })
 INLINE_FORMAT_TYPES = frozenset({"em_open", "strong_open", "s_open", "hardbreak"})
 VISIBLE_BOLD_MARKER = re.compile(r"(?<!\*)\*\*(?!\*)")
+MARKDOWN_BLOCK_NAMES = {
+    "paragraph_open": "paragraphs",
+    "list_item_open": "list_entries",
+    "tr_open": "table_rows",
+    "th_open": "table_header_cells",
+    "td_open": "table_data_cells",
+}
 CJK_TEXT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 CJK_BOLD_BOUNDARIES = " \t\u00a0\u3000.,!?;:()。！？、；：，…（）「」『』《》【】〈〉〔〕［］“”‘’"
 PLAIN_BOLD_SPAN = re.compile(r"(?<![\\*])\*\*(?!\*)([^*\\`<>\[\]\r\n]+)\*\*(?!\*)")
@@ -534,6 +541,15 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
     if localized.crossed_tags - original.crossed_tags:
         problems.append("introduced incorrectly nested HTML tags")
     return problems
+
+
+def missing_markdown_blocks(source, translated):
+    """Return counts of missing Markdown block types without exposing the text."""
+    deficit = markdown_inventory(source).blocks - markdown_inventory(translated).blocks
+    return {
+        MARKDOWN_BLOCK_NAMES.get(kind, f"{kind}_headings"): count
+        for kind, count in sorted(deficit.items())
+    }
 
 
 class RenderedSidebar(HTMLParser):

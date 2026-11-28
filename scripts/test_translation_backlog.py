@@ -143,6 +143,13 @@ class TranslationBacklogTests(unittest.TestCase):
         self.assertNotIn(sources[0], report["structural_review"])
         self.assertIn("missing Markdown sections, paragraphs, list entries, or table cells",
                       report["structural_review"][sources[1]])
+        self.assertEqual(report["missing_block_details"], {
+            sources[1]: {
+                "comparison_source": "current_english",
+                "source_blob": backlog.markdown_blobs("master")[sources[1]],
+                "missing": {"paragraphs": 1},
+            },
+        })
         self.assertNotIn("\n\n" + footer, Path(sources[0]).read_text(encoding="utf-8"))
 
     def test_footer_normalization_preserves_line_endings_and_ignores_code(self):
@@ -158,13 +165,13 @@ class TranslationBacklogTests(unittest.TestCase):
 
     def test_detailed_audit_checks_structure_against_recorded_source(self):
         path = self.root / "src/old.md"
-        path.write_text("Read [the guide](guide.md).\n")
+        path.write_text("Read [the guide](guide.md).\n\n## Checklist\n\n- Date\n")
         self.git("commit", "-am", "Add source link")
         recorded = self.git("rev-parse", "HEAD")
         path.write_text("Read [the updated guide](guide-v2.md).\n\nNew paragraph.\n")
         self.git("commit", "-am", "Revise source link and add a paragraph")
         self.git("checkout", "af")
-        path.write_text("Lees [die gids](guide.md).\n")
+        path.write_text("Lees [die gids](guide.md).\n\n## Kontrolelys\n\n- Datum\n")
         backlog.record_translations(recorded, ["src/old.md"], {})
         self.git("add", str(backlog.STATE_PATH), "src/old.md")
         self.git("commit", "-m", "Publish translation of the first guide")
@@ -180,6 +187,13 @@ class TranslationBacklogTests(unittest.TestCase):
         self.git("commit", "-am", "Break a link in the localized copy")
         report = backlog.audit("af", source, backlog.markdown_blobs("af"), history, detailed=True)
         self.assertIn("src/old.md", report["structural_review"])
+        self.assertEqual(report["missing_block_details"], {
+            "src/old.md": {
+                "comparison_source": "recorded_english",
+                "source_blob": backlog.markdown_blobs(recorded)["src/old.md"],
+                "missing": {"h2_headings": 1, "list_entries": 1, "paragraphs": 1},
+            },
+        })
 
     def test_checkpoint_does_not_record_the_inferred_legacy_baseline_as_translated(self):
         self.git("checkout", "af")
