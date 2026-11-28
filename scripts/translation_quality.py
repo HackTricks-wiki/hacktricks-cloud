@@ -268,6 +268,7 @@ class ChapterHTML(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.targets = Counter()
+        self.reader_labels = Counter()
         self.unmatched_closing = Counter()
         self.crossed_tags = Counter()
         self.tag_stack = []
@@ -275,8 +276,12 @@ class ChapterHTML(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag in PAIRED_HTML_TAGS:
             self.tag_stack.append(tag)
-        generated_alias = tag == "span" and dict(attrs).get("class") == SOURCE_ANCHOR_CLASS
+        attributes = dict(attrs)
+        generated_alias = tag == "span" and attributes.get("class") == SOURCE_ANCHOR_CLASS
+        destination = attributes.get("src") or attributes.get("href")
         for name, value in attrs:
+            if value and value.strip() and (name in {"title", "aria-label"} or (name == "alt" and tag == "img")):
+                self.reader_labels[(tag, destination, name)] += 1
             if generated_alias and name == "id":
                 self.targets[(tag, "translation alias", value)] += 1
             elif value is not None and (name in {"href", "src", "id"} or (tag == "a" and name == "name")):
@@ -318,6 +323,7 @@ class MarkdownInventory(NamedTuple):
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
     inline_formatting: Counter
+    reader_labels: Counter
     open_tags: Counter
     unmatched_closing: Counter
     crossed_tags: Counter
@@ -332,6 +338,7 @@ def markdown_inventory(text):
     nested_blocks = []
     inline_positions = []
     inline_formatting = Counter()
+    reader_labels = Counter()
     inline_block = 0
     html = ChapterHTML()
     tokens = MARKDOWN.parse(text, env)
@@ -370,19 +377,28 @@ def markdown_inventory(text):
                 href = inline.attrGet("href")
                 targets[("link", href)] += 1
                 inline_positions.append((inline_block, "link", href))
+                if (inline.attrGet("title") or "").strip():
+                    reader_labels[("Markdown link", href, "title")] += 1
             elif inline.type == "image":
                 src = inline.attrGet("src")
                 targets[("image", src)] += 1
                 inline_positions.append((inline_block, "image", src))
+                if inline.content.strip():
+                    reader_labels[("Markdown image", src, "alt")] += 1
+                if (inline.attrGet("title") or "").strip():
+                    reader_labels[("Markdown image", src, "title")] += 1
             elif inline.type == "html_inline":
                 html.feed(inline.content)
     html.close()
     for definition in env.get("references", {}).values():
         targets[("reference definition", definition["href"])] += 1
+        if (definition.get("title") or "").strip():
+            reader_labels[("Markdown reference", definition["href"], "title")] += 1
     targets.update(html.targets)
+    reader_labels.update(html.reader_labels)
     return MarkdownInventory(
         blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals,
-        tuple(inline_positions), inline_formatting, Counter(html.tag_stack),
+        tuple(inline_positions), inline_formatting, reader_labels, Counter(html.tag_stack),
         html.unmatched_closing, html.crossed_tags,
     )
 
@@ -411,6 +427,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("moved Markdown links, images, or inline code")
     if original.inline_formatting != localized.inline_formatting:
         problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
+    if original.reader_labels - localized.reader_labels:
+        problems.append("missing image alternative text, tooltip, or accessible label")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     if localized.crossed_tags - original.crossed_tags:

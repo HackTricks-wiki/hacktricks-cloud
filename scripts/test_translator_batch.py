@@ -346,6 +346,30 @@ class TranslationBatchTests(unittest.TestCase):
         for variant in (links_swapped, code_swapped):
             self.assertEqual(markdown_problems(source, variant), ["moved Markdown links, images, or inline code"])
 
+    def test_markdown_checks_preserve_translated_alternative_text_tooltips_and_labels(self):
+        source = (
+            '![Map of the building](map.png "View the map") and [directions](guide.md "Open the guide").\n\n'
+            '![A waiting room][room]\n\n[room]: room.png "Room preview"\n\n'
+            '<img src="door.png" alt="Front entrance">\n\n'
+            '<a href="rooms.html" aria-label="List of rooms">Rooms</a>\n\n![](decoration.png)\n'
+        )
+        localized = (
+            '![Plan du bâtiment](map.png "Voir le plan") et [itinéraire](guide.md "Ouvrir le guide").\n\n'
+            '![Une salle d’attente][room]\n\n[room]: room.png "Aperçu de la salle"\n\n'
+            '<img src="door.png" alt="Entrée principale">\n\n'
+            '<a href="rooms.html" aria-label="Liste des salles">Salles</a>\n\n![](decoration.png)\n'
+        )
+        self.assertEqual(markdown_problems(source, localized), [])
+        for removed in (
+            'Plan du bâtiment', 'Voir le plan', ' "Ouvrir le guide"', 'Une salle d’attente',
+            ' "Aperçu de la salle"', 'Entrée principale', ' aria-label="Liste des salles"',
+        ):
+            with self.subTest(removed=removed):
+                self.assertEqual(
+                    markdown_problems(source, localized.replace(removed, "")),
+                    ["missing image alternative text, tooltip, or accessible label"],
+                )
+
     def test_markdown_checks_detect_reordered_heading_levels_with_equal_counts(self):
         original = "# Handbook\n\n## Reading\n\n### Examples\n\n## Writing\n"
         localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"
