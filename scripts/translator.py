@@ -18,7 +18,7 @@ from urllib.request import Request, urlopen
 
 from translation_backlog import (
     SUMMARY_PATH, checkpoint_for_update, markdown_blobs, normalize_reference_footer, record_translations,
-    reusable_chapter_labels,
+    reusable_chapter_labels, summary_issue,
 )
 from translation_quality import (
     MARKDOWN, markdown_line_offsets,
@@ -341,6 +341,18 @@ def cp_translation_to_repo_dir_and_check_gh_branch(
     Get the translated files from the temp folder and copy them to the repo directory in the expected branch.
     Also remove all the files that are not in the master branch.
     """
+    staged_summary = Path(temp_folder, SUMMARY_PATH)
+    if SUMMARY_PATH in translate_files:
+        if not staged_summary.is_file():
+            raise RuntimeError("Selected SUMMARY.md is missing from the staged translation")
+        english = subprocess.check_output(["git", "show", f"{source_ref}:{SUMMARY_PATH}"]).decode("utf-8")
+        summary = staged_summary.read_bytes().decode("utf-8")
+        issue = summary_issue(english, summary, branch)
+        if issue:
+            raise RuntimeError(f"Staged SUMMARY.md failed the sidebar check ({issue})")
+    elif staged_summary.exists():
+        raise RuntimeError("The translation batch unexpectedly staged SUMMARY.md")
+
     branch_exists = subprocess.run(['git', 'show-ref', '--verify', '--quiet', 'refs/heads/' + branch])
     # If branch doesn't exist, create it
     if branch_exists.returncode != 0:

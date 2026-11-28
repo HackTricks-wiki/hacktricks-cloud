@@ -139,6 +139,25 @@ class TranslationBatchTests(unittest.TestCase):
                     run(swapped)
                 self.assertEqual(git("rev-parse", "fr"), revision)
                 self.assertFalse((repo / ".translation-source-blobs.json").exists())
+                with tempfile.TemporaryDirectory() as stage:
+                    staged = Path(stage, "src", "SUMMARY.md")
+                    staged.parent.mkdir()
+                    with self.assertRaisesRegex(RuntimeError, "missing from the staged translation"):
+                        translator.cp_translation_to_repo_dir_and_check_gh_branch(
+                            "fr", stage, ["src/SUMMARY.md"], revision, {},
+                        )
+                    staged.write_text(summary, encoding="utf-8")
+                    with self.assertRaisesRegex(RuntimeError, "unexpectedly staged SUMMARY.md"):
+                        translator.cp_translation_to_repo_dir_and_check_gh_branch(
+                            "fr", stage, ["src/guide.md"], revision, {},
+                        )
+                    with self.assertRaisesRegex(RuntimeError, "sidebar check \\(untranslated\\)"):
+                        translator.cp_translation_to_repo_dir_and_check_gh_branch(
+                            "fr", stage, ["src/SUMMARY.md"], revision, {},
+                        )
+                    self.assertEqual(git("branch", "--show-current"), "master")
+                    self.assertEqual(git("rev-parse", "origin/fr"), revision)
+                    self.assertEqual(git("status", "--porcelain"), "")
                 run(localized)
                 self.assertEqual(git("rev-parse", "fr"), git("rev-parse", "origin/fr"))
                 self.assertEqual(set(git("diff-tree", "-r", "--no-commit-id", "--name-only", "fr").splitlines()), {
