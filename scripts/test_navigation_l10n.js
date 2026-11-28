@@ -59,12 +59,20 @@ function translate(language) {
     const references = { childNodes: [{}], firstChild: { nodeType: 3 }, textContent: "References", hash: "#references" };
     const alreadyLocalized = { ...references, textContent: "Custom source list" };
     const richHeading = { ...references, firstChild: { nodeType: 1 } };
+    const tabNames = ["Install", "Second Tab", "Method1", "Example 3", "GCP"];
+    const tabs = tabNames.map(name => ({
+        childNodes: [{}], firstChild: { nodeType: 3 }, textContent: name, dataset: { tabname: name },
+    }));
+    const tabWithIcon = { ...tabs[0], childNodes: [{}, {}] };
     const document = {
         documentElement: { lang: language },
         querySelectorAll(selector) {
             if (selector === "[data-nav-label]") { return nodes; }
             if (selector === 'main h2#references > a.header[href="#references"]') {
                 return [references, alreadyLocalized, richHeading];
+            }
+            if (selector === "main .mdbook-tabs > button.mdbook-tab[data-tabname]") {
+                return [...tabs, tabWithIcon];
             }
             return selector === ".blockquote-tag > .blockquote-tag-title" ? callouts : [];
         },
@@ -109,6 +117,11 @@ function translate(language) {
     assert.equal(alreadyLocalized.textContent, "Custom source list");
     assert.equal(richHeading.textContent, "References");
     labels.references = references.textContent;
+    assert.deepEqual(tabs.map(tab => tab.dataset.tabname), tabNames);
+    assert.equal(tabs[4].textContent, "GCP");
+    assert.equal(tabWithIcon.textContent, "Install");
+    const [install, secondTab, method, example] = tabs.map(tab => tab.textContent);
+    Object.assign(labels, { install, secondTab, method, example });
     labels.callouts = callouts.map(title => {
         assert.equal(title.firstChild.nodeType, 1);
         assert.notEqual(title.lastChild.textContent, "Original callout title");
@@ -137,6 +150,9 @@ test("regional tags select a translation and unknown tags use English", () => {
     assert.deepEqual(translate("pt").callouts, ["Observação", "Dica", "Importante", "Aviso", "Cuidado"]);
     assert.equal(translate("pt").references, "Referências");
     assert.equal(translate("ja").references, "参考資料");
+    assert.equal(translate("fr").install, "Installer");
+    assert.equal(translate("pt").method, "Método 1");
+    assert.equal(translate("ja").example, "例 3");
 });
 
 test("already published templates localize using their legacy selectors", () => {

@@ -799,6 +799,44 @@ function codeInterfaceMessages(language) {
         }
     }
 
+    const tabLabels = {
+        af: ["Installeer", "Tweede oortjie", "Metode {n}", "Voorbeeld {n}"],
+        de: ["Installieren", "Zweiter Tab", "Methode {n}", "Beispiel {n}"],
+        el: ["Εγκατάσταση", "Δεύτερη καρτέλα", "Μέθοδος {n}", "Παράδειγμα {n}"],
+        es: ["Instalar", "Segunda pestaña", "Método {n}", "Ejemplo {n}"],
+        fr: ["Installer", "Deuxième onglet", "Méthode {n}", "Exemple {n}"],
+        hi: ["इंस्टॉल करें", "दूसरा टैब", "तरीका {n}", "उदाहरण {n}"],
+        it: ["Installa", "Seconda scheda", "Metodo {n}", "Esempio {n}"],
+        ja: ["インストール", "2 番目のタブ", "方法 {n}", "例 {n}"],
+        ko: ["설치", "두 번째 탭", "방법 {n}", "예제 {n}"],
+        pl: ["Zainstaluj", "Druga karta", "Metoda {n}", "Przykład {n}"],
+        pt: ["Instalar", "Segunda aba", "Método {n}", "Exemplo {n}"],
+        sr: ["Инсталирај", "Друга картица", "Метод {n}", "Пример {n}"],
+        sw: ["Sakinisha", "Kichupo cha pili", "Njia ya {n}", "Mfano wa {n}"],
+        tr: ["Kur", "İkinci sekme", "Yöntem {n}", "Örnek {n}"],
+        uk: ["Встановити", "Друга вкладка", "Спосіб {n}", "Приклад {n}"],
+        vi: ["Cài đặt", "Thẻ thứ hai", "Cách {n}", "Ví dụ {n}"],
+        zh: ["安装", "第二个标签页", "方法 {n}", "示例 {n}"],
+    };
+    if (Object.hasOwn(tabLabels, supportedLocale)) {
+        const [install, secondTab, method, example] = tabLabels[supportedLocale];
+        for (const button of document.querySelectorAll("main .mdbook-tabs > button.mdbook-tab[data-tabname]")) {
+            if (button.childNodes.length !== 1 || button.firstChild.nodeType !== 3) { continue; }
+            const label = button.textContent.trim().toLowerCase();
+            // mdBook uses data-tabname to select panels and synchronize tab groups.
+            if (label === "install") {
+                button.textContent = install;
+            } else if (label === "second tab") {
+                button.textContent = secondTab;
+            } else {
+                const numbered = /^(method|example)\s*([0-9]+)$/.exec(label);
+                if (numbered) {
+                    button.textContent = (numbered[1] === "method" ? method : example).replace("{n}", numbered[2]);
+                }
+            }
+        }
+    }
+
     const calloutTypes = ["note", "tip", "important", "warning", "caution"];
     for (const title of document.querySelectorAll(".blockquote-tag > .blockquote-tag-title")) {
         const index = calloutTypes.findIndex(type => title.parentElement.classList.contains(`blockquote-tag-${type}`));
