@@ -36,7 +36,7 @@ export HT_LANG="master" # Leave master for English
 docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -v $(pwd)/hacktricks-cloud:/app ghcr.io/hacktricks-wiki/hacktricks-cloud/translator-image bash -c "mkdir -p ~/.ssh && ssh-keyscan -H github.com >> ~/.ssh/known_hosts && cd /app && git checkout $HT_LANG && git pull && MDBOOK_PREPROCESSOR__HACKTRICKS__ENV=dev mdbook serve --hostname 0.0.0.0"
 ```
 
-Die container-opdrag volg Docker se gedokumenteerde run-koppelvlak en gebruik mdBook se HTTP-voorskoubediener; die repository koppel die container se poort 3000 aan plaaslike poort 3377.<sup>[[4]](#references)[[5]](#references)[[7]](#references)</sup>
+Die container-opdrag volg Docker se gedokumenteerde `run`-koppelvlak en gebruik mdBook se HTTP-voorskoubediener; die repository koppel die container se poort 3000 aan plaaslike poort 3377.<sup>[[4]](#references)[[5]](#references)[[7]](#references)</sup>
 
 Jou plaaslike kopie van HackTricks Cloud sal **ná ’n minuut beskikbaar wees by [http://localhost:3377](http://localhost:3377)**.<sup>[[2]](#references)</sup>
 
