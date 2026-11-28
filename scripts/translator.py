@@ -1,5 +1,6 @@
 import argparse
 from functools import lru_cache
+import hashlib
 import json
 import os
 from openai import OpenAI #pip3 install openai
@@ -70,7 +71,7 @@ DEFAULT_OPENAI_MODEL_ALIAS = "OPENAI_BEST_CHEAPEST"
 MODEL_ALIASES_TIMEOUT_SECONDS = 15
 
 
-def load_default_openai_model(endpoint: str = MODEL_ALIASES_ENDPOINT) -> str:
+def load_default_openai_model(endpoint: str = MODEL_ALIASES_ENDPOINT, *, alias=DEFAULT_OPENAI_MODEL_ALIAS) -> str:
     """Load the cheapest configured OpenAI model from the model-alias Lambda."""
     request = Request(
         endpoint,
@@ -85,10 +86,10 @@ def load_default_openai_model(endpoint: str = MODEL_ALIASES_ENDPOINT) -> str:
         ) from exc
 
     aliases = payload.get("model_aliases") if isinstance(payload, dict) else None
-    model = aliases.get(DEFAULT_OPENAI_MODEL_ALIAS) if isinstance(aliases, dict) else None
+    model = aliases.get(alias) if isinstance(aliases, dict) else None
     if not isinstance(model, str) or not model.strip():
         raise RuntimeError(
-            f"Model alias {DEFAULT_OPENAI_MODEL_ALIAS} was not returned by {endpoint}"
+            f"Model alias {alias} was not returned by {endpoint}"
         )
     return model.strip()
 
@@ -593,7 +594,7 @@ def copy_files(source_path, dest_path):
 NAVIGATION_LABEL = re.compile(r"^#\s*(\d+)\.\s+(.+)$")
 
 
-def translate_navigation_batch(language, batch, model, client):
+def translate_navigation_batch(language, batch, model, client, fallback_model=None):
     translations = {}
     pending = list(batch)
     for _ in range(3):
@@ -616,14 +617,22 @@ def translate_navigation_batch(language, batch, model, client):
         if not pending:
             return translations
     if len(pending) == 1:
-        raise RuntimeError("SUMMARY.md returned missing or untranslated navigation labels after retries")
+        if fallback_model:
+            alternate = fallback_model()
+            if alternate != model:
+                translations.update(translate_navigation_batch(language, pending, alternate, client))
+                return translations
+        digest = hashlib.sha256(pending[0].encode("utf-8")).hexdigest()[:12]
+        raise RuntimeError(f"SUMMARY.md returned missing or untranslated navigation labels after retries (label {digest})")
     middle = len(pending) // 2
     for smaller in (pending[:middle], pending[middle:]):
-        translations.update(translate_navigation_batch(language, smaller, model, client))
+        translations.update(translate_navigation_batch(language, smaller, model, client, fallback_model))
     return translations
 
 
-def translate_summary(language, source, previous, model, client, branch=None, chapter_labels=None):
+def translate_summary(
+    language, source, previous, model, client, branch=None, chapter_labels=None, fallback_model=None,
+):
     """Translate navigation labels independently of their paths and indentation."""
     parts = summary_parts(source)
     labels = list(dict.fromkeys(label for _, label, _ in parts if label is not None))
@@ -638,7 +647,7 @@ def translate_summary(language, source, previous, model, client, branch=None, ch
 
     pending = [label for label in labels if label not in translations]
     for start in range(0, len(pending), 40):
-        translations.update(translate_navigation_batch(language, pending[start:start + 40], model, client))
+        translations.update(translate_navigation_batch(language, pending[start:start + 40], model, client, fallback_model))
 
     result = "".join(prefix + (translations[label] if label is not None else "") + suffix
                      for prefix, label, suffix in parts)
@@ -839,7 +848,14 @@ if __name__ == "__main__":
                 with open(SUMMARY_PATH, encoding="utf-8", newline="") as source:
                     summary = source.read()
                 chapter_labels = reusable_chapter_labels(summary, source_files, branch)
-                translated = translate_summary(args.language, summary, previous, model, client, branch, chapter_labels)
+                fallback_model = None
+                if args.navigation_only and not args.model:
+                    fallback_model = lru_cache(maxsize=1)(
+                        lambda: load_default_openai_model(alias="OPENAI_BEST_QUALITY")
+                    )
+                translated = translate_summary(
+                    args.language, summary, previous, model, client, branch, chapter_labels, fallback_model,
+                )
                 target = os.path.join(dest_folder, SUMMARY_PATH)
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 with open(target, "w", encoding="utf-8", newline="") as output:

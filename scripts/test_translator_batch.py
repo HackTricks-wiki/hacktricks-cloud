@@ -36,6 +36,20 @@ class TranslationBatchTests(unittest.TestCase):
             )
         self.assertEqual(create.call_count, 2)
 
+    def test_summary_tries_quality_model_for_only_the_stubborn_label(self):
+        source = "# Summary\n\n# Welcome!\n- [About the author](guide.md)\n"
+        cheap = "# 1. Welcome!"
+        with patch.object(translator, "translate_text", side_effect=[
+            "# 1. Welcome!\n# 2. Sobre o autor", cheap, cheap, "# 1. Boas-vindas!",
+        ]) as translate:
+            localized = translator.translate_summary(
+                "Brazilian Portuguese", source, None, "fast-model", None, "pt",
+                fallback_model=lambda: "quality-model",
+            )
+        args = translate.call_args.args
+        self.assertEqual((args[1], args[3]), ("# 1. Welcome!", "quality-model"))
+        self.assertIn("- [Sobre o autor](guide.md)", localized)
+
     def test_summary_retries_only_missing_or_unchanged_labels(self):
         source = "# Summary\n\n# Welcome!\n- [About the author](guide.md)\n"
         with patch.object(translator, "translate_text", side_effect=[
