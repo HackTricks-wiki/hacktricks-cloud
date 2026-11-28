@@ -39,17 +39,17 @@ MDBOOK_TAB_OPEN_RE = re.compile(r"\{\{#tab\b([^{}]*)\}\}")
 LINKED_CITATION_RE = re.compile(
     r"<sup>(?:\[\[\d+\]\]\(#references\))+</sup>|\[\[\d+\]\]\(#references\)"
 )
-REFERENCES_HEADING_RE = re.compile(r"^## References\s*$", re.MULTILINE)
+REFERENCES_HEADING_RE = re.compile(r"^## References[ \t]*(?=\r?$)", re.MULTILINE)
 REFERENCE_LINE_RE = re.compile(
-    r"^- \[(\d+)\] \[([^\]\n]+)\]\((.+)\)\s*$", re.MULTILINE
+    r"^- \[(\d+)\] \[([^\]\r\n]+)\]\(([^\r\n]+)\)([ \t]*)(?=\r?$)", re.MULTILINE
 )
 PROTECTED_MARKUP_RE = re.compile(
     r"\{\{#ref\}\}[\s\S]*?\{\{#endref\}\}"
     r"|\{\{#[^{}]*\}\}"
     r"|<sup>(?:\[\[\d+\]\]\(#references\))+</sup>"
     r"|\[\[\d+\]\]\(#references\)"
-    r"|^## References[ \t]*$"
-    r"|^- \[\d+\] \[[^\]\n]+\]\([^\n]+\)[ \t]*$",
+    r"|^## References[ \t]*(?=\r?$)"
+    r"|^- \[\d+\] \[[^\]\r\n]+\]\([^\r\n]+\)[ \t]*(?=\r?$)",
     re.MULTILINE,
 )
 
@@ -229,7 +229,7 @@ def preserve_reference_markup(source: str, translated: str) -> str:
 
     def restore_reference(match):
         number, url = next(source_reference_data)
-        return f"- [{number}] [{match.group(2)}]({url})"
+        return f"- [{number}] [{match.group(2)}]({url}){match.group(4)}"
 
     return REFERENCE_LINE_RE.sub(restore_reference, restored)
 
