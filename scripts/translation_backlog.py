@@ -256,17 +256,22 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
     return report
 
 
-def pending(branch: str, source_ref: str, extras: set[str], initial_ref=None) -> list[str]:
-    source = markdown_blobs(source_ref)
-    existing = markdown_blobs(branch)
-    state = load_state(branch, existing.keys(), initial_ref)
-    findings = audit(branch, source, existing, english_history(source_ref))
-    repairs = {path for paths in findings.values() for path in paths}
+def planned_paths(source, state, findings, extras=()):
+    planned_findings = ("missing", "untranslated", "wrong_language", "navigation_structure")
+    repairs = {path for category in planned_findings for path in findings[category]}
     paths = (
         path for path, blob in source.items()
         if state.get(path) != blob or path in repairs or path in extras
     )
     return sorted(paths, key=lambda path: (path == SUMMARY_PATH, path))
+
+
+def pending(branch: str, source_ref: str, extras: set[str], initial_ref=None) -> list[str]:
+    source = markdown_blobs(source_ref)
+    existing = markdown_blobs(branch)
+    state = load_state(branch, existing.keys(), initial_ref)
+    findings = audit(branch, source, existing, english_history(source_ref))
+    return planned_paths(source, state, findings, extras)
 
 
 def reusable_chapter_labels(summary, source_files, branch):
