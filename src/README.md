@@ -68,7 +68,7 @@ Le fichier `docker-compose.yml` fourni sert la branche actuellement extraite à 
 
 ### Statistiques GitHub
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
+![Statistiques GitHub de HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
 
 ## References
 
