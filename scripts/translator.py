@@ -20,7 +20,7 @@ from translation_backlog import (
 )
 from translation_quality import (
     MARKDOWN, markdown_line_offsets,
-    copied_prose, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts,
+    copied_prose, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, repair_cjk_bold_boundaries, summary_language_text, summary_parts,
     summary_structure, unchanged_summary_label, verified_summary_name, wrong_language,
 )
 
@@ -735,6 +735,16 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
     if fenced_code_blocks(content) != fenced_code_blocks(translated_content):
         raise RuntimeError(f"Page {file_path} changed fenced code blocks")
     problems = markdown_problems(content, translated_content)
+    if branch in {"ja", "ko", "zh"} and "introduced visible Markdown bold markers" in problems:
+        repaired = repair_cjk_bold_boundaries(translated_content)
+        if (
+            repaired != translated_content
+            and not markdown_problems(content, repaired)
+            and protected_markup_is_intact(content, repaired)
+            and fenced_code_blocks(content) == fenced_code_blocks(repaired)
+        ):
+            translated_content = repaired
+            problems = []
     if problems:
         raise RuntimeError(f"Page {file_path}: {', '.join(problems)}")
 

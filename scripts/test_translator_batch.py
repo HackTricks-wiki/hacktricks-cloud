@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 import translator
 from translation_quality import (
     check_rendered_sidebar, copied_sentence, markdown_problems, preserve_source_heading_anchors,
-    suspected_english_blocks,
+    repair_cjk_bold_boundaries, suspected_english_blocks,
 )
 
 
@@ -422,6 +422,31 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertEqual(markdown_problems(source, localized.replace("dans les exemples", "avec `**` dans les exemples")), [
             "changed inline or indented code",
         ])
+
+    def test_cjk_bold_repair_preserves_punctuation_and_protected_text(self):
+        text = "请先**打开指南。**然后开始。\n\n用途是**「読書」**です。\n"
+        sample = "请先**打开指南。**然后开始。"
+        code = f"\n示例：`{sample}`\n\n```text\n{sample}\n```\n"
+        escaped = "\n请先\\*\\*打开指南。\\*\\*然后开始。\n"
+        original = text + code + escaped
+        expected = "请先**打开指南**。然后开始。\n\n用途是「**読書**」です。\n" + code + escaped
+        self.assertEqual(repair_cjk_bold_boundaries(original), expected)
+        self.assertEqual(repair_cjk_bold_boundaries(expected), expected)
+        ambiguous = f"\\*\\*打开指南。\\*\\* 或 `**打开指南。**`\n"
+        self.assertEqual(repair_cjk_bold_boundaries(ambiguous), ambiguous)
+
+    def test_page_repairs_cjk_bold_only_after_full_structure_validation(self):
+        english = "First, **open the guide**. Then begin.\n"
+        chinese = "请先**打开指南。**然后开始。\n"
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.md"
+            output = Path(directory) / "output.md"
+            source.write_text(english, encoding="utf-8")
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", return_value=chinese,
+            ):
+                translator.translate_file("Chinese", source, output, "gpt-4o", None, "zh")
+            self.assertEqual(output.read_text(encoding="utf-8"), "请先**打开指南**。然后开始。\n")
 
     def test_markdown_checks_preserve_callout_type_and_position(self):
         source = (
