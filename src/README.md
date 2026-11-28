@@ -38,7 +38,7 @@ docker run -d --rm --platform linux/amd64 -p 3377:3000 --name hacktricks_cloud -
 
 컨테이너 명령은 Docker의 문서화된 `run` 인터페이스를 따르며 mdBook의 HTTP 미리보기 서버를 사용합니다. 저장소는 컨테이너의 3000 포트를 로컬 3377 포트에 매핑합니다.<sup>[[4]](#references)[[5]](#references)[[7]](#references)</sup>
 
-1분 후 로컬 HackTricks Cloud 사본을 **[http://localhost:3377](http://localhost:3377)**에서 이용할 수 있습니다.<sup>[[2]](#references)</sup>
+1분 후 로컬 HackTricks Cloud 사본을 [**http://localhost:3377**](http://localhost:3377)에서 이용할 수 있습니다.<sup>[[2]](#references)</sup>
 
 또는 Docker Compose가 설치되어 있다면 저장소 루트에서 다음을 실행하세요:<sup>[[2]](#references)[[6]](#references)</sup>
 
