@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import translator
 from translation_quality import (
-    check_rendered_sidebar, copied_reader_labels, copied_sentence, markdown_problems, preserve_source_heading_anchors,
+    check_rendered_sidebar, copied_heading_count, copied_reader_labels, copied_sentence, markdown_problems, preserve_source_heading_anchors,
     repair_cjk_bold_boundaries, suspected_english_blocks,
 )
 
@@ -722,6 +722,24 @@ class TranslationBatchTests(unittest.TestCase):
             with open(target) as stream:
                 self.assertEqual(stream.read(), french)
         self.assertEqual(translate.call_count, 2)
+
+    def test_page_retries_copied_section_headings_and_preserves_bookmarks(self):
+        source_text = "# BookStack\n\n## **Requirements** {#requirements}\n\n## References\n"
+        localized = source_text.replace("**Requirements**", "**Prérequis**")
+        self.assertEqual(copied_heading_count(source_text, source_text, "fr"), 1)
+        self.assertEqual(copied_heading_count(source_text, localized, "fr"), 0)
+        code = "# `Requirements`\n"
+        self.assertEqual(copied_heading_count(code, code, "fr"), 0)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.md"
+            target = Path(directory) / "output.md"
+            source.write_text(source_text, encoding="utf-8")
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", side_effect=[source_text, localized],
+            ) as translate:
+                translator.translate_file("French", source, target, "gpt-4o", None, "fr")
+            self.assertEqual(translate.call_count, 2)
+            self.assertEqual(target.read_text(encoding="utf-8"), localized)
 
     def test_page_retries_short_copied_image_descriptions(self):
         english = '![Library logo](library.svg)\n'

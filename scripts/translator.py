@@ -22,7 +22,7 @@ from translation_backlog import (
 )
 from translation_quality import (
     MARKDOWN, markdown_line_offsets,
-    copied_prose, copied_reader_labels, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, repair_cjk_bold_boundaries, summary_language_text, summary_parts,
+    copied_heading_count, copied_prose, copied_reader_labels, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, repair_cjk_bold_boundaries, summary_language_text, summary_parts,
     summary_structure, unchanged_summary_label, verified_summary_name, wrong_language,
 )
 
@@ -733,7 +733,8 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
                 invalid_prose = has_prose and (
                     copied_prose(chunk, prose) or copied_sentence(chunk, prose) or wrong_language(prose, branch)
                 )
-                if not invalid_prose and not copied_reader_labels(chunk, prose, branch):
+                if (not invalid_prose and not copied_reader_labels(chunk, prose, branch)
+                        and not copied_heading_count(chunk, prose, branch)):
                     break
                 print(f"Retrying untranslated or wrong-language text in {file_path} ({attempt + 1}/3)")
             else:
@@ -766,6 +767,8 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
     # and definitions are parsed together in the assembled page.
     if copied_reader_labels(content, translated_content, branch):
         raise RuntimeError(f"Page {file_path} returned untranslated reader labels")
+    if copied_heading_count(content, translated_content, branch):
+        raise RuntimeError(f"Page {file_path} returned untranslated headings")
 
     # make sure directory exists
     os.makedirs(os.path.dirname(file_dest_path), exist_ok=True)

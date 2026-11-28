@@ -350,6 +350,10 @@ NESTED_BLOCK_TYPES = frozenset({
     "tr_open", "tr_close", "th_open", "td_open", "hr",
 })
 INLINE_FORMAT_TYPES = frozenset({"em_open", "strong_open", "s_open", "hardbreak"})
+LOCALIZED_HEADING_LABELS = frozenset({
+    "disclaimer", "getting started", "github stats", "hacktricks friends", "hacktricks partners",
+    "how to contribute", "license", "license disclaimer", "prerequisites", "requirements", "troubleshooting",
+})
 VISIBLE_BOLD_MARKER = re.compile(r"(?<!\*)\*\*(?!\*)")
 MARKDOWN_BLOCK_NAMES = {
     "paragraph_open": "paragraphs",
@@ -425,6 +429,7 @@ def repair_cjk_bold_boundaries(text):
 class MarkdownInventory(NamedTuple):
     blocks: Counter
     heading_levels: tuple[str, ...]
+    heading_labels: tuple[str, ...]
     nested_blocks: tuple[tuple[str, str | None], ...]
     callouts: tuple[tuple[int, str], ...]
     targets: Counter
@@ -444,6 +449,7 @@ def markdown_inventory(text):
     env = {}
     blocks, targets, literals = Counter(), Counter(), Counter()
     heading_levels = []
+    heading_labels = []
     nested_blocks = []
     callouts = []
     quote_number = 0
@@ -458,7 +464,14 @@ def markdown_inventory(text):
         if token.type == "heading_open":
             blocks[token.tag] += 1
             heading_levels.append(token.tag)
-            attributes = HEADING_ATTRIBUTES.search(tokens[index + 1].content)
+            heading = tokens[index + 1]
+            attributes = HEADING_ATTRIBUTES.search(heading.content)
+            children = heading.children or ()
+            if attributes:
+                children = MARKDOWN.parseInline(heading.content[:attributes.start()])[0].children or ()
+            text = "".join(child.content if child.type == "text" else " "
+                           for child in children if child.type in {"text", "softbreak", "hardbreak"})
+            heading_labels.append(text if not any(child.type in {"code_inline", "image"} for child in children) else "")
             if attributes:
                 for attribute in attributes[1].split():
                     if attribute.startswith("#") and len(attribute) > 1:
@@ -517,7 +530,7 @@ def markdown_inventory(text):
     targets.update(html.targets)
     reader_labels.update(html.reader_labels)
     return MarkdownInventory(
-        blocks, tuple(heading_levels), tuple(nested_blocks), tuple(callouts), targets, literals,
+        blocks, tuple(heading_levels), tuple(heading_labels), tuple(nested_blocks), tuple(callouts), targets, literals,
         tuple(inline_positions), inline_formatting, visible_bold_markers, reader_labels, Counter(html.tag_stack),
         html.unmatched_closing, html.crossed_tags,
     )
@@ -591,6 +604,24 @@ def copied_reader_labels(source, localized, language):
             if substantial_english or english_image_description:
                 counts[categories[attribute]] += count
     return dict(counts)
+
+
+def copied_heading_count(source, localized, language):
+    """Count unchanged, clearly translatable chapter headings at matching positions."""
+    if language not in LANGUAGE_CODES:
+        return 0
+    original = markdown_inventory(source)
+    translated = markdown_inventory(localized)
+    if original.heading_levels != translated.heading_levels:
+        return 0
+    count = 0
+    for before, after in zip(original.heading_labels, translated.heading_labels):
+        label = " ".join(re.findall(r"[^\W\d_]+", before.casefold()))
+        if label not in LOCALIZED_HEADING_LABELS:
+            continue
+        if label == " ".join(re.findall(r"[^\W\d_]+", after.casefold())):
+            count += 1
+    return count
 
 
 def missing_markdown_blocks(source, translated):
