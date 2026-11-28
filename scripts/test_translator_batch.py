@@ -410,6 +410,25 @@ class TranslationBatchTests(unittest.TestCase):
                     ["changed Markdown emphasis, strikethrough, or hard line breaks"],
                 )
 
+    def test_markdown_checks_preserve_callout_type_and_position(self):
+        source = (
+            "> [!NOTE]\n> The reading room is inside.\n\n"
+            "> [!WARNING]\n> The stairs are steep.\n\n"
+            "- Accessibility\n\n  > [!TIP]\n  > Ask about the lift.\n"
+        )
+        localized = (
+            "> [!note]\n> La salle de lecture est à l’intérieur.\n\n"
+            "> [!WARNING]\n> L’escalier est raide.\n\n"
+            "- Accessibilité\n\n  > [!TIP]\n  > Renseignez-vous sur l’ascenseur.\n"
+        )
+        self.assertEqual(markdown_problems(source, localized), [])
+        for marker in ("[!NOTE]", "[!REMARQUE]", "[!WARNING] Autre titre", ""):
+            with self.subTest(marker=marker):
+                broken = localized.replace("[!WARNING]", marker)
+                self.assertIn("changed Markdown callout types or positions", markdown_problems(source, broken))
+        swapped = localized.replace("[!WARNING]", "[!NOTE]").replace("[!note]", "[!WARNING]")
+        self.assertIn("changed Markdown callout types or positions", markdown_problems(source, swapped))
+
     def test_markdown_checks_preserve_list_quote_table_and_rule_structure(self):
         original = (
             "> Read this first.\n\n---\n\n"

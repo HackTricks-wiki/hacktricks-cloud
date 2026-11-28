@@ -342,6 +342,7 @@ class ChapterHTML(HTMLParser):
 MARKDOWN = MarkdownIt("commonmark").enable(["table", "strikethrough"])
 HEADING_ATTRIBUTES = re.compile(r"\s+\{([^{}]+)\}\s*$")
 TASK_LIST_MARKER = re.compile(r"^\[([ xX])\](?:\s|$)")
+CALLOUT_MARKER = re.compile(r"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(?:\n|$)", re.I)
 NESTED_BLOCK_TYPES = frozenset({
     "blockquote_open", "blockquote_close", "bullet_list_open", "bullet_list_close",
     "ordered_list_open", "ordered_list_close", "list_item_open", "list_item_close",
@@ -355,6 +356,7 @@ class MarkdownInventory(NamedTuple):
     blocks: Counter
     heading_levels: tuple[str, ...]
     nested_blocks: tuple[tuple[str, str | None], ...]
+    callouts: tuple[tuple[int, str], ...]
     targets: Counter
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
@@ -372,6 +374,8 @@ def markdown_inventory(text):
     blocks, targets, literals = Counter(), Counter(), Counter()
     heading_levels = []
     nested_blocks = []
+    callouts = []
+    quote_number = 0
     inline_positions = []
     inline_formatting = Counter()
     reader_labels = Counter()
@@ -394,6 +398,12 @@ def markdown_inventory(text):
         elif token.type == "html_block":
             html.feed(token.content)
 
+        if token.type == "blockquote_open":
+            quote_number += 1
+            if tokens[index + 1].type == "paragraph_open":
+                marker = CALLOUT_MARKER.match(tokens[index + 2].content)
+                if marker:
+                    callouts.append((quote_number, marker[1].lower()))
         if token.type in NESTED_BLOCK_TYPES:
             attribute = token.attrGet("start") if token.type == "ordered_list_open" else token.attrGet("style")
             nested_blocks.append((token.type, attribute))
@@ -433,7 +443,7 @@ def markdown_inventory(text):
     targets.update(html.targets)
     reader_labels.update(html.reader_labels)
     return MarkdownInventory(
-        blocks, tuple(heading_levels), tuple(nested_blocks), targets, literals,
+        blocks, tuple(heading_levels), tuple(nested_blocks), tuple(callouts), targets, literals,
         tuple(inline_positions), inline_formatting, reader_labels, Counter(html.tag_stack),
         html.unmatched_closing, html.crossed_tags,
     )
@@ -450,6 +460,8 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("changed Markdown heading order or nesting")
     if original.nested_blocks != localized.nested_blocks:
         problems.append("changed Markdown lists, block quotes, tables, or thematic breaks")
+    if original.callouts != localized.callouts:
+        problems.append("changed Markdown callout types or positions")
     old_targets, new_targets = original.targets, localized.targets
     if allow_source_aliases:
         old_targets = {key: count for key, count in old_targets.items() if key[1] != "translation alias"}
