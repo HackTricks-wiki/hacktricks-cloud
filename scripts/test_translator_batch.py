@@ -470,6 +470,26 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertEqual(copied_reader_labels(original, localized, "ko"), {})
         self.assertEqual(markdown_problems(original, localized), [])
 
+    def test_markdown_checks_preserve_disclosure_labels_and_figure_captions(self):
+        source = (
+            '<details><summary>Support <strong>HackTricks</strong></summary></details>\n\n'
+            '<figure><figcaption>Open the <em>map of the building</em></figcaption></figure>\n'
+        )
+        localized = source.replace('Support ', 'Soutenir ').replace(
+            'Open the <em>map of the building</em>', 'Consultez le <em>plan du bâtiment</em>'
+        )
+        self.assertEqual(markdown_problems(source, localized), [])
+        self.assertEqual(copied_reader_labels(source, source, "fr"), {"disclosure_labels": 1, "figure_captions": 1})
+        self.assertEqual(copied_reader_labels(source, localized, "fr"), {})
+        hindi = '<details><summary>HackTricks को support करें</summary></details>'
+        self.assertEqual(copied_reader_labels(source, hindi, "hi"), {"disclosure_labels": 1})
+        self.assertIn("missing figure caption or disclosure label", markdown_problems(
+            source, localized.replace('Consultez le <em>plan du bâtiment</em>', ' '),
+        ))
+        self.assertIn("missing figure caption or disclosure label", markdown_problems(
+            source, localized.replace('Soutenir <strong>HackTricks</strong>', ''),
+        ))
+
     def test_markdown_allows_adjacent_emphasis_to_merge_without_losing_formatting(self):
         source = "Give the **ORIGINAL** **AUTHORS** all the **credit**.\n\n*Read* *more*.\n"
         localized = "Attribuez tout le **mérite** aux **AUTEURS ORIGINAUX**.\n\n*En savoir plus*.\n"

@@ -298,6 +298,7 @@ PAIRED_HTML_TAGS = frozenset({
     "a", "b", "blockquote", "code", "details", "div", "em", "figure", "figcaption",
     "i", "kbd", "pre", "s", "span", "strong", "sub", "summary", "sup",
 })
+HTML_TEXT_LABEL_TAGS = frozenset({"figcaption", "summary"})
 
 
 class ChapterHTML(HTMLParser):
@@ -308,11 +309,14 @@ class ChapterHTML(HTMLParser):
         self.unmatched_closing = Counter()
         self.crossed_tags = Counter()
         self.tag_stack = []
+        self.text_labels = []
 
     def handle_starttag(self, tag, attrs):
         if tag in PAIRED_HTML_TAGS:
             self.tag_stack.append(tag)
         attributes = dict(attrs)
+        if tag in HTML_TEXT_LABEL_TAGS:
+            self.text_labels.append((tag, attributes.get("id"), []))
         generated_alias = tag == "span" and attributes.get("class") == SOURCE_ANCHOR_CLASS
         destination = attributes.get("src") or attributes.get("href")
         for name, value in attrs:
@@ -324,7 +328,16 @@ class ChapterHTML(HTMLParser):
                 self.targets[(tag, name, value)] += 1
 
 
+    def handle_data(self, data):
+        for _, _, parts in self.text_labels:
+            parts.append(data)
+
     def handle_endtag(self, tag):
+        if self.text_labels and self.text_labels[-1][0] == tag:
+            label_tag, destination, parts = self.text_labels.pop()
+            label = "".join(parts).strip()
+            if label:
+                self.reader_labels[(label_tag, destination, label_tag)].append(label)
         if tag not in PAIRED_HTML_TAGS:
             return
         if self.tag_stack and self.tag_stack[-1] == tag:
@@ -504,7 +517,10 @@ def markdown_inventory(text):
         for position, inline in enumerate(inline_tokens):
             if inline.type == "text":
                 visible_bold_markers += len(VISIBLE_BOLD_MARKER.findall(inline.content))
+                html.handle_data(inline.content)
             elif inline.type in INLINE_FORMAT_TYPES:
+                if inline.type == "hardbreak":
+                    html.handle_data(" ")
                 # Adjacent emphasis on words in the same phrase can merge when
                 # the word order changes. Whitespace between them has no text
                 # that needs to remain outside the emphasis.
@@ -516,6 +532,7 @@ def markdown_inventory(text):
                         adjacent_emphasis[(inline_block, inline.type)] += 1
                 inline_formatting[(inline_block, inline.type)] += 1
             elif inline.type == "code_inline":
+                html.handle_data(inline.content)
                 literals[("inline code", inline.content)] += 1
                 inline_positions.append((inline_block, "inline code", inline.content))
             elif inline.type == "link_open":
@@ -534,6 +551,8 @@ def markdown_inventory(text):
                     reader_labels[("Markdown image", src, "title")].append(inline.attrGet("title"))
             elif inline.type == "html_inline":
                 html.feed(inline.content)
+            elif inline.type == "softbreak":
+                html.handle_data(" ")
     html.close()
     for definition in env.get("references", {}).values():
         targets[("reference definition", definition["href"])] += 1
@@ -579,9 +598,12 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
     if localized.visible_bold_markers > original.visible_bold_markers:
         problems.append("introduced visible Markdown bold markers")
-    if any(len(localized.reader_labels.get(key, ())) < len(labels)
-           for key, labels in original.reader_labels.items()):
+    missing_labels = {key[2] for key, labels in original.reader_labels.items()
+                      if len(localized.reader_labels.get(key, ())) < len(labels)}
+    if missing_labels - HTML_TEXT_LABEL_TAGS:
         problems.append("missing image alternative text, tooltip, or accessible label")
+    if missing_labels & HTML_TEXT_LABEL_TAGS:
+        problems.append("missing figure caption or disclosure label")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     if localized.crossed_tags - original.crossed_tags:
@@ -593,20 +615,29 @@ def copied_reader_labels(source, localized, language):
     """Count copied English labels on the same rendered elements, without exposing their text."""
     if language not in LANGUAGE_CODES:
         return {}
-    categories = {"alt": "image_alternative_text", "title": "tooltips", "aria-label": "accessible_labels"}
+    categories = {
+        "alt": "image_alternative_text", "title": "tooltips", "aria-label": "accessible_labels",
+        "figcaption": "figure_captions", "summary": "disclosure_labels",
+    }
     label_starts = {"diagram", "download", "image", "list", "map", "open", "photo", "see", "show", "view"}
     counts = Counter()
     original = markdown_inventory(source).reader_labels
     translated = markdown_inventory(localized).reader_labels
 
-    def words(labels):
-        return Counter(tuple(re.findall(r"[^\W\d_]+", label.casefold())) for label in labels)
+    def words(labels, attribute):
+        values = Counter()
+        for label in labels:
+            phrase = tuple(re.findall(r"[^\W\d_]+", label.casefold()))
+            if attribute == "summary" and language in SCRIPTS and {"support", "hacktricks"}.issubset(phrase):
+                phrase = ("support", "hacktricks", "cloud") if "cloud" in phrase else ("support", "hacktricks")
+            values[phrase] += 1
+        return values
 
     for key, labels in original.items():
         tag, _, attribute = key
         if tag == "Markdown reference" or key not in translated:
             continue
-        for phrase, count in (words(labels) & words(translated[key])).items():
+        for phrase, count in (words(labels, attribute) & words(translated[key], attribute)).items():
             substantial_english = (
                 len(phrase) >= 5 and (len(phrase) >= 8 or phrase[0] in label_starts)
                 and len((ENGLISH_FUNCTION_WORDS | {"of"}).intersection(phrase)) >= 2
@@ -616,7 +647,10 @@ def copied_reader_labels(source, localized, language):
                 and "".join(phrase).isascii()
                 and (phrase[-1:] in {("logo",), ("screenshot",), ("diagram",)} or phrase[-2:] == ("github", "stats"))
             )
-            if substantial_english or english_image_description:
+            english_support_label = attribute == "summary" and phrase in {
+                ("support", "hacktricks"), ("support", "hacktricks", "cloud"),
+            }
+            if substantial_english or english_image_description or english_support_label:
                 counts[categories[attribute]] += count
     return dict(counts)
 
