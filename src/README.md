@@ -68,7 +68,7 @@ O `docker-compose.yml` incluído serve o branch atualmente selecionado em [http:
 
 ### Estatísticas do Github
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
+![Estatísticas de HackTricks Cloud no GitHub](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
 
 ## References
 
