@@ -187,6 +187,23 @@ class TranslationBatchTests(unittest.TestCase):
             with self.subTest(old=old):
                 self.assertIn(expected, markdown_problems(source, localized.replace(old, new)))
 
+    def test_markdown_checks_detect_swapped_inline_elements_with_equal_counts(self):
+        source = (
+            "# Forms\n\n"
+            "Fetch the [application](apply.pdf) with `fetch`.\n\n"
+            "Send the [receipt](receipt.pdf) with `send`.\n"
+        )
+        translated = (
+            "# Formulaires\n\n"
+            "Téléchargez la [demande](apply.pdf) avec `fetch`.\n\n"
+            "Envoyez le [reçu](receipt.pdf) avec `send`.\n"
+        )
+        self.assertEqual(markdown_problems(source, translated), [])
+        links_swapped = translated.replace("apply.pdf", "TEMP").replace("receipt.pdf", "apply.pdf").replace("TEMP", "receipt.pdf")
+        code_swapped = translated.replace("`fetch`", "TEMP").replace("`send`", "`fetch`").replace("TEMP", "`send`")
+        for variant in (links_swapped, code_swapped):
+            self.assertEqual(markdown_problems(source, variant), ["moved Markdown links, images, or inline code"])
+
     def test_markdown_checks_detect_reordered_heading_levels_with_equal_counts(self):
         original = "# Handbook\n\n## Reading\n\n### Examples\n\n## Writing\n"
         localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"

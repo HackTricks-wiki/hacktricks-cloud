@@ -274,6 +274,7 @@ class MarkdownInventory(NamedTuple):
     heading_levels: tuple[str, ...]
     targets: Counter
     literals: Counter
+    inline_positions: tuple[tuple[int, str, str], ...]
     open_tags: Counter
     unmatched_closing: Counter
 
@@ -284,6 +285,8 @@ def markdown_inventory(text):
     env = {}
     blocks, targets, literals = Counter(), Counter(), Counter()
     heading_levels = []
+    inline_positions = []
+    inline_block = 0
     html = ChapterHTML()
     tokens = MARKDOWN.parse(text, env)
     for index, token in enumerate(tokens):
@@ -302,20 +305,30 @@ def markdown_inventory(text):
         elif token.type == "html_block":
             html.feed(token.content)
 
+        if token.type == "inline":
+            inline_block += 1
         for inline in token.children or ():
             if inline.type == "code_inline":
                 literals[("inline code", inline.content)] += 1
+                inline_positions.append((inline_block, "inline code", inline.content))
             elif inline.type == "link_open":
-                targets[("link", inline.attrGet("href"))] += 1
+                href = inline.attrGet("href")
+                targets[("link", href)] += 1
+                inline_positions.append((inline_block, "link", href))
             elif inline.type == "image":
-                targets[("image", inline.attrGet("src"))] += 1
+                src = inline.attrGet("src")
+                targets[("image", src)] += 1
+                inline_positions.append((inline_block, "image", src))
             elif inline.type == "html_inline":
                 html.feed(inline.content)
     html.close()
     for definition in env.get("references", {}).values():
         targets[("reference definition", definition["href"])] += 1
     targets.update(html.targets)
-    return MarkdownInventory(blocks, tuple(heading_levels), targets, literals, html.open_tags, html.unmatched_closing)
+    return MarkdownInventory(
+        blocks, tuple(heading_levels), targets, literals, tuple(inline_positions),
+        html.open_tags, html.unmatched_closing,
+    )
 
 
 def markdown_problems(source, translated, *, allow_source_aliases=False):
@@ -335,6 +348,9 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("changed link, image, or HTML anchor targets")
     if original.literals != localized.literals:
         problems.append("changed inline or indented code")
+    if (old_targets == new_targets and original.literals == localized.literals
+            and original.inline_positions != localized.inline_positions):
+        problems.append("moved Markdown links, images, or inline code")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     return problems
