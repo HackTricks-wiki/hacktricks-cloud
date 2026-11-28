@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import translator
 from translation_quality import (
-    check_rendered_sidebar, copied_sentence, markdown_problems, preserve_source_heading_anchors,
+    check_rendered_sidebar, copied_reader_labels, copied_sentence, markdown_problems, preserve_source_heading_anchors,
     repair_cjk_bold_boundaries, suspected_english_blocks,
 )
 
@@ -432,6 +432,24 @@ class TranslationBatchTests(unittest.TestCase):
                     markdown_problems(source, localized.replace(removed, "")),
                     ["missing image alternative text, tooltip, or accessible label"],
                 )
+
+    def test_copied_labels_flag_descriptions_and_preserve_product_names(self):
+        original = (
+            '![Library logo](logo.svg) ![BookStack](wordmark.svg)\n\n'
+            '<a href="rooms.html" aria-label="See the list of available rooms">Rooms</a>\n\n'
+            '[Map][map] and `![Library logo](sample.svg)`\n\n'
+            '[map]: rooms.png "Open the map of the building"\n'
+        )
+        mixed = original.replace('>Rooms<', '>열람실<').replace('[Map]', '[지도]')
+        self.assertEqual(copied_reader_labels(original, mixed, "ko"), {
+            "image_alternative_text": 1, "accessible_labels": 1, "tooltips": 1,
+        })
+        self.assertEqual(copied_reader_labels(original, mixed, "fr"), {"accessible_labels": 1, "tooltips": 1})
+        localized = (mixed.replace('Library logo](logo.svg)', '도서관 로고](logo.svg)')
+                     .replace('See the list of available rooms', '이용할 수 있는 열람실 목록')
+                     .replace('Open the map of the building', '건물 지도 열기'))
+        self.assertEqual(copied_reader_labels(original, localized, "ko"), {})
+        self.assertEqual(markdown_problems(original, localized), [])
 
     def test_markdown_checks_detect_reordered_heading_levels_with_equal_counts(self):
         original = "# Handbook\n\n## Reading\n\n### Examples\n\n## Writing\n"

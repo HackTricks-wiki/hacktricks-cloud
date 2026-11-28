@@ -18,7 +18,7 @@ from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
     LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, ignored_prose_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
-    missing_markdown_blocks, suspected_english_blocks, unchanged_summary_label, wrong_language,
+    copied_reader_labels, missing_markdown_blocks, suspected_english_blocks, unchanged_summary_label, wrong_language,
 )
 
 
@@ -188,6 +188,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
     structural_review = {}
     missing_block_details = {}
     english_review = {}
+    reader_label_review = {}
     footer_spacing = []
     for path in paths:
         original, localized = texts[source[path]], texts[existing[path]]
@@ -217,6 +218,9 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
                 english_review[path] = count
         if detailed and review_source != localized:
             normalized = normalize_reference_footer(review_source, localized)
+            labels = copied_reader_labels(review_source, normalized, language)
+            if labels:
+                reader_label_review[path] = labels
             if normalized != localized:
                 footer_spacing.append(path)
             problems = markdown_problems(review_source, normalized, allow_source_aliases=True)
@@ -239,6 +243,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpo
             checkpoint_unverified=sorted(set(paths) - comparable.keys()),
             partly_untranslated=partial,
             english_prose_review=english_review,
+            untranslated_reader_labels=reader_label_review,
             reference_footer_spacing=footer_spacing,
             structural_review=structural_review,
             missing_block_details=missing_block_details,

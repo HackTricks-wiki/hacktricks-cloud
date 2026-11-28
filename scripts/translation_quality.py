@@ -4,7 +4,7 @@ import ast
 import posixpath
 import re
 import unicodedata
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import lru_cache
 from html.parser import HTMLParser
 from typing import NamedTuple
@@ -304,7 +304,7 @@ class ChapterHTML(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.targets = Counter()
-        self.reader_labels = Counter()
+        self.reader_labels = defaultdict(list)
         self.unmatched_closing = Counter()
         self.crossed_tags = Counter()
         self.tag_stack = []
@@ -317,7 +317,7 @@ class ChapterHTML(HTMLParser):
         destination = attributes.get("src") or attributes.get("href")
         for name, value in attrs:
             if value and value.strip() and (name in {"title", "aria-label"} or (name == "alt" and tag == "img")):
-                self.reader_labels[(tag, destination, name)] += 1
+                self.reader_labels[(tag, destination, name)].append(value)
             if generated_alias and name == "id":
                 self.targets[(tag, "translation alias", value)] += 1
             elif value is not None and (name in {"href", "src", "id"} or (tag == "a" and name == "name")):
@@ -432,7 +432,7 @@ class MarkdownInventory(NamedTuple):
     inline_positions: tuple[tuple[int, str, str], ...]
     inline_formatting: Counter
     visible_bold_markers: int
-    reader_labels: Counter
+    reader_labels: dict
     open_tags: Counter
     unmatched_closing: Counter
     crossed_tags: Counter
@@ -450,7 +450,7 @@ def markdown_inventory(text):
     inline_positions = []
     inline_formatting = Counter()
     visible_bold_markers = 0
-    reader_labels = Counter()
+    reader_labels = defaultdict(list)
     inline_block = 0
     html = ChapterHTML()
     tokens = MARKDOWN.parse(text, env)
@@ -498,22 +498,22 @@ def markdown_inventory(text):
                 targets[("link", href)] += 1
                 inline_positions.append((inline_block, "link", href))
                 if (inline.attrGet("title") or "").strip():
-                    reader_labels[("Markdown link", href, "title")] += 1
+                    reader_labels[("Markdown link", href, "title")].append(inline.attrGet("title"))
             elif inline.type == "image":
                 src = inline.attrGet("src")
                 targets[("image", src)] += 1
                 inline_positions.append((inline_block, "image", src))
                 if inline.content.strip():
-                    reader_labels[("Markdown image", src, "alt")] += 1
+                    reader_labels[("Markdown image", src, "alt")].append(inline.content)
                 if (inline.attrGet("title") or "").strip():
-                    reader_labels[("Markdown image", src, "title")] += 1
+                    reader_labels[("Markdown image", src, "title")].append(inline.attrGet("title"))
             elif inline.type == "html_inline":
                 html.feed(inline.content)
     html.close()
     for definition in env.get("references", {}).values():
         targets[("reference definition", definition["href"])] += 1
         if (definition.get("title") or "").strip():
-            reader_labels[("Markdown reference", definition["href"], "title")] += 1
+            reader_labels[("Markdown reference", definition["href"], "title")].append(definition["title"])
     targets.update(html.targets)
     reader_labels.update(html.reader_labels)
     return MarkdownInventory(
@@ -551,13 +551,46 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
         problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
     if localized.visible_bold_markers > original.visible_bold_markers:
         problems.append("introduced visible Markdown bold markers")
-    if original.reader_labels - localized.reader_labels:
+    if any(len(localized.reader_labels.get(key, ())) < len(labels)
+           for key, labels in original.reader_labels.items()):
         problems.append("missing image alternative text, tooltip, or accessible label")
     if localized.open_tags - original.open_tags or localized.unmatched_closing - original.unmatched_closing:
         problems.append("introduced unmatched HTML tags")
     if localized.crossed_tags - original.crossed_tags:
         problems.append("introduced incorrectly nested HTML tags")
     return problems
+
+
+def copied_reader_labels(source, localized, language):
+    """Count copied English labels on the same rendered elements, without exposing their text."""
+    if language not in LANGUAGE_CODES:
+        return {}
+    categories = {"alt": "image_alternative_text", "title": "tooltips", "aria-label": "accessible_labels"}
+    label_starts = {"diagram", "download", "image", "list", "map", "open", "photo", "see", "show", "view"}
+    counts = Counter()
+    original = markdown_inventory(source).reader_labels
+    translated = markdown_inventory(localized).reader_labels
+
+    def words(labels):
+        return Counter(tuple(re.findall(r"[^\W\d_]+", label.casefold())) for label in labels)
+
+    for key, labels in original.items():
+        tag, _, attribute = key
+        if tag == "Markdown reference" or key not in translated:
+            continue
+        for phrase, count in (words(labels) & words(translated[key])).items():
+            substantial_english = (
+                len(phrase) >= 5 and (len(phrase) >= 8 or phrase[0] in label_starts)
+                and len((ENGLISH_FUNCTION_WORDS | {"of"}).intersection(phrase)) >= 2
+            )
+            english_image_description = (
+                attribute == "alt" and (language in SCRIPTS or language == "sr")
+                and "".join(phrase).isascii()
+                and (phrase[-1:] in {("logo",), ("screenshot",), ("diagram",)} or phrase[-2:] == ("github", "stats"))
+            )
+            if substantial_english or english_image_description:
+                counts[categories[attribute]] += count
+    return dict(counts)
 
 
 def missing_markdown_blocks(source, translated):
