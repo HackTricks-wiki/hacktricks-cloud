@@ -139,7 +139,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False):
             target = summary_parts(localized)
             source_parts = summary_parts(original)
             if summary_structure(source_parts) == summary_structure(target):
-                if any(original_label is not None and unchanged_summary_label(original_label, localized_label)
+                if any(original_label is not None and unchanged_summary_label(original_label, localized_label, language)
                        for (_, original_label, _), (_, localized_label, _) in zip(source_parts, target)):
                     copied.append(path)
                 elif wrong_language(summary_language_text(source_parts, target), language):
@@ -215,7 +215,7 @@ def reusable_chapter_labels(summary, source_files, branch):
         if chapter_title(pages[original]) != label:
             continue
         title = chapter_title(pages[localized])
-        if not title or title == label or unchanged_summary_label(label, title) or wrong_language(title, language):
+        if not title or title == label or unchanged_summary_label(label, title, language) or wrong_language(title, language):
             continue
         parts = summary_parts(prefix + title + suffix)
         if len(parts) != 1 or parts[0] != (prefix, title, suffix):

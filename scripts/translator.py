@@ -611,7 +611,7 @@ def translate_navigation_batch(language, batch, model, client, fallback_model=No
                 candidates[index] = match[2].strip()
         for index, label in enumerate(pending, start=1):
             localized = candidates.get(index)
-            if localized and index not in duplicates and not unchanged_summary_label(label, localized):
+            if localized and index not in duplicates and not unchanged_summary_label(label, localized, language):
                 translations[label] = localized
         pending = [label for label in pending if label not in translations]
         if not pending:
@@ -642,7 +642,7 @@ def translate_summary(
         if (summary_structure(old_source) == summary_structure(old_output)
                 and not wrong_language(summary_language_text(old_source, old_output), branch)):
             for (_, label, _), (_, localized, _) in zip(old_source, old_output):
-                if label is not None and not unchanged_summary_label(label, localized):
+                if label is not None and not unchanged_summary_label(label, localized, language):
                     translations[label] = localized
 
     pending = [label for label in labels if label not in translations]

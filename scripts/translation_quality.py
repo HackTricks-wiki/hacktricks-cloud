@@ -59,6 +59,7 @@ ENGLISH_FUNCTION_WORDS = frozenset(
 NAVIGATION_WORDS = frozenset(
     {"welcome", "introduction", "overview", "about", "getting started", "table of contents"}
 )
+SHARED_SUMMARY_WORDS = {"fr": {("introduction",)}, "french": {("introduction",)}}
 LANGUAGE_CODES = frozenset("af de el es fr hi it ja ko pl pt sr sw tr uk vi zh".split())
 SCRIPTS = {
     "el": ("GREEK",), "hi": ("DEVANAGARI",), "ja": ("HIRAGANA", "KATAKANA", "CJK"),
@@ -99,10 +100,13 @@ def needs_summary_translation(label):
     )
 
 
-def unchanged_summary_label(source, translated):
+def unchanged_summary_label(source, translated, language=""):
     if not needs_summary_translation(source):
         return False
-    return re.findall(r"[^\W\d_]+", source.casefold()) == re.findall(r"[^\W\d_]+", translated.casefold())
+    original = tuple(re.findall(r"[^\W\d_]+", source.casefold()))
+    if original in SHARED_SUMMARY_WORDS.get(language.lower(), ()):
+        return False
+    return original == tuple(re.findall(r"[^\W\d_]+", translated.casefold()))
 
 
 def summary_language_text(source_parts, target_parts):

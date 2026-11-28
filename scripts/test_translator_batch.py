@@ -36,6 +36,13 @@ class TranslationBatchTests(unittest.TestCase):
             )
         self.assertEqual(create.call_count, 2)
 
+    def test_french_summary_accepts_shared_french_vocabulary(self):
+        source = "# Summary\n\n# Introduction\n"
+        with patch.object(translator, "translate_text", return_value="# 1. Introduction") as translate:
+            localized = translator.translate_summary("French", source, None, "fixture", None, "fr")
+        self.assertEqual(localized, source)
+        translate.assert_called_once()
+
     def test_summary_tries_quality_model_for_only_the_stubborn_label(self):
         source = "# Summary\n\n# Welcome!\n- [About the author](guide.md)\n"
         cheap = "# 1. Welcome!"
