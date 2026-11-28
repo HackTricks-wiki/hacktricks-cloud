@@ -239,6 +239,25 @@ class TranslationBacklogTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, failure):
                     backlog.check_rendered_sidebar(summary, rendered.replace(previous, replacement), "pt")
 
+    def test_cloud_welcome_links_use_the_current_locale_and_preserve_other_links(self):
+        base = "https://book.hacktricks.wiki/en/welcome/"
+        author = f"$$external:{base}about-the-author.html$$"
+        values = f"$$external:{base}hacktricks-values-and-faq.html$$"
+        summary = (
+            f"<!-- {author} -->\r\n"
+            f"- [Sobre o autor{author}]()\r\n"
+            f"- [Valores e perguntas frequentes{values}]()\r\n"
+            f"- [Política de cookies$$external:{base}cookies-policy.html$$]()\r\n"
+            "- [Guia](guide.html)\r\n"
+        )
+        expected = summary.replace(f"autor{author}", f"autor{author.replace('/en/', '/pt/')}").replace(
+            f"frequentes{values}", f"frequentes{values.replace('/en/', '/pt/')}",
+        )
+        self.assertEqual(backlog.localize_cloud_welcome_links(summary, "pt"), expected)
+        self.assertEqual(backlog.localize_cloud_welcome_links(expected, "pt"), expected)
+        with self.assertRaisesRegex(ValueError, "Unsupported translated edition"):
+            backlog.localize_cloud_welcome_links(summary, "../pt")
+
     def test_missing_language_page_is_pending_even_if_english_is_unchanged(self):
         self.git("checkout", "af")
         self.git("rm", "src/old.md")

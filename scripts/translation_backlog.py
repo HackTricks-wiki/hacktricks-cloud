@@ -17,7 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
-    MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
+    LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
     unchanged_summary_label, wrong_language,
 )
 
@@ -27,6 +27,22 @@ STATE_PATH = Path(".translation-source-blobs.json")
 # The last Translate All run that succeeded for every language, before the
 # large AWS/Azure/GCP technique PRs were merged.
 INITIAL_SOURCE_REF = "b9b85d019e2997ee1ca34fea60ec38d780aa3d9b"
+
+CLOUD_WELCOME_LINK = re.compile(
+    r"\$\$external:https://book\.hacktricks\.wiki/en/welcome/"
+    r"(?P<page>about-the-author|hacktricks-values-and-faq)\.html\$\$"
+)
+
+
+def localize_cloud_welcome_links(summary: str, branch: str) -> str:
+    """Use the translated editions of both standing Cloud welcome links."""
+    if branch not in LANGUAGE_CODES:
+        raise ValueError(f"Unsupported translated edition: {branch}")
+    destination = rf"$$external:https://book.hacktricks.wiki/{branch}/welcome/\g<page>.html$$"
+    return "".join(
+        prefix + label + CLOUD_WELCOME_LINK.sub(destination, suffix, count=1) if label is not None else prefix
+        for prefix, label, suffix in summary_parts(summary)
+    )
 
 
 def git(*args: str) -> bytes:
@@ -274,7 +290,9 @@ def file_list(path: str) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("audit", "plan", "mark", "verify", "verify-render", "restore-anchors"))
+    parser.add_argument("action", choices=(
+        "audit", "plan", "mark", "verify", "verify-render", "restore-anchors", "localize-welcome-links",
+    ))
     parser.add_argument("--language", required=True, help="Local or remote-tracking language branch")
     parser.add_argument("--source-ref", default="master")
     parser.add_argument("--initial-source-ref", help="English baseline for legacy language branches")
@@ -298,6 +316,12 @@ def main() -> None:
     elif args.action == "restore-anchors":
         updated, eligible = restore_anchors(args.language, args.source_ref)
         print(f"{args.language}: restored source bookmarks in {len(updated)} of {eligible} checkpointed pages")
+    elif args.action == "localize-welcome-links":
+        path = Path(SUMMARY_PATH)
+        summary = path.read_bytes().decode("utf-8")
+        localized = localize_cloud_welcome_links(summary, args.language)
+        if localized != summary:
+            path.write_bytes(localized.encode("utf-8"))
     elif args.action == "verify-render":
         if args.toc is None:
             parser.error("verify-render requires --toc")
