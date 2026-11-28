@@ -22,7 +22,7 @@ from translation_backlog import (
 )
 from translation_quality import (
     MARKDOWN, markdown_line_offsets,
-    copied_prose, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, repair_cjk_bold_boundaries, summary_language_text, summary_parts,
+    copied_prose, copied_reader_labels, copied_sentence, english_segments, fenced_code_spans, markdown_problems, preserve_source_heading_anchors, repair_cjk_bold_boundaries, summary_language_text, summary_parts,
     summary_structure, unchanged_summary_label, verified_summary_name, wrong_language,
 )
 
@@ -730,15 +730,14 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
             has_prose = bool(english_segments(chunk))
             for attempt in range(3):
                 prose = translate_text(language, chunk, file_path, model, client=client)
-                if not has_prose or (
-                    not copied_prose(chunk, prose)
-                    and not copied_sentence(chunk, prose)
-                    and not wrong_language(prose, branch)
-                ):
+                invalid_prose = has_prose and (
+                    copied_prose(chunk, prose) or copied_sentence(chunk, prose) or wrong_language(prose, branch)
+                )
+                if not invalid_prose and not copied_reader_labels(chunk, prose, branch):
                     break
-                print(f"Retrying untranslated or wrong-language prose in {file_path} ({attempt + 1}/3)")
+                print(f"Retrying untranslated or wrong-language text in {file_path} ({attempt + 1}/3)")
             else:
-                raise RuntimeError(f"Page {file_path} returned untranslated or wrong-language prose")
+                raise RuntimeError(f"Page {file_path} returned untranslated or wrong-language text")
             translated_content += leading + prose.strip() + trailing
     
     elapsed_time = time.time() - start_time
@@ -763,6 +762,10 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
             problems = []
     if problems:
         raise RuntimeError(f"Page {file_path}: {', '.join(problems)}")
+    # Reference definitions become reader-visible tooltips only once their uses
+    # and definitions are parsed together in the assembled page.
+    if copied_reader_labels(content, translated_content, branch):
+        raise RuntimeError(f"Page {file_path} returned untranslated reader labels")
 
     # make sure directory exists
     os.makedirs(os.path.dirname(file_dest_path), exist_ok=True)

@@ -723,6 +723,38 @@ class TranslationBatchTests(unittest.TestCase):
                 self.assertEqual(stream.read(), french)
         self.assertEqual(translate.call_count, 2)
 
+    def test_page_retries_short_copied_image_descriptions(self):
+        english = '![Library logo](library.svg)\n'
+        korean = '![도서관 로고](library.svg)\n'
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.md"
+            target = Path(directory) / "output.md"
+            source.write_text(english, encoding="utf-8")
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", side_effect=[english, korean],
+            ) as translate:
+                translator.translate_file("Korean", source, target, "gpt-4o", None, "ko")
+            self.assertEqual(translate.call_count, 2)
+            self.assertEqual(target.read_text(encoding="utf-8"), korean)
+
+    def test_page_rejects_a_copied_tooltip_defined_in_a_separate_chunk(self):
+        link = '[Map][room]\n\n'
+        definition = '[room]: rooms.png "View the map of the building"\n'
+        translated_link = '[Plan][room]\n\n'
+        translated_definition = '[room]: rooms.png "Voir le plan du bâtiment"\n'
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.md"
+            target = Path(directory) / "output.md"
+            source.write_text(link + definition, encoding="utf-8")
+            with patch.object(translator, "split_text", return_value=[link, definition]):
+                with patch.object(translator, "translate_text", side_effect=[translated_link, definition]):
+                    with self.assertRaisesRegex(RuntimeError, "untranslated reader labels"):
+                        translator.translate_file("French", source, target, "gpt-4o", None, "fr")
+                self.assertFalse(target.exists())
+                with patch.object(translator, "translate_text", side_effect=[translated_link, translated_definition]):
+                    translator.translate_file("French", source, target, "gpt-4o", None, "fr")
+            self.assertEqual(target.read_text(encoding="utf-8"), translated_link + translated_definition)
+
     def test_failed_page_fails_the_entire_batch(self):
         calls = []
 
