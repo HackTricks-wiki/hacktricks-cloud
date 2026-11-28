@@ -5,7 +5,7 @@
 >
 > <details>
 >
-> <summary>HackTricks को support करें</summary>
+> <summary>HackTricks का समर्थन करें</summary>
 >
 > - [**सदस्यता योजनाएँ**](https://github.com/sponsors/carlospolop) देखें!
 > - 💬 [**Discord समूह**](https://discord.gg/hRep4RUj7f) या [**Telegram समूह**](https://t.me/peass) **से जुड़ें**, या **Twitter** 🐦 पर [**@hacktricks_live**](https://twitter.com/hacktricks_live) को **फ़ॉलो करें**।
