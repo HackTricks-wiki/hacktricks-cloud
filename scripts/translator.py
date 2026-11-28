@@ -417,6 +417,16 @@ Translate all English prose, headings, navigation labels, link labels, and table
 Also don't add any extra stuff in your response that is not part of the translation and markdown syntax."""},
         {"role": "user", "content": text},
     ]
+    if file_path == SUMMARY_PATH:
+        messages = [
+            {"role": "system", "content": (
+                f"Translate these numbered table-of-contents labels to {language}. "
+                "Translate descriptive words, including connecting words in technical titles. "
+                "Keep product names and identifiers. Output one line for each label, starting with "
+                "its original # and number, such as # 1. Translated label. Return no commentary."
+            )},
+            {"role": "user", "content": text},
+        ]
     try:
         response = client.chat.completions.create(
             model=model,
@@ -467,6 +477,8 @@ Also don't add any extra stuff in your response that is not part of the translat
         if cont >= 2:
             raise RuntimeError(f"Page {file_path} returned incomplete translation after retries")
         return translate_text(language, text, file_path, model, cont + 1, slpitted, client)
+    if file_path == SUMMARY_PATH:
+        return response_message
     response_message = response_message.replace("bypassy", "bypasses") # PL translations translates that from time to time
     response_message = response_message.replace("Bypassy", "Bypasses")
     response_message = response_message.replace("-privec.md", "-privesc.md") # PL translations translates that from time to time
@@ -578,6 +590,39 @@ def copy_files(source_path, dest_path):
     file_names = ["hacktricks-preprocessor.py", "book.toml", ".gitignore", "src/robots.txt"]
     move_files_to_push(source_path, dest_path, file_names)
 
+NAVIGATION_LABEL = re.compile(r"^#\s*(\d+)\.\s+(.+)$")
+
+
+def translate_navigation_batch(language, batch, model, client):
+    translations = {}
+    pending = list(batch)
+    for _ in range(3):
+        prompt = "\n".join(f"# {index}. {label}" for index, label in enumerate(pending, start=1))
+        result = translate_text(language, prompt, SUMMARY_PATH, model, client=client)
+        candidates = {}
+        duplicates = set()
+        for line in result.splitlines():
+            match = NAVIGATION_LABEL.fullmatch(line.strip())
+            if match:
+                index = int(match[1])
+                if index in candidates:
+                    duplicates.add(index)
+                candidates[index] = match[2].strip()
+        for index, label in enumerate(pending, start=1):
+            localized = candidates.get(index)
+            if localized and index not in duplicates and not unchanged_summary_label(label, localized):
+                translations[label] = localized
+        pending = [label for label in pending if label not in translations]
+        if not pending:
+            return translations
+    if len(pending) == 1:
+        raise RuntimeError("SUMMARY.md returned missing or untranslated navigation labels after retries")
+    middle = len(pending) // 2
+    for smaller in (pending[:middle], pending[middle:]):
+        translations.update(translate_navigation_batch(language, smaller, model, client))
+    return translations
+
+
 def translate_summary(language, source, previous, model, client, branch=None, chapter_labels=None):
     """Translate navigation labels independently of their paths and indentation."""
     parts = summary_parts(source)
@@ -593,22 +638,7 @@ def translate_summary(language, source, previous, model, client, branch=None, ch
 
     pending = [label for label in labels if label not in translations]
     for start in range(0, len(pending), 40):
-        batch = pending[start:start + 40]
-        prefixes = [f"# {index}. " for index in range(1, len(batch) + 1)]
-        prompt = "\n".join(prefix + label for prefix, label in zip(prefixes, batch))
-        for _ in range(3):
-            result = translate_text(language, prompt, SUMMARY_PATH, model, client=client)
-            lines = result.splitlines()
-            if len(lines) != len(batch) or any(not line.startswith(prefix) for prefix, line in zip(prefixes, lines)):
-                continue
-            localized = [line[len(prefix):].strip() for prefix, line in zip(prefixes, lines)]
-            if any(not value or unchanged_summary_label(label, value)
-                   for label, value in zip(batch, localized)):
-                continue
-            translations.update(zip(batch, localized))
-            break
-        else:
-            raise RuntimeError("SUMMARY.md returned missing or untranslated navigation labels after retries")
+        translations.update(translate_navigation_batch(language, pending[start:start + 40], model, client))
 
     result = "".join(prefix + (translations[label] if label is not None else "") + suffix
                      for prefix, label, suffix in parts)

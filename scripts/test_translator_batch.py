@@ -36,6 +36,17 @@ class TranslationBatchTests(unittest.TestCase):
             )
         self.assertEqual(create.call_count, 2)
 
+    def test_summary_retries_only_missing_or_unchanged_labels(self):
+        source = "# Summary\n\n# Welcome!\n- [About the author](guide.md)\n"
+        with patch.object(translator, "translate_text", side_effect=[
+            "# 2. Sobre o autor\n# 1. Welcome!",
+            "# 1. Boas-vindas!",
+        ]) as translate:
+            localized = translator.translate_summary("Brazilian Portuguese", source, None, "fixture", None, "pt")
+        self.assertEqual(translate.call_args.args[1], "# 1. Welcome!")
+        self.assertIn("# Boas-vindas!", localized)
+        self.assertIn("- [Sobre o autor](guide.md)", localized)
+
     def test_summary_translates_labels_and_keeps_structure_and_previous_labels(self):
         old_source = "# Summary\n\n# Welcome!\n- [About the author](old.md)\n"
         old_target = "# Summary\n\n# Bem-vindo!\n- [Sobre o autor](old.md)\n"
