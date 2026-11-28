@@ -10,7 +10,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import translator
-from translation_quality import check_rendered_sidebar, copied_sentence, markdown_problems, preserve_source_heading_anchors
+from translation_quality import (
+    check_rendered_sidebar, copied_sentence, markdown_problems, preserve_source_heading_anchors,
+    suspected_english_blocks,
+)
 
 
 class FailingClient:
@@ -306,6 +309,21 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertFalse(translator.copied_prose(source, localized))
         self.assertTrue(copied_sentence(source, localized))
         self.assertFalse(copied_sentence(source, "Bienvenue.\n\n```text\n" + copied + "\n```"))
+
+    def test_language_checks_ignore_indented_code_and_quotation_continuations(self):
+        english = (
+            "The library has a reading room where you can sit while you review the book. "
+            "When you have finished, you should return the book to the shelf and ask the staff "
+            "for help if you are uncertain about where it belongs."
+        )
+        code = f"    {english}\n"
+        self.assertFalse(translator.copied_prose(f"Library\n\n{code}", f"Bibliothèque\n\n{code}"))
+        self.assertFalse(copied_sentence(english, f"Bibliothèque\n\n{code}"))
+        self.assertEqual(suspected_english_blocks(f"Bibliothèque\n\n{english}"), 1)
+        for quote in (f"> Original quotation\n{english}", f"<blockquote>{english}</blockquote>"):
+            with self.subTest(quote=quote):
+                self.assertFalse(copied_sentence(english, quote))
+                self.assertEqual(suspected_english_blocks(f"Bibliothèque\n\n{quote}"), 0)
 
     def test_markdown_checks_accept_localized_text_and_flag_structural_regressions(self):
         source = (

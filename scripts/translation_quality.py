@@ -20,13 +20,15 @@ def markdown_line_offsets(text):
     return offsets
 
 
-def fenced_code_spans(text):
+def fenced_code_spans(text, *, tokens=None):
     """Locate code fences, including ones that open on a list marker."""
     if "```" not in text and "~~~" not in text:
         return []
     offsets = markdown_line_offsets(text)
+    if tokens is None:
+        tokens = MARKDOWN.parse(text)
     native = [(offsets[token.map[0]], offsets[token.map[1]])
-              for token in MARKDOWN.parse(text) if token.type == "fence"]
+              for token in tokens if token.type == "fence"]
     spans = []
     cursor = 0
     for start, end in [*native, (len(text), len(text))]:
@@ -157,25 +159,44 @@ def summary_language_text(source_parts, target_parts):
                     if source is not None and localized and needs_summary_translation(source))
 
 
-def reader_text(text):
-    """Keep prose while removing code and reference syntax."""
+@lru_cache(maxsize=128)
+def ignored_prose_spans(text):
+    tokens = MARKDOWN.parse(text)
+    offsets = markdown_line_offsets(text)
+    code = fenced_code_spans(text, tokens=tokens)
+    quotes = []
+    for token in tokens:
+        if token.type in {"code_block", "blockquote_open"}:
+            start, end = token.map
+            spans = code if token.type == "code_block" else quotes
+            spans.append((offsets[start], offsets[end]))
+    return tuple(code), tuple(quotes)
+
+
+@lru_cache(maxsize=128)
+def reader_text(text, *, include_quotes=True):
+    """Keep prose while removing code, reference syntax, and optional quoted text."""
+    code, quotes = ignored_prose_spans(text)
+    spans = sorted(code if include_quotes else code + quotes)
     fragments = []
     cursor = 0
-    for start, end in fenced_code_spans(text):
-        fragments.append(text[cursor:start])
-        cursor = end
+    for start, end in spans:
+        if start > cursor:
+            fragments.append(text[cursor:start])
+        cursor = max(cursor, end)
     fragments.append(text[cursor:])
     text = "\n\n".join(fragments)
     text = re.sub(r"<!--.*?-->|<(?:pre|code)\b[^>]*>.*?</(?:pre|code)>", "", text, flags=re.S | re.I)
     text = re.sub(r"\{\{#ref\}\}.*?\{\{#endref\}\}|\{\{#[^{}]*\}\}", "", text, flags=re.S)
     text = re.sub(r"(?m)^\s*## References[ \t]*$|^- \[\d+\] .*?$", "", text)
+    if not include_quotes:
+        text = re.sub(r"<blockquote\b[^>]*>.*?</blockquote\s*>", "", text, flags=re.S | re.I)
+        text = re.sub(r"(?m)^[ \t]*>.*$", "", text)
     return re.sub(r"`+[^`\n]+`+|\]\([^\n)]*\)|<[^>]*>|https?://\S+", " ", text)
 
 
 def prose_segments(text, *, include_quotes=True):
-    prose = reader_text(text)
-    if not include_quotes:
-        prose = re.sub(r"(?m)^[ \t]*>.*$", "", prose)
+    prose = reader_text(text, include_quotes=include_quotes)
     for block in re.split(r"\n[ \t]*\n", prose):
         # Separate headings, list items and table rows even without blank lines.
         for segment in re.split(r"\n(?=[ \t]*(?:#{1,6} |[-*+] |\d+\. |\|))", block):
@@ -206,7 +227,7 @@ def copied_prose(source, translated, *, majority=False):
 def copied_sentence(source, translated):
     """Find substantial English sentences embedded inside otherwise translated prose."""
     def sentences(text):
-        prose = re.sub(r"(?m)^[ \t]*>.*$", "", reader_text(text))
+        prose = reader_text(text, include_quotes=False)
         for sentence in re.split(r"(?<=[.!?])\s+|\n", prose):
             words = tuple(re.findall(r"[^\W\d_]+", sentence.casefold()))
             if len(words) >= 12 and len(ENGLISH_FUNCTION_WORDS.intersection(words)) >= 3:
