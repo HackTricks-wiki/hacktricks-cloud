@@ -352,12 +352,12 @@ NESTED_BLOCK_TYPES = frozenset({
 INLINE_FORMAT_TYPES = frozenset({"em_open", "strong_open", "s_open", "hardbreak"})
 VISIBLE_BOLD_MARKER = re.compile(r"(?<!\*)\*\*(?!\*)")
 CJK_TEXT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
-CJK_BOUNDARY_PUNCTUATION = "。！？、；：，…（）「」『』《》【】〈〉〔〕［］“”‘’"
+CJK_BOLD_BOUNDARIES = " \t\u00a0\u3000.,!?;:()。！？、；：，…（）「」『』《》【】〈〉〔〕［］“”‘’"
 PLAIN_BOLD_SPAN = re.compile(r"(?<![\\*])\*\*(?!\*)([^*\\`<>\[\]\r\n]+)\*\*(?!\*)")
 
 
 def repair_cjk_bold_boundaries(text):
-    """Move CJK punctuation outside failed bold delimiters without changing prose."""
+    """Move CJK boundary spaces and punctuation outside failed bold delimiters."""
     offsets = markdown_line_offsets(text)
     changes = {}
     for block in MARKDOWN.parse(text):
@@ -370,13 +370,13 @@ def repair_cjk_bold_boundaries(text):
                 continue
             for match in PLAIN_BOLD_SPAN.finditer(token.content):
                 original, phrase = match[0], match[1]
-                body = phrase.strip(CJK_BOUNDARY_PUNCTUATION)
+                body = phrase.strip(CJK_BOLD_BOUNDARIES)
                 if (
-                    not body or body == phrase or body != body.strip() or not CJK_TEXT.search(body)
+                    not body or body == phrase or not CJK_TEXT.search(body)
                     or raw_block.count(original) != 1
                 ):
                     continue
-                prefix_length = len(phrase) - len(phrase.lstrip(CJK_BOUNDARY_PUNCTUATION))
+                prefix_length = len(phrase) - len(phrase.lstrip(CJK_BOLD_BOUNDARIES))
                 replacement = f"{phrase[:prefix_length]}**{body}**{phrase[prefix_length + len(body):]}"
                 position = start + raw_block.index(original)
                 if position > 0 and text[position - 1] in {"\\", "*"}:

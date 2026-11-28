@@ -435,6 +435,18 @@ class TranslationBatchTests(unittest.TestCase):
         ambiguous = f"\\*\\*打开指南。\\*\\* 或 `**打开指南。**`\n"
         self.assertEqual(repair_cjk_bold_boundaries(ambiguous), ambiguous)
 
+    def test_cjk_bold_repair_moves_outer_spaces_without_changing_text(self):
+        examples = (
+            ("공지의** 안내서 **를 읽으세요.", "공지의 **안내서** 를 읽으세요."),
+            ("준비는**(안내서)**부터 시작합니다.", "준비는(**안내서**)부터 시작합니다."),
+            ("請** 読書。 **後に確認。", "請 **読書**。 後に確認。"),
+        )
+        for original, expected in examples:
+            with self.subTest(original=original):
+                self.assertEqual(repair_cjk_bold_boundaries(original), expected)
+                self.assertEqual(expected.replace("**", ""), original.replace("**", ""))
+                self.assertEqual(repair_cjk_bold_boundaries(expected), expected)
+
     def test_page_repairs_cjk_bold_only_after_full_structure_validation(self):
         english = "First, **open the guide**. Then begin.\n"
         chinese = "请先**打开指南。**然后开始。\n"
