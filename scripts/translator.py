@@ -3,6 +3,7 @@ from functools import lru_cache
 import hashlib
 import json
 import os
+from pathlib import Path
 from openai import OpenAI #pip3 install openai
 import time
 import shutil
@@ -388,7 +389,8 @@ def commit_and_push(translate_files, branch):
         print("No translation or shared book changes to publish")
         return
     subprocess.run(["git", "commit", "-m", message[:72]], check=True)
-    subprocess.run(["git", "push", "--set-upstream", "origin", branch], check=True)
+    push_script = Path(__file__).resolve().with_name("push_branch_with_retry.sh")
+    subprocess.run(["bash", str(push_script), branch], check=True)
     print("Commit created and pushed")
 
 

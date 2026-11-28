@@ -25,6 +25,51 @@ class FailingClient:
 
 
 class TranslationBatchTests(unittest.TestCase):
+    def test_publish_preserves_unrelated_updates_and_aborts_on_conflicts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def git(repo, *args):
+                return subprocess.check_output(["git", *args], cwd=repo, text=True).strip()
+
+            remote, local, editor = (root / name for name in ("remote.git", "local", "editor"))
+            git(root, "init", "--bare", "--initial-branch=fr", str(remote))
+            git(root, "clone", str(remote), str(local))
+            for name in ("guide.md", "notes.md"):
+                (local / name).write_text("Original\n", encoding="utf-8")
+            git(local, "config", "user.name", "Translator Fixture")
+            git(local, "config", "user.email", "translation@example.org")
+            git(local, "add", "-A")
+            git(local, "commit", "-m", "Original files")
+            git(local, "push", "origin", "fr")
+            git(root, "clone", str(remote), str(editor))
+            git(editor, "config", "user.name", "Editor Fixture")
+            git(editor, "config", "user.email", "editor@example.org")
+            (editor / "notes.md").write_text("Editorial change\n", encoding="utf-8")
+            git(editor, "commit", "-am", "Concurrent notes update")
+            git(editor, "push", "origin", "fr")
+
+            previous = Path.cwd()
+            try:
+                os.chdir(local)
+                (local / "guide.md").write_text("Traduction\n", encoding="utf-8")
+                translator.commit_and_push(["guide.md"], "fr")
+                self.assertEqual(git(remote, "show", "fr:notes.md"), "Editorial change")
+                self.assertEqual(git(remote, "show", "fr:guide.md"), "Traduction")
+
+                git(editor, "pull", "--ff-only")
+                (editor / "guide.md").write_text("Révision\n", encoding="utf-8")
+                git(editor, "commit", "-am", "Concurrent chapter update")
+                git(editor, "push", "origin", "fr")
+                (local / "guide.md").write_text("Nouvelle traduction\n", encoding="utf-8")
+                with self.assertRaises(subprocess.CalledProcessError):
+                    translator.commit_and_push(["guide.md"], "fr")
+                self.assertEqual(git(remote, "show", "fr:guide.md"), "Révision")
+                self.assertEqual(git(local, "status", "--porcelain"), "")
+                self.assertEqual(git(local, "branch", "--show-current"), "fr")
+            finally:
+                os.chdir(previous)
+
     @unittest.skipUnless(shutil.which("mdbook"), "mdBook is required for the translation integration test")
     def test_git_and_mdbook_integration_blocks_swapped_links_then_publishes_valid_output(self):
         cli = str(Path(translator.__file__).resolve())
