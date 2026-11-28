@@ -436,6 +436,7 @@ class MarkdownInventory(NamedTuple):
     literals: Counter
     inline_positions: tuple[tuple[int, str, str], ...]
     inline_formatting: Counter
+    adjacent_emphasis: Counter
     visible_bold_markers: int
     reader_labels: dict
     open_tags: Counter
@@ -455,6 +456,7 @@ def markdown_inventory(text):
     quote_number = 0
     inline_positions = []
     inline_formatting = Counter()
+    adjacent_emphasis = Counter()
     visible_bold_markers = 0
     reader_labels = defaultdict(list)
     inline_block = 0
@@ -498,10 +500,20 @@ def markdown_inventory(text):
                 marker = TASK_LIST_MARKER.match(token.content)
                 if marker:
                     nested_blocks.append(("task list item", marker[1].lower()))
-        for inline in token.children or ():
+        inline_tokens = token.children or ()
+        for position, inline in enumerate(inline_tokens):
             if inline.type == "text":
                 visible_bold_markers += len(VISIBLE_BOLD_MARKER.findall(inline.content))
             elif inline.type in INLINE_FORMAT_TYPES:
+                # Adjacent emphasis on words in the same phrase can merge when
+                # the word order changes. Whitespace between them has no text
+                # that needs to remain outside the emphasis.
+                if inline.type in {"em_open", "strong_open"} and position >= 2:
+                    previous, separator = inline_tokens[position - 2:position]
+                    if (previous.type == inline.type.replace("_open", "_close")
+                            and previous.level == separator.level == inline.level
+                            and separator.type == "text" and not separator.content.strip()):
+                        adjacent_emphasis[(inline_block, inline.type)] += 1
                 inline_formatting[(inline_block, inline.type)] += 1
             elif inline.type == "code_inline":
                 literals[("inline code", inline.content)] += 1
@@ -531,7 +543,7 @@ def markdown_inventory(text):
     reader_labels.update(html.reader_labels)
     return MarkdownInventory(
         blocks, tuple(heading_levels), tuple(heading_labels), tuple(nested_blocks), tuple(callouts), targets, literals,
-        tuple(inline_positions), inline_formatting, visible_bold_markers, reader_labels, Counter(html.tag_stack),
+        tuple(inline_positions), inline_formatting, adjacent_emphasis, visible_bold_markers, reader_labels, Counter(html.tag_stack),
         html.unmatched_closing, html.crossed_tags,
     )
 
@@ -560,7 +572,10 @@ def markdown_problems(source, translated, *, allow_source_aliases=False):
     if (old_targets == new_targets and original.literals == localized.literals
             and original.inline_positions != localized.inline_positions):
         problems.append("moved Markdown links, images, or inline code")
-    if original.inline_formatting != localized.inline_formatting:
+    old_runs = original.inline_formatting - original.adjacent_emphasis
+    new_runs = localized.inline_formatting - localized.adjacent_emphasis
+    if any(original.inline_formatting[key] != localized.inline_formatting[key] and old_runs[key] != new_runs[key]
+           for key in original.inline_formatting.keys() | localized.inline_formatting.keys()):
         problems.append("changed Markdown emphasis, strikethrough, or hard line breaks")
     if localized.visible_bold_markers > original.visible_bold_markers:
         problems.append("introduced visible Markdown bold markers")

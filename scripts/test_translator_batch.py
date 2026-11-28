@@ -470,6 +470,20 @@ class TranslationBatchTests(unittest.TestCase):
         self.assertEqual(copied_reader_labels(original, localized, "ko"), {})
         self.assertEqual(markdown_problems(original, localized), [])
 
+    def test_markdown_allows_adjacent_emphasis_to_merge_without_losing_formatting(self):
+        source = "Give the **ORIGINAL** **AUTHORS** all the **credit**.\n\n*Read* *more*.\n"
+        localized = "Attribuez tout le **mérite** aux **AUTEURS ORIGINAUX**.\n\n*En savoir plus*.\n"
+        self.assertEqual(markdown_problems(source, localized), [])
+        reordered = localized.replace("**AUTEURS ORIGINAUX**", "**AUTEURS** et **ORIGINAUX**")
+        self.assertEqual(markdown_problems(source, reordered), [])
+        self.assertEqual(markdown_problems(source, localized.replace("**mérite**", "mérite")), [
+            "changed Markdown emphasis, strikethrough, or hard line breaks",
+        ])
+        separate = source.replace("**ORIGINAL** **AUTHORS**", "**ORIGINAL** and **AUTHORS**")
+        self.assertEqual(markdown_problems(separate, localized), [
+            "changed Markdown emphasis, strikethrough, or hard line breaks",
+        ])
+
     def test_markdown_checks_detect_reordered_heading_levels_with_equal_counts(self):
         original = "# Handbook\n\n## Reading\n\n### Examples\n\n## Writing\n"
         localized = "# Manuel\n\n## Lecture\n\n## Rédaction\n\n### Exemples\n"
