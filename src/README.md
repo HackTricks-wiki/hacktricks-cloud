@@ -2,7 +2,7 @@
 
 <figure><img src="images/cloud.gif" alt=""><figcaption></figcaption></figure>
 
-_Logo và chuyển động của Hacktricks do_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/)_ thiết kế._<sup>[[1]](#references)</sup>
+_Logo và chuyển động của Hacktricks do_ [_@ppieranacho_](https://www.instagram.com/ppieranacho/) _thiết kế._<sup>[[1]](#references)</sup>
 
 ### Chạy HackTricks Cloud cục bộ
 
