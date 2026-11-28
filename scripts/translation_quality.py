@@ -97,7 +97,7 @@ def summary_structure(parts):
 
 def fixed_summary_name(label, language):
     return (
-        language.lower() in {"ja", "japanese"}
+        language.lower() in {"ja", "japanese", "zh", "chinese", "simplified chinese"}
         and " ".join(re.findall(r"[a-z]+", label.lower())) in FIXED_SUMMARY_NAMES
     )
 
