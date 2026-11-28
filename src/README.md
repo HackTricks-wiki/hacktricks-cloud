@@ -86,4 +86,5 @@ docker compose up
 - [12] [HackTricks Cloud Pentesting 方法論](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [HackTricks の価値観と FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [HackTricks Cloud の Repobeats 統計グラフィック](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
