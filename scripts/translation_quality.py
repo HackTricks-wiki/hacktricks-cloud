@@ -172,8 +172,11 @@ def reader_text(text):
     return re.sub(r"`+[^`\n]+`+|\]\([^\n)]*\)|<[^>]*>|https?://\S+", " ", text)
 
 
-def prose_segments(text):
-    for block in re.split(r"\n[ \t]*\n", reader_text(text)):
+def prose_segments(text, *, include_quotes=True):
+    prose = reader_text(text)
+    if not include_quotes:
+        prose = re.sub(r"(?m)^[ \t]*>.*$", "", prose)
+    for block in re.split(r"\n[ \t]*\n", prose):
         # Separate headings, list items and table rows even without blank lines.
         for segment in re.split(r"\n(?=[ \t]*(?:#{1,6} |[-*+] |\d+\. |\|))", block):
             words = re.findall(r"[^\W\d_]+", segment.lower(), flags=re.UNICODE)
@@ -228,6 +231,18 @@ def language_identifier():
     from py3langid.langid import LanguageIdentifier, MODEL_FILE
 
     return LanguageIdentifier.from_model_file(MODEL_FILE, norm_probs=True)
+
+
+def suspected_english_blocks(text):
+    """Count substantial English prose blocks for review, even if paraphrased."""
+    count = 0
+    for words in prose_segments(text, include_quotes=False):
+        if len(words) < 30 or len(ENGLISH_FUNCTION_WORDS.intersection(words)) < 5:
+            continue
+        language, confidence = language_identifier().classify(" ".join(words[:180]))
+        if language == "en" and confidence >= 0.995:
+            count += 1
+    return count
 
 
 def wrong_language(text, branch):

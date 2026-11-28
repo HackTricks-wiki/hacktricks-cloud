@@ -18,7 +18,7 @@ from urllib.parse import unquote, urlsplit
 
 from translation_quality import (
     LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
-    unchanged_summary_label, wrong_language,
+    suspected_english_blocks, unchanged_summary_label, wrong_language,
 )
 
 
@@ -148,6 +148,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False):
     language = branch.rsplit('/', 1)[-1]
     copied, language_mismatches, navigation, partial = [], [], [], []
     structural_review = {}
+    english_review = {}
     for path in paths:
         original, localized = texts[source[path]], texts[existing[path]]
         review_source = texts[comparable[path]] if path in comparable else original
@@ -173,6 +174,10 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False):
             language_mismatches.append(path)
         elif detailed and (copied_prose(review_source, localized) or copied_sentence(review_source, localized)):
             partial.append(path)
+        elif detailed and language in LANGUAGE_CODES:
+            count = suspected_english_blocks(localized)
+            if count:
+                english_review[path] = count
         if detailed and review_source != localized:
             problems = markdown_problems(review_source, localized, allow_source_aliases=True)
             if problems:
@@ -186,6 +191,7 @@ def audit(branch, source, existing, historical_blobs, *, detailed=False):
             source_advanced=sorted(path for path, blob in comparable.items() if source[path] != blob),
             checkpoint_unverified=sorted(set(paths) - comparable.keys()),
             partly_untranslated=partial,
+            english_prose_review=english_review,
             structural_review=structural_review,
         )
     return report

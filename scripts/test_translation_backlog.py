@@ -86,6 +86,42 @@ class TranslationBacklogTests(unittest.TestCase):
         self.assertEqual(report["untranslated"], [backlog.SUMMARY_PATH, "src/old.md"])
         self.assertIn("src/old.md", backlog.pending("af", "master", set()))
 
+    def test_detailed_audit_flags_paraphrased_english_without_scheduling_a_rewrite(self):
+        page = self.root / "src/old.md"
+        english = (
+            "The reading room staff can help you after you arrive at the library. "
+            "Before you leave, ask whether any of the books can be borrowed and where "
+            "the return box is located for the end of the day."
+        )
+        paraphrase = (
+            "When you enter the library, there will be someone at the desk who can answer "
+            "your questions. If you want to take a book with you, check which books may be "
+            "borrowed and how they should be returned to the building."
+        )
+        french = (
+            "La bibliothèque municipale accueille les visiteurs du lundi au samedi. "
+            "Les personnes qui souhaitent consulter des ouvrages peuvent réserver une place "
+            "dans la salle de lecture auprès du personnel de l’accueil."
+        )
+        page.write_text(english, encoding="utf-8")
+        self.git("commit", "-am", "Write the source guide")
+        self.git("checkout", "-b", "fr")
+        french_context = (french + "\n\n") * 9
+        page.write_text(
+            f"{french_context}{paraphrase}\n\n"
+            f"> {paraphrase}\n\n```text\n{paraphrase}\n```\n\n{french_context}",
+            encoding="utf-8",
+        )
+        self.git("commit", "-am", "Add guide translation")
+        source = backlog.markdown_blobs("master")
+        localized = backlog.markdown_blobs("fr")
+        history = backlog.english_history("master")
+        basic = backlog.audit("fr", source, localized, history)
+        report = backlog.audit("fr", source, localized, history, detailed=True)
+        self.assertNotIn("english_prose_review", basic)
+        self.assertNotIn("src/old.md", report["partly_untranslated"])
+        self.assertEqual(report["english_prose_review"], {"src/old.md": 1})
+
     def test_detailed_audit_checks_structure_against_recorded_source(self):
         path = self.root / "src/old.md"
         path.write_text("Read [the guide](guide.md).\n")
