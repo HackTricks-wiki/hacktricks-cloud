@@ -68,7 +68,7 @@ docker compose up
 
 ### Github 统计数据
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
+![HackTricks Cloud 的 GitHub 统计](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
 
 ## References
 
