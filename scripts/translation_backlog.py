@@ -9,15 +9,75 @@ instead records the Git blob ID of every English page it has translated.
 import argparse
 import json
 import os
+import posixpath
 import re
 import subprocess
+from io import BytesIO
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from translation_quality import (
+    LANGUAGE_CODES, MARKDOWN, chapter_title, check_rendered_anchor_collisions, check_rendered_sidebar, check_sidebar_script, copied_prose, copied_sentence, english_segments, ignored_prose_spans, markdown_problems, preserve_source_heading_anchors, summary_language_text, summary_parts, summary_structure,
+    copied_heading_count, copied_reader_labels, missing_markdown_blocks, suspected_english_blocks, unchanged_summary_label, wrong_language,
+)
 
 
+SUMMARY_PATH = "src/SUMMARY.md"
 STATE_PATH = Path(".translation-source-blobs.json")
 # The last Translate All run that succeeded for every language, before the
 # large AWS/Azure/GCP technique PRs were merged.
 INITIAL_SOURCE_REF = "b9b85d019e2997ee1ca34fea60ec38d780aa3d9b"
+
+CLOUD_WELCOME_LINK = re.compile(
+    r"\$\$external:https://book\.hacktricks\.wiki/en/welcome/"
+    r"(?P<page>about-the-author|hacktricks-values-and-faq)\.html\$\$"
+)
+REFERENCE_FOOTER = re.compile(
+    r"^- \[\d+\] \[[^\]\r\n]+\]\([^\r\n]+\)[ \t]*(?P<newline>\r?\n)"
+    r"(?P<gap>(?:[ \t]*\r?\n)*)(?P<include>\{\{#include (?:\./|(?:\.\./)*)banners/hacktricks-training\.md\}\})"
+    r"[ \t]*(?:\r?\n[ \t]*)*\Z",
+    flags=re.MULTILINE,
+)
+
+
+def normalize_reference_footer(source, localized):
+    """Restore the blank line before a standalone training banner include."""
+    original = REFERENCE_FOOTER.search(source)
+    translated = REFERENCE_FOOTER.search(localized)
+    if not original or not translated or not original["gap"] or translated["gap"]:
+        return localized
+    if original["include"] != translated["include"]:
+        return localized
+    for text, match in ((source, original), (localized, translated)):
+        code_spans, _ = ignored_prose_spans(text)
+        if any(start <= match.start("include") < end for start, end in code_spans):
+            return localized
+    include_start = translated.start("include")
+    return localized[:include_start] + translated["newline"] + localized[include_start:]
+
+
+def localize_cloud_welcome_links(summary: str, branch: str) -> str:
+    """Use the translated editions of both standing Cloud welcome links."""
+    if branch not in LANGUAGE_CODES:
+        raise ValueError(f"Unsupported translated edition: {branch}")
+    destination = rf"$$external:https://book.hacktricks.wiki/{branch}/welcome/\g<page>.html$$"
+    return "".join(
+        prefix + label + CLOUD_WELCOME_LINK.sub(destination, suffix, count=1) if label is not None else prefix
+        for prefix, label, suffix in summary_parts(summary)
+    )
+
+
+def summary_issue(source, localized, language):
+    source_parts = summary_parts(source)
+    localized_parts = summary_parts(localized)
+    if summary_structure(source_parts) != summary_structure(localized_parts):
+        return "navigation_structure"
+    if any(label is not None and unchanged_summary_label(label, translation, language)
+           for (_, label, _), (_, translation, _) in zip(source_parts, localized_parts)):
+        return "untranslated"
+    if wrong_language(summary_language_text(source_parts, localized_parts), language):
+        return "wrong_language"
+    return None
 
 
 def git(*args: str) -> bytes:
@@ -31,31 +91,46 @@ def markdown_blobs(ref: str) -> dict[str, str]:
             continue
         metadata, raw_path = entry.split(b"\t", 1)
         path = raw_path.decode("utf-8")
-        if path.endswith(".md") and path != "src/SUMMARY.md":
+        if path.endswith(".md"):
             result[path] = metadata.split()[2].decode("ascii")
     return result
 
 
-def language_files(branch: str) -> set[str]:
-    return set(markdown_blobs(branch))
-
-
-def load_state(branch: str, existing_files: set[str]) -> dict[str, str]:
+def read_checkpoint(branch):
     try:
         state_json = subprocess.check_output(
             ["git", "show", f"{branch}:{STATE_PATH}"], stderr=subprocess.DEVNULL
         )
         state = json.loads(state_json.decode("utf-8"))
     except subprocess.CalledProcessError:
-        # The prior fully successful translation run predates the state file.
-        return {
-            path: blob
-            for path, blob in markdown_blobs(INITIAL_SOURCE_REF).items()
-            if path in existing_files
-        }
-    if state.get("schema") != 1 or not isinstance(state.get("sources"), dict):
+        return None
+    if not isinstance(state, dict) or state.get("schema") != 1 or not isinstance(state.get("sources"), dict):
         raise ValueError(f"Invalid translation state on {branch}")
-    return state["sources"]
+    return state
+
+
+def recorded_sources(branch: str) -> dict[str, str] | None:
+    checkpoint = read_checkpoint(branch)
+    return checkpoint["sources"] if checkpoint is not None else None
+
+
+def checkpoint_for_update(branch, initial_ref=None):
+    checkpoint = read_checkpoint(branch)
+    if checkpoint is not None:
+        return checkpoint["sources"], checkpoint.get("assumed_baseline")
+    baseline = git("rev-parse", "--verify", f"{initial_ref or INITIAL_SOURCE_REF}^{{commit}}").decode().strip()
+    return {}, baseline
+
+
+def load_state(branch: str, existing_files: set[str], initial_ref=None) -> dict[str, str]:
+    recorded, baseline = checkpoint_for_update(branch, initial_ref)
+    # An inferred legacy baseline is sufficient for planning, but stays
+    # separate from the recorded source blobs used for audits and repairs.
+    legacy = {
+        path: blob for path, blob in markdown_blobs(baseline).items()
+        if path in existing_files and path != SUMMARY_PATH
+    } if baseline else {}
+    return legacy | recorded
 
 
 def extra_paths(args: argparse.Namespace) -> set[str]:
@@ -67,14 +142,216 @@ def extra_paths(args: argparse.Namespace) -> set[str]:
     return {path.strip() for value in values for path in re.split(r"[,\n]", value) if path.strip()}
 
 
-def pending(branch: str, source_ref: str, extras: set[str]) -> list[str]:
-    source = markdown_blobs(source_ref)
-    existing = language_files(branch)
-    state = load_state(branch, existing)
-    return sorted(
-        path for path, blob in source.items()
-        if path not in existing or state.get(path) != blob or path in extras
+def read_blobs(blob_ids):
+    """Read many blobs with one Git process, with no checkout."""
+    ids = sorted(set(blob_ids))
+    if not ids:
+        return {}
+    raw = subprocess.check_output(
+        ["git", "cat-file", "--batch"], input=("\n".join(ids) + "\n").encode("ascii")
     )
+    stream = BytesIO(raw)
+    result = {}
+    for blob in ids:
+        header = stream.readline().split()
+        if len(header) != 3 or header[0].decode("ascii") != blob or header[1] != b"blob":
+            raise RuntimeError(f"Cannot read translation blob {blob}")
+        result[blob] = stream.read(int(header[2])).decode("utf-8", errors="replace")
+        stream.read(1)  # The delimiter after the blob.
+    return result
+
+
+def english_history(source_ref):
+    return set(git("rev-list", "--objects", "--no-object-names", source_ref, "--", "src").decode("ascii").splitlines())
+
+
+def verified_source_blobs(branch, source, existing, historical_blobs):
+    return {
+        path: blob for path, blob in (recorded_sources(branch) or {}).items()
+        if path in source and path in existing and blob in historical_blobs
+    }
+
+
+def audit(branch, source, existing, historical_blobs, *, detailed=False, checkpoint_ref=None):
+    missing = sorted(source.keys() - existing.keys())
+    paths = sorted(source.keys() & existing.keys())
+    comparable = (
+        verified_source_blobs(checkpoint_ref or branch, source, existing, historical_blobs)
+        if detailed else {}
+    )
+    texts = read_blobs(
+        [blob for path in paths for blob in (source[path], existing[path])]
+        + list(comparable.values())
+    )
+    language = branch.rsplit('/', 1)[-1]
+    copied, language_mismatches, navigation, partial = [], [], [], []
+    structural_review = {}
+    missing_block_details = {}
+    english_review = {}
+    reader_label_review = {}
+    heading_review = {}
+    footer_spacing = []
+    for path in paths:
+        original, localized = texts[source[path]], texts[existing[path]]
+        review_source = texts[comparable[path]] if path in comparable else original
+        if path == SUMMARY_PATH:
+            issue = summary_issue(original, localized, language)
+            if issue == "navigation_structure":
+                navigation.append(path)
+                if existing[path] in historical_blobs:
+                    copied.append(path)
+            elif issue == "untranslated":
+                copied.append(path)
+            elif issue == "wrong_language":
+                language_mismatches.append(path)
+            continue
+        if copied_prose(original, localized, majority=True) or (
+            existing[path] in historical_blobs and english_segments(localized)
+        ):
+            copied.append(path)
+        elif english_segments(original) and wrong_language(localized, language):
+            language_mismatches.append(path)
+        elif detailed and (copied_prose(review_source, localized) or copied_sentence(review_source, localized)):
+            partial.append(path)
+        elif detailed and language in LANGUAGE_CODES:
+            count = suspected_english_blocks(localized)
+            if count:
+                english_review[path] = count
+        if detailed and review_source != localized:
+            normalized = normalize_reference_footer(review_source, localized)
+            labels = copied_reader_labels(review_source, normalized, language)
+            if labels:
+                reader_label_review[path] = labels
+            headings = copied_heading_count(review_source, normalized, language)
+            if headings:
+                heading_review[path] = headings
+            if normalized != localized:
+                footer_spacing.append(path)
+            problems = markdown_problems(review_source, normalized, allow_source_aliases=True)
+            if problems:
+                structural_review[path] = problems
+                missing_blocks = missing_markdown_blocks(review_source, normalized)
+                if missing_blocks:
+                    missing_block_details[path] = {
+                        "comparison_source": "recorded_english" if path in comparable else "current_english",
+                        "source_blob": comparable.get(path, source[path]),
+                        "missing": missing_blocks,
+                    }
+    report = {
+        "missing": missing, "untranslated": copied, "wrong_language": language_mismatches,
+        "navigation_structure": navigation,
+    }
+    if detailed:
+        report.update(
+            source_advanced=sorted(path for path, blob in comparable.items() if source[path] != blob),
+            checkpoint_unverified=sorted(set(paths) - comparable.keys()),
+            partly_untranslated=partial,
+            english_prose_review=english_review,
+            untranslated_reader_labels=reader_label_review,
+            untranslated_headings=heading_review,
+            reference_footer_spacing=footer_spacing,
+            structural_review=structural_review,
+            missing_block_details=missing_block_details,
+        )
+    return report
+
+
+def planned_paths(source, state, findings, extras=()):
+    planned_findings = ("missing", "untranslated", "wrong_language", "navigation_structure")
+    repairs = {path for category in planned_findings for path in findings[category]}
+    paths = (
+        path for path, blob in source.items()
+        if state.get(path) != blob or path in repairs or path in extras
+    )
+    return sorted(paths, key=lambda path: (path == SUMMARY_PATH, path))
+
+
+def pending(branch: str, source_ref: str, extras: set[str], initial_ref=None) -> list[str]:
+    source = markdown_blobs(source_ref)
+    existing = markdown_blobs(branch)
+    state = load_state(branch, existing.keys(), initial_ref)
+    findings = audit(branch, source, existing, english_history(source_ref))
+    return planned_paths(source, state, findings, extras)
+
+
+def reusable_chapter_labels(summary, source_files, branch):
+    """Reuse chapter translations for exact title links backed by a current source checkpoint."""
+    recorded = recorded_sources(branch) or {}
+    if not recorded:
+        return {}
+    existing = markdown_blobs(branch)
+    entries = []
+    for prefix, label, suffix in summary_parts(summary):
+        if label is None or not suffix.startswith("]("):
+            continue
+        tokens = MARKDOWN.parseInline("[chapter" + suffix)[0].children or ()
+        href = next((token.attrGet("href") for token in tokens if token.type == "link_open"), "")
+        destination = urlsplit(href)
+        if not destination.path or destination.scheme or destination.netloc or destination.query or destination.fragment:
+            continue
+        path = posixpath.normpath(posixpath.join("src", unquote(destination.path)))
+        blob = source_files.get(path)
+        if blob and recorded.get(path) == blob and path in existing:
+            entries.append((prefix, label, suffix, blob, existing[path]))
+
+    pages = read_blobs(blob for entry in entries for blob in entry[-2:])
+    candidates = {}
+    language = branch.rsplit("/", 1)[-1]
+    for prefix, label, suffix, original, localized in entries:
+        if chapter_title(pages[original]) != label:
+            continue
+        title = chapter_title(pages[localized])
+        if not title or title == label or unchanged_summary_label(label, title, language) or wrong_language(title, language):
+            continue
+        parts = summary_parts(prefix + title + suffix)
+        if len(parts) != 1 or parts[0] != (prefix, title, suffix):
+            continue
+        candidates.setdefault(label, set()).add(title)
+    return {label: next(iter(titles)) for label, titles in candidates.items() if len(titles) == 1}
+
+
+def restore_anchors(branch, source_ref):
+    """Restore bookmarks in the build workspace from recorded source revisions."""
+    if git("rev-parse", "HEAD") != git("rev-parse", branch):
+        raise ValueError("The translation branch must be checked out before restoring anchors")
+    if git("status", "--porcelain", "--untracked-files=no", "--", "src"):
+        raise ValueError("The source directory must be clean before restoring anchors")
+
+    existing = markdown_blobs(branch)
+    checkpoints = verified_source_blobs(
+        branch, markdown_blobs(source_ref), existing, english_history(source_ref)
+    )
+    checkpoints.pop(SUMMARY_PATH, None)
+    originals = read_blobs(checkpoints.values())
+    updated = []
+    for path, blob in sorted(checkpoints.items()):
+        page = Path(path)
+        if page.is_symlink():
+            continue
+        localized = page.read_bytes().decode("utf-8")
+        restored = preserve_source_heading_anchors(originals[blob], localized)
+        if restored != localized:
+            page.write_bytes(restored.encode("utf-8"))
+            updated.append(path)
+    return updated, len(checkpoints)
+
+
+def record_translations(source_ref, paths, state, *, assumed_baseline=None, retain_removed=False):
+    source = markdown_blobs(source_ref)
+    for path in paths:
+        if path not in source or not Path(path).is_file():
+            raise RuntimeError(f"Translated page is missing: {path}")
+        state[path] = source[path]
+    checkpoint = {
+        "schema": 1, "sources": {path: blob for path, blob in state.items() if retain_removed or path in source},
+    }
+    if assumed_baseline:
+        checkpoint["assumed_baseline"] = assumed_baseline
+    STATE_PATH.write_text(
+        json.dumps(checkpoint, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Recorded {len(paths)} translated English source blobs")
 
 
 def file_list(path: str) -> list[str]:
@@ -83,19 +360,69 @@ def file_list(path: str) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("plan", "mark", "verify"))
-    parser.add_argument("--language", required=True, help="Local language branch name")
+    parser.add_argument("action", choices=(
+        "audit", "plan", "mark", "verify", "verify-navigation", "verify-render", "restore-anchors", "localize-welcome-links",
+    ))
+    parser.add_argument("--language", required=True, help="Local or remote-tracking language branch")
     parser.add_argument("--source-ref", default="master")
+    parser.add_argument("--initial-source-ref", help="English baseline for legacy language branches")
     parser.add_argument("--output", help="Newline-delimited output for plan")
     parser.add_argument("--file-list", help="Completed batch for mark")
     parser.add_argument("--extras", help="Comma- or newline-delimited paths to retry")
     parser.add_argument("--extra-env", help="Environment variable with comma-delimited paths")
+    parser.add_argument("--toc", type=Path, help="Rendered mdBook sidebar, for verify-render")
+    parser.add_argument("--toc-script", type=Path, help="Rendered sidebar JavaScript, for verify-render")
+    parser.add_argument("--landing", action="store_true", help="Check that mdBook's first chapter is the landing page")
+    parser.add_argument("--detailed", action="store_true",
+                        help="Include mixed-prose and Markdown differences in the read-only audit")
     args = parser.parse_args()
+    if args.detailed and args.action != "audit":
+        parser.error("--detailed is only supported by audit")
+    if args.landing and args.action != "verify-navigation":
+        parser.error("--landing is only supported by verify-navigation")
 
-    if args.action == "plan":
+    if args.action == "audit":
+        print(json.dumps(audit(
+            args.language, markdown_blobs(args.source_ref), markdown_blobs(args.language),
+            english_history(args.source_ref), detailed=args.detailed,
+        ), indent=2, ensure_ascii=False))
+    elif args.action == "restore-anchors":
+        updated, eligible = restore_anchors(args.language, args.source_ref)
+        print(f"{args.language}: restored source bookmarks in {len(updated)} of {eligible} checkpointed pages")
+    elif args.action == "localize-welcome-links":
+        path = Path(SUMMARY_PATH)
+        summary = path.read_bytes().decode("utf-8")
+        localized = localize_cloud_welcome_links(summary, args.language)
+        if localized != summary:
+            path.write_bytes(localized.encode("utf-8"))
+    elif args.action == "verify-navigation":
+        source = git("show", f"{args.source_ref}:{SUMMARY_PATH}").decode("utf-8")
+        summary = Path(SUMMARY_PATH).read_bytes().decode("utf-8")
+        issue = summary_issue(source, summary, args.language)
+        if issue:
+            raise SystemExit(f"{args.language}: {SUMMARY_PATH} failed the sidebar check ({issue})")
+        if args.landing:
+            first_link = next((suffix for _, _, suffix in summary_parts(summary)
+                               if suffix.startswith(("](", "$$external:"))), "")
+            if not re.fullmatch(r"\]\((?:\./)?README\.md\)(?:[ \t]*<!--.*-->)?", first_link.strip()):
+                raise SystemExit(f"{args.language}: the landing page must be the first chapter in {SUMMARY_PATH}")
+        print(f"{args.language}: sidebar labels are localized and chapter links match the source")
+    elif args.action == "verify-render":
+        if args.toc is None:
+            parser.error("verify-render requires --toc")
+        try:
+            summary = Path(SUMMARY_PATH).read_text(encoding="utf-8")
+            check_rendered_sidebar(summary, args.toc.read_text(encoding="utf-8"), args.language)
+            if args.toc_script:
+                check_sidebar_script(summary, args.toc_script.read_text(encoding="utf-8"), args.language)
+            check_rendered_anchor_collisions(args.toc.parent)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"{args.language}: rendered sidebar matches localized SUMMARY.md")
+    elif args.action == "plan":
         if not args.output:
             parser.error("plan requires --output")
-        paths = pending(args.language, args.source_ref, extra_paths(args))
+        paths = pending(args.language, args.source_ref, extra_paths(args), args.initial_source_ref)
         Path(args.output).write_text("".join(f"{path}\n" for path in paths), encoding="utf-8")
         print(f"{args.language}: {len(paths)} English pages pending translation")
     elif args.action == "mark":
@@ -103,24 +430,13 @@ def main() -> None:
             parser.error("mark requires --file-list")
         if git("rev-parse", "--abbrev-ref", "HEAD").decode().strip() != args.language:
             raise RuntimeError(f"mark must run on {args.language}")
-        source = markdown_blobs(args.source_ref)
-        existing = language_files(args.language)
-        state = load_state(args.language, existing)
-        paths = file_list(args.file_list)
-        for path in paths:
-            if path not in source or not Path(path).is_file():
-                raise RuntimeError(f"Translated page is missing: {path}")
-            state[path] = source[path]
-        STATE_PATH.write_text(
-            json.dumps({"schema": 1, "sources": state}, sort_keys=True, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        print(f"Recorded {len(paths)} translated pages for {args.language}")
+        state, baseline = checkpoint_for_update(args.language, args.initial_source_ref)
+        record_translations(args.source_ref, file_list(args.file_list), state, assumed_baseline=baseline)
     else:
-        paths = pending(args.language, args.source_ref, set())
+        paths = pending(args.language, args.source_ref, set(), args.initial_source_ref)
         if paths:
             raise SystemExit(f"{args.language}: {len(paths)} pages still pending; first: {paths[:10]}")
-        print(f"{args.language}: all English source pages have translations")
+        print(f"{args.language}: no pending translations for {args.source_ref}")
 
 
 if __name__ == "__main__":

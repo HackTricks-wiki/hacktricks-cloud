@@ -26,7 +26,7 @@ class TranslationBacklogTests(unittest.TestCase):
         self.git("config", "user.email", "test@example.com")
         (self.root / "src").mkdir()
         (self.root / "src" / "old.md").write_text("English v1\n")
-        (self.root / "src" / "SUMMARY.md").write_text("# Summary\n")
+        (self.root / "src" / "SUMMARY.md").write_text("# Summary\n\n# Welcome!\n\n- [About the author](old.md)\n")
         self.git("add", "src")
         self.git("commit", "-m", "baseline")
         self.baseline = self.git("rev-parse", "HEAD")
@@ -46,15 +46,18 @@ class TranslationBacklogTests(unittest.TestCase):
     def test_changed_and_added_pages_resume_from_recorded_blobs(self):
         self.assertEqual(
             backlog.pending("af", "master", set()),
-            ["src/new.md", "src/old.md"],
+            ["src/new.md", "src/old.md", backlog.SUMMARY_PATH],
         )
         self.git("checkout", "af")
         (self.root / "src" / "new.md").write_text("Nuwe bladsy\n")
         (self.root / "src" / "old.md").write_text("Afrikaans v2\n")
+        (self.root / backlog.SUMMARY_PATH).write_text(
+            "# Summary\n\n# Welkom!\n\n- [Oor die skrywer](old.md)\n"
+        )
         self.git("add", "src")
         self.git("commit", "-m", "translate batch")
         batch = self.root / "batch.txt"
-        batch.write_text("src/new.md\nsrc/old.md\n")
+        batch.write_text("src/new.md\nsrc/old.md\nsrc/SUMMARY.md\n")
         with patch.object(sys, "argv", ["translation_backlog.py", "mark", "--language", "af", "--file-list", str(batch)]):
             backlog.main()
         state = json.loads(backlog.STATE_PATH.read_text())
@@ -63,6 +66,310 @@ class TranslationBacklogTests(unittest.TestCase):
         self.git("commit", "-m", "record source blobs")
         self.assertEqual(backlog.pending("af", "master", set()), [])
         self.assertEqual(backlog.pending("af", "master", {"src/old.md"}), ["src/old.md"])
+
+    def test_historical_english_copy_is_pending_despite_checkpoint(self):
+        path = self.root / "src/old.md"
+        english = "This is the original text and it should be translated before publication.\n"
+        path.write_text(english)
+        self.git("commit", "-am", "Add English prose")
+        path.write_text("Here is a new version with different wording for the reader to review.\n")
+        self.git("commit", "-am", "Revise English prose")
+        self.git("checkout", "af")
+        path.write_text(english)
+        self.git("commit", "-am", "Accidentally copy original English")
+        backlog.record_translations("master", ["src/old.md"], {})
+        self.git("add", str(backlog.STATE_PATH))
+        self.git("commit", "-m", "Record incorrect checkpoint")
+
+        report = backlog.audit("af", backlog.markdown_blobs("master"), backlog.markdown_blobs("af"),
+                               backlog.english_history("master"))
+        self.assertEqual(report["untranslated"], [backlog.SUMMARY_PATH, "src/old.md"])
+        self.assertIn("src/old.md", backlog.pending("af", "master", set()))
+
+    def test_sidebar_gate_checks_the_working_copy_before_building(self):
+        summary = Path(backlog.SUMMARY_PATH)
+        english = summary.read_text(encoding="utf-8")
+        localized = "# Summary\n\n# Welkom!\n\n- [Oor die skrywer](old.md)\n"
+        argv = ["translation_backlog.py", "verify-navigation", "--language", "af", "--source-ref", self.baseline]
+        with patch.object(sys, "argv", argv):
+            summary.write_text(localized, encoding="utf-8")
+            backlog.main()
+            summary.write_text(english, encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "sidebar check \\(untranslated\\)"):
+                backlog.main()
+            summary.write_text(localized.replace("old.md", "new.md"), encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "sidebar check \\(navigation_structure\\)"):
+                backlog.main()
+
+    def test_landing_gate_requires_the_landing_page_as_the_first_chapter(self):
+        summary = Path(backlog.SUMMARY_PATH)
+        english = summary.read_text(encoding="utf-8")
+        localized = "# Summary\n\n# Welkom!\n\n- [Oor die skrywer](old.md)\n"
+        argv = ["translation_backlog.py", "verify-navigation", "--language", "af", "--landing"]
+        with patch.object(sys, "argv", argv):
+            summary.write_text(localized, encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "landing page must be the first chapter"):
+                backlog.main()
+            summary.write_text(english.replace("old.md", "README.md"), encoding="utf-8")
+            self.git("commit", "-am", "Use the README as the first chapter")
+            summary.write_text(localized.replace("old.md", "README.md"), encoding="utf-8")
+            backlog.main()
+
+    def test_detailed_audit_flags_paraphrased_english_without_scheduling_a_rewrite(self):
+        page = self.root / "src/old.md"
+        english = (
+            "The reading room staff can help you after you arrive at the library. "
+            "Before you leave, ask whether any of the books can be borrowed and where "
+            "the return box is located for the end of the day."
+        )
+        paraphrase = (
+            "When you enter the library, there will be someone at the desk who can answer "
+            "your questions. If you want to take a book with you, check which books may be "
+            "borrowed and how they should be returned to the building."
+        )
+        french = (
+            "La bibliothèque municipale accueille les visiteurs du lundi au samedi. "
+            "Les personnes qui souhaitent consulter des ouvrages peuvent réserver une place "
+            "dans la salle de lecture auprès du personnel de l’accueil."
+        )
+        page.write_text(english, encoding="utf-8")
+        self.git("commit", "-am", "Write the source guide")
+        self.git("checkout", "-b", "fr")
+        french_context = (french + "\n\n") * 9
+        page.write_text(
+            f"{french_context}{paraphrase}\n\n"
+            f"> {paraphrase}\n\n```text\n{paraphrase}\n```\n\n{french_context}",
+            encoding="utf-8",
+        )
+        self.git("commit", "-am", "Add guide translation")
+        source = backlog.markdown_blobs("master")
+        localized = backlog.markdown_blobs("fr")
+        history = backlog.english_history("master")
+        basic = backlog.audit("fr", source, localized, history)
+        report = backlog.audit("fr", source, localized, history, detailed=True)
+        self.assertNotIn("english_prose_review", basic)
+        self.assertNotIn("src/old.md", report["partly_untranslated"])
+        self.assertEqual(report["english_prose_review"], {"src/old.md": 1})
+
+    def test_detailed_audit_distinguishes_footer_spacing_from_missing_paragraphs(self):
+        intro = "Use the form to request a copy.\n\nKeep the receipt for your records.\n\n"
+        french_intro = "Utilisez le formulaire pour demander une copie.\n\nConservez le reçu.\n\n"
+        reference = "## References\n\n- [1] [Guide](https://example.org/guide)\n"
+        footer = "{{#include ../banners/hacktricks-training.md}}\n"
+        sources = ("src/old.md", "src/new.md")
+        for path in sources:
+            Path(path).write_text(intro + reference + "\n" + footer, encoding="utf-8")
+        self.git("commit", "-am", "Write source pages with their own reference footer")
+        self.git("checkout", "-b", "fr")
+        Path(sources[0]).write_text(french_intro + reference + footer, encoding="utf-8")
+        Path(sources[1]).write_text(french_intro.split("\n\n")[0] + "\n\n" + reference + footer, encoding="utf-8")
+        self.git("commit", "-am", "Translate pages without the footer separator")
+        report = backlog.audit(
+            "fr", backlog.markdown_blobs("master"), backlog.markdown_blobs("fr"),
+            backlog.english_history("master"), detailed=True,
+        )
+        self.assertEqual(report["reference_footer_spacing"], sorted(sources))
+        self.assertNotIn(sources[0], report["structural_review"])
+        self.assertIn("missing Markdown sections, paragraphs, list entries, or table cells",
+                      report["structural_review"][sources[1]])
+        self.assertEqual(report["missing_block_details"], {
+            sources[1]: {
+                "comparison_source": "current_english",
+                "source_blob": backlog.markdown_blobs("master")[sources[1]],
+                "missing": {"paragraphs": 1},
+            },
+        })
+        self.assertNotIn("\n\n" + footer, Path(sources[0]).read_text(encoding="utf-8"))
+
+    def test_footer_normalization_preserves_line_endings_and_ignores_code(self):
+        ref = "- [1] [Guide](https://example.org/guide)\r\n"
+        footer = "{{#include ../banners/hacktricks-training.md}}\r\n"
+        source = ref + "\r\n" + footer
+        localized = ref + footer
+        self.assertEqual(backlog.normalize_reference_footer(source, localized), source)
+        code = "```markdown\r\n" + localized
+        self.assertEqual(backlog.normalize_reference_footer(source, code), code)
+        other = localized.replace("banners/hacktricks-training.md", "banners/other.md")
+        self.assertEqual(backlog.normalize_reference_footer(source, other), other)
+
+    def test_detailed_audit_checks_structure_against_recorded_source(self):
+        path = self.root / "src/old.md"
+        path.write_text("Read [the guide](guide.md).\n\n## Checklist\n\n- Date\n")
+        self.git("commit", "-am", "Add source link")
+        recorded = self.git("rev-parse", "HEAD")
+        path.write_text("Read [the updated guide](guide-v2.md).\n\nNew paragraph.\n")
+        self.git("commit", "-am", "Revise source link and add a paragraph")
+        self.git("checkout", "af")
+        path.write_text("Lees [die gids](guide.md).\n\n## Kontrolelys\n\n- Datum\n")
+        backlog.record_translations(recorded, ["src/old.md"], {})
+        self.git("add", str(backlog.STATE_PATH), "src/old.md")
+        self.git("commit", "-m", "Publish translation of the first guide")
+        source = backlog.markdown_blobs("master")
+        history = backlog.english_history("master")
+
+        report = backlog.audit("af", source, backlog.markdown_blobs("af"), history, detailed=True)
+        self.assertEqual(report["source_advanced"], ["src/old.md"])
+        self.assertEqual(report["checkpoint_unverified"], [backlog.SUMMARY_PATH])
+        self.assertEqual(report["structural_review"], {})
+
+        path.write_text("Lees [die gids](verkeerd.md).\n")
+        self.git("commit", "-am", "Break a link in the localized copy")
+        report = backlog.audit("af", source, backlog.markdown_blobs("af"), history, detailed=True)
+        self.assertIn("src/old.md", report["structural_review"])
+        self.assertEqual(report["missing_block_details"], {
+            "src/old.md": {
+                "comparison_source": "recorded_english",
+                "source_blob": backlog.markdown_blobs(recorded)["src/old.md"],
+                "missing": {"h2_headings": 1, "list_entries": 1, "paragraphs": 1},
+            },
+        })
+
+    def test_checkpoint_does_not_record_the_inferred_legacy_baseline_as_translated(self):
+        self.git("checkout", "af")
+        state, baseline = backlog.checkpoint_for_update("af")
+        self.assertEqual((state, baseline), ({}, self.baseline))
+        (self.root / backlog.SUMMARY_PATH).write_text("# Summary\n\n# Welkom!\n")
+        backlog.record_translations("master", [backlog.SUMMARY_PATH], state, assumed_baseline=baseline)
+        self.git("add", "src", str(backlog.STATE_PATH))
+        self.git("commit", "-m", "Record one verified localization")
+
+        recorded = backlog.recorded_sources("af")
+        self.assertEqual(set(recorded), {backlog.SUMMARY_PATH})
+        plan = backlog.load_state("af", backlog.markdown_blobs("af").keys())
+        self.assertEqual(plan["src/old.md"], backlog.markdown_blobs(self.baseline)["src/old.md"])
+        result = backlog.audit("af", backlog.markdown_blobs("master"), backlog.markdown_blobs("af"),
+                               backlog.english_history("master"), detailed=True)
+        self.assertIn("src/old.md", result["checkpoint_unverified"])
+
+    def test_reuse_navigation_requires_the_current_exact_chapter_title(self):
+        page = self.root / "src/old.md"
+        page.write_text("# Read the guide\n")
+        self.git("commit", "-am", "Add English chapter title")
+        english = self.git("rev-parse", "HEAD")
+        self.git("checkout", "af")
+        page.write_text(
+            '# <span class="translation-source-anchor" id="read-the-guide"></span>Lees die gids\n'
+        )
+        backlog.record_translations(english, ["src/old.md"], {})
+        self.git("add", "src", str(backlog.STATE_PATH))
+        self.git("commit", "-m", "Translate the current chapter title")
+
+        files = backlog.markdown_blobs(english)
+        summary = (
+            "# Summary\n\n- [Read the guide](old.md)\n"
+            "- [Short guide](old.md)\n- [About the guide](old.md#appendix)\n"
+            "- [Read the guide](https://example.org/old.md)\n"
+        )
+        self.assertEqual(backlog.reusable_chapter_labels(summary, files, "af"), {"Read the guide": "Lees die gids"})
+        self.git("checkout", "master")
+        page.write_text("# Read the updated guide\n")
+        self.git("commit", "-am", "Advance the English source")
+        self.assertEqual(backlog.reusable_chapter_labels(summary, backlog.markdown_blobs("master"), "af"), {})
+
+    def test_restore_anchors_uses_only_real_checkpoints_from_english_history(self):
+        page = self.root / "src" / "old.md"
+        page.write_text("# Read the guide\n")
+        self.git("commit", "-am", "English heading")
+        revision = self.git("rev-parse", "HEAD")
+        page.write_text("# Read the revised guide\n")
+        self.git("commit", "-am", "Change the source heading after translation")
+        self.git("checkout", "af")
+        page.write_text("# Lees die gids\n")
+        (self.root / "src" / "new.md").write_text("# Nuwe bladsy\n")
+        backlog.record_translations(revision, ["src/old.md"], {})
+        before = self.git("rev-parse", "HEAD")
+        self.git("add", "src", str(backlog.STATE_PATH))
+        self.git("commit", "-m", "Translated guide plus an untracked revision")
+        published = self.git("rev-parse", "HEAD")
+
+        self.assertEqual(backlog.restore_anchors("af", "master"), (["src/old.md"], 1))
+        self.assertIn('id="read-the-guide"', page.read_text())
+        self.assertNotIn("read-the-revised-guide", page.read_text())
+        self.assertEqual((self.root / "src" / "new.md").read_text(), "# Nuwe bladsy\n")
+        self.assertEqual(self.git("rev-parse", "HEAD"), published)
+        self.assertNotEqual(published, before)
+
+    def test_restore_anchors_leaves_dirty_working_source_alone(self):
+        self.git("checkout", "af")
+        page = self.root / "src" / "old.md"
+        page.write_text("Unsaved derivative edit\n")
+        with self.assertRaisesRegex(ValueError, "must be clean"):
+            backlog.restore_anchors("af", "master")
+        self.assertEqual(page.read_text(), "Unsaved derivative edit\n")
+
+    def test_rendered_bookmarks_do_not_shadow_an_existing_section(self):
+        path = self.root / "guide.html"
+        markup = '<h2 id="source">Section</h2><span class="translation-source-anchor" id="source"></span>'
+        path.write_text(markup)
+        with self.assertRaisesRegex(ValueError, "duplicates a rendered ID in guide.html"):
+            backlog.check_rendered_anchor_collisions(self.root)
+        path.write_text(markup.replace('<h2 id="source">', '<h2 id="localized">'))
+        (self.root / "print.html").write_text(markup)
+        backlog.check_rendered_anchor_collisions(self.root)
+
+    def test_sidebar_script_rejects_stale_embedded_labels(self):
+        localized = "# Summary\n\n# Bienvenue !\n\n- [À propos de l'auteur](author.md)\n"
+        markup = (
+            '<li class="part-title">Bienvenue !</li>'
+            '<span class="chapter-link-wrapper"><a href="author.html">À propos de l’auteur</a></span>'
+        )
+        script = "var toc = '" + markup + "';\n"
+        backlog.check_sidebar_script(localized, script, "fr")
+        with self.assertRaisesRegex(ValueError, "chapter 1 differs"):
+            backlog.check_sidebar_script(localized, script.replace("À propos de l’auteur", "About the author"), "fr")
+        with self.assertRaisesRegex(ValueError, "Cannot find the embedded sidebar"):
+            backlog.check_sidebar_script(localized, "const toc = null;", "fr")
+
+    def test_rendered_sidebar_rejects_english_fallback_with_correct_lang_tag(self):
+        summary = "# Summary\n\n# Boas-vindas!\n"
+        rendered = '<html lang="pt"><li class="part-title">Boas-vindas!</li></html>'
+        backlog.check_rendered_sidebar(summary, rendered, "pt")
+        with self.assertRaisesRegex(ValueError, "section 1 differs"):
+            backlog.check_rendered_sidebar(summary, rendered.replace("Boas-vindas!", "Welcome!"), "pt")
+        with self.assertRaisesRegex(ValueError, "language pt, got en"):
+            backlog.check_rendered_sidebar(summary, rendered.replace('lang="pt"', 'lang="en"'), "pt")
+
+    def test_rendered_sidebar_rejects_untranslated_chapter_or_changed_destination(self):
+        summary = (
+            "# Summary\n\n# Boas-vindas!\n\n"
+            "- [Guia de leitura](guide/README.md)\n"
+            "  - [Sobre o autor$$external:https://example.org/author?from=toc$$]()\n"
+        )
+        rendered = (
+            '<html lang="pt"><li class="part-title">Boas-vindas!</li>'
+            '<span class="chapter-link-wrapper"><a href="guide/index.html"><strong aria-hidden="true">1.</strong> Guia de leitura</a>'
+            '<a class="chapter-fold-toggle"><div>❱</div></a></span>'
+            '<span class="chapter-link-wrapper">'
+            '<span>Sobre o autor$$external:https://example.org/author?from=toc$$</span></span></html>'
+        )
+        backlog.check_rendered_sidebar(summary, rendered, "pt")
+        for previous, replacement, failure in (
+            ("Guia de leitura", "Reading guide", "chapter 1 differs"),
+            ("guide/index.html", "guide/other.html", "chapter 1 destination differs"),
+            ("example.org/author?from=toc", "example.org/author/from=toc", "chapter 2 external destination differs"),
+        ):
+            with self.subTest(previous=previous):
+                with self.assertRaisesRegex(ValueError, failure):
+                    backlog.check_rendered_sidebar(summary, rendered.replace(previous, replacement), "pt")
+
+    def test_cloud_welcome_links_use_the_current_locale_and_preserve_other_links(self):
+        base = "https://book.hacktricks.wiki/en/welcome/"
+        author = f"$$external:{base}about-the-author.html$$"
+        values = f"$$external:{base}hacktricks-values-and-faq.html$$"
+        summary = (
+            f"<!-- {author} -->\r\n"
+            f"- [Sobre o autor{author}]()\r\n"
+            f"- [Valores e perguntas frequentes{values}]()\r\n"
+            f"- [Política de cookies$$external:{base}cookies-policy.html$$]()\r\n"
+            "- [Guia](guide.html)\r\n"
+        )
+        expected = summary.replace(f"autor{author}", f"autor{author.replace('/en/', '/pt/')}").replace(
+            f"frequentes{values}", f"frequentes{values.replace('/en/', '/pt/')}",
+        )
+        self.assertEqual(backlog.localize_cloud_welcome_links(summary, "pt"), expected)
+        self.assertEqual(backlog.localize_cloud_welcome_links(expected, "pt"), expected)
+        with self.assertRaisesRegex(ValueError, "Unsupported translated edition"):
+            backlog.localize_cloud_welcome_links(summary, "../pt")
 
     def test_missing_language_page_is_pending_even_if_english_is_unchanged(self):
         self.git("checkout", "af")

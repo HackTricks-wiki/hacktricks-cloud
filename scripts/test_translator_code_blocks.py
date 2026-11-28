@@ -23,7 +23,7 @@ class CodeBlockPreservationTests(unittest.TestCase):
     def test_preserves_python_indentation_and_blank_lines(self):
         code = '```python\ndef example():\n    if True:\n        return 1\n\n    return 0\n```'
         result = self.translate('# English prose\n\n'+code+'\n\nEnglish prose\n')
-        self.assertIn('# French prose', result)
+        self.assertIn('French prose\n\n', result)
         self.assertEqual(translator.fenced_code_blocks(result), [code])
 
     def test_inner_indented_backticks_stay_inside_the_original_block(self):
@@ -60,7 +60,10 @@ class CodeBlockPreservationTests(unittest.TestCase):
             return text.replace('English prose', 'French prose').strip()
 
         result = self.translate(source, stripped)
-        self.assertEqual(result, source.replace('English prose', 'French prose'))
+        expected = source.replace('English prose', 'French prose').replace(
+            '# French prose', '# <span class="translation-source-anchor" id="english-prose"></span>French prose', 1
+        )
+        self.assertEqual(result, expected)
 
     def test_nested_list_code_preserves_its_list_indentation(self):
         code = '    ```python\n    def example():\n        return 1\n    ```'
@@ -68,6 +71,22 @@ class CodeBlockPreservationTests(unittest.TestCase):
         result = self.translate(source)
         self.assertEqual(translator.fenced_code_blocks(result), [code])
         self.assertIn('2. French prose', result)
+
+    def test_fence_on_list_marker_keeps_code_and_translates_following_prose(self):
+        code = "- ```text\n  Literal sample\n  ```"
+        source = code + "\n\nEnglish prose after the sample.\n"
+        payloads = []
+
+        def prose(_language, text, *_args, **_kwargs):
+            payloads.append(text)
+            return text.replace("English prose", "French prose")
+
+        self.assertEqual(translator.fenced_code_blocks(source), [code])
+        result = self.translate(source, prose)
+        self.assertIn("French prose after the sample.", result)
+        self.assertEqual(translator.fenced_code_blocks(result), [code])
+        self.assertTrue(payloads)
+        self.assertTrue(all("Literal sample" not in text for text in payloads))
 
     def test_longer_outer_fence_keeps_inner_fences_literal(self):
         code = '````markdown\n```python\n    example = 1\n```\n````'

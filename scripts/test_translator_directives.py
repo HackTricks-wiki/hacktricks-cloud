@@ -48,6 +48,17 @@ Gebruik die API.
 
 
 class PreserveReferenceMarkupTests(unittest.TestCase):
+    def test_preserves_blank_lines_and_line_endings_after_a_reference(self):
+        for newline in ("\n", "\r\n"):
+            with self.subTest(newline=newline):
+                source = newline.join([
+                    "## References", "", "- [1] [English title](https://example.org/help)  ",
+                    "", "{{#include ../banners/footer.md}}", "",
+                ])
+                french = source.replace("English title", "Titre français")
+                model_output = french.replace("[1]", "[7]").replace("example.org", "example.com")
+                self.assertEqual(preserve_reference_markup(source, model_output), french)
+
     def test_restores_citations_numbers_and_urls_but_keeps_translated_titles(self):
         source = '''Claim.<sup>[[1]](#references)[[2]](#references)</sup>
 
