@@ -563,15 +563,24 @@ def check_rendered_anchor_collisions(book_dir):
 
 
 ATX_HEADING = re.compile(r"^ {0,3}#{1,6}[ \t]+")
+SETEXT_HEADING_INDENT = re.compile(r"^ {0,3}")
 HEADING_LINK_TAGS = re.compile(
     r"""(?:<a(?:\s+(?:id|name|href)=(?:"[^"]*"|'[^']*'))+\s*></a>)*""",
     re.I,
 )
 
 
+class ChapterHeading(NamedTuple):
+    line: int
+    level: str
+    anchor: str
+    alias_offset: int | None
+
+
 def chapter_headings(text):
-    """Return the source line, level, and automatic or explicit mdBook ID."""
+    """Return mdBook heading IDs and safe positions for source aliases."""
     tokens = MARKDOWN.parse(text)
+    lines = re.split(r"\r\n?|\n", text)
     generated = set()
     for index, token in enumerate(tokens):
         if token.type != "heading_open":
@@ -581,8 +590,9 @@ def chapter_headings(text):
         attributes_list = attributes[1].split() if attributes else ()
         explicit = next((value[1:] for value in attributes_list
                          if value.startswith("#") and len(value) > 1), None)
+        line = token.map[0]
         if explicit:
-            yield token.map[0], token.tag, explicit, False
+            yield ChapterHeading(line, token.tag, explicit, None)
             continue
 
         children = inline.children or ()
@@ -609,28 +619,36 @@ def chapter_headings(text):
             bool(base) and not attributes and HEADING_LINK_TAGS.fullmatch(markup) is not None
             and not any(child.type == "image" for child in children)
         )
-        yield token.map[0], token.tag, anchor, supported
+        prefix = None
+        if supported and token.level == 0:
+            if token.markup.startswith("#"):
+                prefix = ATX_HEADING.match(lines[line])
+            elif token.markup in {"=", "-"} and token.map[1] - line == 2:
+                prefix = SETEXT_HEADING_INDENT.match(lines[line])
+        yield ChapterHeading(line, token.tag, anchor, prefix.end() if prefix is not None else None)
 
 
 def preserve_source_heading_anchors(source, localized):
     """Keep source bookmarks when translation changes an mdBook section ID."""
     source_headings = list(chapter_headings(source))
     target_headings = list(chapter_headings(localized))
-    if [heading[1] for heading in source_headings] != [heading[1] for heading in target_headings]:
+    if [heading.level for heading in source_headings] != [heading.level for heading in target_headings]:
         return localized
 
-    used = {heading[2] for heading in target_headings}
+    used = {heading.anchor for heading in target_headings}
     raw_targets = markdown_inventory(localized).targets
     used.update(target[-1] for target in raw_targets
                 if len(target) == 3 and target[1] in {"id", "name", "translation alias"})
-    lines = localized.splitlines(keepends=True)
-    for (_, _, anchor, source_supported), (line, _, _, target_supported) in zip(source_headings, target_headings):
-        prefix = ATX_HEADING.match(lines[line])
-        if source_supported and target_supported and anchor not in used and prefix:
-            index = prefix.end()
-            alias = f'<span class="{SOURCE_ANCHOR_CLASS}" id="{anchor}"></span>'
-            lines[line] = lines[line][:index] + alias + lines[line][index:]
-            used.add(anchor)
+    lines = re.split(r"(\r\n?|\n)", localized)
+    for original, target in zip(source_headings, target_headings):
+        if original.alias_offset is None or target.alias_offset is None or original.anchor in used:
+            continue
+        line_index = target.line * 2
+        line = lines[line_index]
+        index = target.alias_offset
+        alias = f'<span class="{SOURCE_ANCHOR_CLASS}" id="{original.anchor}"></span>'
+        lines[line_index] = line[:index] + alias + line[index:]
+        used.add(original.anchor)
     return "".join(lines)
 
 

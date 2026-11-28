@@ -27,11 +27,11 @@ class TranslationBatchTests(unittest.TestCase):
         cli = str(Path(translator.__file__).resolve())
         source = (
             "# Reading guide\n\nOpen the [library](https://example.org/library).\n\n"
-            "Read the [catalog](https://example.org/catalog).\n"
+            "Read the [catalog](https://example.org/catalog).\n\nReceipts\n--------\n"
         )
         localized = (
             "# Guide de lecture\n\nOuvrez la [bibliothèque](https://example.org/library).\n\n"
-            "Consultez le [catalogue](https://example.org/catalog).\n"
+            "Consultez le [catalogue](https://example.org/catalog).\n\nReçus\n-----\n"
         )
         summary = "# Summary\n\n# Welcome!\n\n- [Reading guide](guide.md)\n"
         swapped = localized.replace(
@@ -100,6 +100,9 @@ class TranslationBatchTests(unittest.TestCase):
                 localized_summary = (repo / "src/SUMMARY.md").read_text(encoding="utf-8")
                 toc = (repo / "book/toc.html").read_text(encoding="utf-8")
                 check_rendered_sidebar(localized_summary, toc, "fr")
+                chapter = (repo / "book/guide.html").read_text(encoding="utf-8")
+                self.assertIn('<h2 id="reçus">', chapter)
+                self.assertIn('class="translation-source-anchor" id="receipts"', chapter)
             finally:
                 os.chdir(previous)
 
@@ -415,6 +418,16 @@ class TranslationBatchTests(unittest.TestCase):
         preserved = preserve_source_heading_anchors(source, localized)
         self.assertNotIn('id="introduction"', preserved)
         self.assertIn('id="details"', preserved)
+
+    def test_translation_preserves_setext_bookmarks_and_line_endings(self):
+        source = "Reader guide\n============\n\nWhere to find receipts\n----------------------\n"
+        localized = "Guide du lecteur\r\n================\r\n\r\nOù trouver les reçus\r\n--------------------\r\n"
+        preserved = preserve_source_heading_anchors(source, localized)
+        self.assertIn('id="reader-guide"></span>Guide du lecteur\r\n', preserved)
+        self.assertIn('id="where-to-find-receipts"></span>Où trouver les reçus\r\n', preserved)
+        self.assertEqual(preserved.count("\r\n"), localized.count("\r\n"))
+        self.assertEqual(preserve_source_heading_anchors(source, preserved), preserved)
+        self.assertEqual(markdown_problems(source, preserved, allow_source_aliases=True), [])
 
     def test_translation_restores_heading_that_contains_a_legacy_bookmark(self):
         source = '# <a href="#legacy-id" id="legacy-id"></a>Reader guide\n'
