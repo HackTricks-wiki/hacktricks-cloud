@@ -86,4 +86,5 @@ O `docker-compose.yml` incluído serve o branch atualmente selecionado em [http:
 - [12] [Metodologia de Pentesting na Cloud do HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [Valores e FAQ do HackTricks](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Gráfico de estatísticas do Repobeats para o HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
