@@ -68,7 +68,7 @@ docker compose up
 
 ### Στατιστικά GitHub
 
-![HackTricks Cloud Github Stats](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
+![Στατιστικά του HackTricks Cloud στο GitHub](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)<sup>[[14]](#references)</sup>
 
 ## References
 
