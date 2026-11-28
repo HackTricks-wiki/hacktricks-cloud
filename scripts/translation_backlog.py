@@ -34,14 +34,14 @@ CLOUD_WELCOME_LINK = re.compile(
 )
 REFERENCE_FOOTER = re.compile(
     r"^- \[\d+\] \[[^\]\r\n]+\]\([^\r\n]+\)[ \t]*(?P<newline>\r?\n)"
-    r"(?P<gap>(?:[ \t]*\r?\n)*)(?P<include>\{\{#include (?:\.\./)*banners/hacktricks-training\.md\}\})"
+    r"(?P<gap>(?:[ \t]*\r?\n)*)(?P<include>\{\{#include (?:\./|(?:\.\./)*)banners/hacktricks-training\.md\}\})"
     r"[ \t]*(?:\r?\n[ \t]*)*\Z",
     flags=re.MULTILINE,
 )
 
 
 def normalize_reference_footer(source, localized):
-    """Restore a missing footer separator for comparison, while keeping the original reportable."""
+    """Restore the blank line before a standalone training banner include."""
     original = REFERENCE_FOOTER.search(source)
     translated = REFERENCE_FOOTER.search(localized)
     if not original or not translated or not original["gap"] or translated["gap"]:

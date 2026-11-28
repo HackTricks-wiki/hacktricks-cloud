@@ -16,7 +16,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from translation_backlog import (
-    SUMMARY_PATH, checkpoint_for_update, markdown_blobs, record_translations, reusable_chapter_labels,
+    SUMMARY_PATH, checkpoint_for_update, markdown_blobs, normalize_reference_footer, record_translations,
+    reusable_chapter_labels,
 )
 from translation_quality import (
     MARKDOWN, markdown_line_offsets,
@@ -730,6 +731,7 @@ def translate_file(language, file_path, file_dest_path, model, client, branch=No
 
     # Chunk-level checks cannot detect a citation/heading added across chunk
     # boundaries. Never write or checkpoint a structurally broken page.
+    translated_content = normalize_reference_footer(content, translated_content)
     if not protected_markup_is_intact(content, translated_content):
         raise RuntimeError(f"Page {file_path} changed protected markup")
     if fenced_code_blocks(content) != fenced_code_blocks(translated_content):

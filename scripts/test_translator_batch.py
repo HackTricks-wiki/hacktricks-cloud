@@ -597,6 +597,24 @@ class TranslationBatchTests(unittest.TestCase):
                     translator.translate_file("French", origin, target, "gpt-4o", None, "fr")
             self.assertFalse(translator.os.path.exists(target))
 
+    def test_page_restores_the_blank_line_before_the_training_footer(self):
+        english = (
+            "The library opens early on weekdays.\n\n## References\n\n"
+            "- [1] [Schedule](https://example.org/hours)\n\n{{#include ./banners/hacktricks-training.md}}\n"
+        )
+        french = english.replace("The library opens early on weekdays.", "La bibliothèque ouvre tôt en semaine.")
+        french = french.replace("[Schedule]", "[Horaires]")
+        without_separator = french.replace("\n\n{{#include", "\n{{#include")
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "source.md"
+            target = Path(directory) / "output.md"
+            source.write_text(english, encoding="utf-8")
+            with patch.object(translator, "reportTokens", return_value=1), patch.object(
+                translator, "translate_text", return_value=without_separator
+            ):
+                translator.translate_file("French", source, target, "gpt-4o", None, "fr")
+            self.assertEqual(target.read_text(encoding="utf-8"), french)
+
     def test_page_retries_copied_prose_before_writing_output(self):
         english = "This is the original text and it should be translated before publication.\n"
         french = "Ce texte doit être traduit avant sa publication.\n"
