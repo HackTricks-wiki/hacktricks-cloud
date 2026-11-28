@@ -59,6 +59,9 @@ ENGLISH_FUNCTION_WORDS = frozenset(
 NAVIGATION_WORDS = frozenset(
     {"welcome", "introduction", "overview", "about", "getting started", "table of contents"}
 )
+FIXED_SUMMARY_NAMES = frozenset({
+    "defender for cloud", "microsoft defender for cloud", "az defender for cloud",
+})
 SHARED_SUMMARY_WORDS = {"fr": {("introduction",)}, "french": {("introduction",)}}
 LANGUAGE_CODES = frozenset("af de el es fr hi it ja ko pl pt sr sw tr uk vi zh".split())
 SCRIPTS = {
@@ -92,7 +95,13 @@ def summary_structure(parts):
     return [(prefix, label is None, suffix) for prefix, label, suffix in parts]
 
 
+def fixed_summary_name(label):
+    return " ".join(re.findall(r"[a-z]+", label.lower())) in FIXED_SUMMARY_NAMES
+
+
 def needs_summary_translation(label):
+    if fixed_summary_name(label):
+        return False
     words = re.findall(r"[a-z]+", label.lower())
     return (
         " ".join(words) in NAVIGATION_WORDS

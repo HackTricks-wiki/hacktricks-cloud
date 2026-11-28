@@ -36,6 +36,13 @@ class TranslationBatchTests(unittest.TestCase):
             )
         self.assertEqual(create.call_count, 2)
 
+    def test_summary_keeps_verified_product_name_with_english_connective(self):
+        source = "# Summary\n\n- [Az - Defender for Cloud](guide.md)\n"
+        with patch.object(translator, "translate_text") as translate:
+            localized = translator.translate_summary("Japanese", source, None, "fixture", None, "ja")
+        self.assertEqual(localized, source)
+        translate.assert_not_called()
+
     def test_french_summary_accepts_shared_french_vocabulary(self):
         source = "# Summary\n\n# Introduction\n"
         with patch.object(translator, "translate_text", return_value="# 1. Introduction") as translate:
