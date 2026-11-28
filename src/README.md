@@ -86,4 +86,5 @@ Bundled `docker-compose.yml` आपके वर्तमान में checke
 - [12] [HackTricks Cloud Pentesting पद्धति](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [HackTricks Values और FAQ](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [HackTricks Cloud के लिए Repobeats आँकड़ों का ग्राफ़](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
