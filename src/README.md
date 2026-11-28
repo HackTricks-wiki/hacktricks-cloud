@@ -86,4 +86,5 @@ docker compose up
 - [12] [Μεθοδολογία Pentesting Cloud του HackTricks](https://github.com/HackTricks-wiki/hacktricks-cloud/blob/master/src/pentesting-cloud/pentesting-cloud-methodology.md)
 - [13] [Αξίες & Συχνές ερωτήσεις του HackTricks](https://book.hacktricks.wiki/en/welcome/hacktricks-values-and-faq.html)
 - [14] [Γράφημα στατιστικών Repobeats για το HackTricks Cloud](https://repobeats.axiom.co/api/embed/1dfdbb0435f74afa9803cd863f01daac17cda336.svg)
+
 {{#include ./banners/hacktricks-training.md}}
